@@ -1,0 +1,17 @@
+# Build outputs
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+# jenv local override (committed .java-version is the project contract)
+.java-local
