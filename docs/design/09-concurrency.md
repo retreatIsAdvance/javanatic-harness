@@ -1,11 +1,11 @@
-# 09 · 并发模型 — Virtual Thread + ScopedValue + 结构化并发
+# 09 · 并发模型 — Virtual Thread + ScopedValue + 排空循环
 
-dsh 基于 Cordis 的 fiber（协程）+ async/await。JH 用 **Java 25 Virtual Thread** 实现等价的"同步写法、异步调度"，用 **`ScopedValue`（JEP 506，Java 25 final）** 替代 `ThreadLocal` 做 initiator / request-context 传递，用 `StructuredTaskScope`（JEP 505，**仍为 preview**）实现结构化生命周期。
+dsh 基于 Cordis 的 fiber（协程）+ async/await。JH 用 **Java 25 Virtual Thread** 实现"同步写法、异步调度"，用 **`ScopedValue`（JEP 506，25 final）** 做 initiator 传递，生命周期收敛在 **`Scope` LIFO 栈**（01），工具并行用**普通虚拟线程 + join**（不依赖 preview 的 StructuredTaskScope，见 §5）。
 
-> **Java 25 特性状态提醒**：
-> - **Virtual Thread**：自 21 final，生产可用。25 进一步优化了 synchronized 下的虚拟线程行为（JEP 491），pinning 大幅减少。
-> - **`ScopedValue`（JEP 506）**：**Java 25 转 final**，生产可用。这是本项目选 25 而非 21 的首要理由。
-> - **`StructuredTaskScope`（JEP 505）**：**Java 25 仍为第五 preview**。本项目仅在少数类（agent-loop 工具并行执行）使用，需 `--enable-preview` 编译运行，并隔离以便 final 后平滑迁移。
+> **Java 25 特性状态**：
+> - **Virtual Thread**：21 起 final。25 优化了 synchronized 下的 pinning（JEP 491）。
+> - **`ScopedValue`（JEP 506）**：**25 转 final**——本项目选 25 的首要理由。
+> - **`StructuredTaskScope`（JEP 505）**：25 仍为第五 preview。**MVP 不使用**（§5 说明为何不需要它）。
 
 ## 1. 为什么 Virtual Thread（而不是 CompletableFuture 链或 Reactor）
 
@@ -13,398 +13,235 @@ dsh 基于 Cordis 的 fiber（协程）+ async/await。JH 用 **Java 25 Virtual 
 |---|---|---|---|
 | 写法 | 同步（看起来阻塞）| 回调链 | 声明式流 |
 | 心智模型 | 与 dsh async/await 一致 | 分散 | 学习曲线高 |
-| 取消传播 | `Thread.interrupt()` + `AbortController` | 手动 future 链 | 复杂 |
+| 取消传播 | `checkAbort()` 协作点 + 异常 | 手动 future 链 | 复杂 |
 | 栈追踪 | 完整（可读）| 无（异步栈丢失）| 无 |
 | JVM 原生 | ✅ JDK 25 | ✅ | ❌ 外部依赖 |
-| 适合 IO 密集 | ✅（agent loop 天然 IO：LLM 流式、子进程）| ⚠️ | ✅ |
+| 适合 IO 密集 | ✅（LLM 流式、子进程）| ⚠️ | ✅ |
 
-**结论**：Virtual Thread 让 agent loop 代码读起来像顺序同步代码（`response.body().forEachRemaining(...)` 阻塞但实际挂起），与 dsh 的 `for await (const chunk of stream)` 心智模型一致。
+**结论**：agent loop 读起来像顺序同步代码（`stream.forEach(...)` 阻塞但实际挂起），与 dsh 的 `for await` 心智模型一致。kernel 事件派发也不返回 future——waterfall 同步返回值，notify fire-and-forget（01 §5），整个内核无回调链。
 
-## 2. Fiber（JH）= Cordis Fiber（生命周期）+ Virtual Thread（执行）
+## 2. Scope（生命周期）与 Virtual Thread（执行）的分工
 
 **重要区分**：
-- **Cordis Fiber / JH `Fiber`**：生命周期容器（effect 栈、scope key、inject 依赖）。**不是** OS 线程，也不是虚拟线程。
-- **Virtual Thread**：执行载体。一个 agent 的 driver 跑在一个虚拟线程上。
 
-一个 JH `Fiber` 可能在任意虚拟线程上执行代码（driver 跑一个、工具执行跑另一个），但 effect 栈的回收是 fiber 级别的（fiber dispose 时逆序回收所有 effect，不论它们在哪个线程注册的）。
+- **`Scope`**：生命周期 + 可见性容器（effect 栈 LIFO、服务 overlay、订阅归属）。不是线程。
+- **Virtual Thread**：执行载体。driver 一个、每个工具执行一个、每个 notify listener 一个。
+
+一个 Scope 上的 effect 可能在任意虚拟线程上注册；回收是 scope 级的（`close()` 逆序回收，不论注册线程）。执行结构由 Runtime 的 executor 提供：
 
 ```java
-// FiberRuntime 提供 virtual thread executor
-public final class FiberRuntime {
-    private final ExecutorService virtualThreadExecutor =
-        Executors.newVirtualThreadPerTaskExecutor();
-
-    public Executor virtualThreadExecutor() { return virtualThreadExecutor; }
+public final class Runtime implements AutoCloseable {
+    private final ExecutorService virtualThreads = Executors.newVirtualThreadPerTaskExecutor();
+    public ExecutorService virtualThreads() { return virtualThreads; }
+    // close(): root.close() LIFO 级联 → virtualThreads.close()
 }
 ```
 
-所有 `CompletableFuture.runAsync(task, virtualThreadExecutor)` 在虚拟线程上跑。task 内部可以写阻塞代码（IO、`Object.wait()`），不占用 platform thread。
+**规则**：需要并发就 `virtualThreads.submit(...)`（或 fork 虚拟线程）；**禁止创建独立的平台线程池**——所有执行都挂在 Runtime 的 executor 下，teardown 时统一收敛（R3：scope 外启动的线程清不掉）。
 
 ## 3. Agent Driver —— 单虚拟线程排空
 
-一个 agent 的 driver 是**一个虚拟线程**上的排空循环：
+一个 agent 的 driver 是**一个虚拟线程**上的排空循环（04 §5）：
 
 ```java
-private void ensureDriver() {
-    if (driver != null && !driver.isDone()) return;
-    status = AgentStatus.RUNNING;
-    driver = CompletableFuture.runAsync(this::drainLoop, virtualThreadExecutor);
-}
+driver = CompletableFuture.runAsync(
+    () -> registry.withInitiator(this, this::drainLoop),   // 绑定点（见 §11）
+    virtualThreads);
 
 private void drainLoop() {
-    // 当前在虚拟线程上
     try {
-        while (hasWork()) {
-            runTurn();  // 同步调用，内部可阻塞（LLM 流式、工具执行）
-        }
+        while (hasWork()) runTurn();   // 同步调用，内部可阻塞
     } finally {
-        status = AgentStatus.IDLE;
-        driver = null;
+        // 状态复位 + 唤醒竞态防护：退出窗口内有新 work → 重启 driver
+        status = IDLE; driver = null;
+        if (hasWork()) ensureDriver(); else notifyIdle();
     }
 }
 ```
 
-**优势**：`runTurn()` 内部的 `llm.stream(...).forEach(chunk -> ...)` 看起来阻塞，实际挂起虚拟线程等 SSE。代码读起来与 dsh 的顺序 async/await 一致，无需 `.thenCompose` 链。
+**唤醒竞态**（修正）：send() 与 driver 退出并发时，"投递成功但 driver 已决定退出"的窗口由 finally 重查 `hasWork()` 封闭——不丢唤醒。
 
-**取消**：`drainLoop` 在关键点检查 `abortSignal.checkAbort()`，取消时抛 `AbortedException`，虚拟线程正常结束。
+**取消**：`drainLoop` 及其调用的每个长操作在关键点 `signal.checkAbort()`，取消时抛 `AbortedException`，虚拟线程正常结束。
 
-## 4. 取消传播
+## 4. 取消传播（协作式）
 
-### AbortController（协作式取消）
-
-JH 用协作式取消（而非 `Thread.interrupt()`），因为：
-- `interrupt()` 会在任意安全点抛 `InterruptedException`，难以精确控制。
-- agent loop 需要在**自己选择的检查点**响应取消（模型请求间隙、工具执行边界）。
+不用 `Thread.interrupt()`（任意安全点抛 `InterruptedException`，不可控）；在**自己选择的检查点**响应取消（04 §9 的 AbortController / AbortSignal）。
 
 ```java
-public final class AbortController {
-    private final AtomicReference<AgentCancelCause> cause = new AtomicReference<>();
-    private final AtomicBoolean cancelled = new AtomicBoolean(false);
-    private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
+// 工具执行（子进程）：注册取消监听，取消 → kill
+Process p = pb.start();
+signal.controller().addListener(() -> p.destroyForcibly());
 
-    public void cancel(AgentCancelCause c) {
-        if (cancelled.compareAndSet(false, true)) {
-            cause.set(c);
-            listeners.forEach(Runnable::run);
-        }
-    }
-
-    public boolean isAborted() { return cancelled.get(); }
-
-    void addListener(Runnable r) {
-        if (isAborted()) r.run();
-        else listeners.add(r);
-    }
-}
-
-public record AbortSignal(AbortController controller) {
-    public boolean isAborted() { return controller.isAborted(); }
-
-    /** 在检查点调用，已取消则抛 AbortedException。 */
-    public void checkAbort() {
-        if (isAborted()) throw new AbortedException(controller.cause());
-    }
-}
-
-public class AbortedException extends RuntimeException {
-    private final AgentCancelCause cause;
-    public AbortedException(AgentCancelCause c) { super(c.toString()); this.cause = c; }
-    public AgentCancelCause cancelCause() { return cause; }
-}
+// 模型流式：消费循环每 chunk 自查
+stream.forEach(chunk -> { signal.checkAbort(); session.append(...); });
 ```
 
-### 工具执行的取消
+HTTP body 是阻塞读——虚拟线程挂起不占 platform thread；取消时 `AbortedException` 抛出，连接由 try-with-resources 关闭。
 
-工具执行（如 bash 子进程）注册取消监听，取消时 `destroyForcibly`：
+## 5. 工具并行 —— 错误即数据，join 即收敛（无需 preview）
+
+工具并行的语义在 R2 下发生了关键简化：**单个工具失败不是异常，是 error result**（04 §executeTools；executor 把每个工具的异常转成 `ToolResultEvent(error)`，只有 `AbortedException` 传播）。因此根本不需要 `ShutdownOnFailure` 的"任一失败取消其余"——失败已经是数据，全部跑完、逐个落账即可：
 
 ```java
-CompletableFuture.supplyAsync(() -> {
-    Process p = pb.start();
-    signal.controller().addListener(() -> p.destroyForcibly());  // 取消 → kill
-    // ... 等待进程 ...
-}, virtualThreadExecutor);
-```
+// io.javanatic.harness.tools.ToolExecutor —— 并行执行（无 preview 依赖）
+List<LoggedEvent<ToolResultEvent>> execute(List<ToolCallEvent> calls, AbortSignal signal) {
+    List<Future<LoggedEvent<ToolResultEvent>>> futures = calls.stream()
+        .map(call -> virtualThreads.submit(() -> executeOne(call, signal)))
+        .toList();
+    return futures.stream().map(this::await).toList();   // 逐个 join；错误已封装为 result
+}
 
-### 模型流式的取消
-
-SSE 读取循环每行检查 `signal.checkAbort()`：
-
-```java
-response.body().forEachRemaining(line -> {
-    signal.checkAbort();  // 取消时抛 AbortedException，虚拟线程结束
-    parseAndEmit(line);
-});
-```
-
-HTTP client 的 `response.body()` 是阻塞读，虚拟线程挂起不占 platform thread。取消时 `AbortedException` 抛出，虚拟线程正常退出，HTTP 连接由 try-with-resources 关闭。
-
-## 5. 结构化并发（StructuredTaskScope）
-
-> ⚠️ **JEP 505 在 Java 25 仍是第五 preview**。下列代码需要 `--enable-preview` 编译和运行。本项目把 `StructuredTaskScope` 的使用**隔离在 agent-loop 的工具并行执行这一个类**里（`ToolExecutor`），一旦 JEP 505 转 final，迁移面收敛在单文件。MVP 若不想引入 preview，可退化为 `CompletableFuture.allOf` 手写等价逻辑（见本节末尾的 fallback）。
-
-对于"一个 step 内并行执行多个工具调用"或"并行 fan-out 的 session/flush"，用 `StructuredTaskScope`：
-
-```java
-// 并行执行多个工具调用
-private List<ToolResultEvent> executeTools(List<ToolCallEvent> calls, AbortSignal signal) {
-    try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-        List<StructuredTaskScope.Subtask<ToolResultEvent>> subtasks = calls.stream()
-            .map(call -> scope.fork(() -> {
-                signal.checkAbort();
-                return executeOneTool(call, signal);
-            }))
-            .toList();
-
-        scope.join();          // 等所有完成
-        scope.throwIfFailed(); // 任一失败抛
-
-        return subtasks.stream()
-            .map(StructuredTaskScope.Subtask::get)
-            .toList();
-    } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
+private LoggedEvent<ToolResultEvent> await(Future<LoggedEvent<ToolResultEvent>> f) {
+    try {
+        return f.get();
+    } catch (ExecutionException e) {
+        // executeOne 内已捕获一切工具异常并转 error result；
+        // 能到这里的只有 AbortedException（取消要传播）或执行框架自身的 bug
+        throw (RuntimeException) e.getCause();
     }
 }
 ```
 
-**`ShutdownOnFailure`**：任一子任务失败 → 取消其余子任务。这正是工具并行执行的期望语义（一个工具失败不应让其他继续浪费）。
-
-### 结构化并发的生命周期绑定
-
-`StructuredTaskScope` 是 try-with-resources，离开作用域自动 `close()`（等待所有子任务）。这与 JH Fiber 的 "child fiber dispose 被 parent 兜底" 语义一致：
-
-```
-Fiber（effect 栈）
-  └─ scope = StructuredTaskScope（子任务）
-       └─ Virtual Thread（一个工具执行）
-```
-
-parent fiber dispose → scope close → 等子任务 → 逆序回收 effect。**结构化并发保证不泄漏**。
+- **不引入 `--enable-preview`**：MVP 零 preview 依赖，分发与工具链最简。
+- **为何曾经考虑 StructuredTaskScope**：为了"任一失败取消其余 + 作用域退出自动 join"。前者被错误即数据消解（失败不中断同伴，这正是期望语义——一个 bash 失败不该浪费掉并行的 fs_read 结果）；后者由"submit 全部 → get 全部"的顺序结构等价给出。
+- **将来 JEP 505 final 后**：可换 `StructuredTaskScope.Open` 获得 join 的取消传播与线程转储归组——纯实现替换，语义不变，单文件迁移（11 §8）。
 
 ## 6. 并发安全：哪些是线程安全的
 
 | 组件 | 线程安全？ | 手段 |
 |---|---|---|
-| `ServiceRegistry` | ✅ | `ConcurrentHashMap` |
+| Scope 服务 overlay | ✅ | 每 scope 一个 `ConcurrentHashMap` |
 | `Events`（hooks map）| ✅ | `ConcurrentHashMap` + `CopyOnWriteArrayList` |
-| `Session`（log append）| ✅ | `synchronized append()` |
-| `SurfaceManager` | ✅ | 单线程访问（driver 虚拟线程）+ 缓存 |
+| `Session`（append / 读）| ✅ | `synchronized`（append 与快照读同锁，无撕裂）|
+| `SurfaceManager` | ✅ | 仅在 Session 锁内访问 |
 | `Inbox` | ✅ | `synchronized` 方法 |
-| `AgentLoopImpl` driver | ⚠️ 单 driver 虚拟线程 | `ensureDriver` synchronized 启动 |
-| `ToolRegistry`（注册）| ✅ | `ScopedLayers` 用 `ConcurrentHashMap` |
-| `Fiber` effect 栈 | ✅ | `ConcurrentLinkedDeque` |
+| `AgentLoopImpl` driver | ⚠️ 单 driver | `ensureDriver` synchronized + finally 重查 |
+| `ToolRegistry`（注册）| ✅ | 06 的 scoped layers 用并发容器 |
+| Scope effect 栈 | ✅ | `ConcurrentLinkedDeque` + CAS |
 
-**规则**：注册/查询类（Registry/Store/Events）线程安全（多 agent 并发访问）；执行类（driver、单 session 的 log append）单线程为主，用 `synchronized` 保护关键区。
+**规则**：注册/查询类（Registry/Store/Events）线程安全（多 agent 并发访问）；执行类（driver、单 session 的 log append）以单写者为主，`synchronized` 保护关键区。25 下虚拟线程进入 `synchronized` 块不再 pinning（JEP 491），无需为虚拟线程改写 `ReentrantLock`。
 
-## 7. Teardown 顺序（关键不变式）
+## 7. Teardown 顺序（不变式）
 
-dsh 强调 "disposer identity is load-bearing: composite effect that owns teardown ORDER must yield THIS function so Cordis nests unregistration at that yield position"。
-
-JH 的 LIFO effect 栈保证：
+dsh 强调 "disposer identity is load-bearing: the composite effect that owns teardown ORDER must nest unregistration at that yield position"。JH 的 Scope LIFO effect 栈保证（01 §3）：
 
 ```java
-// agent 创建时的 effect 注册顺序（addEffect/addCloseable）
-1. addEffect(register session publication hooks)   // 先注册（最后回收）
-2. addEffect(register agent in registry)
-3. addCloseable(stop driver + await quiescence)    // 后注册（先回收）
+// agent 创建时的 effect 注册顺序（scope.effect / scope.onClose）
+1. effect(register session publication hooks)   // 先注册 → 最后回收
+2. effect(register agent in registry)
+3. onClose(stop driver + await quiescence)      // 后注册 → 先回收
 
-// dispose 时 LIFO 回收：
-1. stop driver + await quiescence    // 先停 loop
-2. unregister agent                  // 再注销
-3. remove session publication hooks  // 最后移 session
+// scope.close() 时 LIFO 回收：
+1. stop driver + await quiescence    // 先停 loop（等它写完最后的 turn/end）
+2. unregister agent                  // 再注销（否则 disposed 事件早于 driver 退出）
+3. remove session publication hooks  // 最后移 session（driver 的最终事件仍可 publish）
 ```
 
-**关键**：driver 必须先停（等它把最后的 `turn/end` 写完），再注销 agent（否则 `agent/disposed` 在 driver 还在跑时发出），最后移 session（否则 driver 的最终事件无法 publish）。
+两个 R3 场景复用同一原语：
 
-`Fiber.dispose()` 用 `Deque.pollLast()`（LIFO）保证这个顺序：
+- **插件加载失败回滚**：`child.close()`（01 §7）——apply 抛异常即回收该子树全部 effect，父级干净。
+- **整体 shutdown**：`Runtime.close()` → root LIFO 级联 → executor close 等残余任务。
 
-```java
-public CompletableFuture<Void> dispose() {
-    return CompletableFuture.runAsync(() -> {
-        AutoCloseable c;
-        while ((c = effectStack.pollLast()) != null) {  // LIFO
-            try { c.close(); }
-            catch (Exception e) { /* log, 不阻断 */ }
-        }
-        runtime.registry().revokeAll(this);
-    }, virtualThreadExecutor);
-}
-```
+**回收失败不阻断**：单个 effect 的 close 抛异常只记日志，其余继续回收——teardown 永不因一个坏 disposer 卡死。
 
 ## 8. 虚拟线程 + 持久化的交互
 
-Session append 是同步的（`synchronized`），但持久化是异步的（buffer + flush）：
+Session append 同步（锁内），持久化异步（订阅 `session/appended`，buffer + batch 落盘，03 §6）：
 
 ```
 driver 虚拟线程                持久化虚拟线程
-     │                              │
      │ session.append(event)        │
-     │ ──synchronized────────────►  │
-     │   log.add(event)             │ buffer.put(event)
-     │   notifyObservers(event)     │
+     │ ──synchronized────────────►  │ (notify session/appended)
+     │   log.add + surface commit   │ buffer.put → 异步 batch 写盘
      │ ◄─────────────────────────── │
-     │                              │ (异步 batch 写盘)
-     │                              │
-     │ ... 继续 turn ...            │
+     │ ... 继续 turn ...
 ```
 
-**session/flush barrier**：agent 要确保持久化落盘时（如 resume 前、dispose 时），调 `sessionStore.flush(session)`，它 dispatch `session/flush`（parallel），await 所有持久化 listener：
+**flush barrier**：resume 前 / dispose 前确保持久化落盘，`SessionStore.flush` dispatch `session/flush` 并 await 全部持久化 listener（01 §5 `notifyAndWait`——并发派发 + join，异常不传播只记日志）：
 
 ```java
-public CompletableFuture<Boolean> flush(Session session) {
-    return events.parallel(SessionEvents.FLUSH, session, session)
-        .thenApply(v -> true);
-}
-
-// 用法（dispose 前）
-awaitQuiescence().thenCompose(v -> sessions.flush(session)).join();
+// dispose 前：先静止，再 flush
+handle.dispose = awaitQuiescence()
+    .thenCompose(v -> sessions.flush(scope, session))
+    .thenRun(() -> agentScope.close());
 ```
 
 ## 9. 背压与限流
 
-### LLM 流式背压
+### LLM 流式背压 —— 有界阻塞队列（不是 Flow.Publisher）
 
-`Flow.Publisher<StreamChunk>`（Reactive Streams）天然支持背压。agent loop 的订阅者用 `request(N)` 控制拉取速度：
+LLM seam 的流式接口是**阻塞 `Stream<StreamChunk>`**（05 §LLM）：provider 跑在自己的虚拟线程上，把 chunk 写进有界 `BlockingQueue`；`Stream` 的 next 阻塞读（消费慢 → 队列满 → producer 挂起）。背压由队列容量自然给出，无 Reactive Streams 协议税（onSubscribe/request 合规是前版一整类缺陷的来源）：
 
 ```java
-llm.stream(config, request, signal).subscribe(new Flow.Subscriber<>() {
-    private Flow.Subscription subscription;
-    @Override public void onSubscribe(Flow.Subscription s) {
-        this.subscription = s;
-        s.request(1);  // 一次要一个
-    }
-    @Override public void onNext(StreamChunk chunk) {
-        session.append(toChunkEvent(chunk));  // 写日志
-        subscription.request(1);              // 要下一个
-    }
-    @Override public void onError(Throwable t) { ... }
-    @Override public void onComplete() { ... }
-});
+// Provider 侧（DeepSeek SSE 解析循环，跑在 producer 虚拟线程）
+for (SseEvent e : sse) {
+    signal.checkAbort();
+    queue.put(parseChunk(e));       // 队列满 → 挂起（背压）
+}
+queue.complete();
+
+// Consumer 侧（driver 虚拟线程，04 §7）
+try (Stream<StreamChunk> chunks = llm.stream(callConfig, request, signal)) {
+    chunks.forEach(chunk -> { signal.checkAbort(); session.append(...); });
+}
 ```
+
+为何不用 `Flow.Publisher`：JH 里流的唯一消费者是 agent loop 自己，无 reactive 互操作需求；虚拟线程下"阻塞队列 + 阻塞流"语义相同、代码量减半。将来接 WebFlux 之类，在 seam 上写一个小适配器即可。
 
 ### 工具输出限流（spill）
 
-大输出（如 `ls -la /` 几千行）不应全量塞回模型。spill 机制（移植 dsh `ctx.spillStore`）：
-
-- `tools/post-execute` 监听器检查输出长度，超阈值则 spill 到磁盘，返回定位符 + 检索提示。
-- 模型看到的是 `"Output spilled (5000 lines). First 50 lines: ... Use fs_read with offset to retrieve more."`
+大输出（`ls -la /` 几千行）不全量塞回模型。spill（移植 dsh `ctx.spillStore`）：`tools/post-execute` 监听器检查输出长度，超阈值 spill 到磁盘，返回定位符 + 前 N 行 + 检索提示（`fs_read` with offset 取回）。
 
 ## 10. 与 dsh 并发模型对齐
 
 | dsh | JH | 备注 |
 |---|---|---|
-| Cordis fiber（协程生命周期） | `Fiber`（effect 栈生命周期）| 不绑定执行线程 |
+| Cordis fiber（协程生命周期）| `Scope`（effect 栈 LIFO）| 不绑定执行线程 |
 | async/await | Virtual Thread（同步写法）| 心智模型一致 |
-| `ctx.effect(disposer)` | `Fiber.addCloseable`（LIFO）| teardown 顺序保证 |
+| `ctx.effect(disposer)` | `Scope.effect` / `onClose` | teardown 顺序保证 |
 | AbortSignal.reason | `AbortSignal.controller().cause()` | first-cause-wins |
-| `structuredClone`/Promise.all | `StructuredTaskScope.ShutdownOnFailure` | 结构化并发 |
-| 持久化异步 buffer + flush barrier | 同（session/flush parallel）| 1:1 |
-| LLM 流式 AsyncIterable | `Flow.Publisher<StreamChunk>` | Reactive Streams 标准 |
-| 背压 | `Flow.Subscription.request(N)` | 标准背压 |
+| Promise.all（工具并行）| submit 全部 + join 全部 | 错误即数据，无需 fail-fast |
+| 持久化异步 buffer + flush barrier | 同（session/flush → notifyAndWait）| 1:1 |
+| LLM 流式 AsyncIterable | 阻塞 `Stream<StreamChunk>` + 有界队列 | 背压 = 队列容量 |
 | 取消检查点 | `signal.checkAbort()` | 协作式 |
-| teardown ORDER（composite effect）| LIFO `Deque.pollLast()` | 1:1 |
-| 同进程因果归因（initiator）| `ScopedValue<Agent>`（JEP 506 final）| 不可变，虚拟线程继承 |
+| teardown ORDER（composite effect）| Scope LIFO + 子 scope 级联 entry | 1:1 |
+| 同进程因果归因（initiator）| `ScopedValue<Agent>`（JEP 506 final）| 绑定点规则见 §11 |
 
-## 11. ScopedValue 详解（JEP 506，Java 25 final）
+## 11. ScopedValue 详解（JEP 506，25 final）
 
-`ScopedValue` 是 Java 25 final 的"作用域值"——一个**不可变、有限生命周期、虚拟线程继承**的值容器，专为替代 `ThreadLocal` 在虚拟线程时代的痛点设计。本项目用它传递 agent initiator（[04 §8](04-agent-loop.md)）和 request-context。
+`ScopedValue`：**不可变、有限生命周期、虚拟线程创建时继承**的作用域值。JH 用它传 agent initiator（04 §10）与 request-context。
 
 ### 为什么不用 ThreadLocal
 
 | 维度 | ThreadLocal | ScopedValue |
 |---|---|---|
 | 可变性 | 可变（任意代码 `set()`）| **不可变**（绑定后只读）|
-| 清理 | 必须手动 `remove()`，否则线程池泄漏 | `where(v).run(op)` 退出自动解绑 |
-| 虚拟线程继承 | 默认**不**继承子虚拟线程的值（需 `Thread.Builder.inherit()`）| **自动继承**所有子虚拟线程（含 StructuredTaskScope fork 的）|
-| 开销 | 每 Thread 一个 map，虚拟线程量大时有 GC 压力 | 绑定是栈帧级，几乎零开销 |
-| 生命周期 | 与 Thread 绑定（线程复用 → 值串台）| 与作用域绑定（词法确定）|
+| 清理 | 必须手动 `remove()`，池化线程泄漏 | `where(v).run(op)` 退出自动解绑 |
+| 虚拟线程继承 | 默认不继承 | **创建时**自动继承 |
+| 开销 | 每 Thread 一个 map | 绑定是栈帧级 |
+| 生命周期 | 与 Thread 绑定（复用 → 串台）| 与作用域绑定（词法确定）|
 
-对 agent loop 的关键场景：driver 虚拟线程 fork 出工具执行子虚拟线程，这些子线程要读到 `currentInitiator()` 做日志归因。`ScopedValue` 自动继承，`ThreadLocal` 默认不继承——这是选 ScopedValue 的硬理由。
+### JH 的三条绑定规则（不变式化，04 §10）
 
-### 用法
+1. **绑定点唯一**：`drainLoop` 整段跑在 `withInitiator(this, ...)` 内；agent 生命周期内的一切模型调用、工具执行、事件派发都在绑定内发生。
+2. **继承发生在创建时**：ScopedValue 按线程**创建时刻**快照继承——绑定后 caller 再绑新值，已派生的子虚拟线程看不到。因此**禁止向池化 executor 提交**任务再期望读到 initiator（池化线程的绑定属于创建它的别人）；需要并发就 fork 虚拟线程（工具执行、notify 派发都如此，§2 规则）。要显式传值就当参数传——"显式 > 隐式"。
+3. **不可变**：绑定期内无人能改写 initiator。嵌套绑定（subagent 内层遮蔽外层、退出恢复）用 `where(...).run(...)` 开新作用域表达。
 
 ```java
-// 定义（static final，不可变容器）
-private static final ScopedValue<Agent> INITIATOR = ScopedValue.newInstance();
-
-// 绑定 + 在作用域内执行
-public <T> T withInitiator(Agent a, Supplier<T> op) {
-    return ScopedValue.where(INITIATOR, a).get(op);
-}
-
-// 读取（作用域外或未绑定时 isBound()=false）
-public Agent currentInitiator() {
-    return INITIATOR.isBound() ? INITIATOR.get() : null;
-}
-
-// 嵌套绑定（内层遮蔽外层，退出恢复）
+// 嵌套遮蔽：subagent 场景
 ScopedValue.where(INITIATOR, parentAgent).run(() -> {
-    // INITIATOR.get() == parentAgent
-    ScopedValue.where(INITIATOR, childAgent).run(() -> {
-        // INITIATOR.get() == childAgent（内层遮蔽）
-    });
-    // INITIATOR.get() == parentAgent（恢复）
+    // parent 的工具执行：INITIATOR.get() == parentAgent
+    ScopedValue.where(INITIATOR, childAgent).run(() ->
+        child.followup(task));      // child loop 内读到 childAgent
+    // 恢复 parentAgent
 });
 ```
 
-### 虚拟线程继承的实测语义
+## 12. 不使用 StructuredTaskScope 的决策记录
 
-```java
-ScopedValue.where(INITIATOR, agent).run(() -> {
-    // 当前虚拟线程：INITIATOR.get() == agent ✅
-
-    // fork 子虚拟线程（StructuredTaskScope 或手动）
-    Thread.startVirtualThread(() -> {
-        // 子虚拟线程：INITIATOR.get() == agent ✅（自动继承）
-        log("initiator={}", currentInitiator());
-    }).join();
-
-    // StructuredTaskScope fork 的子任务也继承
-    try (var scope = new StructuredTaskScope.Open()) {
-        scope.fork(() -> {
-            // INITIATOR.get() == agent ✅
-            return null;
-        });
-        scope.join();
-    }
-});
-// 作用域外：INITIATOR.isBound() == false ✅（自动解绑）
-```
-
-### 注意事项
-
-- **不可变意味着不能"更新"**：若需要在一个深调用栈里"修改" initiator（罕见），用 `ScopedValue.where(INITIATOR, newValue).run(inner)` 开新作用域，而非 set。
-- **不跨线程池边界**：提交到 `ExecutorService` 的任务**不**继承 ScopedValue（因为提交时脱离了 `run()` 的词法作用域）。若需在池任务里读 initiator，把它作为**显式参数**传递（这正是 dsh 倡导的"显式 > 隐式"）。本项目 initiator 仅在 agent driver 的虚拟线程树内传递，不跨池。
-- **与 `StructuredTaskScope` 协同最佳**：StructuredTaskScope fork 的子任务在父作用域内，自动继承 ScopedValue。
-
-## 12. StructuredTaskScope 的 preview 风险与 fallback
-
-JEP 505 在 Java 25 仍是第五 preview。若 MVP 不愿引入 `--enable-preview`，工具并行执行可退化为纯 `CompletableFuture`：
-
-```java
-// 不用 StructuredTaskScope 的 fallback（无 preview）
-private CompletableFuture<List<ToolResultEvent>> executeTools(
-        List<ToolCallEvent> calls, AbortSignal signal) {
-    List<CompletableFuture<ToolResultEvent>> futures = calls.stream()
-        .map(call -> CompletableFuture.supplyAsync(() -> {
-            signal.checkAbort();
-            return executeOneTool(call, signal);
-        }, virtualThreadExecutor))
-        .toList();
-
-    // 任一失败时取消其余（手动等价 ShutdownOnFailure）
-    CompletableFuture<Void> all = CompletableFuture.allOf(
-        futures.toArray(CompletableFuture[]::new));
-
-    return all.thenApply(v -> futures.stream()
-            .map(CompletableFuture::join)
-            .toList())
-        .exceptionally(ex -> {
-            futures.forEach(f -> f.cancel(true));  // 取消其余
-            throw new CompletionException(ex);
-        });
-}
-```
-
-**权衡**：fallback 失去了 StructuredTaskScope 的"作用域退出自动 join + 取消传播"的词法保证，需手动 `cancel`。但本项目只在工具并行执行这一处用，复杂度可控。建议 MVP 先用 fallback，待 JEP 505 final（预计 Java 26/27）再切换。
+| 问题 | 答案 |
+|---|---|
+| 为什么 25 不用 | JEP 505 第五 preview；`--enable-preview` 侵入编译/运行/分发全链路 |
+| 为什么语义上不需要 | 工具失败是 error result（数据）不是异常——"任一失败取消其余"反而不是期望语义；join 收敛由顺序结构给出 |
+| 失去了什么 | STS 的线程转储归组与 join 期取消传播的词法保证；当前无消费者 |
+| 何时重新评估 | JEP 505 final（预计 26/27）：`ToolExecutor` 单文件可换 `STS.Open`，语义不变（11 §8 迁移路径） |

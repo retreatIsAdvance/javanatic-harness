@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.deepseek</groupId>
+        <groupId>io.javanatic</groupId>
         <artifactId>harness-bundle-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -14,35 +14,55 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.deepseek</groupId>
-            <artifactId>harness-core</artifactId>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.deepseek</groupId>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-session</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-tools</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-agent-loop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-interaction-approval</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-llm-deepseek</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.deepseek</groupId>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-llm-replay</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.deepseek</groupId>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-fs-local</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.deepseek</groupId>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-fs-tool</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.deepseek</groupId>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-shell-bash-local</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.deepseek</groupId>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-shell-tool</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.deepseek</groupId>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-session-persistence-jsonl</artifactId>
         </dependency>    </dependencies>
 </project>

@@ -8,7 +8,7 @@
 |---|---|
 | Java 25 能否用？ | **能**。2025-09-16 GA，5 年 LTS（支持到 2030+）|
 | 相比 21 的硬收益 | **`ScopedValue` final（JEP 506）** —— initiator 传递从 ThreadLocal 的"能用但有继承陷阱"升级为"不可变 + 虚拟线程自动继承" |
-| 有没有 preview 风险 | 有：`StructuredTaskScope`（JEP 505）在 25 仍是第五 preview。本项目**隔离使用**并提供 CompletableFuture fallback，MVP 可选不碰 preview |
+| 有没有 preview 风险 | **没有**。`StructuredTaskScope`（JEP 505）在 25 仍是第五 preview，本项目**生产与测试都不用**：工具并行 = 虚拟线程 submit all + join all（错误即数据，[09 §5](09-concurrency.md)），无 `--enable-preview` |
 | 是否影响 JPMS/Maven/库生态 | 不影响。JPMS 自 9 稳定；Jackson/SnakeYAML/JUnit 5 均支持 Java 25；Maven compiler 3.13+ 支持 `release 25` |
 
 ## 2. 依赖的 JEP 与状态
@@ -24,14 +24,14 @@
 | **506** | **Scoped Values** | **Final（25 新转 final）** | agent initiator 传递（[04 §8](04-agent-loop.md)）| **首选**（21 下退化为 ThreadLocal）|
 | **511** | **Module Import Declarations** | **Final（25 新转 final）** | 跨模块消费者降噪（[08 §11](08-type-discipline.md)）| 可选（锦上添花）|
 | **513** | **Flexible Constructor Bodies** | **Final（25 新转 final）** | record 构造器前置校验（[08 §10](08-type-discipline.md)）| 可选（更自然，非必需）|
-| 505 | Structured Concurrency | **第五 Preview** | 工具并行执行（[09 §5](09-concurrency.md)）| 可选（有 fallback）|
+| 505 | Structured Concurrency | **第五 Preview** | MVP 不用；[09 §5](09-concurrency.md) 的 join-all 已覆盖需求 | 不依赖 |
 | 507 | Primitive Patterns | Preview | — | 不用 |
 | 491 | Synchronize Virtual Threads w/o Pinning | Final（自 24） | `synchronized` 下虚拟线程不再 pin | 被动受益（无需改代码）|
 | 480/485 | Stream Gatherers | Final（自 23） | 可选用于 surface fold | 不依赖 |
 
 **关键边界**：
 - **生产代码只依赖 Final 特性**：444/441/409/395（自 ≤21 已 final）+ 506/511/513（25 新 final）。
-- **Preview 特性（505）隔离使用**：仅 `ToolExecutor` 一个类用 `StructuredTaskScope`，需 `--enable-preview`。MVP 可完全跳过，用 [09 §12](09-concurrency.md) 的 CompletableFuture fallback。
+- **Preview 特性（505）不使用**：工具并行 = submit all + join all（[09 §5](09-concurrency.md)），错误即数据。整仓库无 `--enable-preview`，构建配置因此更简单。505 final 后再评估（§5、§8）。
 
 ## 3. 为什么 ScopedValue（JEP 506）是首要理由
 
@@ -84,27 +84,24 @@ private static final InheritableThreadLocal<Agent> INITIATOR = new InheritableTh
 
 这两个单独不值升级，但叠加 506 后收益凑齐：
 
-- **JEP 511**：`import module io.deepseek.harness.kernel;` 一行替代 30+ 包级 import。本项目 agent-loop 跨 kernel/session/tools/llm 四模块，降噪明显。纪律：尊重 JPMS `exports`，不破坏隔离（[08 §11](08-type-discipline.md)）。
+- **JEP 511**：`import module io.javanatic.harness.kernel;` 一行替代 30+ 包级 import。本项目 agent-loop 跨 kernel/session/tools/llm 四模块，降噪明显。纪律：尊重 JPMS `exports`，不破坏隔离（[08 §11](08-type-discipline.md)）。
 - **JEP 513**：record 构造器可在字段赋值前执行校验语句。本项目的值对象（ShellRequest、ConfigRow 等）大量做 fail-loud-at-construction 校验，此前要绕弯或用静态工厂，现在自然前置（[08 §10](08-type-discipline.md)）。**不依赖它也能工作**，只是代码更顺。
 
-## 5. StructuredTaskScope（JEP 505）的 preview 风险管理
+## 5. StructuredTaskScope（JEP 505）：MVP 不用的决策记录
 
-JEP 505 在 Java 25 仍是**第五次 preview**（API 形状趋稳，但尚未 final）。本项目策略：
+JEP 505 在 Java 25 仍是**第五次 preview**（API 形状趋稳，但尚未 final）。决策：**不使用**。
 
-### 隔离使用
-- 仅 `ToolExecutor.executeTools(...)` 一个方法用 `StructuredTaskScope.ShutdownOnFailure`（并行执行工具调用）。
-- 该文件单独标注 `--enable-preview`，Maven 配置见 [02 §5](02-module-layout.md)。
+### 现行方案（09 §5）：错误即数据，join 即收敛
 
-### 提供 fallback
-- 若 MVP 不愿引入 `--enable-preview`，用 `CompletableFuture.allOf` + 手动 cancel 实现等价语义（[09 §12](09-concurrency.md) 的完整代码）。
-- fallback 失去了"作用域退出自动 join + 取消传播"的词法保证，但本项目只在工具并行这一处用，复杂度可控。
+`ToolExecutor` 对一批 toolCall：逐个 `executor.submit`（虚拟线程）→ join 全部。工具异常**不传播**，而是落成 error `ToolResultEvent`（R2 审计要求：每个调用的结局都要有账）；只有 `AbortedException`（取消）穿透 join 上抛。无 preview、无 cancel 编排，收敛语义由 join 一处给出。
 
-### 迁移路径
-- JEP 505 预计在 Java 26 或 27 转 final。届时：
-  1. 移除该文件的 `--enable-preview` 标注。
-  2. 若 API 有微调（preview 期间可能改名/调签名），更新 `ToolExecutor` 单文件。
-  3. 删除 fallback 分支（或保留为测试用）。
-- 因为隔离在单类，迁移面收敛。
+### STS 会多给什么
+
+`ShutdownOnFailure` 的 fail-fast（首个失败取消兄弟任务）+ 词法作用域 join + 取消传播。但 fail-fast 与审计语义**冲突**：兄弟任务被取消后，它们的 `ToolResultEvent` 缺失，模型与日志都看不到"这一批里还有谁没跑完"。当前语义（全部跑完、失败记为数据）对 agent loop 更正确。
+
+### 何时重新评估
+
+JEP 505 final（预计 26/27）后：若需要"取消传播进工具实现"（目前经 `AbortSignal` 已有），再评估替换；替换面收敛在 `ToolExecutor` 单方法（[09 §12](09-concurrency.md) 决策记录）。
 
 ## 6. 生态兼容性核对
 
@@ -133,7 +130,7 @@ JEP 505 在 Java 25 仍是**第五次 preview**（API 形状趋稳，但尚未 f
 | ScopedValue（506）| `InheritableThreadLocal` + 手动继承 | 子虚拟线程继承需手工，易泄漏 |
 | import module（511）| 罗列包级 import | 冗长，无功能损失 |
 | Flexible Constructor Bodies（513）| 紧凑构造器内校验（部分场景用静态工厂）| 校验不能完全前置，可读性略降 |
-| StructuredTaskScope（505）| CompletableFuture fallback（09 §12）| 无词法作用域保证 |
+| StructuredTaskScope（505）| 无影响（本就未使用）| — |
 | synchronized 虚拟线程优化（491）| 21 下 synchronized 会 pin 虚拟线程 | 高并发 IO 场景吞吐降低；本项目用 `ReentrantLock` 规避 |
 
 降级步骤：
@@ -141,11 +138,10 @@ JEP 505 在 Java 25 仍是**第五次 preview**（API 形状趋稳，但尚未 f
 2. `04-agent-loop.md` 的 `ScopedValue<Agent>` 换回 `InheritableThreadLocal<Agent>`（注意 fork 子虚拟线程的手动传递）。
 3. Session.append 的 `synchronized` 评估是否换 `ReentrantLock`（避免 pinning）。
 4. 移除所有 `import module` 声明，展开为包级 import。
-5. `ToolExecutor` 用 [09 §12](09-concurrency.md) fallback。
 
 ## 8. 前瞻：Java 26/27 预期
 
-- **JEP 505 StructuredTaskScope 转 final**：届时移除 `--enable-preview`，`ToolExecutor` 单文件迁移。
+- **JEP 505 StructuredTaskScope 转 final**：届时评估把 join-all 换成 STS——收益是词法 join 与取消传播，但 fail-fast 与"每个调用都落账"的审计语义冲突，需要连同 R2 一起重新论证（§5、[09 §12](09-concurrency.md)）。
 - **JEP 507 Primitive Patterns**：若 final，可考虑给 `SessionEvent` 的 seq/time（long）加 primitive pattern 优化，非必需。
 - **AOT 编译（Graal）**：若 `jlink` + Graal native image 成熟，headless runner 可产出原生可执行文件，启动毫秒级。本项目 JPMS 结构天然适配 native image（无复杂反射）。
 

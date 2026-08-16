@@ -1,184 +1,229 @@
-# 01 · Kernel — Context / Fiber / Events
+# 01 · Kernel — Scope / Events / Plugin
 
-Kernel 是 Cordis 的 JVM 等价物。它提供四个原语：
+Kernel 是 Cordis 思想的 JVM 等价物——**思想照搬，形状不照搬**。它提供三个原语：
 
-1. **`Context`** —— 服务仓库 + 事件总线 + 生命周期挂载点。
-2. **`Fiber`** —— 一个生命周期容器（Cordis fiber 的等价物），持有 effect 栈、inject 依赖、scope key。
-3. **`Events`** —— 五种 dispatch 模式（emit / waterfall / parallel / serial / bail）。
-4. **`Scope`** —— effect 栈与 closeable 回收。
+1. **`Scope`** —— 唯一的生命周期 + 可见性容器：LIFO effect 栈、服务 overlay、事件订阅归属、父子级联。
+2. **`Events`** —— 两种 dispatch 模式（notify / waterfall），其余派发形态是这两种之上的工具方法。
+3. **`Plugin`** —— 带稳定 id 的挂载单元，`apply(Scope)` 里的一切注册都是可回收的 effect。
 
-目标行数：**整个 kernel < 1500 行 Java**（不含测试）。
+目标行数：**整个 kernel < 1200 行 Java**（不含测试）。
 
----
+## 0. 与 Cordis 形状的三处刻意偏离
 
-## 1. ServiceKey — 类型品牌的服务标识
+Cordis 的 `fiber` / `scope` / `context` 三套概念是 TS 生态的历史产物。JH 不复制这个形状：
 
-dsh 用 `symbol` 做 service key，靠 `ReflectService.store` 的 symbol→impl 映射隔离。JH 用泛型 phantom type：
+| Cordis 形状 | JH 形状 | 理由 |
+|---|---|---|
+| Fiber（生命周期）+ ScopeKey（可见性标签）+ Context（facade）三套概念 | 一个 `Scope` 同时是生命周期容器和可见性边界 | 三个概念在 Cordis 里本就纠缠；Java 的 try-with-resources + 级联 close 让一个对象足够。概念减半，语义不丢：per-agent 隔离 = 子 scope overlay |
+| 五种 dispatch（emit/waterfall/parallel/serial/bail）| 两种模式（NOTIFY / WATERFALL）+ 工具方法 | serial = 顺序 notify；parallel = 并发 notify + join；bail = waterfall 且 listener 可短路。模式进类型、形态进工具，消灭"mode × 方法配对"整类错误 |
+| fiber 缓存父链服务 + provider 下线时全树 evict | 每次访问沿 scope 链重新解析 | 一次 map 查找的成本，换来**吊销后不可能拿到僵尸引用**（不变式 R3 结构性成立），整个缓存失效机器删除 |
+
+另有两处收缩：`ServiceKey` 无 `isolate` 字段（隔离由子 scope 承担，两套隔离机制留一套）；不做运行时热重载（静态组合，缺失依赖 fail loud）。
+
+## 1. 模块定位：单一 JPMS 模块
+
+kernel 同属一个 JPMS 模块 `io.javanatic.harness.kernel`（Maven `harness-kernel-core`），三个导出包：
+
+```
+kernel/core/
+  └── io.javanatic.harness.kernel.scope    (Scope, Runtime, ServiceKey, Subscription)
+      io.javanatic.harness.kernel.events   (Events, EventKey, 监听器接口, WaterfallArgs, Next)
+      io.javanatic.harness.kernel.plugin   (Plugin, PluginLoader)
+```
+
+**为什么不再按概念拆模块**：`Scope` 的方法签名同时引用 Events（订阅）与 Plugin（加载）——按概念拆模块必然成环，JPMS 禁止模块互 `requires`。一个模块 + 多个导出包保留包级组织与 `exports` 边界（内部实现放非导出包）。`kernel.brand`（`Id<T>`）与 `kernel.config`（`ConfigService`）因零依赖独立成模块。
+
+JPMS 根名统一为 `io.javanatic.harness.*`（全仓库约定，见 [02](02-module-layout.md)）。
+
+## 2. ServiceKey — 类型品牌的服务标识
 
 ```java
-// io.dsh.kernel.context.ServiceKey
-package io.dsh.kernel.context;
-
+// io.javanatic.harness.kernel.scope.ServiceKey
 /**
- * 类型品牌的服务标识。结构上是 name + isolate，类型上是 T 的载体。
- * 泛型 T 仅供编译器在 {@link Context#provide} / {@link Context#get} 处做类型检查，
- * 运行时不参与 equals/hashCode（erasure）。
+ * 类型品牌的服务标识。结构上只有 name，类型上是 T 的载体。
+ * 泛型 T 仅供编译器在 provide / resolve 处做类型检查，运行时不参与 equals（erasure）。
  *
- * @param name    服务名（全局唯一，等价 cordis 的 string key）
- * @param isolate 隔离标签；同 name 不同 isolate 是独立服务（等价 cordis isolate label）
+ * key 是共享常量：由 seam 的 Definition 模块持有唯一 public static final 实例，
+ * Provider 与 Consumer 都 import 该常量，不各自 new。name 拼写错误的出错面
+ * 因此收敛到 Definition 一处。
  */
-public record ServiceKey<T>(String name, String isolate) {
-
-    /** 默认 isolate 为 "main"。 */
-    public ServiceKey(String name) {
-        this(name, "main");
-    }
-
+public record ServiceKey<T>(String name) {
     @Override
-    public String toString() {
-        return isolate.equals("main") ? name : name + "@" + isolate;
-    }
+    public String toString() { return name; }
 }
 ```
 
-**为什么不用 `Class<T>` 做 key？**
-dsh 的 `ctx.tools` 之类服务是**一个 Service 接口的多个实现共存**（tool registry 有多个 provider 注册器）。用 `Class<T>` 会把 key 和类型绑死，无法表达"同接口、不同 isolate"的隔离。`ServiceKey<T>` 解耦 name 和类型，由 `provide` 的调用方保证 `T` 与 impl 匹配。
+**为什么不用 `Class<T>` 做 key**：一个 Service 接口常有多个实现方共存注册（tool registry 的多个注册器），`Class<T>` 把 key 和类型绑死。`ServiceKey<T>` 解耦 name 与类型，由 `provide` 调用方保证 `T` 与 impl 匹配。
 
-**isolate 的用途**：Preset 组合中，一个 agent scope 内挂载的服务对其他 agent 不可见（等价 dsh 的 `isolate` realm）。通过 `ServiceKey("fs", "agent-42")` 实现隔离命名空间。
+**为什么没有 isolate**：Cordis 用 isolate label 做 per-realm 命名隔离。JH 的子 scope overlay 已经表达"一个 agent 挂载的服务对其他 agent 不可见"（子 scope 注册的服务只在子树内可解析）。两套隔离机制留一套，留 scope 这套——它同时管生命周期。
 
----
-
-## 2. Context — 服务仓库 + 事件总线
+## 3. Scope — 生命周期 + 可见性容器
 
 ```java
-// io.dsh.kernel.context.Context
-package io.dsh.kernel.context;
+// io.javanatic.harness.kernel.scope.Scope
+package io.javanatic.harness.kernel.scope;
 
-import java.util.concurrent.ConcurrentHashMap;
+import io.javanatic.harness.kernel.events.*;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
-public final class Context {
-
-    private final ServiceRegistry services;
-    private final Events events;
-    private final Fiber fiber;      // 拥有此 Context 的 fiber
-    private final ScopeKey scopeKey; // 此 Context 所属 scope（可 null = 全局）
-
-    Context(Fiber fiber, ScopeKey scopeKey) {
-        this.fiber = fiber;
-        this.scopeKey = scopeKey;
-        this.services = fiber.runtime().registry();
-        this.events = fiber.runtime().events();
-    }
+/**
+ * 唯一的生命周期 + 可见性容器。
+ *
+ * 生命周期：effect 栈按 LIFO 回收（后注册先回收），close 级联子 scope。
+ * 可见性：服务沿父链向上解析；本 scope 注册的同名服务覆盖（shadow）父级。
+ * 事件：scope.events() 返回绑定本 scope 的订阅视图，订阅随 scope 回收。
+ *
+ * 插件在自己的 scope（通常是 Runtime 为它建的子 scope）上注册一切；
+ * 不持有全局静态状态是插件的义务（见 §8 R3）。
+ */
+public interface Scope extends AutoCloseable {
 
     // ────────── 服务 ──────────
 
     /**
-     * 注册服务。返回 Subscription，close 即注销（走 fiber effect 栈，按序回收）。
-     * 重复注册同 key 抛 IllegalStateException（fail loud）。
+     * 注册服务到本 scope。本 scope 内重复注册同 key 抛 IllegalStateException；
+     * 子 scope 注册同 key 覆盖父级（overlay/shadow，preset 组合用它）。
+     * 注册即 effect：返回的 Subscription close 即注销；
+     * 调用方不 close 时，scope close 按 LIFO 兜底回收。
      */
-    public <T> Subscription provide(ServiceKey<T> key, T impl) {
-        return fiber.addEffect(() -> services.register(key, impl, fiber));
-    }
+    <T> Subscription provide(ServiceKey<T> key, T impl);
 
-    /**
-     * 查找服务。沿 fiber 父链向上查找，直到第一个提供者。
-     * @throws ServiceNotAvailableException 当声明了 require 但尚未提供。
-     */
-    public <T> T get(ServiceKey<T> key) {
-        return fiber.resolve(key)
-            .orElseThrow(() -> new ServiceNotAvailableException(key));
-    }
+    /** 沿父链向上查找服务；本 scope 起查。 */
+    <T> Optional<T> resolve(ServiceKey<T> key);
 
-    /** 软查找，返回 Optional。 */
-    public <T> Optional<T> getIfPresent(ServiceKey<T> key) {
-        return fiber.resolve(key);
-    }
-
-    // ────────── 事件 ──────────
-
-    public Subscription on(EventKey<?> key, EventListener listener) {
-        return events.subscribe(key, listener, scopeKey, /*global*/ false);
-    }
-
-    /** 全局监听（忽略 scope filter）。 */
-    public Subscription onGlobal(EventKey<?> key, EventListener listener) {
-        return events.subscribe(key, listener, /*scopeKey*/ null, /*global*/ true);
-    }
-
-    public void emit(EventKey<?> key, Object carrier, Object payload) {
-        events.emit(key, carrier, payload);
-    }
-
-    public <T> CompletableFuture<T> waterfall(
-            EventKey<T> key, Object carrier, List<Object> args, Next<T> inner) {
-        return events.waterfall(key, carrier, args, inner);
-    }
-
-    public CompletableFuture<Void> parallel(EventKey<?> key, Object carrier, Object payload) {
-        return events.parallel(key, carrier, payload);
-    }
-
-    public <T> CompletableFuture<T> serial(EventKey<T> key, Object carrier, Object payload) {
-        return events.serial(key, carrier, payload);
-    }
+    /** resolve 的 fail-loud 版：沿链无提供者时抛 ServiceNotAvailableException。 */
+    <T> T require(ServiceKey<T> key);
 
     // ────────── 生命周期 ──────────
 
-    public Fiber fiber() { return fiber; }
-    public ScopeKey scopeKey() { return scopeKey; }
+    /**
+     * 注册一个 effect：register() 执行注册副作用并返回回收器，回收器入栈。
+     * register 抛异常则注册失败、无回收器入栈（原子性）。
+     */
+    Subscription effect(Effect effect);
 
-    /** 在本 fiber 上注册一个 closeable，返回的 Subscription 可提前回收。 */
-    public Subscription addCloseable(AutoCloseable c) {
-        return fiber.addCloseable(c);
+    /** 纯 teardown 挂载（无注册副作用）。等价于 effect(() -> c)。 */
+    Subscription onClose(AutoCloseable c);
+
+    /** 派生子 scope：新的生命周期域 + 服务 overlay 层。父 close 级联子。 */
+    Scope child();
+
+    /** 本 scope 在父链中的位置（root 返回自身）。事件冒泡与 overlay 以此为据。 */
+    Scope parent();
+
+    /** 绑定本 scope 的事件订阅视图（订阅随 scope 回收，见 §5）。 */
+    ScopedEvents events();
+
+    /** LIFO 回收本 scope 全部 effect，并级联所有子 scope。幂等。 */
+    @Override
+    void close();
+
+    boolean isClosed();
+}
+
+/** 注册副作用与回收器的分离：register 的返回值才是 effect 栈持有并回收的东西。 */
+@FunctionalInterface
+public interface Effect {
+    AutoCloseable register() throws Exception;
+}
+```
+
+```java
+// io.javanatic.harness.kernel.scope.ScopeImpl —— 实现要点
+final class ScopeImpl implements Scope {
+
+    private final ScopeImpl parent;                 // null = root
+    private final Runtime runtime;                  // 共享的 events bus + executor
+    private final ConcurrentHashMap<ServiceKey<?>, Object> services = new ConcurrentHashMap<>();
+    private final ConcurrentLinkedDeque<AutoCloseable> effectStack = new ConcurrentLinkedDeque<>();
+    private final Set<ScopeImpl> children = ConcurrentHashMap.newKeySet();
+    private final AtomicReference<Status> status = new AtomicReference<>(Status.ACTIVE);
+    private volatile ScopedEvents eventsView;       // 惰性创建
+
+    enum Status { ACTIVE, CLOSED }
+
+    // 解析：每次访问沿链重查——不缓存。
+    // 这不是性能妥协，是 R3 的结构性保证：provider scope close 即注销，
+    // 任何后续 resolve 都查不到，僵尸引用在结构上不存在。
+    @SuppressWarnings("unchecked")
+    public <T> Optional<T> resolve(ServiceKey<T> key) {
+        ScopeImpl cursor = this;
+        while (cursor != null) {
+            Object impl = cursor.services.get(key);
+            if (impl != null) return Optional.of((T) impl);
+            cursor = cursor.parent;
+        }
+        return Optional.empty();
     }
 
-    /** 派生一个 child fiber（新的生命周期域）。 */
-    public Context child() {
-        Fiber child = fiber.spawnChild();
-        return child.context();
+    public <T> Subscription provide(ServiceKey<T> key, T impl) {
+        ensureActive();
+        Object prev = services.putIfAbsent(key, impl);
+        if (prev != null) {
+            throw new IllegalStateException("Service " + key + " already registered in this scope");
+        }
+        return effect(() -> () -> services.remove(key, impl));
     }
 
-    /** 创建一个 scoped context（绑定 scopeKey，事件走 filter）。 */
-    public Context withScope(ScopeKey key) {
-        Fiber scoped = fiber.spawnChild();
-        scoped.setScope(key);
-        return scoped.context();
+    public Scope child() {
+        ensureActive();
+        ScopeImpl child = new ScopeImpl(this, runtime);
+        children.add(child);
+        effectStack.push((AutoCloseable) child::close);   // 父 close 级联子
+        return child;
+    }
+
+    // close：先本 scope effect 逆序回收，再级联子 scope（子先于父的 effect 回收
+    // 之外的部分；级联本身也是栈上一个 effect，天然排在子 scope 创建之后注册，
+    // LIFO 保证子 scope 先于父级更早的 effect 回收——session 先于 agent 的
+    // teardown 顺序由此成立，详见 09 §teardown）。
+    @Override
+    public void close() {
+        if (!status.compareAndSet(Status.ACTIVE, Status.CLOSED)) return;
+        AutoCloseable c;
+        while ((c = effectStack.pollLast()) != null) {
+            try {
+                c.close();
+            } catch (Exception e) {
+                // 一个 effect 失败不阻断其余回收；kernel 日志记录
+                runtime.logDisposeError(this, e);
+            }
+        }
     }
 }
 ```
 
-**关键设计决策**：
+**关键设计点**：
 
-- **`provide` 返回 `Subscription`（`AutoCloseable`）**，而不是 dsh 的"返回 disposer 由 fiber effect 栈持有"。这是因为 Java 习惯显式回收（try-with-resources），但**同时**也挂到 fiber effect 栈兜底（fiber unload 时即使 subscription 没 close 也会回收）。这给了消费者两种选择：精确控制（自己 close）或托管（让 fiber 回收）。
+1. **LIFO effect 栈**：后注册先回收。子 scope 的级联 close 是父栈上的一个 entry，位于其后注册的所有 effect 之前回收——"插件 A 依赖插件 B，则 B 先于 A 卸载"由加载顺序 + LIFO 自动给出。
+2. **close 幂等且防并发双 drain**：CAS 状态位保证至多一次完整回收；`Subscription.close()` 与 `Scope.close()` 竞争同一条目时，栈的原子摘除保证回收器至多执行一次。
+3. **子 scope 可单独 close**：这既是 preset/agent 的隔离原语，也是插件加载失败时的**回滚原语**（见 §7 R3）。
 
-- **`get` 沿 fiber 父链向上查找**（见 §4 Fiber），实现 dsh 的 "provider 可见性 = 父链上有该服务"。
-
----
-
-## 3. Subscription — 可撤销的注册
+## 4. Subscription — 可撤销的注册
 
 ```java
-// io.dsh.kernel.context.Subscription
-package io.dsh.kernel.context;
-
-import java.util.concurrent.atomic.AtomicBoolean;
-
+// io.javanatic.harness.kernel.scope.Subscription
 /**
  * 一次注册的回收句柄。幂等：多次 close 只有第一次生效。
- * 由 fiber 的 effect 栈兜底：即使调用方忘了 close，fiber unload 时也会回收。
+ * close 先从 scope effect 栈摘除，再执行回收器——顺序保证即使回收器抛异常，
+ * 该条目也不会被 scope close 二次回收。
  */
 public final class Subscription implements AutoCloseable {
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AutoCloseable disposer;
+    private final Runnable removeFromStack;
 
-    Subscription(AutoCloseable disposer) {
+    Subscription(AutoCloseable disposer, Runnable removeFromStack) {
         this.disposer = disposer;
+        this.removeFromStack = removeFromStack;
     }
 
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
+            removeFromStack.run();
             try {
                 disposer.close();
             } catch (Exception e) {
@@ -191,588 +236,387 @@ public final class Subscription implements AutoCloseable {
 }
 ```
 
----
+## 5. Events — 两种模式 + 工具方法
 
-## 4. Fiber — 生命周期容器
-
-Cordis 的 fiber 是一个 plugin 实例的运行时载体：持有 effect 栈、inject 依赖、scope key，unload 时按逆序回收所有 effect。JH 的 Fiber 直接对应：
+### 监听器接口
 
 ```java
-// io.dsh.kernel.fiber.Fiber
-package io.dsh.kernel.fiber;
+// io.javanatic.harness.kernel.events —— 监听器接口族
+package io.javanatic.harness.kernel.events;
 
-public final class Fiber {
-
-    private final Fiber parent;           // null = root
-    private final FiberRuntime runtime;   // 共享的 registry/events
-    private final Deque<AutoCloseable> effectStack = new ConcurrentLinkedDeque<>();
-    private final Set<ServiceKey<?>> required = ConcurrentHashMap.newKeySet();
-    private final Map<ServiceKey<?>, Object> cachedServices = new ConcurrentHashMap<>();
-
-    private volatile ScopeKey scopeKey;
-    private volatile Context cachedContext;
-    private volatile Status status = Status.ACTIVE; // ACTIVE | DISPOSING | DISPOSED
-
-    enum Status { ACTIVE, DISPOSING, DISPOSED }
-
-    // ────────── 服务解析（沿父链向上）──────────
-
-    @SuppressWarnings("unchecked")
-    <T> Optional<T> resolve(ServiceKey<T> key) {
-        // 自己缓存命中
-        Object cached = cachedServices.get(key);
-        if (cached != null) return Optional.of((T) cached);
-
-        // 沿父链查找
-        Fiber cursor = this;
-        while (cursor != null) {
-            Optional<Object> impl = cursor.runtime.registry().get(key, cursor);
-            if (impl.isPresent()) {
-                // 缓存到自己（观察者：provider 下线时需失效缓存 —— 见 §6）
-                cachedServices.put(key, impl.get());
-                return Optional.of((T) impl.get());
-            }
-            cursor = cursor.parent;
-        }
-        return Optional.empty();
-    }
-
-    // ────────── effect 栈（逆序回收）──────────
-
-    /**
-     * 注册一个 effect。返回的 Subscription close 时执行 disposer；
-     * 若调用方未 close，fiber dispose 时按 LIFO 顺序回收。
-     */
-    Subscription addEffect(AutoCloseable registerAction) {
-        ensureActive();
-        try {
-            registerAction.close(); // registerAction 的 "close" 其实是执行注册副作用
-            // 上面执行注册，下面拿到 disposer 放进栈
-            // （实际实现：registerAction 返回 disposer，这里简化为直接 close 语义）
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return new Subscription(() -> effectStack.remove(registerAction));
-    }
-
-    /**
-     * 添加一个纯 closeable（无注册副作用，只是 teardown 时要回收）。
-     */
-    Subscription addCloseable(AutoCloseable c) {
-        ensureActive();
-        effectStack.push(c);
-        return new Subscription(() -> effectStack.remove(c));
-    }
-
-    // ────────── 派生 ──────────
-
-    Fiber spawnChild() {
-        ensureActive();
-        Fiber child = new Fiber(this, runtime);
-        runtime.track(child);
-        // 父 dispose 时连带子（结构化并发语义）
-        addCloseable(child::dispose);
-        return child;
-    }
-
-    // ────────── dispose（LIFO 逆序回收）──────────
-
-    CompletableFuture<Void> dispose() {
-        if (status != Status.ACTIVE) return CompletableFuture.completedFuture(null);
-        status = Status.DISPOSING;
-
-        return CompletableFuture.runAsync(() -> {
-            // 1. 先 dispose 所有 child fiber（已由 addCloseable 保证，但显式再 drain）
-            // 2. LIFO 回收 effect 栈
-            AutoCloseable c;
-            while ((c = effectStack.pollLast()) != null) {
-                try {
-                    c.close();
-                } catch (Exception e) {
-                    runtime.events().emit(InternalEvents.DISPOSE_ERROR, null, e);
-                    // 一个 effect 失败不阻断其余回收
-                }
-            }
-            // 3. 从 registry 注销本 fiber 提供的所有服务
-            runtime.registry().revokeAll(this);
-            status = Status.DISPOSED;
-        }, runtime.virtualThreadExecutor());
-    }
-
-    // ────────── scope ──────────
-
-    void setScope(ScopeKey key) {
-        if (this.scopeKey != null) {
-            throw new IllegalStateException("Fiber scope already set: " + scopeKey);
-        }
-        this.scopeKey = key;
-        this.cachedContext = null; // 失效缓存让 context() 重建
-    }
-
-    Context context() {
-        if (cachedContext == null) {
-            cachedContext = new Context(this, scopeKey);
-        }
-        return cachedContext;
-    }
-
-    public Context ctx() { return context(); }
-    public Status status() { return status; }
-
-    private void ensureActive() {
-        if (status != Status.ACTIVE) {
-            throw new IllegalStateException("Fiber not active: " + status);
-        }
-    }
+/** NOTIFY 监听器。handle 允许阻塞（派发在虚拟线程上），返回即完成。 */
+@FunctionalInterface
+public interface EventListener<T> {
+    void handle(Object carrier, T payload) throws Exception;
 }
+
+/** WATERFALL 监听器：包一层 WaterfallArgs（args + next），返回值沿链上传。 */
+@FunctionalInterface
+public interface WaterfallListener<T> {
+    T handle(Object carrier, WaterfallArgs<T> args) throws Exception;
+}
+
+/** waterfall 的 next：委托给链上的下一个 listener。 */
+@FunctionalInterface
+public interface Next<T> {
+    T invoke() throws Exception;
+}
+
+/** waterfall 参数包：args 可被 listener 改写后随 next 下传（不可变，改写即换新实例）。 */
+public record WaterfallArgs<T>(List<Object> args, Next<T> next) {}
 ```
 
-**关键设计点**：
-
-1. **LIFO effect 栈**：dsh 的 `ctx.effect()` 保证 disposer 逆序执行（后注册先回收），这对 agent lifecycle 至关重要（session 必须在 agent 之后回收）。JH 用 `Deque<AutoCloseable>` + `pollLast()` 实现。
-
-2. **`spawnChild` 自动级联回收**：child fiber 的 dispose 被挂到 parent 的 effect 栈。等价 dsh 的 "fiber unload 连带 unload 子 fiber"。
-
-3. **dispose 跑在虚拟线程 executor 上**：让回收可以 await（teardown 里可能要 flush 持久化），同时不阻塞调用方。
-
----
-
-## 5. ServiceRegistry — 服务存储与可见性
+### EventKey — 事件名 + 类型 token + 模式
 
 ```java
-// io.dsh.kernel.context.ServiceRegistry
-package io.dsh.kernel.context;
+// io.javanatic.harness.kernel.events.EventKey
+public record EventKey<T>(String name, Class<T> type, Mode mode) {
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+    /** 只有两种模式；serial/parallel/bail 形态由 Events 的工具方法表达。 */
+    public enum Mode { NOTIFY, WATERFALL }
 
-/**
- * 服务存储。key = ServiceKey（name + isolate），value = Impl。
- * Impl 记录提供者 fiber，用于 revokeAll(fiber) 时批量回收。
- */
-public final class ServiceRegistry {
+    public static <T> EventKey<T> notify(String name, Class<T> type) {
+        return new EventKey<>(name, type, Mode.NOTIFY);
+    }
+    public static <T> EventKey<T> waterfall(String name, Class<T> type) {
+        return new EventKey<>(name, type, Mode.WATERFALL);
+    }
 
-    private final ConcurrentHashMap<ServiceKey<?>, Impl<?>> store = new ConcurrentHashMap<>();
-
-    record Impl<T>(T value, Fiber provider) {}
-
-    /**
-     * 注册。重复 key fail loud。
-     * 返回的 disposer 从 store 删除该 key（幂等）。
-     */
-    <T> AutoCloseable register(ServiceKey<T> key, T value, Fiber provider) {
-        Impl<?> existing = store.putIfAbsent(key, new Impl<>(value, provider));
-        if (existing != null) {
+    /** 模式契约校验：订阅/派发方法与 key 绑定的 mode 不符时 fail loud。 */
+    void requireMode(Mode expected) {
+        if (mode != expected) {
             throw new IllegalStateException(
-                "Service " + key + " already registered by " + existing.provider);
+                "Event " + name + " is " + mode + ", expected " + expected);
         }
-        return () -> store.remove(key, new Impl<>(value, provider));
-    }
-
-    @SuppressWarnings("unchecked")
-    <T> Optional<T> get(ServiceKey<T> key, Fiber forFiber) {
-        Impl<?> impl = store.get(key);
-        if (impl == null) return Optional.empty();
-        // 可见性检查：默认所有 fiber 可见父链上的服务
-        // isolate 隔离：不同 isolate 的服务仅对同 isolate 的 fiber 可见
-        // （JH 简化：isolate 相同即可见，跨 isolate 抛 SecurityException）
-        return Optional.of((T) impl.value());
-    }
-
-    /** 某个 fiber unload 时，注销它提供的所有服务。 */
-    void revokeAll(Fiber provider) {
-        store.entrySet().removeIf(e -> e.getValue().provider() == provider);
-    }
-
-    /** 枚举所有已注册 key（用于 dump-config / 调试）。 */
-    public Set<ServiceKey<?>> keys() {
-        return Collections.unmodifiableSet(store.keySet());
     }
 }
 ```
 
-**简化决策（相对 Cordis）**：
-
-- **不做响应式 reload**。Cordis 的 provider 上/下线会触发依赖方 fiber 自动 reload/unload。这个机制非常复杂（epoch 比较、_refresh、_unload 协程），且 JVM 生态里 `ServiceLoader` + 手动启动的场景更常见。JH 选择**静态组合**：所有 plugin 在启动时按依赖顺序加载，不支持的依赖 fail loud。
-
-  > 未来如果需要热重载，可以在 ServiceRegistry 上加一个 `Flow.Publisher<ServiceChangeEvent>`，让 Fiber 订阅后重新 resolve。但 MVP 不做。
-
-- **isolate 仅做命名隔离**，不做运行时权限校验（Cordis 的 `Context.filter` 也只是事件过滤，不是安全边界）。真正的安全边界在 sandbox seam。
-
----
-
-## 6. Events — 五种 dispatch 模式
+### Events — 订阅 + 派发
 
 ```java
-// io.dsh.kernel.events.Events
-package io.dsh.kernel.events;
-
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
+// io.javanatic.harness.kernel.events.Events
+package io.javanatic.harness.kernel.events;
 
 public final class Events {
 
+    private static final System.Logger LOG = System.getLogger("io.javanatic.harness.kernel.events");
+
     private final ConcurrentHashMap<EventKey<?>, List<Registration<?>>> hooks = new ConcurrentHashMap<>();
-    private final Executor virtualThreadExecutor;
+    private final ExecutorService virtualThreads;
 
-    public Events(Executor virtualThreadExecutor) {
-        this.virtualThreadExecutor = virtualThreadExecutor;
+    record Registration<T>(Object listener, Scope scope /* null = 全局 */) {}
+
+    // ────────── 订阅（经 ScopedEvents 视图调用，订阅随 scope 回收）──────────
+
+    <T> Subscription subscribe(EventKey<T> key, Object listener, Scope scope) {
+        key.requireMode(listener instanceof WaterfallListener<?> ? Mode.WATERFALL : Mode.NOTIFY);
+        var reg = new Registration<T>(listener, scope);
+        hooks.computeIfAbsent(key, k -> new CopyOnWriteArrayList<Registration<?>>()).add(reg);
+        return new Subscription(
+            () -> hooks.getOrDefault(key, List.of()).remove(reg), () -> { });
     }
 
-    record Registration<T>(
-        EventListener listener,
-        ScopeKey scopeKey,   // listener 所属 scope（null = 全局）
-        boolean global       // 是否绕过 scope filter
-    ) {}
-
-    // ────────── 订阅 ──────────
-
-    public Subscription subscribe(EventKey<?> key, EventListener listener,
-                                   ScopeKey scopeKey, boolean global) {
-        var reg = new Registration<>(listener, scopeKey, global);
-        hooks.computeIfAbsent(key, k -> CopyOnWriteArrayList::new).add(reg);
-        return new Subscription(() -> hooks.getOrDefault(key, List.of()).remove(reg));
-    }
-
-    // ────────── 过滤（scope 链）──────────
+    // ────────── scope 过滤（事件向上冒泡）──────────
 
     /**
-     * scope 过滤规则（对应 dsh scopeTarget）：
-     * - carrierScope == null：全局事件，所有 listener 收。
-     * - listener.global == true：收所有。
-     * - listener.scopeKey == null（全局 listener）：收所有。
-     * - 否则：listener.scopeKey 是 carrierScope 或其祖先时收（事件向上冒泡）。
+     * listener 在 scope S 订阅，收到从 S 或 S 的任何后代 scope 派发的事件；
+     * scope == null 的全局订阅收到一切。对应 dsh 的 scopeTarget 向上冒泡。
      */
-    private boolean passesFilter(Registration<?> reg, ScopeKey carrierScope) {
-        if (carrierScope == null || reg.global || reg.scopeKey == null) return true;
-        // 沿 carrierScope 的祖先链查找 listener.scopeKey
-        for (ScopeKey c = carrierScope; c != null; c = Scope.parentOf(c)) {
-            if (c.equals(reg.scopeKey)) return true;
+    private boolean passesFilter(Registration<?> reg, Scope origin) {
+        if (reg.scope() == null) return true;
+        for (Scope c = origin; c != null; c = c.parent()) {
+            if (c.equals(reg.scope())) return true;
         }
         return false;
     }
 
-    // ────────── EMIT（同步，忽略返回值/异常）──────────
+    // ────────── NOTIFY：notify（尽力而为）/ notifyOrdered（顺序传播）/ notifyAndWait（并发 join）──────────
 
-    public void emit(EventKey<?> key, Object carrier, Object payload) {
-        List<Registration<?>> regs = hooks.get(key);
-        if (regs == null) return;
-        ScopeKey carrierScope = Scope.scopeOf(carrier);
-        for (Registration<?> reg : regs) {
-            if (!passesFilter(reg, carrierScope)) continue;
-            try {
-                reg.listener().handle(carrier, payload);
-            } catch (Exception e) {
-                // observer 失败不阻断其他 listener（对应 dsh session/event 语义）
-                virtualThreadExecutor.execute(() -> { /* log */ });
-            }
+    /** 每个 listener 各跑一个虚拟线程，fire-and-forget；异常记录日志不传播。 */
+    public <T> void notify(EventKey<T> key, Scope origin, Object carrier, T payload) {
+        key.requireMode(Mode.NOTIFY);
+        for (Registration<?> reg : hooks.getOrDefault(key, List.of())) {
+            if (!passesFilter(reg, origin)) continue;
+            virtualThreads.submit(() -> invokeNotify(reg, carrier, payload));
         }
     }
 
-    // ────────── WATERFALL（around-middleware，next() 串链）──────────
-
-    @FunctionalInterface
-    public interface Next<T> { T invoke() throws Exception; }
-
-    @SuppressWarnings("unchecked")
-    public <T> CompletableFuture<T> waterfall(
-            EventKey<T> key, Object carrier, List<Object> args, Next<T> inner) {
-        List<Registration<?>> regs = hooks.get(key);
-        ScopeKey carrierScope = Scope.scopeOf(carrier);
-
-        // 过滤出参与本链的 listener（保序）
-        Deque<EventListener> chain = new ArrayDeque<>();
-        if (regs != null) {
-            for (Registration<?> reg : regs) {
-                if (passesFilter(reg, carrierScope)) {
-                    chain.add(reg.listener());
-                }
-            }
+    /** 顺序派发：listener 依次在调用方线程执行，任一异常停止派发并传播。 */
+    public <T> void notifyOrdered(EventKey<T> key, Scope origin, Object carrier, T payload) {
+        key.requireMode(Mode.NOTIFY);
+        for (Registration<?> reg : hooks.getOrDefault(key, List.of())) {
+            if (!passesFilter(reg, origin)) continue;
+            invokeNotify(reg, carrier, payload);   // 异常直接传播
         }
-
-        // 构建 next 链（对应 cordis events.ts:234-243 的 shift 模式）
-        AtomicReference<Next<T>> nextRef = new AtomicReference<>();
-        Next<T> next = () -> {
-            EventListener cb = chain.pollFirst();
-            if (cb == null) return inner.invoke();
-            return (T) cb.handle(carrier, new WaterfallArgs<>(args, nextRef.get()));
-        };
-        nextRef.set(next);
-
-        // 在虚拟线程上跑（listener 可能 await IO）
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return next.invoke();
-            } catch (Exception e) {
-                throw new CompletionException(e);
-            }
-        }, virtualThreadExecutor);
     }
 
-    // ────────── PARALLEL（全并发，等待全部完成）──────────
-
-    public CompletableFuture<Void> parallel(EventKey<?> key, Object carrier, Object payload) {
-        List<Registration<?>> regs = hooks.get(key);
-        if (regs == null) return CompletableFuture.completedFuture(null);
-        ScopeKey carrierScope = Scope.scopeOf(carrier);
-
-        List<CompletableFuture<Void>> futures = regs.stream()
-            .filter(reg -> passesFilter(reg, carrierScope))
-            .map(reg -> CompletableFuture.runAsync(() -> {
-                try { reg.listener().handle(carrier, payload); }
-                catch (Exception e) { /* 收集，不立即抛 */ }
-            }, virtualThreadExecutor))
-            .toList();
-
+    /** 并发派发并 join 全部完成（持久化 flush barrier 用）；单 listener 失败记日志。 */
+    public <T> CompletableFuture<Void> notifyAndWait(EventKey<T> key, Scope origin, Object carrier, T payload) {
+        key.requireMode(Mode.NOTIFY);
+        List<CompletableFuture<Void>> futures = /* filter 后逐个 submit，同 notify */;
         return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
-    // ────────── SERIAL（顺序 await，可返回值）──────────
+    // ────────── WATERFALL：waterfall（中间件链）/ firstOf（查询）──────────
 
-    @SuppressWarnings("unchecked")
-    public <T> CompletableFuture<T> serial(EventKey<?> key, Object carrier, Object payload) {
-        List<Registration<?>> regs = hooks.get(key);
-        if (regs == null) return CompletableFuture.completedFuture(null);
-        ScopeKey carrierScope = Scope.scopeOf(carrier);
-
-        CompletableFuture<T> chain = CompletableFuture.completedFuture(null);
-        for (Registration<?> reg : regs) {
-            if (!passesFilter(reg, carrierScope)) continue;
-            chain = chain.thenComposeAsync(prev -> {
-                try {
-                    return (CompletableFuture<T>) reg.listener().handle(carrier, payload);
-                } catch (Exception e) {
-                    throw new CompletionException(e);
-                }
-            }, virtualThreadExecutor);
-        }
-        return chain;
-    }
-
-    // ────────── BAIL（同步顺序，第一个非 null 停止）──────────
-
-    @SuppressWarnings("unchecked")
-    public <T> T bail(EventKey<T> key, Object carrier, Object payload) {
-        List<Registration<?>> regs = hooks.get(key);
-        if (regs == null) return null;
-        ScopeKey carrierScope = Scope.scopeOf(carrier);
-        for (Registration<?> reg : regs) {
-            if (!passesFilter(reg, carrierScope)) continue;
-            Object result = reg.listener().handle(carrier, payload);
-            if (isBailed(result)) return (T) result;
-        }
-        return null;
-    }
-
-    private static boolean isBailed(Object v) {
-        return v != null && !(v instanceof Boolean b && !b);
-    }
-}
-```
-
-### EventKey — 事件名 + 类型 token + dispatch mode
-
-```java
-// io.dsh.kernel.events.EventKey
-package io.dsh.kernel.events;
-
-public record EventKey<T>(
-    String name,
-    Class<T> type,
-    DispatchMode mode
-) {
-    public enum DispatchMode { EMIT, WATERFALL, PARALLEL, SERIAL, BAIL }
-
-    public static <T> EventKey<T> emit(String name, Class<T> type) {
-        return new EventKey<>(name, type, DispatchMode.EMIT);
-    }
-    public static <T> EventKey<T> waterfall(String name, Class<T> type) {
-        return new EventKey<>(name, type, DispatchMode.WATERFALL);
-    }
-    public static EventKey<Void> parallel(String name) {
-        return new EventKey<>(name, Void.class, DispatchMode.PARALLEL);
-    }
-    public static <T> EventKey<T> serial(String name, Class<T> type) {
-        return new EventKey<>(name, type, DispatchMode.SERIAL);
-    }
-    public static <T> EventKey<T> bail(String name, Class<T> type) {
-        return new EventKey<>(name, type, DispatchMode.BAIL);
-    }
-}
-```
-
-**dispatch mode 是事件契约的一部分**：EventKey 在构造时绑定 mode，`emit/waterfall/...` 方法可以校验调用方用对了方法。这对应 dsh 的 "`@mode` tag 是公开契约"。
-
-### EventListener — 统一 handler 接口
-
-```java
-// io.dsh.kernel.events.EventListener
-package io.dsh.kernel.events;
-
-@FunctionalInterface
-public interface EventListener {
     /**
-     * 处理事件。
-     * @param carrier  事件载体（携带 scope 信息，对应 dsh 的 thisArg）
-     * @param payload  事件负载；waterfall 模式下是 {@link WaterfallArgs}
-     * @return 对 waterfall/serial/bail：返回值；对 emit/parallel：忽略
+     * 中间件链：不可变 cons-list，buildChain 递归构建，每个 next 绑定剩余尾链。
+     * - 不调 next() = 短路（后续 listener 不执行）
+     * - next() 调用两次 = IllegalStateException（AtomicBoolean 防护）
+     * - 同步跑在调用方（虚拟）线程上，listener 阻塞即阻塞，返回值即结果
      */
-    Object handle(Object carrier, Object payload) throws Exception;
+    public <T> T waterfall(EventKey<T> key, Scope origin, Object carrier,
+                           List<Object> args, Next<T> inner) {
+        key.requireMode(Mode.WATERFALL);
+        List<WaterfallListener<? super T>> chain = /* filter + cast，kernel 内唯一 unchecked cast */;
+        try {
+            return buildChain(chain, 0, carrier, args, inner).invoke();
+        } catch (CompletionException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CompletionException("waterfall failed for " + key.name(), e);
+        }
+    }
+
+    /**
+     * 查询形态（替代 cordis bail）：每个 listener 返回非 null 即短路整链，
+     * 全部返回 null 时结果为 empty。inner 是 () -> null。
+     * "审批决策"、"凭据解析" 这类 first-answer-wins 的场景用它。
+     */
+    public <T> Optional<T> firstOf(EventKey<T> key, Scope origin, Object carrier, List<Object> args) {
+        return Optional.ofNullable(waterfall(key, origin, carrier, args, () -> null));
+    }
+
+    private <T> Next<T> buildChain(List<WaterfallListener<? super T>> chain, int index,
+                                   Object carrier, List<Object> args, Next<T> inner) {
+        if (index == chain.size()) return inner;
+        WaterfallListener<? super T> listener = chain.get(index);
+        Next<T> rest = buildChain(chain, index + 1, carrier, args, inner);
+        AtomicBoolean invokedOnce = new AtomicBoolean(false);
+        return () -> {
+            if (!invokedOnce.compareAndSet(false, true)) {
+                throw new IllegalStateException("waterfall next() invoked twice");
+            }
+            return listener.handle(carrier, new WaterfallArgs<>(args, rest));
+        };
+    }
 }
 ```
 
-### WaterfallArgs — 带 next 的参数包
+### ScopedEvents — 绑定 scope 的订阅视图
 
 ```java
-// io.dsh.kernel.events.WaterfallArgs
-package io.dsh.kernel.events;
-
-import java.util.List;
-
-public record WaterfallArgs<T>(
-    List<Object> args,
-    Events.Next<T> next
-) {}
+// io.javanatic.harness.kernel.events.ScopedEvents
+/**
+ * Scope.events() 返回的视图。订阅挂在所属 scope 的 effect 栈上：
+ * scope close 时订阅自动注销，插件不需要（也不应该）手工管理订阅回收。
+ */
+public interface ScopedEvents {
+    <T> Subscription on(EventKey<T> key, EventListener<? super T> listener);
+    /** 全局订阅（忽略 scope 过滤），仍随 scope 回收。 */
+    <T> Subscription onGlobal(EventKey<T> key, EventListener<? super T> listener);
+    <T> Subscription onWaterfall(EventKey<T> key, WaterfallListener<? super T> listener);
+}
 ```
 
-listener 形如：
+**Cordis 五模式 → JH 两模式的映射**：
+
+| Cordis | JH | 说明 |
+|---|---|---|
+| emit | `notify` | fire-and-forget，每 listener 一个虚拟线程 |
+| parallel | `notifyAndWait` | 并发 + join，返回 barrier |
+| serial | `notifyOrdered` | 顺序，异常传播 |
+| waterfall | `waterfall` | around-middleware，next() 串链 |
+| bail | `firstOf` | waterfall 的查询形态，inner = null 默认 |
+
+## 6. Runtime — 顶层运行时
+
 ```java
-ctx.on(AgentEvents.PRE_STEP, (carrier, payload) -> {
-    WaterfallArgs<PreStepDecision> wp = (WaterfallArgs<PreStepDecision>) payload;
-    // 检查 carrier、修改 args[0]（messages）
-    return wp.next().invoke(); // 委托给下一个 listener
-});
-```
+// io.javanatic.harness.kernel.scope.Runtime
+package io.javanatic.harness.kernel.scope;
 
----
+/**
+ * 顶层运行时：root scope + 事件总线 + 虚拟线程 executor。
+ * try-with-resources 入口；close 顺序 = root scope LIFO 级联回收 → executor 关闭。
+ */
+public final class Runtime implements AutoCloseable {
 
-## 7. FiberRuntime — 顶层运行时
-
-```java
-// io.dsh.kernel.runtime.FiberRuntime
-package io.dsh.kernel.runtime;
-
-public final class FiberRuntime implements AutoCloseable {
-
-    private final ServiceRegistry registry = new ServiceRegistry();
     private final Events events;
-    private final ExecutorService virtualThreadExecutor;
-    private final Fiber rootFiber;
-    private final Set<Fiber> allFibers = ConcurrentHashMap.newKeySet();
+    private final ExecutorService virtualThreads;
+    private final Scope root;
 
-    public FiberRuntime() {
-        this.virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
-        this.events = new Events(virtualThreadExecutor);
-        this.rootFiber = new Fiber(null, this);
-        allFibers.add(rootFiber);
+    public Runtime() {
+        this.virtualThreads = Executors.newVirtualThreadPerTaskExecutor();
+        this.events = new Events(virtualThreads);
+        this.root = new ScopeImpl(null, this);
     }
 
-    public Context rootContext() { return rootFiber.context(); }
-    public ServiceRegistry registry() { return registry; }
+    public Scope root() { return root; }
     public Events events() { return events; }
-    public Executor virtualThreadExecutor() { return virtualThreadExecutor; }
 
-    void track(Fiber f) { allFibers.add(f); }
+    void logDisposeError(Scope scope, Exception e) {
+        System.getLogger("io.javanatic.harness.kernel.scope").log(
+            System.Logger.Level.WARNING, "effect dispose failed in {0}", scope, e);
+    }
 
     @Override
     public void close() {
-        // 1. dispose root fiber（级联所有 child）
-        rootFiber.dispose().join();
-        // 2. 关闭 executor
-        virtualThreadExecutor.close();
+        root.close();          // LIFO 级联：所有插件 effect、子 scope
+        virtualThreads.close(); // 最后等残余 listener 任务结束
     }
 }
 ```
 
 **入口模式**：
+
 ```java
-try (var runtime = new FiberRuntime()) {
-    Context ctx = runtime.rootContext();
-    // 加载 plugin（通过 PluginLoader，见 §8）
-    pluginLoader.loadAll(ctx, classpathPlugins);
-    // 驱动 agent loop
-    Agent agent = ctx.get(AgentLoop.KEY).create(sessionId, options);
-    agent.send(userMessage);
+try (var runtime = new Runtime()) {
+    Scope root = runtime.root();
+    PluginLoader loader = new PluginLoader();
+    Map<String, Plugin> discovered = loader.discover();
+    List<Plugin> ordered = /* 07 的 boot 流程按 rows 顺序选取 */;
+    loader.loadAll(root, ordered);
+    Agent agent = root.require(AgentRegistry.KEY).create(root, options);
+    agent.followup(userMessage);
     agent.whenIdle().join();
 }
-// runtime.close() 逆序回收所有 fiber
+// runtime.close() 逆序回收一切
 ```
 
----
-
-## 8. Plugin 与 PluginLoader
-
-dsh 的 plugin 是一个实现 `Service` 接口的对象。JH 等价物：
+## 7. Plugin 与 PluginLoader — 挂载与原子回滚
 
 ```java
-// io.dsh.kernel.plugin.Plugin
-package io.dsh.kernel.plugin;
+// io.javanatic.harness.kernel.plugin.Plugin
+package io.javanatic.harness.kernel.plugin;
 
-@FunctionalInterface
+import io.javanatic.harness.kernel.scope.Scope;
+import java.util.Set;
+
 public interface Plugin {
+
     /**
-     * 挂载到 context。所有注册（provide/on）必须通过 ctx，
-     * 由返回的 fiber effect 栈保证卸载时回收。
+     * 全局唯一的稳定 id（kebab-case，如 "llm-deepseek"、"fs-local"）。
+     * 它是配置 rows / patch / 依赖声明的引用锚点——rows 按 id 引用插件，
+     * 不写类名（类名在 JPMS 下不可跨模块反射访问）。
      */
-    void apply(Context ctx) throws Exception;
+    String id();
+
+    /** 依赖的其他插件 id（决定加载顺序，拓扑排序用）。 */
+    default Set<String> requires() { return Set.of(); }
+
+    /**
+     * 挂载到自己的子 scope。所有注册（provide / events().on）都过 scope effect 栈，
+     * 卸载时 LIFO 回收。禁止持有全局静态状态（见 R3 剩余风险）。
+     */
+    void apply(Scope scope) throws Exception;
 }
 ```
 
 ```java
-// io.dsh.kernel.plugin.PluginLoader
-package io.dsh.kernel.plugin;
-
-import java.util.*;
-
+// io.javanatic.harness.kernel.plugin.PluginLoader
 /**
- * 通过 ServiceLoader 发现所有 Plugin 实现，按依赖顺序加载。
- * 依赖顺序：Plugin 可声明 @InjectService(KEY) 表明需要某服务，
- *           loader 拓扑排序后加载（缺依赖 fail loud）。
+ * 通过 ServiceLoader 发现所有 Plugin 实现。
+ *
+ * 发现与顺序分离：discover() 建立 id→Plugin 索引；加载顺序由调用方给出
+ * （07 的 boot 流程按 rows 顺序，或 topoSort 按 requires 拓扑序）。
+ * fail loud 三类：重复 id；引用了不存在的 id（requires 与 row 双侧）；环。
  */
 public final class PluginLoader {
 
-    public void loadAll(Context rootCtx) {
-        ServiceLoader<Plugin> loader = ServiceLoader.load(Plugin.class);
-        List<Plugin> plugins = new ArrayList<>();
-        loader.forEach(plugins::add);
+    /** 发现 module-path/classpath 上全部 Plugin，按 id 索引。重复 id fail loud。 */
+    public Map<String, Plugin> discover() {
+        Map<String, Plugin> byId = new LinkedHashMap<>();
+        for (Plugin p : ServiceLoader.load(Plugin.class)) {
+            Plugin prev = byId.putIfAbsent(p.id(), p);
+            if (prev != null) {
+                throw new IllegalStateException(
+                    "Duplicate plugin id '" + p.id() + "': "
+                        + prev.getClass().getName() + " vs " + p.getClass().getName());
+            }
+        }
+        return byId;
+    }
 
-        // 拓扑排序（按 @InjectService 注解声明的依赖）
-        List<Plugin> sorted = topoSort(plugins);
-
-        for (Plugin p : sorted) {
-            Context child = rootCtx.child();
+    /**
+     * 按给定顺序加载：每个 plugin 一个子 scope。
+     * requires 中出现尚未加载的 id → fail loud（顺序错了）。
+     * apply 抛异常 → 立即 close 该子 scope（回滚它已注册的全部副作用）→ 异常上抛。
+     * 加载是逐插件原子的：不存在半挂载的插件（R3）。
+     */
+    public void loadAll(Scope root, List<Plugin> ordered) {
+        Set<String> loaded = new HashSet<>();
+        for (Plugin p : ordered) {
+            for (String dep : p.requires()) {
+                if (!loaded.contains(dep)) {
+                    throw new IllegalStateException(
+                        "Plugin '" + p.id() + "' requires '" + dep
+                            + "' which is not loaded before it (check row order)");
+                }
+            }
+            Scope child = root.child();
             try {
                 p.apply(child);
             } catch (Exception e) {
-                throw new RuntimeException("Plugin failed: " + p.getClass(), e);
+                child.close();   // R3 回滚原语：子 scope 单独 close
+                throw new IllegalStateException(
+                    "Plugin failed and rolled back: " + p.id(), e);
             }
+            loaded.add(p.id());
         }
     }
 
-    private List<Plugin> topoSort(List<Plugin> plugins) {
-        // 解析每个 Plugin 的 @InjectService 注解，构建 DAG，Kahn 算法
-        // ...
-    }
+    /** 按 requires 做 Kahn 拓扑排序（rows 未显式定序时用）。环 fail loud。 */
+    public List<Plugin> topoSort(Collection<Plugin> plugins) { /* Kahn；剩余节点非空即环 */ }
 }
 ```
 
-**每个 Plugin 实现类在 `META-INF/services/io.dsh.kernel.plugin.Plugin` 注册**（ServiceLoader 标准）。JPMS 模块则用 `provides Plugin with XxxPlugin;` 在 `module-info.java` 声明。
+每个 Plugin 实现类经 ServiceLoader 发现：JPMS 模块在 `module-info.java` 声明 `provides io.javanatic.harness.kernel.plugin.Plugin with XxxPlugin;`；classpath jar 用 `META-INF/services/...`。同一语义。
 
----
+**为什么不用注解声明依赖**：Java 注解成员只接受编译期常量，`ServiceKey`/插件对象放不进去；字符串 id 走 `requires()` 方法，拼写错误在 loadAll / topoSort 处 fail loud。
 
-## 9. 与 dsh 的语义对齐清单
+## 8. 不变式 R3：副作用消除
+
+> **R3（副作用消除）**：插件加载失败或作用域关闭时，它注册的一切副作用——服务、事件订阅、后台任务、句柄——都被清理；不存在半挂载状态，不存在吊销后的僵尸引用。
+
+机制与证明点：
+
+| 保证 | 机制 | 证明 |
+|---|---|---|
+| 半挂载不存在 | 每插件独立子 scope；apply 失败立即 `child.close()` 回滚 | 加载失败回滚测试（10） |
+| 僵尸引用不存在 | 服务**每次访问沿链重解析**，不缓存；provider scope close 即从 overlay 摘除 | 结构性：无缓存即无失效遗漏 |
+| 回收顺序 | effect 栈 LIFO；子 scope 级联 entry 位于其后续 effect 之前 | teardown 顺序测试（09 §teardown） |
+| 重复回收不可能 | Subscription CAS + 栈原子摘除；Scope close CAS | 并发 close 测试 |
+
+**边界与剩余风险**（诚实声明）：
+
+- **运行时卸载/升级是 MVP 非目标**。静态组合：全部插件启动时加载，teardown 发生在 shutdown。R3 的机制在 shutdown 与加载失败两个场景生效；将来做运行时卸载，复用同一 `child.close()` + 增加 in-flight drain 语义。
+- **Scope 之外的副作用清不掉**：JVM 全局静态、scope 外启动的线程、`System.setProperty` 之类。插件义务：禁改全局状态；文件写入走 fs seam。靠 lint + review 执行——这是 R3 无法用测试完全证明的部分。
+
+## 9. 日志 — System.Logger
+
+kernel 全部日志走 JDK 内置 `System.Logger`：
+
+```java
+private static final System.Logger LOG = System.getLogger("io.javanatic.harness.kernel.events");
+LOG.log(System.Logger.Level.WARNING, "notify listener failed for {0}", key.name(), e);
+```
+
+不引入 SLF4J 依赖：`System.Logger` 是 JDK 原生 API，默认路由 `java.util.logging`；需要对接 SLF4J/Logback 时替换 logger backend，**调用点零改动**。
+
+## 10. 与 dsh 的语义对齐清单
 
 | dsh 语义 | JH 实现 | 对齐情况 |
 |---|---|---|
-| `ctx.x` Proxy 查找 | `ctx.get(KEY)` 显式 | ✅ 语义等价，语法显式 |
-| `inject` 声明依赖 | `@InjectService` 注解 + topoSort | ✅ 静态版本（无热重载） |
-| `ctx.effect(disposer)` | `Subscription`（AutoCloseable）+ fiber 栈兜底 | ✅ |
-| `ctx.on/off` | `Subscription`（close 即 off） | ✅ |
-| 5 种 dispatch | `emit/waterfall/parallel/serial/bail` | ✅ |
-| waterfall `next()` | `WaterfallArgs.next()` | ✅ shift 模式 |
+| `ctx.x` Proxy 查找 | `scope.require(KEY)` / `resolve(KEY)` 显式 | ✅ 语义等价，语法显式 |
+| fiber（生命周期）| `Scope` + LIFO effect 栈 | ✅ 统一进 Scope |
+| scope key（可见性）| `Scope` 父链 + 事件冒泡过滤 | ✅ 统一进 Scope |
+| `inject` 声明依赖 | `Plugin.requires()`（id）+ loadAll 顺序校验 | ✅ 静态版本（无热重载） |
+| `ctx.effect(disposer)` | `Effect.register()` 返回回收器 + Subscription + scope 栈兜底 | ✅ |
+| `ctx.on/off` | `Subscription`（close 即 off），scope close 兜底 | ✅ |
+| 5 种 dispatch | 2 模式（NOTIFY/WATERFALL）+ notify/notifyOrdered/notifyAndWait/firstOf 工具 | ✅ 形态全部可表达 |
+| waterfall `next()` | cons-list 不可变链 + once 防护 | ✅ shift 语义 |
 | scope filter（向上冒泡）| `passesFilter` 沿 parent 链 | ✅ |
-| fiber LIFO teardown | `Deque.pollLast()` | ✅ |
-| isolate 隔离 | `ServiceKey.isolate` | ✅ 简化版 |
+| isolate 隔离 | 子 scope overlay（同名服务 shadow 父级） | ✅ 一种机制替代两种 |
+| provider 下线失效缓存 | 无缓存：每访问重解析 | ✅ 结构性更强 |
 | 响应式 reload | **未实现**（静态组合） | ❌ MVP 不做 |
-| `Context.filter` Proxy | `Scope.scopeOf(carrier)` + `passesFilter` | ✅ |

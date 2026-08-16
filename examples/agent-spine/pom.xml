@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.deepseek</groupId>
+        <groupId>io.javanatic</groupId>
         <artifactId>harness-examples-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -14,7 +14,32 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.deepseek</groupId>
-            <artifactId>harness-core</artifactId>
-        </dependency>    </dependencies>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-session</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-system-prompt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-tools</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-agent-loop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-llm-llm</artifactId>
+        </dependency>
+    </dependencies>
 </project>

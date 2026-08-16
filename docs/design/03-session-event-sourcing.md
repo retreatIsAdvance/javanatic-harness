@@ -2,6 +2,8 @@
 
 这是整个系统最有原则性的部分。**Session 不是对话历史，而是一个 append-only 的事件日志**，模型看到的 Message 列表是它的投影。
 
+本篇同时是不变式 **R1（可重建性）** 的载体：见 §8。
+
 ## 1. 核心决策：事件类型体系（不靠 declaration merging）
 
 dsh 用 TypeScript 的 `declare module` 做编译期 declaration merging 扩展 `SessionEventMap`。Java 没有等价物。三个候选方案：
@@ -9,124 +11,141 @@ dsh 用 TypeScript 的 `declare module` 做编译期 declaration merging 扩展 
 | 方案 | 优点 | 缺点 | 选不选 |
 |---|---|---|---|
 | A. 全部事件一个 `sealed interface` | 编译期穷尽检查 | 扩展插件无法加新事件类型 | ❌ 违背 dsh merge-extensible 精神 |
-| B. 运行时注册表 `SessionEventRegistry` | 可扩展 | 失去 switch 穷尽检查 | ⚠️ 单独用不够 |
+| B. 运行时注册表 | 可扩展 | 失去 switch 穷尽检查 | ⚠️ 单独用不够 |
 | **C. sealed 核心 + 注册表扩展** | 核心事件穷尽检查，插件可扩展 | 两套机制并存 | ✅ |
 
 ### 方案 C 的设计
 
-**核心 12 种事件** 用 `sealed interface`（编译期穷尽）：
+**`seq` 不在事件上**：序号是日志的信封（envelope）属性，由 `Session.append` 在锁内统一分配——调用方不可能写错、跳号或并发撞号。事件 record 只携带业务事实。
 
 ```java
-// io.dsh.core.session.event.SessionEvent
-package io.dsh.core.session.event;
+// io.javanatic.harness.session.event.LoggedEvent
+/**
+ * 日志条目信封：seq 与事件的配对。seq 单调、从 0 起、等于条目在日志中的下标。
+ * 只有 Session.append 会构造它（锁内）；日志外流转的都是裸事件。
+ */
+public record LoggedEvent<T extends SessionEvent>(long seq, T event) {}
+```
 
-import java.util.OptionalLong;
+```java
+// io.javanatic.harness.session.event.SessionEvent
+package io.javanatic.harness.session.event;
 
 /**
- * Session 日志的一个不可变条目。
+ * Session 日志的一个不可变事件。
  *
- * sealed：核心事件编译期穷尽。
- * permits 子句包含 12 个核心 record + 1 个 ExtensionEvent（插件扩展出口）。
- * switch(SessionEvent) 配合 default 处理 ExtensionEvent。
+ * sealed：核心事件编译期穷尽；permits 含 13 个核心 record + 1 个 ExtensionEvent。
+ * switch(SessionEvent) 配合 ExtensionEvent 分支处理扩展。
+ *
+ * 注意：seq 不在此（在 LoggedEvent 信封上）；time 在此——
+ * R1 规定提示词组装只读日志不读环境时钟，事件自带时间是这条规则的载体。
  */
 public sealed interface SessionEvent permits
     TurnStart, TurnEnd, StepStart, StepEnd,
     UserMessageEvent, AssistantChunkEvent, AssistantMessageEvent,
-    ToolCallEvent, ToolResultEvent,
+    LlmRequestEvent, ToolCallEvent, ToolResultEvent,
     TodoWriteEvent, RequestHeaderEvent, SessionEndSeedEvent,
     ExtensionEvent {
-
-    /** 事件在日志中的单调位置（seq = log.length）。 */
-    long seq();
 
     /** Unix epoch 毫秒。 */
     long time();
 
-    /** 事件类型名（持久化 key，跨语言兼容）。 */
+    /** 事件类型名（持久化 key，跨实现兼容）。 */
     String type();
 
     /**
      * 读取方可安全跳过的未知事件标记。
      * 默认 false（required）：未知事件拒绝重建，而非静默丢弃。
+     * 它由信封行序列化（不在 data 里），读取方无需解码事件即可决定跳过。
      */
     default boolean ignorable() { return false; }
 }
 ```
 
-**核心事件**（12 个 record，1:1 对应 dsh）：
+**核心事件**（13 个 record；均无 seq）：
 
 ```java
-public record TurnStart(long seq, long time, int turn) implements SessionEvent {
+public record TurnStart(long time, int turn) implements SessionEvent {
     @Override public String type() { return "turn/start"; }
 }
-
-public record TurnEnd(long seq, long time, int turn, TurnEndReason reason) implements SessionEvent {
+public record TurnEnd(long time, int turn, TurnEndReason reason) implements SessionEvent {
     @Override public String type() { return "turn/end"; }
 }
-
-public record StepStart(long seq, long time, int turn, int step) implements SessionEvent {
+public record StepStart(long time, int turn, int step) implements SessionEvent {
     @Override public String type() { return "step/start"; }
 }
-
-public record StepEnd(long seq, long time, int turn, int step) implements SessionEvent {
+public record StepEnd(long time, int turn, int step) implements SessionEvent {
     @Override public String type() { return "step/end"; }
 }
 
 public record UserMessageEvent(
-    long seq, long time,
+    long time,
     UserMessage message,
     SurfaceOp surfaceOp,           // surface 事件必填
-    List<Long> sourceEventSeqs     // 可空：provenance
+    List<Long> sourceEventSeqs     // provenance，可空
 ) implements SessionEvent, SurfaceEvent {
     @Override public String type() { return "user/message"; }
 }
 
-public record AssistantChunkEvent(
-    long seq, long time, int turn, int step, StreamChunk chunk
-) implements SessionEvent {
+/** 流式 chunk 的 log-only 记录（遥测/调试用；投影不读它）。 */
+public record AssistantChunkEvent(long time, int turn, int step, StreamChunk chunk)
+    implements SessionEvent {
     @Override public String type() { return "assistant/chunk"; }
-    // 非 surface 事件：无 surfaceOp / sourceEventSeqs（编译期保证，非继承 SurfaceEvent）
 }
 
 public record AssistantMessageEvent(
-    long seq, long time, int turn, int step,
+    long time, int turn, int step,
     AssistantMessage message,
-    TokenUsage usage,              // 可 null
+    @Nullable TokenUsage usage,
     SurfaceOp surfaceOp,
     List<Long> sourceEventSeqs
 ) implements SessionEvent, SurfaceEvent {
     @Override public String type() { return "assistant/message"; }
 }
 
+/**
+ * R1 锚点：每次 LLM 请求的指纹。log-only（非 surface）。
+ * 内容不重复存——消息窗口可由 [fromSeq, toSeq] 重投影；哈希证明确定性。
+ */
+public record LlmRequestEvent(
+    long time, int turn, int step,
+    String systemPromptSha256,
+    String toolsSchemaSha256,
+    long messagesFromSeq,          // 本次请求消息窗口的日志区间（闭区间）
+    long messagesToSeq,
+    Map<String, String> params     // model、temperature 等请求参数
+) implements SessionEvent {
+    @Override public String type() { return "llm/request"; }
+    @Override public boolean ignorable() { return true; }  // 遥测性：旧读取方可跳过
+}
+
 public record ToolCallEvent(
-    long seq, long time, int turn, int step,
+    long time, int turn, int step,
     CallId callId, String name, String arguments  // arguments 是原始 JSON 字符串
 ) implements SessionEvent {
     @Override public String type() { return "tool/call"; }
 }
 
 public record ToolResultEvent(
-    long seq, long time, int turn, int step,
+    long time, int turn, int step,
     ToolResultMessage message,
-    ToolError error,               // 可 null
-    JsonValue meta,                // 可 null：工具私有展示数据
+    @Nullable ToolError error,
+    @Nullable JsonValue meta,      // 工具私有展示数据
+    boolean concludesTurn,         // 该结果是否终结本 turn（ask_user 类工具为 true）
     SurfaceOp surfaceOp,
     List<Long> sourceEventSeqs
 ) implements SessionEvent, SurfaceEvent {
     @Override public String type() { return "tool/result"; }
 }
 
-public record TodoWriteEvent(long seq, long time, List<TodoItem> todos) implements SessionEvent {
+public record TodoWriteEvent(long time, List<TodoItem> todos) implements SessionEvent {
     @Override public String type() { return "todo/write"; }
 }
-
-public record RequestHeaderEvent(
-    long seq, long time, EpochHeader header, RequestHeaderReason reason
-) implements SessionEvent {
+public record RequestHeaderEvent(long time, EpochHeader header, RequestHeaderReason reason)
+    implements SessionEvent {
     @Override public String type() { return "request/header"; }
 }
-
-public record SessionEndSeedEvent(long seq, long time) implements SessionEvent {
+public record SessionEndSeedEvent(long time) implements SessionEvent {
     @Override public String type() { return "session/end-seed"; }
 }
 ```
@@ -135,72 +154,40 @@ public record SessionEndSeedEvent(long seq, long time) implements SessionEvent {
 
 ```java
 /**
- * 插件扩展的事件类型。核心 switch 走 default 分支处理它。
+ * 插件扩展的事件类型。核心 switch 用显式分支处理它。
  *
- * 扩展插件实现此接口（不继承核心 record），并在启动时通过
- * SessionEventRegistry 注册其 type name → class 映射。
+ * 扩展插件实现此接口（不继承核心 record），并在插件加载时注册
+ * SessionEventCodec（见 §6）——序列化能力在 codec 上，不在事件上。
  *
  * ignorable() 由扩展实现决定：信息性事件返回 true（未知读取方跳过），
  * 结构性事件返回 false（未知读取方拒绝重建）。
  */
 public non-sealed interface ExtensionEvent extends SessionEvent {
-    // 扩展插件自由实现；type() 必须返回稳定的字符串 key
+    // 扩展自由实现；type() 必须返回稳定的字符串 key
 }
 ```
 
-**编译期穷尽 + 运行时扩展的共存**：
-
-```java
-// 核心代码里 switch 核心事件，default 处理扩展
-String describe(SessionEvent e) {
-    return switch (e) {
-        case TurnStart ts -> "Turn " + ts.turn() + " started";
-        case TurnEnd te -> "Turn " + te.turn() + " ended: " + te.reason();
-        case UserMessageEvent um -> "User: " + um.message();
-        case AssistantMessageEvent am -> "Assistant: " + am.message();
-        // ... 其余核心事件
-        case ExtensionEvent ext -> ext.type() + " (extension)";
-    };
-}
-```
-
-Java 25 的 `switch` pattern matching 对 `sealed` 做**穷尽检查**（此特性自 21 final）：漏掉一个核心分支编译报错；`ExtensionEvent` 是 `non-sealed`（开放），必须用 default 或 case 覆盖。这完美复刻 dsh 的 "closed union ends in assertNever; merge-extensible unions fall through documented default"。
+**编译期穷尽 + 运行时扩展的共存**：Java 25 的 switch pattern matching 对 sealed 做穷尽检查（21 起 final）：漏掉一个核心分支编译报错；`ExtensionEvent` 是 `non-sealed`（开放），switch 用显式分支覆盖。这复刻 dsh 的 "closed union ends in assertNever; merge-extensible unions fall through documented default"。
 
 ## 2. SurfaceEvent — 产生消息的事件子集
 
 只有三种事件进入有序 surface（投影成模型看到的 Message）：
 
 ```java
-// io.dsh.core.session.event.SurfaceEvent
-package io.dsh.core.session.event;
-
-/**
- * 标记接口：产生 LLM 消息的事件子集。
- * 只有 UserMessageEvent / AssistantMessageEvent / ToolResultEvent 实现。
- * 编译期保证：只有 SurfaceEvent 能携带 SurfaceOp 和 sourceEventSeqs。
- */
+// io.javanatic.harness.session.event.SurfaceEvent
+/** 标记接口：产生 LLM 消息的事件子集。编译期保证只有它们携带 SurfaceOp。 */
 public interface SurfaceEvent {
     SurfaceOp surfaceOp();
     List<Long> sourceEventSeqs();
 }
-```
-
-### SurfaceOp — 如何进入有序 surface
-
-```java
-// io.dsh.core.session.event.SurfaceOp
-package io.dsh.core.session.event;
 
 /**
- * 事件如何进入有序 surface。
- * sealed 对应 dsh 的 discriminated union：
+ * 事件如何进入有序 surface：
  * - Append：尾追加（普通 user/assistant/tool 消息）
  * - Replace：替换 surface 中 [start, end]（inclusive）的节点，用于 compaction 摘要
  */
 public sealed interface SurfaceOp permits SurfaceOp.Append, SurfaceOp.Replace {
-
     record Append() implements SurfaceOp {}
-
     record Replace(long start, long end) implements SurfaceOp {}
 }
 ```
@@ -208,552 +195,315 @@ public sealed interface SurfaceOp permits SurfaceOp.Append, SurfaceOp.Replace {
 ## 3. Session — append-only 日志
 
 ```java
-// io.dsh.core.session.Session
-package io.dsh.core.session;
-
-import java.util.*;
+// io.javanatic.harness.session.Session
+package io.javanatic.harness.session;
 
 /**
- * Event-sourced session：一个 append-only 的 SessionEvent 日志。
+ * Event-sourced session：append-only 的 SessionEvent 日志 + 信封序号。
  *
- * Message 历史是 derived（deriveMessages()），不单独存储。
- * 所有事件和嵌套数据在 append 时 deep-freeze（不可变快照），
- * 返回的 event.data 永远是冻结副本，调用方的可变输入无法污染日志。
+ * - seq 在 append 锁内分配（调用方无法提供），连续性结构性成立
+ * - 事件在 append 时结构冻结（不可变快照）；序列化不在这一层（codec 属持久化 seam）
+ * - Message 历史是 derived（deriveMessages），不单独存储
  *
- * Plain class（非 Service）：通过 SessionStore.create() 创建实例。
+ * Plain class（非 Service）：经 SessionStore 创建。
  */
 public final class Session {
 
     private final SessionId id;
     private final SessionHeader header;
-    private final List<SessionEvent> log = new ArrayList<>();
+    private final List<LoggedEvent<? extends SessionEvent>> log = new ArrayList<>();
     private final SurfaceManager surface = new SurfaceManager();
+    private long firstLiveSeq = 0;
 
-    private volatile long firstLiveSeq = 0;
+    // ────────── 构造（replay / fork / resume）──────────
 
-    // ────────── 构造 ──────────
-
-    Session(SessionId id, SessionHeader header) {
-        this.id = Objects.requireNonNull(id);
-        this.header = Objects.requireNonNull(header);
-    }
-
-    /**
-     * 用 seed 事件构造（replay / fork / resume）。
-     * seed 事件被校验、deep-freeze 后追加；firstLiveSeq = seed.size()。
-     */
     static Session create(SessionId id, List<SessionEvent> seed, SessionHeader header) {
         Session s = new Session(id, header);
         for (SessionEvent e : seed) {
-            s.log.add(deepFreeze(e));
-            s.surface.applyCommitted(e);
+            s.log.add(new LoggedEvent<>(s.log.size(), structuralFreeze(e)));
+            s.surface.commit(s.log.getLast());   // seed 重放也要推进投影
         }
         s.firstLiveSeq = seed.size();
         return s;
     }
 
-    // ────────── append ──────────
+    // ────────── append（唯一写入口，锁内完成全部四步）──────────
 
     /**
-     * 追加一个事件到日志。同步通知观察者（通过 SessionStore 的 publication hooks）。
-     * 热路径不阻塞 IO：持久化插件异步 buffer。
+     * 追加事件：seq 分配、冻结、surface 校验与提交、观察者通知，全部在 同一把锁内。
      *
-     * @throws IllegalArgumentException 如果 data 不可 JSON 序列化（对应 dsh isJsonValue 校验），
-     *         或 surface 元数据非法（marker shape、唯一 sourceEventSeqs、replace 范围有效）
+     * @throws IllegalArgumentException surface 元数据非法（replace 范围、provenance）
      */
-    public synchronized <T extends SessionEvent> T append(T event) {
-        // 1. 校验 JSON 可序列化（一次递归遍历，读+校验+冻结）
-        T frozen = deepFreeze(event);
-        // 2. surface 校验（若是 SurfaceEvent）
+    public synchronized <T extends SessionEvent> LoggedEvent<T> append(T event) {
+        // 1. 结构冻结：List/Map 递归 copyOf，杜绝调用方可变输入污染日志
+        T frozen = structuralFreeze(event);
+        // 2. seq 分配（锁内，调用方无参与）
+        LoggedEvent<T> entry = new LoggedEvent<>(log.size(), frozen);
+        // 3. surface 校验 + 提交（校验失败则不落日志——先验证后变更）
         if (frozen instanceof SurfaceEvent se) {
-            surface.validateCandidate(se);
+            surface.validateCandidate(entry.seq(), se);
+            surface.commit(entry);
         }
-        // 3. 追加（seq = log.size() 已由调用方或工厂赋值，这里幂等检查）
-        log.add(frozen);
-        // 4. 推进 surface 投影
-        if (frozen instanceof SurfaceEvent se) {
-            surface.commit(se);
-        }
-        // 5. 触发 publication hooks（由 SessionStore 注入）
-        notifyObservers(frozen);
-        return frozen;
+        // 4. 落日志
+        log.add(entry);
+        return entry;
     }
 
-    // ────────── 投影 ──────────
+    // ────────── 投影与访问（快照读，同样持锁）──────────
 
-    /** 派生 LLM 消息历史（缓存：每个 surface node 首次见到时投影）。 */
-    public List<Message> deriveMessages() {
-        return surface.projectMessages(log);
+    /** 派生 LLM 消息历史（surface node 投影，带缓存）。 */
+    public synchronized List<Message> deriveMessages() {
+        return surface.projectMessages(logSnapshot());
     }
 
-    /** 当前 surface（只读视图）。 */
-    public SessionSurface surface() {
-        return surface.view();
-    }
-
-    /** 最新的 request/header，或空。 */
-    public Optional<EpochHeader> requestHeader() {
-        return foldRequestHeader(log);
-    }
-
-    // ────────── 访问 ──────────
+    public synchronized SessionSurface surface() { return surface.view(); }
+    public synchronized Optional<EpochHeader> requestHeader() { return foldRequestHeader(logSnapshot()); }
 
     public SessionId id() { return id; }
     public SessionHeader header() { return header; }
-    public List<SessionEvent> events() { return List.copyOf(log); }
-    public long seq() { return log.size(); }
+    public synchronized List<LoggedEvent<? extends SessionEvent>> events() {
+        return List.copyOf(log);          // 快照：调用方遍历时不受并发 append 影响
+    }
+    public synchronized long seq() { return log.size(); }
     public long firstLiveSeq() { return firstLiveSeq; }
+
+    private List<LoggedEvent<? extends SessionEvent>> logSnapshot() { return List.copyOf(log); }
 }
 ```
 
-### deepFreeze — 不可变快照
+### structuralFreeze — 不可变快照（非 Jackson 往返）
 
 ```java
 /**
- * 深度冻结事件：递归把 List/Map/record 转为不可变副本。
- * 对应 dsh 的 "events and their nested data are deep-frozen at acceptance"。
+ * 深度冻结事件：递归把 List/Map 复制为不可变副本（List.copyOf / Map.copyOf）。
+ * record 组件按约定本就不可变；此函数处理的是调用方传入可变集合的最后一道拷贝。
  *
- * 实现：用 Jackson 序列化 + 反序列化得到不可变副本（Jackson 配置 IMMUTABLE）。
- * 同时完成 JSON 可序列化校验（一石二鸟）。
+ * 相比"序列化往返冻结"（JSON dump + parse）：一次内存拷贝，无反射/注解依赖、
+ * 成本与事件体积同阶。代价是不再顺带证明"可 JSON 序列化"——该证明移到
+ * 持久化边界（§6 codec），这是有意的分层：不可变性是 Session 的性质，
+ * 可序列化是持久化 seam 的性质。
  */
-@SuppressWarnings("unchecked")
-private static <T extends SessionEvent> T deepFreeze(T event) {
-    try {
-        ObjectMapper m = IMMUTABLE_MAPPER; // 配置了 IMMUTABLE + 无 unknown
-        String json = m.writeValueAsString(event);
-        return (T) m.readValue(json, event.getClass());
-    } catch (JsonProcessingException e) {
-        throw new IllegalArgumentException(
-            "SessionEvent not JSON-serializable: " + e.getOriginalMessage(), e);
-    }
-}
+private static <T extends SessionEvent> T structuralFreeze(T event) { /* 递归 copyOf */ }
 ```
 
 ## 4. SurfaceManager — 有序 surface 投影
 
-1:1 移植 dsh 的 `surface.ts`：
-
 ```java
-// io.dsh.core.session.surface.SurfaceManager
-package io.dsh.core.session.surface;
-
+// io.javanatic.harness.session.surface.SurfaceManager
 class SurfaceManager {
 
-    // surface nodes 的 seq 列表（有序）
-    private final List<Long> nodes = new ArrayList<>();
-    // replace 操作计数（每次 replace 递增，供增量消费者区分"纯追加"vs"重写"）
-    private int replaceGeneration = 0;
-
-    // 缓存：seq → 投影出的 Message（首次见到时计算）
+    private final List<Long> nodes = new ArrayList<>();       // surface node 的 seq（有序）
+    private int replaceGeneration = 0;                        // 区分"纯追加"vs"重写"
     private final Map<Long, Message> messageCache = new HashMap<>();
 
-    /** 校验候选事件能否 commit（不实际修改）。 */
-    void validateCandidate(SurfaceEvent event) {
-        SurfaceOp op = event.surfaceOp();
-        long seq = event.seq();
-        long[] sourceSeqs = event.sourceEventSeqs() == null
-            ? new long[0]
-            : event.sourceEventSeqs().stream().mapToLong(Long::longValue).toArray();
-
-        switch (op) {
-            case SurfaceOp.Append a -> {
-                // append 无额外约束
-            }
+    /** 校验候选事件能否提交（不改任何状态）。provenance 在变更前检查。 */
+    void validateCandidate(long seq, SurfaceEvent event) {
+        switch (event.surfaceOp()) {
+            case SurfaceOp.Append a -> { /* 无额外约束 */ }
             case SurfaceOp.Replace r -> {
-                // start/end 必须是当前 surface 的有效 seq
                 int startIdx = indexOf(r.start());
                 int endIdx = indexOf(r.end());
                 if (startIdx < 0 || endIdx < 0 || startIdx > endIdx) {
                     throw new IllegalArgumentException(
                         "Replace range invalid: [" + r.start() + "," + r.end() + "]");
                 }
-                // provenance：sourceEventSeqs 必须包含所有被 shadow 的 seq
                 long[] shadowed = nodes.subList(startIdx, endIdx + 1)
                     .stream().mapToLong(Long::longValue).toArray();
-                assertProvenance(sourceSeqs, shadowed, seq);
+                assertProvenance(event.sourceEventSeqs(), shadowed, seq);
             }
         }
     }
 
-    /** 提交事件到 surface。 */
-    void commit(SurfaceEvent event) {
-        switch (event.surfaceOp()) {
-            case SurfaceOp.Append a -> nodes.add(event.seq());
-            case SurfaceOp.Replace r -> {
-                int startIdx = indexOf(r.start());
-                int endIdx = indexOf(r.end());
-                // 替换 [startIdx, endIdx] 为新 seq
-                nodes.subList(startIdx, endIdx + 1).clear();
-                nodes.add(startIdx, event.seq());
-                replaceGeneration++;
-                // 失效缓存（被 shadow 的 node 不再有效）
-                for (long s = r.start(); s <= r.end(); s++) messageCache.remove(s);
-            }
-        }
-    }
+    /**
+     * provenance 规则（对应 dsh）：
+     * 1. sourceEventSeqs ⊇ 全部被 shadow 的 seq；
+     * 2. 所有 source seq < 当前 seq（不许引用未来）；
+     * 3. 无重复。
+     */
+    private static void assertProvenance(List<Long> sourceSeqs, long[] shadowed, long seq) { /* ... */ }
 
-    /** 投影为 Message 列表（缓存）。 */
-    List<Message> projectMessages(List<SessionEvent> log) {
-        List<Message> result = new ArrayList<>(nodes.size());
-        for (long seq : nodes) {
-            Message m = messageCache.computeIfAbsent(seq, s -> {
-                SessionEvent e = log.get((int) s);
-                return DeriveMessage.project(e);
-            });
-            if (m != null) result.add(m);
-        }
-        return Collections.unmodifiableList(result);
-    }
+    /** 提交（append 追加；replace 换段并失效被 shadow 的投影缓存）。 */
+    void commit(LoggedEvent<? extends SessionEvent> entry) { /* 见下表语义 */ }
 
-    private int indexOf(long seq) {
-        for (int i = 0; i < nodes.size(); i++) {
-            if (nodes.get(i) == seq) return i;
-        }
-        return -1;
-    }
+    /** 投影为 Message 列表（缓存；replace 时失效被 shadow 段）。 */
+    List<Message> projectMessages(List<LoggedEvent<? extends SessionEvent>> log) { /* ... */ }
 }
 ```
+
+| 操作 | validate | commit |
+|---|---|---|
+| Append | 无额外约束 | `nodes.add(seq)` |
+| Replace[start,end] | 范围有效 + assertProvenance | 换段为新 seq、`replaceGeneration++`、失效被 shadow 段缓存 |
 
 ### DeriveMessage — 每个事件的投影规则
 
 ```java
-// io.dsh.core.session.surface.DeriveMessage
 class DeriveMessage {
-
-    /**
-     * 把一个 surface node 投影成 Message（对应 dsh deriveEventMessage）。
-     * null = 该事件不产生消息（但 surface 里不会出现 null，因为只有 surface 事件才进 surface）。
-     */
+    /** 把一个 surface node 投影成 Message。null = 不产生消息（空 content 截断等）。 */
     static Message project(SessionEvent e) {
         return switch (e) {
-            case UserMessageEvent um -> {
-                // user/message：直接拿 content（source 区分 human / inject / steering）
-                yield new UserMessage(um.message().content(), um.message().source());
-            }
-            case AssistantMessageEvent am -> {
-                // 空 content 的 assistant/message 跳过（max-tokens 截断但无内容）
-                if (am.message().content().isEmpty()) yield null;
-                yield am.message();
-            }
-            case ToolResultEvent tr -> {
-                // tool/result：包装成 user-role 消息携带 tool-result block
-                yield new UserMessage(
-                    List.of(new ToolResultBlock(tr.message())),
-                    MessageSource.tool());
-            }
-            default -> throw new IllegalStateException(
-                "Non-surface event in surface projection: " + e);
+            case UserMessageEvent um ->
+                new UserMessage(um.message().content(), um.message().source());
+            case AssistantMessageEvent am ->
+                am.message().content().isEmpty() ? null : am.message();
+            case ToolResultEvent tr ->
+                new UserMessage(List.of(new ToolResultBlock(tr.message())), MessageSource.tool());
+            default -> throw new IllegalStateException("Non-surface event in surface: " + e.type());
         };
     }
 }
 ```
 
-## 5. SessionStore — 活跃会话管理
+## 5. SessionStore — 活跃会话管理与事件键
 
 ```java
-// io.dsh.core.session.SessionStore
-package io.dsh.core.session;
+// io.javanatic.harness.session.SessionEvents
+/** session 域的事件键常量（Definition 持有，Provider/Consumer 引用）。 */
+public final class SessionEvents {
+    public static final EventKey<Session> CREATED =
+        EventKey.notify("session/created", Session.class);
+    public static final EventKey<Session> DISPOSED =
+        EventKey.notify("session/disposed", Session.class);
+    /** 持久化 barrier：notifyAndWait，全部 flush listener 完成才返回。 */
+    public static final EventKey<Session> FLUSH =
+        EventKey.notify("session/flush", Session.class);
+    public static final EventKey<LoggedEvent<? extends SessionEvent>> APPENDED =
+        EventKey.notify("session/appended", LoggedEvent.class); // unchecked：见 08 §2
+}
+```
 
+```java
+// io.javanatic.harness.session.SessionStore
 /**
- * 活跃会话存储。Session 实例的内存仓库 + publication hooks。
- *
- * 对应 dsh 的 ctx.sessions。
- * Persistence 不在此实现：持久化插件订阅 session/event，flush 时异步落盘。
+ * 活跃会话存储：Session 实例的内存仓库。对应 dsh 的 ctx.sessions。
+ * 持久化不在此实现：持久化插件订阅 session/appended 异步落盘。
  */
 public final class SessionStore {
 
-    private final Events events;
     private final ConcurrentHashMap<SessionId, Entry> store = new ConcurrentHashMap<>();
-    private final AtomicLong idCounter = new AtomicLong(0);
 
-    record Entry(Session session, Fiber ownerFiber, List<EventListener> observers) {}
-
-    /**
-     * 创建会话（由 owner fiber 拥有：dispose 时移除 + 停止通知）。
-     */
-    public Session create(Context ownerCtx, SessionId id, CreateOptions options) {
+    /** 创建会话。header 携带组合清单（R1，见 §8）。 */
+    public Session create(Scope owner, SessionId id, CreateOptions options) {
         Session session = Session.create(id, options.seed(), options.header());
-        // install publication hooks
-        // enter + announce（对应 dsh 的 prepare/enter/announce 三步）
-        store.put(id, new Entry(session, ownerCtx.fiber(), new CopyOnWriteArrayList<>()));
-        events.emit(SessionEvents.CREATED, session, session);
-        ownerCtx.addCloseable(() -> {
-            events.emit(SessionEvents.DISPOSED, session, session);
-            store.remove(id);
-        });
+        store.put(id, new Entry(session));
+        owner.events().onGlobal(SessionEvents.CREATED, (carrier, s) -> { });
+        owner.onClose(() -> store.remove(id));
         return session;
     }
 
-    public Session get(SessionId id) {
-        Entry e = store.get(id);
-        return e == null ? null : e.session();
-    }
+    public Session get(SessionId id) { /* ... */ }
+    public List<Session> list() { /* ... */ }
 
-    public List<Session> list() {
-        return store.values().stream().map(Entry::session).toList();
-    }
-
-    /**
-     * 从 source 会话的稳定前缀 fork 一个 child 会话。
-     */
-    public Session fork(Context ownerCtx, SessionId source, Long boundary, SessionId childId) {
-        Session src = require(source);
-        long end = boundary != null ? boundary : src.seq() - 1;
-        List<SessionEvent> seed = src.events().subList(0, (int) end + 1);
-        // 校验：prefix 不能结束在 open turn 内
-        assertEndsBetweenTurns(seed);
-        SessionId cid = childId != null ? childId : generateId();
-        SessionHeader childHeader = src.header().forFork(cid);
-        return create(ownerCtx, cid, new CreateOptions(seed, childHeader));
-    }
+    /** 从 source 会话的稳定前缀 fork：seed 校验"不能结束在 open turn 内"。 */
+    public Session fork(Scope owner, SessionId source, Long boundary, SessionId childId) { /* ... */ }
 
     /** 持久化 barrier：等所有持久化 listener 完成。 */
-    public CompletableFuture<Boolean> flush(Session session) {
-        return events.parallel(SessionEvents.FLUSH, session, session)
-            .thenApply(v -> true);
-    }
-
-    private SessionId generateId() {
-        return SessionId.of("session-" + idCounter.incrementAndGet());
+    public CompletableFuture<Boolean> flush(Scope origin, Session session) {
+        origin.require(Runtime.KEY).events()
+            .notifyAndWait(SessionEvents.FLUSH, origin, session, session);
+        return CompletableFuture.completedFuture(true);
     }
 }
 ```
 
-## 6. JSONL 持久化
+`SessionStorePlugin`（id `session-store`）在 `apply(Scope)` 注册 `SessionStore` 服务，并订阅 `session/appended` 转发给 `session/event` 观察者。
+
+## 6. 持久化 — codec 属于 seam
+
+### SessionEventCodec — 序列化在持久化边界
 
 ```java
-// io.dsh.session.persistence.jsonl.JsonlPersistence
-package io.dsh.session.persistence.jsonl;
-
+// io.javanatic.harness.session.persistence.SessionEventCodec
 /**
- * JSONL 后端：每行一个 SessionEvent（JSON）。
- * 对应 dsh 的 session-persistence-jsonl。
- *
- * 文件结构：
- *   ~/.harness/sessions/<sessionId>/header.json     ← SessionHeader
- *   ~/.harness/sessions/<sessionId>/log.jsonl       ← 逐行 SessionEvent
- *   ~/.harness/sessions/<sessionId>/log.jsonl.lock  ← 进程锁（防止并发写）
+ * 一种事件类型的序列化器。核心 13 种的 codec 由 jsonl provider 实现；
+ * 扩展事件的 codec 由扩展插件在自己的 apply(Scope) 里注册。
+ * domain record 上零 Jackson 注解——持久化不反向腐蚀 Definition。
+ */
+public interface SessionEventCodec<T extends SessionEvent> {
+    String type();                    // 与事件 type() 一致，注册时校验
+    Class<T> typeClass();
+    void write(T event, JsonSink out);
+    T read(JsonSource in);
+}
+
+/** codec 注册表：type → codec。重复注册 fail loud；核心 codec 由 provider 预置。 */
+public final class SessionEventCodecs {
+    public static Subscription register(Scope scope, SessionEventCodec<?> codec) { /* ... */ }
+    public static Optional<SessionEventCodec<?>> forType(String type) { /* ... */ }
+}
+```
+
+**fail-loud 分层**（对应 dsh "self-contained at load, otherwise at earliest resolvable point"）：
+
+- codec 重复注册 / type 不匹配：注册时抛。
+- 事件类型无 codec 却到达持久化：**该类型首次 flush 时抛**——序列化能力属于持久化边界，Session.append 不感知 JSON。
+- 加载时未知 type：信封行的 `ignorable` 字段为 true 则跳过（无需解码事件体），否则拒绝重建。
+
+### JSONL 布局与行格式
+
+```text
+~/.harness/sessions/<sessionId>/header.json   ← SessionHeader（含组合清单）
+~/.harness/sessions/<sessionId>/log.jsonl     ← 逐行信封
+~/.harness/sessions/<sessionId>/log.jsonl.lock ← 进程锁
+
+行格式（信封字段 + data；ignorable 在信封层，未知类型可不解码即决策）：
+{"seq":12,"type":"tool/result","ignorable":false,"data":{...}}
+```
+
+```java
+// io.javanatic.harness.session.persistence.jsonl.JsonlPersistence
+/**
+ * JSONL 后端：订阅 session/appended 增量 append 行（记录 lastFlushedSeq，
+ * 断点续写）；save() 全量重写（fork 导出用）；load() 逐行重建并校验 seq 连续。
  */
 public final class JsonlPersistence implements SessionPersistence {
-
-    private final Path baseDir;
-    private final ObjectMapper mapper;
-
-    @Override
-    public void save(Session session) {
-        Path dir = baseDir.resolve(session.id().value());
-        Files.createDirectories(dir);
-        // header
-        Path headerFile = dir.resolve("header.json");
-        mapper.writeValue(headerFile.toFile(), session.header());
-        // log（全量重写——简单可靠；增量优化见下）
-        Path logFile = dir.resolve("log.jsonl");
-        try (var writer = Files.newBufferedWriter(logFile,
-                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-            for (SessionEvent e : session.events()) {
-                writer.write(mapper.writeValueAsString(e));
-                writer.newLine();
-            }
-        }
-    }
-
-    @Override
-    public Session load(SessionId id) {
-        Path dir = baseDir.resolve(id.value());
-        SessionHeader header = mapper.readValue(
-            dir.resolve("header.json").toFile(), SessionHeader.class);
-        List<SessionEvent> events = new ArrayList<>();
-        try (var reader = Files.newBufferedReader(dir.resolve("log.jsonl"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                JsonNode node = mapper.readTree(line);
-                String type = node.get("type").asText();
-                Class<? extends SessionEvent> cls = SessionEventRegistry.classFor(type);
-                if (cls == null) {
-                    if (node.has("ignorable") && node.get("ignorable").asBoolean()) {
-                        continue; // 跳过未知 ignorable 事件
-                    }
-                    throw new IllegalStateException("Unknown event type: " + type);
-                }
-                events.add(mapper.readValue(line, cls));
-            }
-        }
-        return Session.create(id, events, header);
-    }
+    /* load: 读行 → 校验 envelope.seq == 行号（跳号/重复拒绝加载）
+             → codec 查找 → 未知 type 时按信封 ignorable 决策 */
 }
 ```
 
-**增量写优化**（可选，MVP 可先全量）：记录 `lastFlushedSeq`，只 append 增量行。
+## 7. 不变式（invariant companion）
 
-## 7. SessionEventRegistry — 扩展事件类型注册
+对应 dsh 的 session invariant。`SessionInvariants.validate(List<LoggedEvent<?>>)` 逐条检查：
 
-```java
-// io.dsh.core.session.event.SessionEventRegistry
-package io.dsh.core.session.event;
+- **信封连续**：`seq[i] == i`（load 与 append 双侧结构性保证，此处复核）
+- **turn/step 单调且嵌套**：turn 号 = TurnStart 计数；step 必在 turn 内；tool/call 与 tool/result 同 step 配对
+- **provenance**：surface 事件的 sourceEventSeqs 全部 < 当前 seq、无重复；Replace 时 ⊇ shadowed
+- **end-seed**：只在 seed 末尾出现一次
+- **R1 复核**：LlmRequestEvent 的 `[messagesFromSeq, messagesToSeq] + systemPromptSha256 + toolsSchemaSha256` 重推导一致（回放测试用，见 10）
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+## 8. 不变式 R1：可重建性
 
-/**
- * 扩展事件类型注册表。
- *
- * 核心事件（sealed）不需要注册（编译期已知）。
- * 插件扩展事件（ExtensionEvent 子类）必须在此注册 type→class 映射，
- * 以便 JSONL 持久化反序列化。
- *
- * 对应 dsh 的 known-event-types（运行时注册版）。
- */
-public final class SessionEventRegistry {
+> **R1（可重建性）**：模型任意一轮看到的完整请求内容，可从持久化事实（日志 + 组合清单）重建，且重建的正确性可被机器验证。
 
-    private static final Map<String, Class<? extends ExtensionEvent>> TYPES = new ConcurrentHashMap<>();
+模型看到的 = 系统提示词 + 消息投影 + 工具 schema + 参数。逐项的重建路径：
 
-    /** 注册扩展事件类型。重复注册同 type fail loud。 */
-    public static void register(String type, Class<? extends ExtensionEvent> cls) {
-        Class<?> existing = TYPES.putIfAbsent(type, cls);
-        if (existing != null && existing != cls) {
-            throw new IllegalStateException(
-                "Event type '" + type + "' already registered: " + existing);
-        }
-    }
-
-    /** 查 type 对应的 class（核心事件返回对应 record class）。 */
-    @SuppressWarnings("unchecked")
-    public static Class<? extends SessionEvent> classFor(String type) {
-        return switch (type) {
-            case "turn/start"       -> TurnStart.class;
-            case "turn/end"         -> TurnEnd.class;
-            case "step/start"       -> StepStart.class;
-            case "step/end"         -> StepEnd.class;
-            case "user/message"     -> UserMessageEvent.class;
-            case "assistant/chunk"  -> AssistantChunkEvent.class;
-            case "assistant/message"-> AssistantMessageEvent.class;
-            case "tool/call"        -> ToolCallEvent.class;
-            case "tool/result"      -> ToolResultEvent.class;
-            case "todo/write"       -> TodoWriteEvent.class;
-            case "request/header"   -> RequestHeaderEvent.class;
-            case "session/end-seed" -> SessionEndSeedEvent.class;
-            default -> TYPES.get(type);
-        };
-    }
-
-    /** 所有已知类型（核心 + 扩展），用于 known-event-types 生成。 */
-    public static Set<String> allTypes() {
-        Set<String> all = new HashSet<>(TYPES.keySet());
-        all.addAll(Set.of(
-            "turn/start","turn/end","step/start","step/end",
-            "user/message","assistant/chunk","assistant/message",
-            "tool/call","tool/result","todo/write",
-            "request/header","session/end-seed"));
-        return Collections.unmodifiableSet(all);
-    }
-}
-```
-
-插件通过 `Plugin.apply(ctx)` 调用 `SessionEventRegistry.register("my/event", MyEvent.class)`。JPMS 的 `provides` 无法直接表达这个（注册是运行时副作用），所以走显式注册 API。
-
-## 8. 不变式（invariant companion）
-
-对应 dsh 的 `dsh-session/invariant`。MVP 用一个简单的 invariant checker：
-
-```java
-// io.dsh.core.session.invariant.SessionInvariants
-package io.dsh.core.session.invariant;
-
-/**
- * Session 日志不变式校验器。
- *
- * 核心不变式：
- * - seq 连续（seq[i] == i）
- * - turn/step 编号单调
- * - step 必须在 turn 内（turn/start 后、turn/end 前）
- * - tool/call 和 tool/result 同 step 配对
- * - surface 事件的 sourceEventSeqs 指向更早的有效 seq
- * - session/end-seed 仅由构造器写入（校验：只在 seed 末尾出现一次）
- */
-public final class SessionInvariants {
-
-    public static void validate(List<SessionEvent> events) {
-        long expectedSeq = 0;
-        int currentTurn = -1;
-        int currentStep = -1;
-        boolean inTurn = false;
-        boolean inStep = false;
-
-        for (SessionEvent e : events) {
-            if (e.seq() != expectedSeq) {
-                throw new InvariantViolation("seq gap: expected " + expectedSeq + ", got " + e.seq());
-            }
-            expectedSeq++;
-
-            switch (e) {
-                case TurnStart ts -> {
-                    if (inTurn) throw new InvariantViolation("nested turn");
-                    inTurn = true;
-                    currentTurn = ts.turn();
-                    if (currentTurn != expectedTurn(events, e.seq())) {
-                        throw new InvariantViolation("turn number not monotonic");
-                    }
-                }
-                case TurnEnd te -> {
-                    if (!inTurn) throw new InvariantViolation("turn/end without start");
-                    if (inStep) throw new InvariantViolation("turn/end inside step");
-                    inTurn = false;
-                }
-                case StepStart ss -> {
-                    if (!inTurn) throw new InvariantViolation("step outside turn");
-                    inStep = true;
-                    currentStep = ss.step();
-                }
-                case StepEnd se -> {
-                    if (!inStep) throw new InvariantViolation("step/end without start");
-                    inStep = false;
-                }
-                case ToolCallEvent tc -> {
-                    if (!inStep) throw new InvariantViolation("tool/call outside step");
-                }
-                case ToolResultEvent tr -> {
-                    if (!inStep) throw new InvariantViolation("tool/result outside step");
-                }
-                case SurfaceEvent se -> {
-                    if (se.sourceEventSeqs() != null) {
-                        for (long s : se.sourceEventSeqs()) {
-                            if (s >= e.seq()) throw new InvariantViolation(
-                                "sourceEventSeq " + s + " >= current seq " + e.seq());
-                        }
-                    }
-                }
-                default -> { /* 其他事件无 turn/step 约束 */ }
-            }
-        }
-    }
-}
-```
-
-## 9. 关键不变式总结
-
-| 不变式 | 校验点 | 失败行为 |
+| 内容 | 来源 | 重建方式 |
 |---|---|---|
-| `seq = log.length`（连续性）| append 时 | 拒绝 append |
-| 所有 event.data JSON 可序列化 | append 时（deepFreeze） | 拒绝 append |
-| SurfaceEvent 必带 surfaceOp | 编译期（sealed 接口） | 编译失败 |
-| Replace 的 start/end 是有效 surface seq | append 时（validateCandidate） | 拒绝 append |
-| Replace 的 sourceEventSeqs 覆盖所有 shadowed seq | append 时 | 拒绝 append |
-| step 必须在 turn 内 | invariant companion | 违规报告 |
-| tool/call 和 tool/result 同 step 配对 | invariant companion | 违规报告 |
-| 未知事件 type | load 时 | ignorable=true 跳过；否则拒绝重建 |
-| 持久化 seq 连续（含 assistant/chunk）| load 时 | 拒绝 load（chunk 不能过滤）|
+| 消息历史 | 日志 | `deriveMessages()` 纯函数（压缩后亦然——压缩也是事件） |
+| 系统提示词 / 工具 schema | 插件集 + 配置 + 会话事实 | 组合清单（SessionHeader 内）+ 代码重组装 |
+| 请求参数 | LlmRequestEvent.params | 直接读 |
+| 正确性证明 | LlmRequestEvent 哈希 | 重组装后比对 SHA-256 |
 
-## 10. 与 dsh 对齐
+三条配套规则，缺一则 R1 为假：
+
+1. **组合清单持久化**：`SessionHeader` 携带 `CompositionManifest`——plugin id + 版本摘要 + 影响模型可见输出的配置值 + harness 版本。无清单的日志无法回答"这份提示词是谁组装的"。
+2. **提示词组装只读日志**：组装器读事件（时间取 `event.time()`，不取 wall clock）；环境注入（日期、平台）进组合清单或事件。违反则哈希比对永远失败，回放测试红。
+3. **哈希锚点**：每步一条 LlmRequestEvent（§1），内容不重复存，可推导 + 哈希定值。代码演进悄悄改变提示词时，旧会话回放的哈希比对立刻暴露。
+
+回放验证（10 的测试形态）：`load() → deriveMessages() + 重组装提示词/schema → sha256 与 LlmRequestEvent 比对`。全绿 = R1 成立。
+
+## 9. 与 dsh 对齐
 
 | dsh 概念 | JH 实现 | 备注 |
 |---|---|---|
-| `SessionEventMap`（merge-extensible） | `sealed interface SessionEvent` + `ExtensionEvent` | 核心 sealed，扩展 non-sealed |
-| `SurfaceEventType` | `interface SurfaceEvent` | 三种实现 |
-| `surfaceOp` 条件字段 | SurfaceEvent 接口方法 | 编译期保证 |
-| `sourceEventSeqs` provenance | `SurfaceEvent.sourceEventSeqs()` + `assertProvenance` | 1:1 |
-| `SurfaceManager` 增量投影 | `SurfaceManager` | 1:1 |
-| `deriveMessages()` 缓存 | `messageCache`（seq→Message） | 1:1 |
-| `session/end-seed` | `SessionEndSeedEvent` record | 1:1 |
-| `ignorable` 前向兼容 | `SessionEvent.ignorable()` + load 时校验 | 1:1 |
-| `isJsonValue` 校验 | `deepFreeze`（Jackson 双向） | 一石二鸟 |
-| `known-event-types.ts` 生成 | `SessionEventRegistry.allTypes()` 运行时 | 换了机制 |
+| `SessionEventMap`（merge-extensible） | sealed 核心 + ExtensionEvent | 核心 sealed，扩展 non-sealed |
+| 事件自带 seq | **信封 LoggedEvent，append 锁内分配** | 修 dsh 教训：调用方无法写错 |
+| `surfaceOp` / `sourceEventSeqs` 条件字段 | SurfaceEvent 接口方法 | 编译期保证 |
+| provenance | assertProvenance（validate 阶段，变更前） | ⊇ shadowed、< 当前、无重复 |
+| `SurfaceManager` 增量投影 | SurfaceManager + 缓存失效 | 1:1 |
+| `deriveMessages()` | 纯函数 + 快照读（同锁） | 并发 append 下无撕裂读 |
+| deep-freeze（序列化往返） | structuralFreeze（内存拷贝）+ codec 在 seam | 不可变性与序列化解耦 |
+| `ignorable` 前向兼容 | 信封行字段，未知类型免解码跳过 | 1:1 |
+| `known-event-types` 生成 | SessionEventCodecs 运行时注册 | 换了机制 |
+| 请求可重建 | **LlmRequestEvent + CompositionManifest（新增）** | R1 载体，超出 dsh 的显式化 |

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.deepseek</groupId>
+        <groupId>io.javanatic</groupId>
         <artifactId>harness-llm-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -14,7 +14,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.deepseek</groupId>
-            <artifactId>harness-kernel</artifactId>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-core</artifactId>
         </dependency>    </dependencies>
 </project>

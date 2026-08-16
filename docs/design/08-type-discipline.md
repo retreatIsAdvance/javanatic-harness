@@ -99,7 +99,7 @@ public final class ScheduleBlocked implements TurnEndReason.Extension {
 TurnEndReasonRegistry.register("schedule-blocked", ScheduleBlocked.class);
 ```
 
-持久化/反序列化时查 registry（见 [03 §7](03-session-event-sourcing.md)）。
+持久化/反序列化时查 codec 注册表（见 [03 §6](03-session-event-sourcing.md)）。
 
 ### 何时用 sealed vs non-sealed
 
@@ -113,8 +113,8 @@ TurnEndReasonRegistry.register("schedule-blocked", ScheduleBlocked.class);
 dsh 用 `Branded<B>` 让 `SessionId` 和 `CallId` 在类型层不可互换。JH 用泛型 phantom type：
 
 ```java
-// io.dsh.kernel.brand.Id
-package io.dsh.kernel.brand;
+// io.javanatic.harness.kernel.brand.Id
+package io.javanatic.harness.kernel.brand;
 
 /**
  * 类型品牌的 ID。结构上是 String，类型上是 T 的载体。
@@ -144,24 +144,18 @@ public record Id<T>(String value) {
 ### 具体 ID 类型
 
 ```java
-// io.dsh.core.session.SessionId
+// io.javanatic.harness.core.session.SessionId
 public class SessionId {
     public interface Brand extends Id.Brand {}
     public static Id<Brand> of(String value) { return new Id<>(value); }
     public static Id<Brand> generate() { return of("sid-" + UUID.randomUUID()); }
 }
 
-// io.dsh.llm.CallId
+// io.javanatic.harness.llm.CallId
 public class CallId {
     public interface Brand extends Id.Brand {}
     public static Id<Brand> of(String value) { return new Id<>(value); }
     public static Id<Brand> generate() { return of("call_" + Long.toHexString(System.nanoTime())); }
-}
-
-// io.dsh.jobs.JobId
-public class JobId {
-    public interface Brand extends Id.Brand {}
-    public static Id<Brand> of(String value) { return new Id<>(value); }
 }
 ```
 
@@ -238,11 +232,12 @@ JH 等价：
 | 边界 | 校验 | 手段 |
 |---|---|---|
 | 同进程 typed 调用 | **不**重复校验 | Java 类型系统（sealed/generics/record）|
-| YAML/JSON 解析 | 校验 | Jackson `@JsonCreator` + 构造器校验 |
+| YAML 配置解析 | 校验 | config 模块 SnakeYAML 白名单 + record 构造器校验 |
 | Model/tool JSON 输入 | 校验 | `ValueSchema` 解析 + 校验 |
-| 持久化加载 | 校验 | `Session.fromRestore` + invariant companion |
+| 持久化序列化 | 校验 | codec 在持久化 seam（`SessionEventCodec`，[03 §6](03-session-event-sourcing.md)）；domain record **零 Jackson 注解** |
+| 持久化加载 | 校验 | envelope `ignorable` 判定 + invariant companion |
 | 虚拟线程边界 | 类型不变 | `Id<T>` phantom type |
-| 网络边界 | 校验 | Jackson `@JsonDeserialize` 严格模式 |
+| 网络边界 | 校验 | DeepSeek adapter 内 Jackson 严格反序列化 |
 
 **示例**：构造器校验（fail loud at construction）：
 ```java
@@ -297,7 +292,7 @@ JH 落地：
 
 ```java
 // 1. Plugin 依赖缺失 → 启动失败
-ctx.get(SomeService.KEY);  // 若未注册抛 ServiceNotAvailableException
+scope.require(SomeService.KEY);  // 若沿链无提供者抛 ServiceNotAvailableException
 
 // 2. Patch 目标 id 不存在 → 报错
 // 3. YAML 字段缺失/类型错 → 构造器抛 IllegalArgumentException
@@ -320,7 +315,7 @@ try {
 import org.jspecify.nullness.Nullable;
 
 public record AssistantMessageEvent(
-    long seq, long time, int turn, int step,
+    long time, int turn, int step,
     AssistantMessage message,
     @Nullable TokenUsage usage,          // 可空
     SurfaceOp surfaceOp,
@@ -365,19 +360,18 @@ Java 25 允许 `import module M;` 一次性导入模块 M 导出的所有包的�
 
 ```java
 // Java 25 之前：消费者要罗列几十个包级 import
-import io.dsh.kernel.context.Context;
-import io.dsh.kernel.context.ServiceKey;
-import io.dsh.kernel.context.Subscription;
-import io.dsh.kernel.fiber.Fiber;
-import io.dsh.kernel.events.EventKey;
-import io.dsh.kernel.events.EventListener;
-import io.dsh.kernel.events.Events;
+import io.javanatic.harness.kernel.scope.Scope;
+import io.javanatic.harness.kernel.scope.ServiceKey;
+import io.javanatic.harness.kernel.scope.Subscription;
+import io.javanatic.harness.kernel.events.EventKey;
+import io.javanatic.harness.kernel.events.EventListener;
+import io.javanatic.harness.kernel.events.Events;
 // ... 还有十几个
 
 // Java 25：一行 import module
-import module io.deepseek.harness.kernel;
+import module io.javanatic.harness.kernel;
 
-// 然后直接用 Context / ServiceKey / Fiber / Events ...
+// 然后直接用 Scope / ServiceKey / Events ...
 ```
 
 **纪律**：`import module` 只导入 `exports` 的包（尊重 JPMS 边界，不破坏隔离）。建议在**跨模块消费者**（如 agent-loop 消费 kernel+session+tools+llm）用 `import module`，在**模块内部**仍用精确的包级 import 以保持可追溯性。
@@ -400,5 +394,6 @@ import module io.deepseek.harness.kernel;
 | 空命名 catch | Javadoc 注释说明 | 同 |
 | 非空约束 | `@Nullable` (jspecify) + 构造器校验 | 同 |
 | 跨模块导入降噪 | Module Import Declarations（JEP 511）| 编译期，尊重 JPMS 边界 ✅ |
+| 序列化注解留在边界 | domain record 零 Jackson 注解，codec 归持久化 seam（03 §6）| 包边界纪律 ✅ |
 | Source plane vs Artifact plane | Maven src/main vs target/*.jar + JPMS module-path | 编译期 ✅ |
 | 一个模块一个 aggregate tsconfig | JPMS `module-info.java` | 编译期 ✅ |
