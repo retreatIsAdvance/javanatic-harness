@@ -15,3 +15,4 @@ replay_pid*
 
 # jenv local override (committed .java-version is the project contract)
 .java-local
+.jqwik-database

@@ -19,7 +19,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | JPMS 名 | 依赖 | 职责 |
 |---|---|---|---|
 | `harness-kernel-brand` | `…kernel.brand` | （无）| `Id<T>` phantom type（对应 dsh-brand）|
-| `harness-kernel-core` | `…kernel` | `brand` | `Scope`/`Runtime`/`ServiceKey`/`Subscription`（.scope）、`Events`/`EventKey`/监听器（.events）、`Plugin`/`PluginLoader`（.plugin）—— 统一内核（[01](01-kernel.md)）|
+| `harness-kernel-core` | `…kernel` | （无，仅 java.base）| `Scope`/`Runtime`/`ServiceKey`/`Subscription`（.scope）、`Events`/`EventKey`/监听器（.events）、`Plugin`/`PluginLoader`（.plugin）—— 统一内核（[01](01-kernel.md)）|
 | `harness-kernel-config` | `…kernel.config` | （无）| YAML 解析（白名单）+ `ConfigService`（[07 §4](07-profile-bundle.md)）|
 
 > **为什么 kernel 从 8 个模块收敛到 3 个**：`Scope` 的方法签名同时引用 Events（订阅视图）与 Plugin（装载），按 fiber/context/scope/events/plugin 拆模块必然互 `requires` 成环。统一内核把三套 Cordis 概念（Fiber/ScopeKey/Context）合成一个 `Scope` 后，循环消失，单模块 + 多导出包即可（[01 §1](01-kernel.md)）。`brand` 与 `config` 因零依赖独立，供最小心智单元引用。
@@ -152,8 +152,6 @@ flowchart TD
         headless[harness-bundle-headless]
     end
 
-    brand --> kcore
-
     kcore --> session
     session --> agent
     session --> sysprompt
@@ -198,10 +196,9 @@ Jackson 只出现在 `llm-deepseek` 与 `persistence-jsonl` 两个模块（JSON 
 ### kernel.core（统一内核）
 
 ```java
+// 仅依赖 java.base（concurrent 集合都在 java.base 里）；brand/config 是同层独立模块，
+// kernel/core 不使用它们——依赖图里没有这条边，谁用谁 requires
 module io.javanatic.harness.kernel {
-    requires io.javanatic.harness.kernel.brand;
-    requires java.util.concurrent;
-
     exports io.javanatic.harness.kernel.scope;   // Scope, Runtime, ServiceKey, Subscription, Effect
     exports io.javanatic.harness.kernel.events;  // Events, EventKey, 监听器, WaterfallArgs, Next
     exports io.javanatic.harness.kernel.plugin;  // Plugin, PluginLoader
@@ -566,6 +563,8 @@ harness/
 
 ### 叶子模块 POM（如 `kernel/core/pom.xml`）
 
+kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/assertj/jqwik 由根 POM 统一注入）：
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -581,14 +580,6 @@ harness/
     </parent>
 
     <artifactId>harness-kernel-core</artifactId>
-
-    <dependencies>
-        <!-- 内部模块：不写 version（由父 POM dependencyManagement 提供）-->
-        <dependency>
-            <groupId>io.javanatic</groupId>
-            <artifactId>harness-kernel-brand</artifactId>
-        </dependency>
-    </dependencies>
 </project>
 ```
 

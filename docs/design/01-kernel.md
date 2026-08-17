@@ -109,7 +109,7 @@ public interface Scope extends AutoCloseable {
     /** 派生子 scope：新的生命周期域 + 服务 overlay 层。父 close 级联子。 */
     Scope child();
 
-    /** 本 scope 在父链中的位置（root 返回自身）。事件冒泡与 overlay 以此为据。 */
+    /** 本 scope 在父链中的位置（root 返回 null，链到此终止）。事件冒泡与 overlay 以此为据。 */
     Scope parent();
 
     /** 绑定本 scope 的事件订阅视图（订阅随 scope 回收，见 §5）。 */
@@ -169,8 +169,7 @@ final class ScopeImpl implements Scope {
     public Scope child() {
         ensureActive();
         ScopeImpl child = new ScopeImpl(this, runtime);
-        children.add(child);
-        effectStack.push((AutoCloseable) child::close);   // 父 close 级联子
+        effectStack.addLast((AutoCloseable) child::close);   // 父 close 级联子（栈上一个 entry）
         return child;
     }
 
@@ -256,14 +255,28 @@ public interface WaterfallListener<T> {
     T handle(Object carrier, WaterfallArgs<T> args) throws Exception;
 }
 
-/** waterfall 的 next：委托给链上的下一个 listener。 */
+/**
+ * waterfall 的 next：委托给链上的下一个 listener。
+ * 零参调用直传当前 args；带参调用以新 args 下传（args 本身不可变，改写即换值）。
+ * 注意：调用点写单参 lambda（`none -> …`）——javac 25 拒绝零参隐式 lambda
+ * 目标 varargs 抽象方法。
+ */
 @FunctionalInterface
 public interface Next<T> {
-    T invoke() throws Exception;
+    T invoke(Object... overrideArgs) throws Exception;
 }
 
-/** waterfall 参数包：args 可被 listener 改写后随 next 下传（不可变，改写即换新实例）。 */
-public record WaterfallArgs<T>(List<Object> args, Next<T> next) {}
+/**
+ * waterfall 参数包：args 不可变，listener 经 next(新值...) 改写下传。
+ * 组件名是 rest（不是 next）：record 组件 next 的访问器 next() 会与委托方法
+ * 同名冲突，next(Object...) 显式定义为委托方法。
+ */
+public record WaterfallArgs<T>(List<Object> args, Next<T> rest) {
+    /** 委托尾链：零参直传当前 args，带参改写。每个 rest 只允许调用一次。 */
+    public T next(Object... overrideArgs) throws Exception {
+        return rest.invoke(overrideArgs);
+    }
+}
 ```
 
 ### EventKey — 事件名 + 类型 token + 模式
@@ -309,12 +322,21 @@ public final class Events {
 
     // ────────── 订阅（经 ScopedEvents 视图调用，订阅随 scope 回收）──────────
 
-    <T> Subscription subscribe(EventKey<T> key, Object listener, Scope scope) {
-        key.requireMode(listener instanceof WaterfallListener<?> ? Mode.WATERFALL : Mode.NOTIFY);
-        var reg = new Registration<T>(listener, scope);
-        hooks.computeIfAbsent(key, k -> new CopyOnWriteArrayList<Registration<?>>()).add(reg);
-        return new Subscription(
-            () -> hooks.getOrDefault(key, List.of()).remove(reg), () -> { });
+    // 两个类型化入口而非 instanceof 猜测：listener 形参类型即模式依据
+    <T> AutoCloseable subscribeNotify(EventKey<T> key, EventListener<? super T> listener, Scope bound) {
+        key.requireMode(Mode.NOTIFY);
+        return addRegistration(key, listener, bound);
+    }
+
+    <T> AutoCloseable subscribeWaterfall(EventKey<T> key, WaterfallListener<? super T> listener, Scope bound) {
+        key.requireMode(Mode.WATERFALL);
+        return addRegistration(key, listener, bound);
+    }
+
+    private AutoCloseable addRegistration(EventKey<?> key, Object listener, Scope bound) {
+        Registration<?> reg = new Registration<>(listener, bound);
+        hooks.computeIfAbsent(key, k -> new CopyOnWriteArrayList<>()).add(reg);
+        return () -> hooks.getOrDefault(key, List.of()).remove(reg);
     }
 
     // ────────── scope 过滤（事件向上冒泡）──────────
@@ -363,13 +385,15 @@ public final class Events {
     /**
      * 中间件链：不可变 cons-list，buildChain 递归构建，每个 next 绑定剩余尾链。
      * - 不调 next() = 短路（后续 listener 不执行）
-     * - next() 调用两次 = IllegalStateException（AtomicBoolean 防护）
+     * - next() 调用两次 = IllegalStateException（invokeOnce 守卫，包在传给
+     *   listener 的 rest 上——守卫在最外层调用处是错的，listener 拿到的 rest
+     *   才是可二次调用的入口）
      * - 同步跑在调用方（虚拟）线程上，listener 阻塞即阻塞，返回值即结果
      */
     public <T> T waterfall(EventKey<T> key, Scope origin, Object carrier,
                            List<Object> args, Next<T> inner) {
         key.requireMode(Mode.WATERFALL);
-        List<WaterfallListener<? super T>> chain = /* filter + cast，kernel 内唯一 unchecked cast */;
+        List<WaterfallListener<T>> chain = /* filter + cast，kernel 内少数同构 unchecked cast */;
         try {
             return buildChain(chain, 0, carrier, args, inner).invoke();
         } catch (CompletionException e) {
@@ -381,24 +405,30 @@ public final class Events {
 
     /**
      * 查询形态（替代 cordis bail）：每个 listener 返回非 null 即短路整链，
-     * 全部返回 null 时结果为 empty。inner 是 () -> null。
+     * 全部返回 null 时结果为 empty。inner 是 overrideArgs -> null。
      * "审批决策"、"凭据解析" 这类 first-answer-wins 的场景用它。
      */
     public <T> Optional<T> firstOf(EventKey<T> key, Scope origin, Object carrier, List<Object> args) {
-        return Optional.ofNullable(waterfall(key, origin, carrier, args, () -> null));
+        return Optional.ofNullable(waterfall(key, origin, carrier, args, overrideArgs -> null));
     }
 
-    private <T> Next<T> buildChain(List<WaterfallListener<? super T>> chain, int index,
+    private <T> Next<T> buildChain(List<WaterfallListener<T>> chain, int index,
                                    Object carrier, List<Object> args, Next<T> inner) {
         if (index == chain.size()) return inner;
-        WaterfallListener<? super T> listener = chain.get(index);
-        Next<T> rest = buildChain(chain, index + 1, carrier, args, inner);
+        WaterfallListener<T> listener = chain.get(index);
+        // 守卫包住传给 listener 的 rest：每个 listener 的 next 只允许调用一次
+        Next<T> rest = invokeOnce(buildChain(chain, index + 1, carrier, args, inner));
+        return overrideArgs -> listener.handle(carrier,
+            new WaterfallArgs<>(overrideArgs.length == 0 ? args : List.of(overrideArgs), rest));
+    }
+
+    private static <T> Next<T> invokeOnce(Next<T> next) {
         AtomicBoolean invokedOnce = new AtomicBoolean(false);
-        return () -> {
+        return overrideArgs -> {
             if (!invokedOnce.compareAndSet(false, true)) {
                 throw new IllegalStateException("waterfall next() invoked twice");
             }
-            return listener.handle(carrier, new WaterfallArgs<>(args, rest));
+            return next.invoke(overrideArgs);
         };
     }
 }
@@ -539,9 +569,9 @@ public final class PluginLoader {
     }
 
     /**
-     * 按给定顺序加载：每个 plugin 一个子 scope。
+     * 按给定顺序加载：每个 plugin 一个 PluginScope 挂载视图。
      * requires 中出现尚未加载的 id → fail loud（顺序错了）。
-     * apply 抛异常 → 立即 close 该子 scope（回滚它已注册的全部副作用）→ 异常上抛。
+     * apply 抛异常 → 立即 close 该视图（回滚全部副作用，含已 provide 的服务）→ 异常上抛。
      * 加载是逐插件原子的：不存在半挂载的插件（R3）。
      */
     public void loadAll(Scope root, List<Plugin> ordered) {
@@ -554,11 +584,11 @@ public final class PluginLoader {
                             + "' which is not loaded before it (check row order)");
                 }
             }
-            Scope child = root.child();
+            Scope mount = new PluginScope(root, root.child());
             try {
-                p.apply(child);
+                p.apply(mount);
             } catch (Exception e) {
-                child.close();   // R3 回滚原语：子 scope 单独 close
+                mount.close();   // R3 回滚原语：私有 child 单独 close
                 throw new IllegalStateException(
                     "Plugin failed and rolled back: " + p.id(), e);
             }
@@ -573,6 +603,8 @@ public final class PluginLoader {
 
 每个 Plugin 实现类经 ServiceLoader 发现：JPMS 模块在 `module-info.java` 声明 `provides io.javanatic.harness.kernel.plugin.Plugin with XxxPlugin;`；classpath jar 用 `META-INF/services/...`。同一语义。
 
+**PluginScope 挂载视图**（包私有，Plugin 只见 `Scope` 接口）：`provide` 落**共享 mount root**（跨插件可见——纯私有 child 里 provide，兄弟插件沿父链解析不到，"b requires a" 直接失败）；`effect` / 订阅 / 子 scope 落**插件私有 child**（close 即整体回滚，含从 root 摘除已注册服务）。解析沿私有 child 向上，两处都可见。实现是 §3 Scope 接口的一个纯委托包装。
+
 **为什么不用注解声明依赖**：Java 注解成员只接受编译期常量，`ServiceKey`/插件对象放不进去；字符串 id 走 `requires()` 方法，拼写错误在 loadAll / topoSort 处 fail loud。
 
 ## 8. 不变式 R3：副作用消除
@@ -583,9 +615,9 @@ public final class PluginLoader {
 
 | 保证 | 机制 | 证明 |
 |---|---|---|
-| 半挂载不存在 | 每插件独立子 scope；apply 失败立即 `child.close()` 回滚 | 加载失败回滚测试（10） |
+| 半挂载不存在 | 每插件独立挂载视图（PluginScope）；apply 失败立即 `mount.close()` 回滚 | 加载失败回滚测试（10） |
 | 僵尸引用不存在 | 服务**每次访问沿链重解析**，不缓存；provider scope close 即从 overlay 摘除 | 结构性：无缓存即无失效遗漏 |
-| 回收顺序 | effect 栈 LIFO；子 scope 级联 entry 位于其后续 effect 之前 | teardown 顺序测试（09 §teardown） |
+| 回收顺序 | effect 栈 LIFO（addLast/pollLast）；子 scope 级联 entry 位于其后续 effect 之前 | teardown 顺序测试（09 §teardown）+ jqwik 性质：任意注册序的回收序恒为其逆序 |
 | 重复回收不可能 | Subscription CAS + 栈原子摘除；Scope close CAS | 并发 close 测试 |
 
 **边界与剩余风险**（诚实声明）：
