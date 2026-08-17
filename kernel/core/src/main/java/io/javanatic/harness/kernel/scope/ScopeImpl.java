@@ -38,13 +38,24 @@ final class ScopeImpl implements Scope {
     @Override
     public <T> Subscription provide(ServiceKey<T> key, T impl) {
         ensureActive();
+        return effect(() -> registerService(key, impl));
+    }
+
+    /**
+     * 无栈注册通道（内核装配用）：写本 scope 服务表，返回"仅注销"的回收器，
+     * 不在本 scope 的 effect 栈登记。ScopeImpl.provide 不用它（走本栈）；
+     * PluginScope 用它把注销器登记到插件私有栈，保证插件 teardown 时
+     * 自己的服务仍可见、摘除恒为最后一步。
+     */
+    <T> AutoCloseable registerService(ServiceKey<T> key, T impl) {
+        ensureActive();
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(impl, "impl");
         Object prev = services.putIfAbsent(key, impl);
         if (prev != null) {
             throw new IllegalStateException("Service " + key + " already registered in this scope");
         }
-        return effect(() -> () -> services.remove(key, impl));
+        return () -> services.remove(key, impl);
     }
 
     @Override
@@ -74,6 +85,10 @@ final class ScopeImpl implements Scope {
         final AutoCloseable disposer;
         try {
             disposer = effect.register();
+        } catch (RuntimeException e) {
+            // fail-loud 语义异常（如 duplicate provide 的 IllegalStateException）原样上抛，
+            // 不裹第二层皮丢失消息；仅受检异常需要包装以穿过无 throws 签名
+            throw e;
         } catch (Exception e) {
             throw new IllegalStateException("Effect register failed; nothing registered", e);
         }

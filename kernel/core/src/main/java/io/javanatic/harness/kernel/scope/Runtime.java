@@ -17,7 +17,7 @@ public final class Runtime implements AutoCloseable {
 
     private final Events events;
     private final ExecutorService virtualThreads;
-    private final Scope root;
+    private final ScopeImpl root;
 
     public Runtime() {
         this.virtualThreads = Executors.newVirtualThreadPerTaskExecutor();
@@ -28,6 +28,17 @@ public final class Runtime implements AutoCloseable {
     /** root scope：所有插件与子 scope 的挂载点。 */
     public Scope root() {
         return root;
+    }
+
+    /**
+     * 为插件装载创建挂载视图（PluginScope，.scope 包内核装配）：
+     * provide 落共享 root（跨插件可见），effect/订阅落插件私有 child
+     * （close 即整体回滚）。PluginLoader.loadAll 逐插件调用。
+     *
+     * @return 挂载视图
+     */
+    public Scope mountScope() {
+        return new PluginScope(root, root.child());
     }
 
     /**

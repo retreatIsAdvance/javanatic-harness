@@ -574,7 +574,8 @@ public final class PluginLoader {
      * apply 抛异常 → 立即 close 该视图（回滚全部副作用，含已 provide 的服务）→ 异常上抛。
      * 加载是逐插件原子的：不存在半挂载的插件（R3）。
      */
-    public void loadAll(Scope root, List<Plugin> ordered) {
+    public void loadAll(Runtime runtime, List<Plugin> ordered) {
+        Scope root = runtime.root();
         Set<String> loaded = new HashSet<>();
         for (Plugin p : ordered) {
             for (String dep : p.requires()) {
@@ -584,7 +585,7 @@ public final class PluginLoader {
                             + "' which is not loaded before it (check row order)");
                 }
             }
-            Scope mount = new PluginScope(root, root.child());
+            Scope mount = runtime.mountScope();
             try {
                 p.apply(mount);
             } catch (Exception e) {
@@ -603,7 +604,9 @@ public final class PluginLoader {
 
 每个 Plugin 实现类经 ServiceLoader 发现：JPMS 模块在 `module-info.java` 声明 `provides io.javanatic.harness.kernel.plugin.Plugin with XxxPlugin;`；classpath jar 用 `META-INF/services/...`。同一语义。
 
-**PluginScope 挂载视图**（包私有，Plugin 只见 `Scope` 接口）：`provide` 落**共享 mount root**（跨插件可见——纯私有 child 里 provide，兄弟插件沿父链解析不到，"b requires a" 直接失败）；`effect` / 订阅 / 子 scope 落**插件私有 child**（close 即整体回滚，含从 root 摘除已注册服务）。解析沿私有 child 向上，两处都可见。实现是 §3 Scope 接口的一个纯委托包装。
+**PluginScope 挂载视图**（`Runtime.mountScope()` 创建，包私有，Plugin 只见 `Scope` 接口）：`provide` 落**共享 mount root**（跨插件可见——纯私有 child 里 provide，兄弟插件沿父链解析不到，"b requires a" 直接失败）；`effect` / 订阅 / 子 scope 落**插件私有 child**（close 即整体回滚）。解析沿私有 child 向上，两处都可见。
+
+它住在 `.scope` 包而非 `.plugin` 包：provide 走 `ScopeImpl.registerService`（包私有无栈注册通道）——"注销服务"登记到插件私有栈，插件自己的 teardown effect 先跑（此刻服务仍可见），服务摘除恒为插件回收的最后一步。若走公开的 `root.provide`，注销器会落在 root 栈的级联 entry 之上，关停时服务先消失、插件 teardown 后跑，顺序相反（迭代 1 实测暴露）。
 
 **为什么不用注解声明依赖**：Java 注解成员只接受编译期常量，`ServiceKey`/插件对象放不进去；字符串 id 走 `requires()` 方法，拼写错误在 loadAll / topoSort 处 fail loud。
 

@@ -73,7 +73,7 @@ class PluginLoaderTest {
         try (Runtime rt = new Runtime()) {
             ServiceKey<Svc> key = new ServiceKey<>("svc");
             List<String> applied = new ArrayList<>();
-            new PluginLoader().loadAll(rt.root(), List.of(
+            new PluginLoader().loadAll(rt, List.of(
                 new FakePlugin("a", s -> {
                     applied.add("a");
                     s.provide(key, new Svc("from-a"));
@@ -92,7 +92,7 @@ class PluginLoaderTest {
         try (Runtime rt = new Runtime()) {
             FakePlugin a = new FakePlugin("a", Set.of("b"), s -> {});
             FakePlugin b = new FakePlugin("b", s -> {});
-            assertThatThrownBy(() -> new PluginLoader().loadAll(rt.root(), List.of(a, b)))
+            assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(a, b)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not loaded before it");
         }
@@ -102,7 +102,7 @@ class PluginLoaderTest {
     void loadAllRejectsDuplicateIdInOrderedList() {
         try (Runtime rt = new Runtime()) {
             FakePlugin a = new FakePlugin("a", s -> {});
-            assertThatThrownBy(() -> new PluginLoader().loadAll(rt.root(), List.of(a, a)))
+            assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(a, a)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("twice");
         }
@@ -120,7 +120,7 @@ class PluginLoaderTest {
                 s.events().onGlobal(PING, (carrier, payload) -> heard.incrementAndGet());
                 throw new IllegalStateException("apply boom");
             });
-            assertThatThrownBy(() -> new PluginLoader().loadAll(rt.root(), List.of(broken)))
+            assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(broken)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Plugin failed and rolled back: broken")
                 .hasCauseInstanceOf(IllegalStateException.class);
@@ -130,6 +130,20 @@ class PluginLoaderTest {
             rt.events().notifyAndWait(PING, rt.root(), this, "x").join();
             assertThat(heard.get()).isZero();
         }
+    }
+
+    @Test
+    void pluginTeardownSeesItsOwnServiceUntilLastStep() {
+        List<String> teardown = new ArrayList<>();
+        try (Runtime rt = new Runtime()) {
+            ServiceKey<Svc> key = new ServiceKey<>("svc");
+            new PluginLoader().loadAll(rt, List.of(new FakePlugin("p", s -> {
+                s.provide(key, new Svc("p"));
+                // teardown effect 晚于 provide 注册：服务应仍可解析（摘除是最后一步）
+                s.onClose(() -> teardown.add(s.require(key).name()));
+            })));
+        }
+        assertThat(teardown).containsExactly("p");
     }
 
     @Test

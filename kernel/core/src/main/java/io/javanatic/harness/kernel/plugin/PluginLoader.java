@@ -1,5 +1,6 @@
 package io.javanatic.harness.kernel.plugin;
 
+import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
 
 import java.util.ArrayDeque;
@@ -56,16 +57,17 @@ public final class PluginLoader {
     }
 
     /**
-     * 按给定顺序加载：每个 plugin 一个 {@link PluginScope} 挂载视图
-     * （provide 落共享 root，effect/订阅落插件私有 child）。
+     * 按给定顺序加载：每个 plugin 一个挂载视图（{@link io.javanatic.harness.kernel.scope.Runtime#mountScope()}，
+     * provide 落共享 root，effect/订阅落插件私有 child）。
      * requires 中出现尚未加载的 id → fail loud（顺序错了）；列表内重复 id → fail loud。
-     * apply 抛异常 → 立即 close 该视图（回滚它已注册的全部副作用，含已 provide 的服务）→ 异常上抛。
+     * apply 抛异常 → 立即 close 该视图（回滚全部副作用，含已 provide 的服务）→ 异常上抛。
      * 加载逐插件原子：不存在半挂载的插件（R3）。
      *
-     * @param root 挂载根 scope（Runtime.root()）
+     * @param runtime 目标运行时（挂载根为其 root scope）
      * @param ordered 加载顺序（boot rows 序或 topoSort 结果）
      */
-    public void loadAll(Scope root, List<Plugin> ordered) {
+    public void loadAll(Runtime runtime, List<Plugin> ordered) {
+        Scope root = runtime.root();
         Set<String> loaded = new HashSet<>();
         for (Plugin p : ordered) {
             if (!loaded.add(p.id())) {
@@ -78,7 +80,7 @@ public final class PluginLoader {
                             + "' which is not loaded before it (check row order)");
                 }
             }
-            Scope mount = new PluginScope(root, root.child());
+            Scope mount = runtime.mountScope();
             try {
                 p.apply(mount);
             } catch (Exception e) {
