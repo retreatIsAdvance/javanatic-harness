@@ -107,7 +107,7 @@ public interface LlmService {
     Stream<StreamChunk> stream(LlmCallConfig config, LlmRequest request, AbortSignal signal);
 
     /** 注册一个 provider adapter（deepseek/replay 插件在 apply 里调用）。 */
-    Subscription registerAdapter(String provider, LlmAdapter adapter);
+    Disposable registerAdapter(String provider, LlmAdapter adapter);
 }
 ```
 
@@ -386,7 +386,7 @@ public final class PersistencePlugin implements Plugin {
 /** 注册与 schema 来源。 */
 public interface ToolRegistry {
     ServiceKey<ToolRegistry> KEY = new ServiceKey<>("tools");
-    Subscription register(ToolDefinition tool);
+    Disposable register(ToolDefinition tool);
     /** 当前 scope 可见的 schema（agent-loop 组装请求的唯一来源）。 */
     List<ToolSchema> schemas(Scope scope);
 }

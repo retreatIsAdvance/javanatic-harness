@@ -36,7 +36,7 @@ final class ScopeImpl implements Scope {
     }
 
     @Override
-    public <T> Subscription provide(ServiceKey<T> key, T impl) {
+    public <T> Disposable provide(ServiceKey<T> key, T impl) {
         ensureActive();
         return effect(() -> registerService(key, impl));
     }
@@ -79,7 +79,7 @@ final class ScopeImpl implements Scope {
     }
 
     @Override
-    public Subscription effect(Effect effect) {
+    public Disposable effect(Effect effect) {
         ensureActive();
         Objects.requireNonNull(effect, "effect");
         final AutoCloseable disposer;
@@ -94,11 +94,11 @@ final class ScopeImpl implements Scope {
         }
         Objects.requireNonNull(disposer, "disposer");
         effectStack.addLast(disposer);
-        return new Subscription(disposer, () -> effectStack.remove(disposer));
+        return new Disposable(disposer, () -> effectStack.remove(disposer));
     }
 
     @Override
-    public Subscription onClose(AutoCloseable closeable) {
+    public Disposable onClose(AutoCloseable closeable) {
         Objects.requireNonNull(closeable, "closeable");
         return effect(() -> closeable);
     }

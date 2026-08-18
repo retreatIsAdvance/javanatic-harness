@@ -19,7 +19,7 @@ public interface Scope extends AutoCloseable {
     /**
      * 注册服务到本 scope。本 scope 内重复注册同 key 抛 IllegalStateException；
      * 子 scope 注册同 key 覆盖父级（overlay/shadow，preset 组合用它）。
-     * 注册即 effect：返回的 Subscription close 即注销；
+     * 注册即 effect：返回的 Disposable close 即注销；
      * 调用方不 close 时，scope close 按 LIFO 兜底回收。
      *
      * @param <T> 服务接口类型
@@ -27,7 +27,7 @@ public interface Scope extends AutoCloseable {
      * @param impl 服务实现
      * @return 可注销句柄
      */
-    <T> Subscription provide(ServiceKey<T> key, T impl);
+    <T> Disposable provide(ServiceKey<T> key, T impl);
 
     /**
      * 沿父链向上查找服务；本 scope 起查。每次访问重查、不缓存——
@@ -55,7 +55,7 @@ public interface Scope extends AutoCloseable {
      * @param effect 注册副作用
      * @return 可回收句柄
      */
-    Subscription effect(Effect effect);
+    Disposable effect(Effect effect);
 
     /**
      * 纯 teardown 挂载（无注册副作用）。等价于 {@code effect(() -> closeable)}。
@@ -63,7 +63,7 @@ public interface Scope extends AutoCloseable {
      * @param closeable 回收器
      * @return 可回收句柄
      */
-    Subscription onClose(AutoCloseable closeable);
+    Disposable onClose(AutoCloseable closeable);
 
     /**
      * 派生子 scope：新的生命周期域 + 服务 overlay 层。父 close 级联子。

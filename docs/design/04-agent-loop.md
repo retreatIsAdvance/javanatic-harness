@@ -363,7 +363,7 @@ public final class AgentRegistry {
     private final AtomicReference<AgentFactory> factory = new AtomicReference<>();
 
     /** loop 插件注册自己的工厂。重复注册 fail loud。 */
-    public Subscription setFactory(AgentFactory f) { /* CAS + Subscription */ }
+    public Disposable setFactory(AgentFactory f) { /* CAS + Disposable */ }
 
     public AgentHandle create(Scope owner, CreateAgentOptions opts)  { /* 工厂 + 注册表 */ }
     public AgentHandle resume(Scope owner, ResumeAgentOptions opts)  { /* load + 工厂 */ }

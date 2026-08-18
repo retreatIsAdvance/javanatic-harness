@@ -177,7 +177,7 @@ Kotlin 的 `sealed class` + `when` 确实更优雅，coroutines 的结构化并�
 | `ctx.<key>` Proxy | `scope.require(ServiceKey<T>)` | 显式查找；沿父链重解析（无缓存）|
 | `ctx.provide(name, value)` | `scope.provide(KEY, impl)` | 子 scope 同名 shadow 父级（overlay）|
 | `inject: { foo: Service }` | `Plugin.requires()`（插件 id）+ loadAll 顺序校验 | 静态组合，缺失 fail loud |
-| `ctx.on('event', cb)` | `scope.events().on(EventKey, listener)` | 返回 `Subscription`，随 scope 回收 |
+| `ctx.on('event', cb)` | `scope.events().on(EventKey, listener)` | 返回 `Disposable`，随 scope 回收 |
 | `ctx.effect(() => disposer)` | `scope.effect(Effect)` | register 返回回收器入 LIFO 栈 |
 | `ctx.waterfall('event', args, inner)` | `Events.waterfall(EventKey, …, Next)` | cons-list 链 + next() 一次防护 |
 | 五种 dispatch（emit/serial/parallel/waterfall/bail）| 两模式 NOTIFY/WATERFALL + `notify`/`notifyOrdered`/`notifyAndWait`/`firstOf` | 模式进类型、形态进工具（[01 §5](01-kernel.md)）|

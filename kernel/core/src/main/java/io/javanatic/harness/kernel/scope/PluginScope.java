@@ -25,7 +25,7 @@ final class PluginScope implements Scope {
     }
 
     @Override
-    public <T> Subscription provide(ServiceKey<T> key, T impl) {
+    public <T> Disposable provide(ServiceKey<T> key, T impl) {
         return own.effect(() -> shared.registerService(key, impl));
     }
 
@@ -40,12 +40,12 @@ final class PluginScope implements Scope {
     }
 
     @Override
-    public Subscription effect(Effect effect) {
+    public Disposable effect(Effect effect) {
         return own.effect(effect);
     }
 
     @Override
-    public Subscription onClose(AutoCloseable closeable) {
+    public Disposable onClose(AutoCloseable closeable) {
         return own.onClose(closeable);
     }
 

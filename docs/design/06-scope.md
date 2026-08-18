@@ -105,7 +105,7 @@ class ScopedToolRegistry implements ToolRegistry {
         new ScopedLayers<>(ToolRegistryLayer::new);
 
     @Override
-    public Subscription register(Scope owner, ToolDefinition tool) {
+    public Disposable register(Scope owner, ToolDefinition tool) {
         ToolRegistryLayer layer = layers.of(owner);
         ToolDefinition prev = layer.tools.putIfAbsent(tool.name(), tool);
         if (prev != null) {
@@ -113,7 +113,7 @@ class ScopedToolRegistry implements ToolRegistry {
             throw new IllegalStateException(
                 "Duplicate tool '" + tool.name() + "' in scope (existing: " + prev + ")");
         }
-        return new Subscription(() -> layer.remove(tool.name()), () -> {});
+        return new Disposable(() -> layer.remove(tool.name()), () -> {});
     }
 
     /** 给 system prompt 组装用的 schemas（agent-loop 的唯一来源，R2）。 */
@@ -243,7 +243,7 @@ public interface AgentPresets {
 ```java
 public interface ToolRegistry {
     /** 限制某 scope 的全局工具集（交集）。 */
-    Subscription restrict(Scope scope, Predicate<String> filter);
+    Disposable restrict(Scope scope, Predicate<String> filter);
 }
 ```
 

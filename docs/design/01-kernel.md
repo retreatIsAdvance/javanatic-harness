@@ -26,7 +26,7 @@ kernel 同属一个 JPMS 模块 `io.javanatic.harness.kernel`（Maven `harness-k
 
 ```
 kernel/core/
-  └── io.javanatic.harness.kernel.scope    (Scope, Runtime, ServiceKey, Subscription)
+  └── io.javanatic.harness.kernel.scope    (Scope, Runtime, ServiceKey, Disposable)
       io.javanatic.harness.kernel.events   (Events, EventKey, 监听器接口, WaterfallArgs, Next)
       io.javanatic.harness.kernel.plugin   (Plugin, PluginLoader)
 ```
@@ -84,10 +84,10 @@ public interface Scope extends AutoCloseable {
     /**
      * 注册服务到本 scope。本 scope 内重复注册同 key 抛 IllegalStateException；
      * 子 scope 注册同 key 覆盖父级（overlay/shadow，preset 组合用它）。
-     * 注册即 effect：返回的 Subscription close 即注销；
+     * 注册即 effect：返回的 Disposable close 即注销；
      * 调用方不 close 时，scope close 按 LIFO 兜底回收。
      */
-    <T> Subscription provide(ServiceKey<T> key, T impl);
+    <T> Disposable provide(ServiceKey<T> key, T impl);
 
     /** 沿父链向上查找服务；本 scope 起查。 */
     <T> Optional<T> resolve(ServiceKey<T> key);
@@ -101,10 +101,10 @@ public interface Scope extends AutoCloseable {
      * 注册一个 effect：register() 执行注册副作用并返回回收器，回收器入栈。
      * register 抛异常则注册失败、无回收器入栈（原子性）。
      */
-    Subscription effect(Effect effect);
+    Disposable effect(Effect effect);
 
     /** 纯 teardown 挂载（无注册副作用）。等价于 effect(() -> c)。 */
-    Subscription onClose(AutoCloseable c);
+    Disposable onClose(AutoCloseable c);
 
     /** 派生子 scope：新的生命周期域 + 服务 overlay 层。父 close 级联子。 */
     Scope child();
@@ -157,7 +157,7 @@ final class ScopeImpl implements Scope {
         return Optional.empty();
     }
 
-    public <T> Subscription provide(ServiceKey<T> key, T impl) {
+    public <T> Disposable provide(ServiceKey<T> key, T impl) {
         ensureActive();
         Object prev = services.putIfAbsent(key, impl);
         if (prev != null) {
@@ -196,25 +196,25 @@ final class ScopeImpl implements Scope {
 **关键设计点**：
 
 1. **LIFO effect 栈**：后注册先回收。子 scope 的级联 close 是父栈上的一个 entry，位于其后注册的所有 effect 之前回收——"插件 A 依赖插件 B，则 B 先于 A 卸载"由加载顺序 + LIFO 自动给出。
-2. **close 幂等且防并发双 drain**：CAS 状态位保证至多一次完整回收；`Subscription.close()` 与 `Scope.close()` 竞争同一条目时，栈的原子摘除保证回收器至多执行一次。
+2. **close 幂等且防并发双 drain**：CAS 状态位保证至多一次完整回收；`Disposable.close()` 与 `Scope.close()` 竞争同一条目时，栈的原子摘除保证回收器至多执行一次。
 3. **子 scope 可单独 close**：这既是 preset/agent 的隔离原语，也是插件加载失败时的**回滚原语**（见 §7 R3）。
 
-## 4. Subscription — 可撤销的注册
+## 4. Disposable — 可撤销的注册
 
 ```java
-// io.javanatic.harness.kernel.scope.Subscription
+// io.javanatic.harness.kernel.scope.Disposable
 /**
  * 一次注册的回收句柄。幂等：多次 close 只有第一次生效。
  * close 先从 scope effect 栈摘除，再执行回收器——顺序保证即使回收器抛异常，
  * 该条目也不会被 scope close 二次回收。
  */
-public final class Subscription implements AutoCloseable {
+public final class Disposable implements AutoCloseable {
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AutoCloseable disposer;
     private final Runnable removeFromStack;
 
-    Subscription(AutoCloseable disposer, Runnable removeFromStack) {
+    Disposable(AutoCloseable disposer, Runnable removeFromStack) {
         this.disposer = disposer;
         this.removeFromStack = removeFromStack;
     }
@@ -443,10 +443,10 @@ public final class Events {
  * scope close 时订阅自动注销，插件不需要（也不应该）手工管理订阅回收。
  */
 public interface ScopedEvents {
-    <T> Subscription on(EventKey<T> key, EventListener<? super T> listener);
+    <T> Disposable on(EventKey<T> key, EventListener<? super T> listener);
     /** 全局订阅（忽略 scope 过滤），仍随 scope 回收。 */
-    <T> Subscription onGlobal(EventKey<T> key, EventListener<? super T> listener);
-    <T> Subscription onWaterfall(EventKey<T> key, WaterfallListener<? super T> listener);
+    <T> Disposable onGlobal(EventKey<T> key, EventListener<? super T> listener);
+    <T> Disposable onWaterfall(EventKey<T> key, WaterfallListener<? super T> listener);
 }
 ```
 
@@ -621,7 +621,7 @@ public final class PluginLoader {
 | 半挂载不存在 | 每插件独立挂载视图（PluginScope）；apply 失败立即 `mount.close()` 回滚 | 加载失败回滚测试（10） |
 | 僵尸引用不存在 | 服务**每次访问沿链重解析**，不缓存；provider scope close 即从 overlay 摘除 | 结构性：无缓存即无失效遗漏 |
 | 回收顺序 | effect 栈 LIFO（addLast/pollLast）；子 scope 级联 entry 位于其后续 effect 之前 | teardown 顺序测试（09 §teardown）+ jqwik 性质：任意注册序的回收序恒为其逆序 |
-| 重复回收不可能 | Subscription CAS + 栈原子摘除；Scope close CAS | 并发 close 测试 |
+| 重复回收不可能 | Disposable CAS + 栈原子摘除；Scope close CAS | 并发 close 测试 |
 
 **边界与剩余风险**（诚实声明）：
 
@@ -647,8 +647,8 @@ LOG.log(System.Logger.Level.WARNING, "notify listener failed for {0}", key.name(
 | fiber（生命周期）| `Scope` + LIFO effect 栈 | ✅ 统一进 Scope |
 | scope key（可见性）| `Scope` 父链 + 事件冒泡过滤 | ✅ 统一进 Scope |
 | `inject` 声明依赖 | `Plugin.requires()`（id）+ loadAll 顺序校验 | ✅ 静态版本（无热重载） |
-| `ctx.effect(disposer)` | `Effect.register()` 返回回收器 + Subscription + scope 栈兜底 | ✅ |
-| `ctx.on/off` | `Subscription`（close 即 off），scope close 兜底 | ✅ |
+| `ctx.effect(disposer)` | `Effect.register()` 返回回收器 + Disposable + scope 栈兜底 | ✅ |
+| `ctx.on/off` | `Disposable`（close 即 off），scope close 兜底 | ✅ |
 | 5 种 dispatch | 2 模式（NOTIFY/WATERFALL）+ notify/notifyOrdered/notifyAndWait/firstOf 工具 | ✅ 形态全部可表达 |
 | waterfall `next()` | cons-list 不可变链 + once 防护 | ✅ shift 语义 |
 | scope filter（向上冒泡）| `passesFilter` 沿 parent 链 | ✅ |

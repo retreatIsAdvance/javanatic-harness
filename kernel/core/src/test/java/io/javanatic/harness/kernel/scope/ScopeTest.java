@@ -95,7 +95,7 @@ class ScopeTest {
     void subscriptionCloseIsIdempotentAndLeavesStack() {
         Runtime rt = new Runtime();
         AtomicInteger disposed = new AtomicInteger();
-        Subscription sub = rt.root().onClose(disposed::incrementAndGet);
+        Disposable sub = rt.root().onClose(disposed::incrementAndGet);
         sub.close();
         sub.close();
         assertThat(disposed.get()).isEqualTo(1);

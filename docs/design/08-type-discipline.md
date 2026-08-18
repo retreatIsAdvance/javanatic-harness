@@ -362,7 +362,7 @@ Java 25 允许 `import module M;` 一次性导入模块 M 导出的所有包的�
 // Java 25 之前：消费者要罗列几十个包级 import
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.kernel.scope.ServiceKey;
-import io.javanatic.harness.kernel.scope.Subscription;
+import io.javanatic.harness.kernel.scope.Disposable;
 import io.javanatic.harness.kernel.events.EventKey;
 import io.javanatic.harness.kernel.events.EventListener;
 import io.javanatic.harness.kernel.events.Events;

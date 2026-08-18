@@ -19,7 +19,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | JPMS 名 | 依赖 | 职责 |
 |---|---|---|---|
 | `harness-kernel-brand` | `…kernel.brand` | （无）| `Id<T>` phantom type（对应 dsh-brand）|
-| `harness-kernel-core` | `…kernel` | （无，仅 java.base）| `Scope`/`Runtime`/`ServiceKey`/`Subscription`（.scope）、`Events`/`EventKey`/监听器（.events）、`Plugin`/`PluginLoader`（.plugin）—— 统一内核（[01](01-kernel.md)）|
+| `harness-kernel-core` | `…kernel` | （无，仅 java.base）| `Scope`/`Runtime`/`ServiceKey`/`Disposable`（.scope）、`Events`/`EventKey`/监听器（.events）、`Plugin`/`PluginLoader`（.plugin）—— 统一内核（[01](01-kernel.md)）|
 | `harness-kernel-config` | `…kernel.config` | （无）| YAML 解析（白名单）+ `ConfigService`（[07 §4](07-profile-bundle.md)）|
 
 > **为什么 kernel 从 8 个模块收敛到 3 个**：`Scope` 的方法签名同时引用 Events（订阅视图）与 Plugin（装载），按 fiber/context/scope/events/plugin 拆模块必然互 `requires` 成环。统一内核把三套 Cordis 概念（Fiber/ScopeKey/Context）合成一个 `Scope` 后，循环消失，单模块 + 多导出包即可（[01 §1](01-kernel.md)）。`brand` 与 `config` 因零依赖独立，供最小心智单元引用。
@@ -199,7 +199,7 @@ Jackson 只出现在 `llm-deepseek` 与 `persistence-jsonl` 两个模块（JSON 
 // 仅依赖 java.base（concurrent 集合都在 java.base 里）；brand/config 是同层独立模块，
 // kernel/core 不使用它们——依赖图里没有这条边，谁用谁 requires
 module io.javanatic.harness.kernel {
-    exports io.javanatic.harness.kernel.scope;   // Scope, Runtime, ServiceKey, Subscription, Effect
+    exports io.javanatic.harness.kernel.scope;   // Scope, Runtime, ServiceKey, Disposable, Effect
     exports io.javanatic.harness.kernel.events;  // Events, EventKey, 监听器, WaterfallArgs, Next
     exports io.javanatic.harness.kernel.plugin;  // Plugin, PluginLoader
 }
@@ -751,4 +751,4 @@ java -jar examples/headless/target/jh.jar --profile headless --verify   # R4 治
 
 4. **Capability seam 三模块纪律**：Definition 模块 `exports` 接口；Provider 模块 `provides Plugin`；Consumer 模块 `requires` Definition。三者绝不循环。
 
-5. **Plugin 注册即效应**：所有 `provide` / `events().on` 都在 `Plugin.apply(scope)` 内通过 scope 执行，Subscription 由所在 scope 的 LIFO 栈兜底。**不允许 Plugin 持有全局静态状态**（R3 边界，[01 §8](01-kernel.md)）。
+5. **Plugin 注册即效应**：所有 `provide` / `events().on` 都在 `Plugin.apply(scope)` 内通过 scope 执行，Disposable 由所在 scope 的 LIFO 栈兜底。**不允许 Plugin 持有全局静态状态**（R3 边界，[01 §8](01-kernel.md)）。

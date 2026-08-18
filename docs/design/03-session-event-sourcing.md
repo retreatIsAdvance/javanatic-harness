@@ -428,7 +428,7 @@ public interface SessionEventCodec<T extends SessionEvent> {
 
 /** codec 注册表：type → codec。重复注册 fail loud；核心 codec 由 provider 预置。 */
 public final class SessionEventCodecs {
-    public static Subscription register(Scope scope, SessionEventCodec<?> codec) { /* ... */ }
+    public static Disposable register(Scope scope, SessionEventCodec<?> codec) { /* ... */ }
     public static Optional<SessionEventCodec<?>> forType(String type) { /* ... */ }
 }
 ```

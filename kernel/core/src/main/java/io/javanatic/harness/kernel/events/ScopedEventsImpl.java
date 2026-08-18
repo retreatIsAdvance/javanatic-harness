@@ -1,7 +1,7 @@
 package io.javanatic.harness.kernel.events;
 
 import io.javanatic.harness.kernel.scope.Scope;
-import io.javanatic.harness.kernel.scope.Subscription;
+import io.javanatic.harness.kernel.scope.Disposable;
 
 /**
  * ScopedEvents 实现：订阅经 {@code scope.effect} 挂 effect 栈，随 scope LIFO 回收。
@@ -18,17 +18,17 @@ final class ScopedEventsImpl implements ScopedEvents {
     }
 
     @Override
-    public <T> Subscription on(EventKey<T> key, EventListener<? super T> listener) {
+    public <T> Disposable on(EventKey<T> key, EventListener<? super T> listener) {
         return scope.effect(() -> events.subscribeNotify(key, listener, scope));
     }
 
     @Override
-    public <T> Subscription onGlobal(EventKey<T> key, EventListener<? super T> listener) {
+    public <T> Disposable onGlobal(EventKey<T> key, EventListener<? super T> listener) {
         return scope.effect(() -> events.subscribeNotify(key, listener, null));
     }
 
     @Override
-    public <T> Subscription onWaterfall(EventKey<T> key, WaterfallListener<? super T> listener) {
+    public <T> Disposable onWaterfall(EventKey<T> key, WaterfallListener<? super T> listener) {
         return scope.effect(() -> events.subscribeWaterfall(key, listener, scope));
     }
 }

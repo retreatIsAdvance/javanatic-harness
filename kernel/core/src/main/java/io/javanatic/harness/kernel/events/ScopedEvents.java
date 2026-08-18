@@ -1,6 +1,6 @@
 package io.javanatic.harness.kernel.events;
 
-import io.javanatic.harness.kernel.scope.Subscription;
+import io.javanatic.harness.kernel.scope.Disposable;
 
 /**
  * {@link io.javanatic.harness.kernel.scope.Scope#events()} 返回的订阅视图。
@@ -18,7 +18,7 @@ public interface ScopedEvents {
      * @param listener 监听器
      * @return 可注销句柄（scope close 兜底回收）
      */
-    <T> Subscription on(EventKey<T> key, EventListener<? super T> listener);
+    <T> Disposable on(EventKey<T> key, EventListener<? super T> listener);
 
     /**
      * 全局订阅：忽略 scope 过滤，收到一切派发；仍随本 scope 回收。
@@ -28,7 +28,7 @@ public interface ScopedEvents {
      * @param listener 监听器
      * @return 可注销句柄
      */
-    <T> Subscription onGlobal(EventKey<T> key, EventListener<? super T> listener);
+    <T> Disposable onGlobal(EventKey<T> key, EventListener<? super T> listener);
 
     /**
      * 本 scope 的 waterfall 订阅。
@@ -38,5 +38,5 @@ public interface ScopedEvents {
      * @param listener 中间件
      * @return 可注销句柄
      */
-    <T> Subscription onWaterfall(EventKey<T> key, WaterfallListener<? super T> listener);
+    <T> Disposable onWaterfall(EventKey<T> key, WaterfallListener<? super T> listener);
 }
