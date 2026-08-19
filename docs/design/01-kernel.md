@@ -450,6 +450,8 @@ public interface ScopedEvents {
 }
 ```
 
+**绑定与归属分离**（实现层要点）：`ScopedEventsImpl` 持有 bind（过滤判定：收到 bind 及其后代派发的事件）与 owner（注销登记的 effect 栈）。普通 scope 两者同一（`Events.forScope`）；挂载视图两者分离（`Events.forMount(shared, owner)`）——bind=共享 root，owner=插件私有栈。若挂载视图的订阅绑到插件私有房，插件将收不到自身子树之外的派发（session 层派发的用户消息、审批门全部失效）；分离后插件收到整个挂载子树的事件，插件 close 即退订。
+
 **Cordis 五模式 → JH 两模式的映射**：
 
 | Cordis | JH | 说明 |
@@ -604,7 +606,7 @@ public final class PluginLoader {
 
 每个 Plugin 实现类经 ServiceLoader 发现：JPMS 模块在 `module-info.java` 声明 `provides io.javanatic.harness.kernel.plugin.Plugin with XxxPlugin;`；classpath jar 用 `META-INF/services/...`。同一语义。
 
-**PluginScope 挂载视图**（`Runtime.mountScope()` 创建，包私有，Plugin 只见 `Scope` 接口）：`provide` 落**共享 mount root**（跨插件可见——纯私有 child 里 provide，兄弟插件沿父链解析不到，"b requires a" 直接失败）；`effect` / 订阅 / 子 scope 落**插件私有 child**（close 即整体回滚）。解析沿私有 child 向上，两处都可见。
+**PluginScope 挂载视图**（`Runtime.mountScope()` 创建，包私有，Plugin 只见 `Scope` 接口）：`provide` 落**共享 mount root**（跨插件可见——纯私有 child 里 provide，兄弟插件沿父链解析不到，"b requires a" 直接失败）；`effect` / 子 scope 落**插件私有 child**（close 即整体回滚）；订阅经 `events()` 的挂载视图——**过滤绑共享 root、注销登记插件私有栈**（见 §5 绑定与归属分离）。解析沿私有 child 向上，两处都可见。
 
 它住在 `.scope` 包而非 `.plugin` 包：provide 走 `ScopeImpl.registerService`（包私有无栈注册通道）——"注销服务"登记到插件私有栈，插件自己的 teardown effect 先跑（此刻服务仍可见），服务摘除恒为插件回收的最后一步。若走公开的 `root.provide`，注销器会落在 root 栈的级联 entry 之上，关停时服务先消失、插件 teardown 后跑，顺序相反（迭代 1 实测暴露）。
 

@@ -131,6 +131,11 @@ final class ScopeImpl implements Scope {
         return view;
     }
 
+    /** 本 scope 所属 Runtime（同包装配用：PluginScope 借它取事件总线）。 */
+    Runtime runtime() {
+        return runtime;
+    }
+
     @Override
     public void close() {
         if (!status.compareAndSet(Status.ACTIVE, Status.CLOSED)) {

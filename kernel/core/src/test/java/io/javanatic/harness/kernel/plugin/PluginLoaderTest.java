@@ -21,6 +21,7 @@ class PluginLoaderTest {
     record Svc(String name) {}
 
     static final EventKey<String> PING = EventKey.notify("plugin-test.ping", String.class);
+    static final EventKey<String> GATE = EventKey.waterfall("plugin-test.gate", String.class);
 
     /** 测试插件：id + requires + 可失败的挂载体。 */
     static final class FakePlugin implements Plugin {
@@ -144,6 +145,31 @@ class PluginLoaderTest {
             })));
         }
         assertThat(teardown).containsExactly("p");
+    }
+
+    @Test
+    void pluginSubscriptionReceivesAppLevelDispatch() {
+        try (Runtime rt = new Runtime()) {
+            AtomicInteger heard = new AtomicInteger();
+            new PluginLoader().loadAll(rt, List.of(
+                new FakePlugin("listener", s ->
+                    s.events().on(PING, (carrier, payload) -> heard.incrementAndGet()))));
+            // origin = root 层派发：挂载视图的订阅过滤绑共享层才收得到（绑插件私有房则收不到）
+            rt.events().notifyAndWait(PING, rt.root(), this, "x").join();
+            assertThat(heard.get()).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void pluginWaterfallGateSeesAppLevelDispatch() {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new FakePlugin("gate", s -> s.events().onWaterfall(GATE,
+                    (carrier, args) -> "gate:" + args.args().getFirst()))));
+            // 审批门式插件：拦 root 层派发的瀑布并换货放行
+            String out = rt.events().waterfall(GATE, rt.root(), this, List.of("q"), none -> "inner");
+            assertThat(out).isEqualTo("gate:q");
+        }
     }
 
     @Test

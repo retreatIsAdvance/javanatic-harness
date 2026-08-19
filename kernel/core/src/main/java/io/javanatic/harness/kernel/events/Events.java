@@ -21,8 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * WATERFALL 族两个方法：waterfall（中间件链）、firstOf（查询，替代 cordis bail）。
  * 模式与方法由 {@link EventKey} 的 requireMode 配对把关，错配 fail loud。
  *
- * 订阅请经 {@link #forScope(Scope)}（挂 scope effect 栈，随 scope 回收）；
- * 本类的 subscribe* 方法仅供内核内部接线。
+ * 订阅请经 {@link #forScope(Scope)}（挂 scope effect 栈，随 scope 回收）或
+ * {@link #forMount(Scope, Scope)}（插件挂载视图）；本类的 subscribe* 方法仅供内核内部接线。
  */
 public final class Events {
 
@@ -50,6 +50,19 @@ public final class Events {
      */
     public ScopedEvents forScope(Scope scope) {
         return new ScopedEventsImpl(this, scope);
+    }
+
+    /**
+     * 返回插件挂载视图（{@code Runtime.mountScope()} 的订阅后端）：
+     * 过滤绑 shared（收到整个挂载子树——含 session 层——派发的事件），
+     * 注销登记在 owner（插件私有栈，close 即退订）。
+     *
+     * @param shared 过滤绑定的共享 scope（root）
+     * @param owner  注销登记的插件私有 scope
+     * @return 订阅视图
+     */
+    public ScopedEvents forMount(Scope shared, Scope owner) {
+        return new ScopedEventsImpl(this, shared, owner);
     }
 
     // ────────── 订阅 ──────────

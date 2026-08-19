@@ -6,7 +6,7 @@ import java.util.Optional;
 
 /**
  * 插件挂载视图（{@link Runtime#mountScope()} 创建）：provide 落共享 root
- * （跨插件可见），effect / 订阅 / 子 scope 落插件私有 child（close 即整体回滚，R3）。
+ * （跨插件可见），effect / 子 scope 落插件私有 child（close 即整体回滚，R3）。
  *
  * 放在 .scope 包的原因：provide 需要 {@link ScopeImpl} 的无栈注册通道
  * （registerService），把"注销服务"登记到插件私有栈——插件的 teardown effect
@@ -18,6 +18,7 @@ final class PluginScope implements Scope {
 
     private final ScopeImpl shared;
     private final Scope own;
+    private volatile ScopedEvents eventsView;
 
     PluginScope(ScopeImpl shared, Scope own) {
         this.shared = shared;
@@ -61,7 +62,19 @@ final class PluginScope implements Scope {
 
     @Override
     public ScopedEvents events() {
-        return own.events();
+        // 过滤绑共享 root：插件订阅收到整个挂载子树（含未来 session 层）派发的事件；
+        // 注销登记在插件私有栈，close 即退订。若绑 own，插件将收不到自身子树之外的
+        // 派发（如审批门、审计类插件失效）
+        ScopedEvents view = eventsView;
+        if (view == null) {
+            synchronized (this) {
+                if (eventsView == null) {
+                    eventsView = shared.runtime().events().forMount(shared, own);
+                }
+                view = eventsView;
+            }
+        }
+        return view;
     }
 
     @Override
