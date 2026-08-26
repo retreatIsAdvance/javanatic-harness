@@ -452,6 +452,8 @@ public interface ScopedEvents {
 
 **绑定与归属分离**（实现层要点）：`ScopedEventsImpl` 持有 bind（过滤判定：收到 bind 及其后代派发的事件）与 owner（注销登记的 effect 栈）。普通 scope 两者同一（`Events.forScope`）；挂载视图两者分离（`Events.forMount(shared, owner)`）——bind=共享 root，owner=插件私有栈。若挂载视图的订阅绑到插件私有房，插件将收不到自身子树之外的派发（session 层派发的用户消息、审批门全部失效）；分离后插件收到整个挂载子树的事件，插件 close 即退订。
 
+**为什么有 `Events` 还要 `ScopedEvents`**：`Events` 是广播站，管「发」——订阅表 + 五种派发，发事件不需要身份；订阅是需要身份的动作，必须挂到某个 scope 的登记簿上，否则插件卸载时无人退订（泄漏，或监听器滞留订阅表成为 R3 要消灭的僵尸引用）。`ScopedEvents.on()` 即 `owner.effect(() -> subscribeNotify(...))`——「订阅」成为 effect 条目，scope close 自动注销，对应 dsh 惯例 *"Registrations are effects"*。订阅方法不直接公开在 `Events` 上：公开签名必须带 scope 参数，调用方就能传任意 scope（root、别人的房间），注销时机错乱且封装失守；bind/owner 的合法组合收死在 `forScope`/`forMount` 两个工厂里，由内核装配层独占。API 面因此不对称：`rt.events()` 给业务层的 `Events` 只能发，`s.events()` 给插件的 `ScopedEvents` 只能订（`on`/`onGlobal`/`onWaterfall`，各返回 `Disposable`）——能给自己订，不能替别人订、不能订完不管。
+
 **Cordis 五模式 → JH 两模式的映射**：
 
 | Cordis | JH | 说明 |
