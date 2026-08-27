@@ -1,0 +1,4 @@
+#!/bin/sh
+# 快速门禁（秒级）：暂存区白空格错误。全量门禁在 pre-push 与 CI。
+# 启用：git config core.hooksPath .githooks
+git diff --cached --check || exit 1

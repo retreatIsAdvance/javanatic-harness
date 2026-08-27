@@ -1,0 +1,4 @@
+#!/bin/sh
+# 推送前门禁：与 CI 同口径——validate 阶段 spotless+checkstyle + 编译 + 全部测试。
+# 赶时间可 git push --no-verify，但 CI 会用同样的命令拦回来。
+exec mvn -B -q package
