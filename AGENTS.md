@@ -9,6 +9,8 @@ Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 
 - **迭代仪式**：每个迭代开始前，与用户确认四件事——**内容 / 目标 / 为什么这样设计 / 明确不做什么**；未确认不得开始写迭代代码。迭代结束报告实际跑过的命令与结果，不夸大、不跳过。
 - **讨论阶段产出解释，不产出代码**。用户在理解/审查阶段时，交付的是讲解与评估；讨论中发现的代码缺陷，指出并说明修法，经确认（或用户明确要求）再动代码。
 - **文档即事实源**：代码与设计文档同一提交同步更新；文档陈述当前状态，不保留演进史叙事。一个事实只有一个家。
+- **犯错回填**：AI 犯错且根因是本文件或设计文档未覆盖 → 同一提交把规则写回（防再犯）。「已知坑」与「编码规范」就是这么长出来的；只修代码不回填规则 = 同一个坑会再踩。
+- **语言政策**：设计文档中文正文 + 英文标题；Javadoc 中文简洁；提交信息英文小写；标识符与 API 名英文。
 - **证据匹配改动面**：行为改动配聚焦测试（`mvn -B -q -pl <module> test`）；架构/组合改动配全量 `mvn -B -q package`。不为提交重复跑已绿的检查；不声称没跑过的验证。
 - **fail loud**：错配、缺依赖、半装配状态必须在发生点大声失败；禁止静默兜底、默认值吞错、空 catch 吞异常。
 - **不确定就问，不猜**；有冲突停下来说明，不擅自扩大范围。
@@ -38,11 +40,22 @@ docs/        design/ 12 篇设计文档 + dsh-reference.md
 java -version           # 25（.java-version=25.0 已提交，jenv 管理，是项目契约）
 mvn -B -q -pl kernel/core test        # 聚焦单模块测试（含 jqwik 属性测试）
 mvn -B -q -pl <group>/<pkg> -am test  # 连依赖一起构建测试
+mvn -B -q validate                     # 快速门禁：spotless:check + checkstyle:check（全 reactor）
+mvn -B -q spotless:apply               # 自动修复白空格/结尾换行/无用 import
 mvn -B -q package                     # 全 reactor 构建+测试（推送/收尾前）
 mvn -B -q -pl <module> -Dtest=XTest test   # 单测试类
+git config core.hooksPath .githooks   # 一次性：启用 pre-commit/pre-push 钩子
 ```
 
 无 mvnw wrapper，用系统 Maven 3.8+。测试栈：JUnit 5 + AssertJ + jqwik（根 POM 统一注入，叶子 POM 不写测试依赖）。
+
+<!-- TODO(产品运行入口)：examples/headless 落地后，此处必须补「跑一个 task」的完整命令（如 jh --profile headless "task" 的等价物）——补此命令是硬要求，不许拖延 -->
+
+### 命令权限分级
+
+| 可自主执行 | 需用户确认 | 禁止 |
+|---|---|---|
+| 全部 `mvn` 验证/构建命令、`spotless:apply`、新建与修改源码/测试/文档、`git add`/`git commit`（规范信息） | `git push`、跨模块重命名或移动、新增第三方依赖、推翻设计文档既有决策、删除非本次创建的文件 | 修改 `.java-version`、提交凭据/`.env`、force push、削弱或跳过 checkstyle/spotless 规则（放宽须 PR 说明理由并改 `config/checkstyle/checkstyle.xml`） |
 
 ## 技术栈（定死，引入新依赖前自问归属）
 
@@ -59,6 +72,8 @@ mvn -B -q -pl <module> -Dtest=XTest test   # 单测试类
 kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`），永久保持。
 
 ## 架构速记
+
+一图速览全部类的关系 + 最小运行示例见 [01-kernel 附录](docs/design/01-kernel.md#附一图速览与最小运行示例)。
 
 1. **一切皆插件**：`Plugin(id/requires/apply)` → `PluginLoader`（发现/查重/拓扑排序/逐个装，apply 抛异常即整插件回滚）→ `Runtime.mountScope()` 发 `PluginScope` 挂载视图（provide 落共享 root，effect/子 scope 落插件私有房，订阅过滤绑共享层、注销登记私有栈）。
 2. **统一 Scope = 生命周期 + 可见性 + 服务 overlay**：服务沿父链逐层解析、**每次访问重查不缓存**；effect 栈 LIFO 回收（后装的先卸）；close 用 CAS 保证单线程排水。
@@ -84,6 +99,8 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - **集合与 null**：不返回 null 集合（返回空集合或 `Optional`）；不可变优先 `List.of`/`Set.of`；遍历中删除用 `removeIf`。
 - **注释与 Javadoc**：每个模块/导出的非显然契约有简洁中文 Javadoc，函数式导出带 `@param`/`@return`；注释写契约与不变量，不写代码复述、不写"我改了什么"；TODO 按 `FIXME`/`TODO`/`XXX` 紧急度分级；文件恰好一个结尾换行。
 - **方法体量**：单方法显著超过 ~80 行先想拆分（阿里手册）；kernel/core 主代码预算 ≤1200 行，超了先删而不是挪。
+
+以上白空格/结尾换行/无用 import/星号导入/命名/制表符等规则**已执法化**：`mvn -B -q validate` 即 spotless + checkstyle 门禁，CI 同口径；规则集在 [config/checkstyle/checkstyle.xml](config/checkstyle/checkstyle.xml)，先绿后严，收紧或放宽须在 PR 说明理由。
 
 ## 模块与构建规则（[02](docs/design/02-module-layout.md)）
 
@@ -111,7 +128,11 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - javac 25：泛型推断下零参隐式 lambda 对 varargs 抽象方法编译失败（`() -> null` ✗）；用单参 lambda（`overrideArgs -> null` ✓，[Next 的 Javadoc](kernel/core/src/main/java/io/javanatic/harness/kernel/events/Next.java)）。
 - `.jqwik-database`（jqwik 模糊缓存）不入库，已在 .gitignore。
 - 事件订阅表遍历用 `CopyOnWriteArrayList`；waterfall 的 next 守卫包在 rest 上（invokeOnce），不在最外层。
+- checkstyle 不解析 `module-info.java`（已排除在门禁外）；首次使用 `import module`（JEP 511）前先升级 checkstyle 依赖，否则解析报错。
 
 ## 修改本文件
 
 规则自包含、链接到权威文档；内容膨胀时先删后加；与设计文档冲突时以设计文档为准并立刻修此处。
+
+- **拆分阈值**：单文件 ≤200 行；超过、或某模块的规则只关己时，拆子目录 AGENTS.md（如 `kernel/AGENTS.md`），AI 按需读取，根文件只留全局规则。
+- **决策记录阈值**：设计文档只承载目标态；当「为什么这么做」的决策史开始挤占目标态时，引入 `.agents/notes/` 决策记录目录（带归档冻结策略），不要把决策史写进设计文档。

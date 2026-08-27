@@ -659,3 +659,92 @@ LOG.log(System.Logger.Level.WARNING, "notify listener failed for {0}", key.name(
 | isolate 隔离 | 子 scope overlay（同名服务 shadow 父级） | ✅ 一种机制替代两种 |
 | provider 下线失效缓存 | 无缓存：每访问重解析 | ✅ 结构性更强 |
 | 响应式 reload | **未实现**（静态组合） | ❌ MVP 不做 |
+
+## 附：一图速览与最小运行示例
+
+装载 timer/echo 两个插件后某一瞬间的对象图；`⟨类名⟩` 标出每个对象的类——类关系与运行时结构合在一张图里。
+
+```text
+      ⟨PluginLoader⟩ 装配工：发现说明书 → 按依赖排序 → 逐个安装
+           │  每装一个，向总机房要一条「施工通道」：
+           │  rt.mountScope() ──► ⟨PluginScope⟩（共享root + 私有房 的套壳）
+           │  再执行说明书 ⟨Plugin⟩.apply(通道)——下面的一切由此而生
+           ▼
+      ⟨Runtime⟩ 总机房（try-with-resources 的资源，管三样东西）
+      ├─ 线程池：notify 时每个监听器借一根虚拟线程，用完即还
+      │
+      ├─ ⟨Events⟩ 广播站（全局唯一，谁都能投递/订阅）
+      │    └─ 订阅表：⟨EventKey⟩主键 → 条目{ 监听器, 订阅点 }
+      │         ├─ "user-msg"     (NOTIFY)    → [ {⟨EventListener⟩收消息, 订阅点=root} ]
+      │         └─ "before-reply" (WATERFALL) → [ {⟨WaterfallListener⟩过闸, 订阅点=root} ]
+      │                                              │  监听器手里拿的是 ⟨WaterfallArgs⟩
+      │                                              │  = 当前货 + ⟨Next⟩放行牌
+      ▼                                              ▼
+      ⟨ScopeImpl⟩ root：1号房 = 所有插件共享的「服务台」
+      ├─ services 表：⟨ServiceKey⟩主键 → 实现
+      │     └─ "clock" → WallClock        ← timer 插件放的，任何房间都取得到
+      ├─ effectStack「还东西登记簿」（LIFO：越晚登记越早还）
+      │     [ 子#2::close, 子#1::close ]   ← 只有两条级联条目
+      │
+      ├─ 子#1 ⟨ScopeImpl⟩ timer 的私有房间
+      │     └─ 登记簿 [a. 摘除"clock" 的凭据, b. onClose告别日志 ]
+      │                                          （b 晚登记 → 关房时先执行）
+      └─ 子#2 ⟨ScopeImpl⟩ echo 的私有房间
+            └─ 登记簿 [c. 退订user-msg凭据, d. 退订before-reply凭据]
+```
+
+插件的订阅条目「订阅点=root」正是 §5 的 bind/owner 分离：过滤绑共享层（echo 收到 root 派发的用户消息），注销登记私有层（echo 退房即退订）。
+
+### 最小运行示例
+
+```java
+// 说明书 1：timer —— 提供一项服务
+static final class TimerPlugin implements Plugin {
+    public String id() { return "timer"; }
+    public void apply(Scope s) {
+        s.provide(Clock.KEY, new WallClock());              // 服务 → 共享服务台
+        s.onClose(() -> System.out.println("timer: 退房"));  // 告别动作 → 私有登记簿
+    }
+}
+
+// 说明书 2：echo —— 用别人的服务，订阅两件事
+static final class EchoPlugin implements Plugin {
+    public String id() { return "echo"; }
+    public Set<String> requires() { return Set.of("timer"); }  // 声明依赖
+    public void apply(Scope s) {
+        Clock clock = s.require(Clock.KEY);                 // 沿 私有房→共享台 查到
+        s.events().on(USER_MSG, (c, msg) ->                // 订阅①：收用户消息
+            System.out.println(clock.stamp() + " 收到: " + msg));
+        s.events().onWaterfall(BEFORE_REPLY, (c, a) ->      // 订阅②：回复前过闸
+            a.next(a.args().getFirst() + " @" + clock.stamp()));  // 换货放行
+    }
+}
+
+// ── 开机 ──
+try (Runtime rt = new Runtime()) {
+    new PluginLoader().loadAll(rt, List.of(new TimerPlugin(), new EchoPlugin()));
+    rt.events().notify(USER_MSG, rt.root(), rt, "你好");             // ⑤ 一条用户消息
+    System.out.println("回复: " + rt.events().waterfall(             // ⑥ 回复前过闸
+        BEFORE_REPLY, rt.root(), rt, List.of("你好"), none -> "(空)"));
+}                                                                    // ⑦ 自动关机
+```
+
+```text
+① 开机     new Runtime()：线程池、广播站、root 1号房就位
+② 装配     PluginLoader 读 echo 的 requires=["timer"] → timer 排前面
+③ 装 timer mountScope 发施工通道 → provide 写进 root.services，
+             "摘除凭据"登记在 timer 私有房 → 登记簿 [a, b]
+④ 装 echo  require 沿链命中；两笔订阅进广播站（订阅点=root），
+             两张退订凭据登记 echo 私有房 → [c, d]
+⑤ 消息     notify(USER_MSG, origin=root)：订阅点=root ✓ 投递，虚拟线程里打印
+⑥ 过闸     waterfall(BEFORE_REPLY)：echo 的闸 next("你好 @10:00:01") 换货放行
+⑦ 关机     try 结束 → Runtime.close() → root 登记簿 LIFO 排水：
+             先关子#2(echo)：  d 退订瀑布 → c 退订消息          （后装的先卸）
+             再关子#1(timer)： b 打印"timer: 退房"（此刻 clock 仍可见）
+                                a 最后才把 clock 摘出共享台      （服务摘除恒为末步）
+
+打印：
+10:00:01 收到: 你好
+回复: 你好 @10:00:01
+timer: 退房
+```
