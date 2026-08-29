@@ -1,4 +1,19 @@
 #!/bin/sh
-# 推送前门禁：与 CI 同口径——validate 阶段 spotless+checkstyle + 编译 + 全部测试。
-# 赶时间可 git push --no-verify，但 CI 会用同样的命令拦回来。
+# 推送门禁：① 回填提醒——fix 类提交未触碰任何文档 → warn（不拦截，advisory）
+#           ② 与 CI 同口径——validate 门禁（spotless+checkstyle）+ 编译 + 全部测试。
+# 跳过：git push --no-verify（CI 会用同样命令拦回来）。
+zero=0000000000000000000000000000000000000000
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$remote_sha" = "$zero" ] && range="$local_sha" || range="$remote_sha..$local_sha"
+    for c in $(git rev-list "$range" 2>/dev/null); do
+        subject=$(git log -1 --format=%s "$c")
+        case "$subject" in
+            fix:*|fix\(*\):*)
+                if ! git diff-tree --no-commit-id --name-only -r "$c" | grep -qE '^(AGENTS\.md|docs/)'; then
+                    echo "⚠ 回填检查：『$subject』未触碰 AGENTS.md 或 docs/"
+                    echo "  若根因是规则/坑未覆盖，按 AGENTS.md『犯错回填』补文档后一并推送"
+                fi ;;
+        esac
+    done
+done
 exec mvn -B -q package
