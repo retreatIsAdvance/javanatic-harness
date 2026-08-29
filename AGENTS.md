@@ -6,10 +6,10 @@ Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 
 
 ## 行为指令（AI 执行的最高优先级）
 
-- **迭代仪式**：每个迭代开始前，与用户确认四件事——**内容 / 目标 / 为什么这样设计 / 明确不做什么**；未确认不得开始写迭代代码。迭代结束报告实际跑过的命令与结果，不夸大、不跳过。
+- **迭代仪式**：每个迭代开始前，与用户确认四件事——**内容 / 目标 / 为什么这样设计 / 明确不做什么**，确认结果落盘 [docs/plan/iteration-N.md](docs/plan/README.md)；未确认落盘不得开始写迭代代码。迭代结束勾完全部验收项、在文件内附证据（实际执行的命令与结果），并如实报告，不夸大、不跳过。
 - **讨论阶段产出解释，不产出代码**。用户在理解/审查阶段时，交付的是讲解与评估；讨论中发现的代码缺陷，指出并说明修法，经确认（或用户明确要求）再动代码。
 - **文档即事实源**：代码与设计文档同一提交同步更新；文档陈述当前状态，不保留演进史叙事。一个事实只有一个家。
-- **犯错回填**：AI 犯错且根因是本文件或设计文档未覆盖 → 同一提交把规则写回（防再犯）。「已知坑」与「编码规范」就是这么长出来的；只修代码不回填规则 = 同一个坑会再踩。
+- **犯错回填**：AI 犯错且根因是本文件或设计文档未覆盖 → 同一提交把规则写回（防再犯）。「已知坑」与「编码规范」就是这么长出来的；只修代码不回填规则 = 同一个坑会再踩。pre-push 对 fix 类提交自动提醒：改了代码但 AGENTS.md 与 docs/ 零变更时给出 warn（advisory，不拦截）。
 - **语言政策**：设计文档中文正文 + 英文标题；Javadoc 中文简洁；提交信息英文小写；标识符与 API 名英文。
 - **证据匹配改动面**：行为改动配聚焦测试（`mvn -B -q -pl <module> test`）；架构/组合改动配全量 `mvn -B -q package`。不为提交重复跑已绿的检查；不声称没跑过的验证。
 - **fail loud**：错配、缺依赖、半装配状态必须在发生点大声失败；禁止静默兜底、默认值吞错、空 catch 吞异常。
@@ -31,7 +31,7 @@ fs/ shell/   capability 三角色：seam / local provider / tool consumer（占�
 session/     persistence seam + jsonl 后端（占位）
 sandbox/ interaction/   沙箱与审批（approval 三模式，executor 固定 stage）
 bundle/ examples/       base/headless 组合与可运行示例（占位）
-docs/        design/ 12 篇设计文档 + dsh-reference.md
+docs/        design/ 12 篇设计文档 + dsh-reference.md；plan/ 逐迭代验收清单（[README](docs/plan/README.md)）
 ```
 
 ## Commands
