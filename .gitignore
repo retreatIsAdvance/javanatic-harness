@@ -16,3 +16,7 @@ replay_pid*
 # jenv local override (committed .java-version is the project contract)
 .java-local
 .jqwik-database
+
+# Secrets (AGENTS.md: never commit credentials)
+.env
+.env.*
