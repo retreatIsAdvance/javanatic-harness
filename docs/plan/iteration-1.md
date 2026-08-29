@@ -11,7 +11,7 @@
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [x] 全 reactor 构建绿：`mvn -B -q package` exit 0（38 项目，提交 7f5720f 时点）
+- [x] 全 reactor 构建绿：`mvn -B -q package` exit 0（38 项目，提交 1a3368d 时点）
 - [x] kernel/core 仅依赖 java.base：module-info 无任何 `requires`
 - [x] 主代码 ≤1200 行：实测 `find kernel/core/src/main -name "*.java" | xargs wc -l` = **1179**
 - [x] 测试清单全绿（33 项）：ScopeTest 10（含 jqwik 属性「teardown 恒为注册逆序」）、EventsTest 11、PluginLoaderTest 12
@@ -21,6 +21,6 @@
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
-| f859dc6 | 插件 teardown 时自己的服务已被摘除 | ScopeImpl 无栈注册通道（registerService）+ PluginScope：服务摘除恒为插件回收最后一步 |
-| 74782f5 | Subscription 命名以事件侧动词覆盖一切注册 | 更名 Disposable（撤销凭据） |
-| ae912f5 | 挂载视图订阅绑插件私有房，收不到应用层派发（审批门/审计类插件失效） | ScopedEventsImpl bind/owner 分离 + Events.forMount（33→含 2 个新验收测试） |
+| 1912e5d | 插件 teardown 时自己的服务已被摘除 | ScopeImpl 无栈注册通道（registerService）+ PluginScope：服务摘除恒为插件回收最后一步 |
+| 2f1eef3 | Subscription 命名以事件侧动词覆盖一切注册 | 更名 Disposable（撤销凭据） |
+| e794290 | 挂载视图订阅绑插件私有房，收不到应用层派发（审批门/审计类插件失效） | ScopedEventsImpl bind/owner 分离 + Events.forMount（33→含 2 个新验收测试） |
