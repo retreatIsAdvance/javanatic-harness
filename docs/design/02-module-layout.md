@@ -30,7 +30,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 | 模块 | 依赖 | 职责 | dsh 对应 |
 |---|---|---|---|
-| `harness-core-session` | `kernel` | `Session`（事件日志 + `LoggedEvent` 信封）、核心事件类型、`SurfaceManager` 投影、`SessionStore` 接口。**零 Jackson 依赖**（codec 在持久化 seam）| `core/session` |
+| `harness-core-session` | `kernel` | `Session`（事件日志 + `LoggedEvent` 信封）、核心事件类型、消息模型（`Message`/`ContentBlock`）、`SurfaceManager` 投影、`SessionStore` 接口。**零 Jackson 依赖**（codec 在持久化 seam）| `core/session` |
 | `harness-core-system-prompt` | `kernel`, `session` | `SystemPromptService` 组装注册表 | `core/system-prompt` |
 | `harness-core-tools` | `kernel`, `session` | `ToolRegistry`（注册 + schemas）与 `ToolExecutor`（R2 单一分发 pipeline）**同模块分接口**（[05 §8](05-capability-seam.md)）| `core/tools` |
 | `harness-core-agent` | `kernel`, `session` | `Agent` 接口、`AgentRegistry`（ScopedValue initiator）、`AgentHandle` | `core/agent` |
@@ -45,7 +45,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 | 模块 | 角色 | 职责 |
 |---|---|---|
-| `harness-llm-llm` | Definition | `LlmService`（`Stream<StreamChunk> stream(...)` 阻塞式）、`Message`/`ContentBlock`/`StreamChunk` 类型 |
+| `harness-llm-llm` | Definition | `LlmService`（`Stream<StreamChunk> stream(...)` 阻塞式）、`StreamChunk` 类型。`Message`/`ContentBlock` 在 `core/session`（消息是被日志的事实；dsh 靠 TS type-only import 从 llm 借用，Java 的 `requires` 是真实模块边，依赖方向要求消息模型在被日志的一侧）|
 | `harness-llm-deepseek` | Provider | DeepSeek HTTP 适配器（插件 id `llm-deepseek`）|
 | `harness-llm-replay` | Provider | 回放适配器（插件 id `llm-replay`，keyless 测试依赖它）|
 

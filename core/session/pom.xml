@@ -16,5 +16,10 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-kernel-core</artifactId>
-        </dependency>    </dependencies>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-brand</artifactId>
+        </dependency>
+    </dependencies>
 </project>
