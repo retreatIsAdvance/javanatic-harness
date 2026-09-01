@@ -2,7 +2,7 @@
 
 基于 JVM 的插件化 Agent Harness —— **Java 25 LTS / JPMS / Maven**。把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 Java 体系：**思想照搬，形状不照搬**。
 
-> **状态**：设计完成 + 迭代 1（kernel：`brand` + `core`）已实现并测试。其余 25 个叶子模块为 `module-info.java` + 标记类 —— 依赖图从第一天起由编译器强制执行。
+> **状态**：设计完成 + 迭代 1（kernel）与迭代 2（core/session 事件日志）已实现并测试。其余 24 个叶子模块为 `module-info.java` + 标记类 —— 依赖图从第一天起由编译器强制执行。
 >
 > 命名：JPMS 根名 / 包名 `io.javanatic.harness.*`，Maven `io.javanatic:harness-*`。
 
@@ -69,7 +69,7 @@ bundle/ examples/   base/headless 组合与可运行示例
 | 切片 | 模块 | 设计文档 |
 |---|---|---|
 | 1 ✅ | `kernel.core`（统一 Scope 内核）| [01-kernel.md](docs/design/01-kernel.md) |
-| 2 | `core.session`（LoggedEvent 信封 + Surface）| [03-session-event-sourcing.md](docs/design/03-session-event-sourcing.md) |
+| 2 ✅ | `core.session`（LoggedEvent 信封 + Surface）| [03-session-event-sourcing.md](docs/design/03-session-event-sourcing.md) |
 | 3 | `llm.replay`（先于 deepseek，keyless 测试依赖它）| [10-testing.md](docs/design/10-testing.md) |
 | 4 | `core.tools` + `fs.*`（R2 单一执行路径打通）| [05-capability-seam.md](docs/design/05-capability-seam.md) |
 | 5 | `core.agent-loop`（Turn/Step 状态机）| [04-agent-loop.md](docs/design/04-agent-loop.md) |

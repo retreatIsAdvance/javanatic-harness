@@ -167,6 +167,10 @@ public non-sealed interface ExtensionEvent extends SessionEvent {
 }
 ```
 
+**TurnEndReason 是开放接口**（对应 dsh 的 merge-extensible TurnEndReasonMap）：核心变体 Completed/Aborted/Error 嵌套其中，agent-loop 等切片追加自己的变体，消费方 switch 用文档化默认分支。**SurfaceEvent 是独立标记接口**（不继承 SessionEvent——sealed permits 之外的事件侧出口）：事件同时实现两者才携带 surface 元数据；扩展事件走 `ExtensionEvent + SurfaceEvent` 组合。
+
+**与 dsh 事件清单的差异**：dsh 另有 `request/context`（provider/model/contextWindow 路由元数据，不参与重建）——JH 事件集暂缺，随 llm 切片补进；JH 的 `LlmRequestEvent`（哈希 + 窗口）是 dsh 没有的 R1 显式化（dsh 在 request/header 存 system/tools **原文**，JH 存指纹靠重组装验证——日志更轻，代码演进漂移会被回放暴露）。
+
 **编译期穷尽 + 运行时扩展的共存**：Java 25 的 switch pattern matching 对 sealed 做穷尽检查（21 起 final）：漏掉一个核心分支编译报错；`ExtensionEvent` 是 `non-sealed`（开放），switch 用显式分支覆盖。这复刻 dsh 的 "closed union ends in assertNever; merge-extensible unions fall through documented default"。
 
 ## 2. SurfaceEvent — 产生消息的事件子集
@@ -271,20 +275,9 @@ public final class Session {
 }
 ```
 
-### structuralFreeze — 不可变快照（非 Jackson 往返）
+### structuralFreeze — 不可变快照（构造时归一实现）
 
-```java
-/**
- * 深度冻结事件：递归把 List/Map 复制为不可变副本（List.copyOf / Map.copyOf）。
- * record 组件按约定本就不可变；此函数处理的是调用方传入可变集合的最后一道拷贝。
- *
- * 相比"序列化往返冻结"（JSON dump + parse）：一次内存拷贝，无反射/注解依赖、
- * 成本与事件体积同阶。代价是不再顺带证明"可 JSON 序列化"——该证明移到
- * 持久化边界（§6 codec），这是有意的分层：不可变性是 Session 的性质，
- * 可序列化是持久化 seam 的性质。
- */
-private static <T extends SessionEvent> T structuralFreeze(T event) { /* 递归 copyOf */ }
-```
+不可变快照不走 append 时点的递归拷贝函数，而是**由每个 domain record 的 compact 构造器实现**：List/Map 组件在构造时 `copyOf` 归一（拒绝 null 元素），调用方可变输入在构造那刻即被隔离——append 收到的已是不可变图。相比"序列化往返冻结"（JSON dump + parse）零反射/注解依赖；代价是不再顺带证明"可 JSON 可序列化"——该证明移到持久化边界（§6 codec），这是有意的分层：不可变性是 Session 域的性质，可序列化是持久化 seam 的性质。手写 `ExtensionEvent` 实现者自负同责（Javadoc 契约）。
 
 ## 4. SurfaceManager — 有序 surface 投影
 
@@ -315,10 +308,14 @@ class SurfaceManager {
     }
 
     /**
-     * provenance 规则（对应 dsh）：
+     * provenance 规则（对应 dsh，含全部细则）：
+     * 0. sourceEventSeqs 缺省（null）= 不记录来源，除 Replace 外合法；
+     *    Replace 必须提供且覆盖 shadowed 段；
+     *    非 surface 事件携带 surface 元数据在 JH 由类型系统拒绝（SurfaceEvent 接口之外无此元数据）；
      * 1. sourceEventSeqs ⊇ 全部被 shadow 的 seq；
      * 2. 所有 source seq < 当前 seq（不许引用未来）；
-     * 3. 无重复。
+     * 3. 无重复；
+     * 4. 显式空列表仅 assistant/message 合法（已知空流），其余事件提供时必须非空。
      */
     private static void assertProvenance(List<Long> sourceSeqs, long[] shadowed, long seq) { /* ... */ }
 
@@ -406,7 +403,9 @@ public final class SessionStore {
 }
 ```
 
-`SessionStorePlugin`（id `session-store`）在 `apply(Scope)` 注册 `SessionStore` 服务，并订阅 `session/appended` 转发给 `session/event` 观察者。
+`SessionStorePlugin`（id `session-store`）在 `apply(Scope)` 注册 `SessionStore` 服务。
+
+**观察者接线（迭代 2 实现）**：dsh 经模块私有 WeakMap attachment 让 Session.append 触达 store 的发布钩子；JH 改为**构造注入**——`Session.create(id, seed, header, observers)` 持不可变 `Observer` 列表，store 注入 `(s, e) -> bus.notify(APPENDED, owner, s, e)`。观察者逐个 contained（异常记日志，不影响 append 返回值）；**防重入**：观察者内再 append 抛 `IllegalStateException`（dsh 教训——synchronized 同线程可静默重入，交错即腐化）。发布事件需拿总线：kernel `Runtime` 现以 `Runtime.KEY` 把自己注册为 root 服务，任意 scope `require` 后经 `events()` 派发。end-seed 由构造器自动补记（seed 已以其结尾则不重标），构造路径不通知观察者——持久化在创建时快照全量日志即可看到 marker。
 
 ## 6. 持久化 — codec 属于 seam
 

@@ -176,6 +176,24 @@ class SessionTest {
         assertThat(s.header().version()).isEqualTo(SessionHeader.FORMAT_VERSION);
     }
 
+    /** 插件自定义事件：进日志、可遍历、ignorable 自决、不变式复核不设结构要求。 */
+    record CronFired(long time, String cronId) implements io.javanatic.harness.session.event.ExtensionEvent {
+        @Override public String type() { return "cron/fired"; }
+        @Override public boolean ignorable() { return true; }
+    }
+
+    @Test
+    void extensionEventAppendsAndIterates() {
+        Session s = Session.create(Session.newId("a"), null, null);
+        LoggedEvent<CronFired> entry = s.append(new CronFired(1, "nightly"));
+        assertThat(entry.seq()).isZero();
+        assertThat(entry.type()).isEqualTo("cron/fired");
+        assertThat(s.events().getFirst().event()).isInstanceOf(CronFired.class);
+        assertThat(s.events().getFirst().event().ignorable()).isTrue();
+        org.assertj.core.api.Assertions.assertThatCode(
+            () -> SessionInvariants.validate(s.events())).doesNotThrowAnyException();
+    }
+
     private static UserMessageEvent user(String text) {
         return new UserMessageEvent(System.currentTimeMillis(), UserMessage.of(text, USER),
             new SurfaceOp.Append(), null);
