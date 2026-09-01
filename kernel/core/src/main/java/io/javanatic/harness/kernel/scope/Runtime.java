@@ -15,6 +15,9 @@ public final class Runtime implements AutoCloseable {
 
     private static final System.Logger LOG = System.getLogger(Runtime.class.getName());
 
+    /** 本 Runtime 的服务键：任意 scope 经 require 取回，用于拿到总线发布事件（插件无法直接持有 Events）。 */
+    public static final ServiceKey<Runtime> KEY = new ServiceKey<>("runtime");
+
     private final Events events;
     private final ExecutorService virtualThreads;
     private final ScopeImpl root;
@@ -23,6 +26,7 @@ public final class Runtime implements AutoCloseable {
         this.virtualThreads = Executors.newVirtualThreadPerTaskExecutor();
         this.events = new Events(virtualThreads);
         this.root = new ScopeImpl(null, this);
+        root.provide(KEY, this);
     }
 
     /** root scope：所有插件与子 scope 的挂载点。 */

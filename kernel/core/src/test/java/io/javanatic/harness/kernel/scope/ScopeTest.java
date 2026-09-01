@@ -21,6 +21,14 @@ class ScopeTest {
     record Svc(String name) {}
 
     @Test
+    void runtimeIsResolvableAsServiceFromAnyScope() {
+        try (Runtime rt = new Runtime()) {
+            // 插件无法直接持有 Events；经 KEY 取回 Runtime 才能发布事件（session store 依赖此路径）
+            assertThat(rt.root().child().child().require(Runtime.KEY)).isSameAs(rt);
+        }
+    }
+
+    @Test
     void resolveWalksParentChainAndRequireFailsLoud() {
         try (Runtime rt = new Runtime()) {
             Scope root = rt.root();
