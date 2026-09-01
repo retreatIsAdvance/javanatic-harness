@@ -21,6 +21,17 @@ public final class Disposable implements AutoCloseable {
         this.removeFromStack = removeFromStack;
     }
 
+    /**
+     * 独立撤销凭据（无 effect 栈登记）：服务内部注册表等自管生命周期的注销器用。
+     * 与 scope 侧注册的区别仅在于没有栈摘除步骤；幂等语义相同。
+     *
+     * @param disposer 回收动作（幂等性由本类保证，动作本身只需可重入安全）
+     * @return 撤销凭据
+     */
+    public static Disposable of(AutoCloseable disposer) {
+        return new Disposable(disposer, () -> { });
+    }
+
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
