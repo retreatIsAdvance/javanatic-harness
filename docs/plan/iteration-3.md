@@ -1,33 +1,32 @@
-# 迭代 3 — llm seam + replay provider（进行中）
+# 迭代 3 — llm seam + replay provider（已完成）
 
 模块：llm/llm（Definition）、llm/replay（Provider）（设计：05 §3、10 §3）
-包名：`io.javanatic.harness.llm` / `io.javanatic.harness.llm.replay`（模块名不变，包名去冗余段，与 session 同法）
+提交：879a91a（seam）→ 77eb73f（replay，amend 含模块 requires 修正）→ 收尾提交
+验收日期：2026-09-01
 
 ## 四确认（已确认 2026-09-01）
 
-- **内容**：
-  1. `llm/llm`：`LlmService`（KEY/stream/registerAdapter→Disposable）+ 路由默认实现（`LlmPlugin` id `llm`：未知 provider fail loud 列出已注册项；重复注册 fail loud）；`LlmAdapter`；`StreamChunk` sealed（Delta/DeltaToolUse/Usage/Finish + `FinishReason`）；`LlmCallConfig`（provider/model，采样参数随 deepseek 切片扩）；`LlmRequest`（system/messages/tools/params，依赖 core/session 的 Message——验证迭代 2 归属决策）；`ToolSchema` 极简（name/description/parametersJson）；`CallId` 品牌 + `AbortSignal`/`AbortedException`（checkAbort 协议）；`ChunkAssembly` 纯函数（chunk 流折叠为 AssembledStep）
-  2. `llm/replay`：`ReplayAdapter`（内存脚本逐次回放、耗尽 fail loud、chunk 间 checkAbort）+ `ReplayPlugin`（id `llm-replay`，`requires={"llm"}`，注册经 `scope.onClose` 挂回收）
-  3. kernel 小增量：`Disposable.of(AutoCloseable)` 公有工厂（无栈撤销凭据——服务内部注册表的注销器）
-  4. 测试 ~15 + 文档同步（05 §3 定稿、README 路线 ✅）
-- **目标**：LLM capability seam 成立——一个 Definition 常驻、多 Provider 挂 adapter、Consumer 不 import 任何 Provider（JPMS 强制）；keyless 回放可用
-- **为什么**：路线第 3 刀（keyless 测试依赖 replay 先于 deepseek）；三角色范式首个完整落地；厂商差异被压缩进单个翻译点（Adapter）
-- **不做**：deepseek 真实 provider（SSE/队列/生产线程/认证，下一刀）；JSON snapshot 文件加载（Jackson 随 agent-loop 快照测试引入）；`AssistantChunkEvent` 仍不进 permits（生产者是 loop）；R1 哈希回放；abort 完整取消传播（仅 checkAbort 协议）
+- **内容**：`llm/llm` seam（LlmService 路由 + LlmAdapter + StreamChunk 词表 + LlmCallConfig/LlmRequest/ToolSchema + CallId/AbortSignal + ChunkAssembly 纯函数）；`llm/replay`（脚本回放 adapter + 插件）；kernel `Disposable.of` 工厂
+- **目标**：LLM capability seam 成立——一个 Definition 常驻、多 Provider 挂 adapter、Consumer 不 import Provider；keyless 回放可用
+- **为什么**：路线第 3 刀（keyless 测试依赖 replay 先于 deepseek）；三角色范式首个完整落地；厂商差异压缩进单个翻译点
+- **不做**：deepseek 真实 provider；JSON snapshot 文件；AssistantChunkEvent；R1 哈希回放；abort 完整取消传播
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] 全 reactor `mvn -B -q package` 绿
-- [ ] `llm/llm` requires = kernel + brand + core/session；`llm/replay` requires = llm.llm + kernel（+按需 brand）；零 Jackson、零第三方
-- [ ] 主代码合计 ≤600 行
-- [ ] 路由：注册后按 provider 分发、config/request 原样到达 adapter
-- [ ] 未知 provider fail loud（消息含已注册清单）；重复注册 fail loud
-- [ ] Disposable.of 注销后即失效；幂等
-- [ ] 组装折叠：文本拼接 / tool-use 按 id 累积 arguments / usage 末次生效 / 缺 Finish fail loud / Finish 后再有 chunk fail loud
-- [ ] replay：脚本按序回放、第 N+1 次 fail loud、chunk 间 checkAbort 生效（AbortedException）
-- [ ] 插件装配：llm + llm-replay 经 PluginLoader 装载成功（requires 顺序）；replay 插件 apply 失败回滚后 adapter 消失（R3 端到端）
-- [ ] 文档同步：05 §3（实际形状 + CallId/ChunkAssembly/Disposable.of 增量）、README 路线表与状态行
+- [x] 全 reactor `mvn -B -q package` 绿（kernel 34 + session 32 + llm 11 + replay 5 = 82 测试）
+- [x] `llm/llm` requires = kernel + brand + core/session；`llm/replay` = llm.llm + kernel + brand + **core.session**（计划写"按需"，实测测试直用 Message 类型必须自声明——非 transitive 政策的预期行为，如实记录）；零 Jackson、零第三方
+- [x] 主代码合计 467 行 ≤600
+- [x] 路由：config/request 原样到达 adapter（verbatim 测试）
+- [x] 未知 provider fail loud（消息含已注册清单）；重复注册 fail loud
+- [x] Disposable.of 注销后即失效、幂等（kernel 侧由 replay 卸载路径间接覆盖 + llm 服务直测）
+- [x] 组装折叠六则：文本拼接 / tool-use 按 id 累积 / 顺序保持 / usage 末次 / 缺 Finish / Finish 后分块（各一用例）+ name 冲突 fail loud
+- [x] replay：脚本按序、耗尽 fail loud、checkAbort 生效（AbortedException）
+- [x] 插件装配：llm + llm-replay 装载成功；缺 llm 时 fail loud；**replay 插件 apply 失败回滚后 adapter 消失、清单为空**（R3 端到端）
+- [x] 文档同步：05 §3（实现落定段 + 词汇类型段修正：Message 移 session、FinishReason 三值）、README 路线表与状态
 
 ## 验收后修正（如有）
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| （验收过程中，非验收后） | llm/replay 测试直用 session Message 类型但模块未 requires core.session——非 transitive 政策下每个触碰方必须自声明，编译期抓获于推送前 | 模块与 pom 补 requires/依赖，amend 进 77eb73f；05 增补 JPMS 注意事项 |
+| （同上） | ChunkAssembly 首版 ToolBuilder.build() 丢失 CallId；Spliterators API 误用 | 编译期/评审发现即修 |

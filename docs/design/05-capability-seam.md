@@ -113,31 +113,28 @@ public interface LlmService {
 
 `LlmPlugin`（id `llm`）提供 LlmService 默认实现（路由到已注册 adapter）；`llm-deepseek` / `llm-replay` 声明 `requires() = Set.of("llm")`，在 apply 里 `registerAdapter`——一个 Definition 常驻，多个 Provider 挂适配器，加载顺序由 requires 保证（01 §7）。
 
-### 词汇类型（同模块）
+**实现落定（迭代 3）**：`RoutingLlmService` 的注册表注销器经 kernel 新增的 `Disposable.of(AutoCloseable)` 公有工厂（无栈撤销凭据）；未知 provider 的 fail-loud 消息携带已注册清单（装配缺口就地诊断）。词表补充 `CallId` 品牌工厂、`AbortSignal`/`AbortedException`（checkAbort 协议）与 **`ChunkAssembly` 纯函数**——chunk 流折叠为 `Assembled(text, toolCalls, usage, finishReason)`，回放测试与 agent-loop 必须共用它（否则回放验证的不是生产行为）。包名 `io.javanatic.harness.llm`（模块名不变）。JPMS 注意：本仓不用 `requires transitive`，任何直接触碰 session Message 类型的模块（含测试）须自声明 `requires io.javanatic.harness.core.session`。
+
+### 词汇类型（同模块；消息模型在 core/session，见 02 归属修正）
 
 ```java
-public sealed interface Message permits UserMessage, AssistantMessage, ToolResultMessage {
-    List<ContentBlock> content();
-}
-
-public sealed interface ContentBlock permits TextBlock, ToolUseBlock, ToolResultBlock, ImageBlock {
-    String type();
-}
-public record TextBlock(String text) implements ContentBlock { public String type() { return "text"; } }
-public record ToolUseBlock(CallId id, String name, String arguments) implements ContentBlock { /* ... */ }
-public record ToolResultBlock(CallId toolUseId, String content, boolean isError) implements ContentBlock { /* ... */ }
-public record ImageBlock(String mediaType, byte[] data) implements ContentBlock { /* ... */ }
-
-/** 流式 chunk。permits 四个变体齐全（含增量工具调用——组装 tool_use 需要它）。 */
+/** 流式 chunk（迭代 3 已实现）。permits 四个变体齐全（含增量工具调用——组装 tool_use 需要它）。 */
 public sealed interface StreamChunk
     permits StreamChunk.Delta, StreamChunk.DeltaToolUse, StreamChunk.Usage, StreamChunk.Finish {
     record Delta(String text) implements StreamChunk {}
-    record DeltaToolUse(CallId id, String name, String argumentsDelta) implements StreamChunk {}
+    record DeltaToolUse(Id<CallId> id, String name, String argumentsDelta) implements StreamChunk {}
     record Usage(TokenUsage usage) implements StreamChunk {}
     record Finish(FinishReason reason) implements StreamChunk {}
 }
 
-public enum FinishReason { STOP, LENGTH, TOOL_USE, CONTENT_FILTER }
+public enum FinishReason { STOP, TOOL_USE, LENGTH }
+```
+
+```java
+// 消息与内容块在 core/session（消息是被日志的事实）。tools 切片进 permits 时
+// 由 session 侧扩展：ContentBlock permits TextBlock + （将进）ToolUseBlock /
+// ToolResultBlock / ImageBlock —— tool 块形态见 04 §7 与 05 §5 的落账图。
+public sealed interface ContentBlock permits TextBlock /* , ToolUseBlock, ToolResultBlock, ImageBlock */ { }
 ```
 
 ### Provider（`harness.llm.deepseek`，plugin id `llm-deepseek`）
