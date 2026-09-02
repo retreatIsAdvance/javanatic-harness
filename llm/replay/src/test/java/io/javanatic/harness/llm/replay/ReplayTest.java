@@ -46,6 +46,17 @@ class ReplayTest {
     }
 
     @Test
+    void constructionFreezesScriptsDeeply() {
+        List<StreamChunk> inner = new java.util.ArrayList<>(List.of(
+            new StreamChunk.Delta("原文"), new StreamChunk.Finish(FinishReason.STOP)));
+        ReplayAdapter adapter = new ReplayAdapter(List.of(inner));
+        inner.set(0, new StreamChunk.Delta("被改了")); // 外层 List.of 挡不住内层可变引用
+        ChunkAssembly.Assembled out = ChunkAssembly.fold(
+            adapter.stream(CONFIG, REQUEST, AbortSignal.never()).toList());
+        assertThat(out.text()).isEqualTo("原文");
+    }
+
+    @Test
     void abortSignalIsCheckedBetweenChunks() {
         AtomicBoolean aborted = new AtomicBoolean(false);
         AbortSignal signal = () -> {

@@ -14,11 +14,11 @@ import java.util.Set;
  */
 public final class ReplayPlugin implements Plugin {
 
-    private final List<List<StreamChunk>> scripts;
+    private final ReplayAdapter adapter;
 
-    /** @param scripts 传给 {@link ReplayAdapter} 的逐次脚本 */
+    /** @param scripts 逐次脚本（构造时经 {@link ReplayAdapter} 深冻结） */
     public ReplayPlugin(List<List<StreamChunk>> scripts) {
-        this.scripts = List.copyOf(scripts);
+        this.adapter = new ReplayAdapter(scripts);
     }
 
     @Override
@@ -34,6 +34,6 @@ public final class ReplayPlugin implements Plugin {
     @Override
     public void apply(Scope scope) {
         LlmService llm = scope.require(LlmService.KEY);
-        scope.onClose(llm.registerAdapter("replay", new ReplayAdapter(scripts)));
+        scope.onClose(llm.registerAdapter("replay", adapter));
     }
 }

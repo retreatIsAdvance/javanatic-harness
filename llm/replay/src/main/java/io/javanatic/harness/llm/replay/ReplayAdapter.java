@@ -22,9 +22,12 @@ public final class ReplayAdapter implements LlmAdapter {
     private final List<List<StreamChunk>> scripts;
     private final AtomicInteger callIndex = new AtomicInteger();
 
-    /** @param scripts 每次调用依次回放的脚本（非空） */
+    /**
+     * @param scripts 每次调用依次回放的脚本（非空）
+     * @throws NullPointerException scripts 或任一内层脚本为 null 时
+     */
     public ReplayAdapter(List<List<StreamChunk>> scripts) {
-        this.scripts = List.copyOf(scripts);
+        this.scripts = scripts.stream().map(List::copyOf).toList(); // 深冻：内外层皆不可变
     }
 
     @Override

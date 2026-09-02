@@ -30,3 +30,4 @@
 |---|---|---|
 | （验收过程中，非验收后） | llm/replay 测试直用 session Message 类型但模块未 requires core.session——非 transitive 政策下每个触碰方必须自声明，编译期抓获于推送前 | 模块与 pom 补 requires/依赖，amend 进 77eb73f；05 增补 JPMS 注意事项 |
 | （同上） | ChunkAssembly 首版 ToolBuilder.build() 丢失 CallId；Spliterators API 误用 | 编译期/评审发现即修 |
+| 迭代后评审 | ReplayAdapter 构造冻结只拷外层，内层脚本是共享引用（调用方构造后改内层会影响回放）；ReplayPlugin 存脚本引用、apply 时才建 adapter，冻结点分散 | 内层 `List::copyOf` 深冻 + 插件构造时即建冻结 adapter（冻结点唯一）；回归测试 constructionFreezesScriptsDeeply |
