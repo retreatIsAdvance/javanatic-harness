@@ -1,8 +1,7 @@
 package io.javanatic.harness.session.message;
 
 /**
- * LLM 消息内容块。本迭代只含 {@link TextBlock}；tool-use / tool-result 块
- * 随 tools 切片进 permits（pre-release 无兼容承诺）。
+ * LLM 消息内容块：文本、模型发起的工具调用、工具结果（tools 切片已进齐）。
  */
-public sealed interface ContentBlock permits TextBlock {
+public sealed interface ContentBlock permits TextBlock, ToolUseBlock, ToolResultBlock {
 }

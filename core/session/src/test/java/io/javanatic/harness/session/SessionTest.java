@@ -194,6 +194,30 @@ class SessionTest {
             () -> SessionInvariants.validate(s.events())).doesNotThrowAnyException();
     }
 
+    @Test
+    void toolResultProjectsAsUserMessageWithToolSource() {
+        Session s = Session.create(Session.newId("a"), null, null);
+        long call = s.append(new io.javanatic.harness.session.event.ToolCallEvent(
+            1, 0, 0, io.javanatic.harness.session.message.CallId.of("c1"),
+            "fs_read", "{\"path\":\"/tmp\"}")).seq();
+        s.append(new io.javanatic.harness.session.event.ToolResultEvent(2, 0, 0,
+            new io.javanatic.harness.session.message.ToolResultBlock(
+                io.javanatic.harness.session.message.CallId.of("c1"), "hello", false),
+            false, new SurfaceOp.Append(), List.of(call)));
+        List<Message> messages = s.deriveMessages();
+        assertThat(messages).hasSize(1);
+        UserMessage projected = (UserMessage) messages.getFirst();
+        assertThat(projected.source())
+            .isEqualTo(new io.javanatic.harness.session.message.MessageSource.Tool(
+                io.javanatic.harness.session.message.CallId.of("c1")));
+        assertThat(projected.content().getFirst())
+            .isInstanceOf(io.javanatic.harness.session.message.ToolResultBlock.class);
+        assertThat(((io.javanatic.harness.session.message.ToolResultBlock) projected.content().getFirst())
+            .content()).isEqualTo("hello");
+        // tool/call 是 log-only：不进投影
+        assertThat(s.events().stream().filter(e -> e.type().equals("tool/call")).count()).isEqualTo(1);
+    }
+
     private static UserMessageEvent user(String text) {
         return new UserMessageEvent(System.currentTimeMillis(), UserMessage.of(text, USER),
             new SurfaceOp.Append(), null);

@@ -1,4 +1,5 @@
 package io.javanatic.harness.llm;
+import io.javanatic.harness.session.message.CallId;
 
 import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.session.message.TokenUsage;

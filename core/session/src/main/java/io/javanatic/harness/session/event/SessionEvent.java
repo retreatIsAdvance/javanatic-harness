@@ -13,6 +13,7 @@ package io.javanatic.harness.session.event;
 public sealed interface SessionEvent permits
     TurnStart, TurnEnd, StepStart, StepEnd,
     UserMessageEvent, AssistantMessageEvent, LlmRequestEvent,
+    ToolCallEvent, ToolResultEvent,
     SessionEndSeedEvent, ExtensionEvent {
 
     /** Unix epoch 毫秒。 */
