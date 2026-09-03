@@ -1,14 +1,21 @@
 package io.javanatic.harness.session;
 
 import io.javanatic.harness.session.event.AssistantMessageEvent;
+import io.javanatic.harness.session.event.ExtensionEvent;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.SurfaceOp;
+import io.javanatic.harness.session.event.ToolCallEvent;
+import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.event.TurnStart;
 import io.javanatic.harness.session.event.UserMessageEvent;
 import io.javanatic.harness.session.message.AssistantMessage;
+import io.javanatic.harness.session.message.CallId;
 import io.javanatic.harness.session.message.Message;
 import io.javanatic.harness.session.message.MessageSource;
+import io.javanatic.harness.session.message.TextBlock;
+import io.javanatic.harness.session.message.TokenUsage;
+import io.javanatic.harness.session.message.ToolResultBlock;
 import io.javanatic.harness.session.message.UserMessage;
 import org.junit.jupiter.api.Test;
 
@@ -48,7 +55,7 @@ class SessionTest {
         List<Message> messages = s.deriveMessages();
         assertThat(messages).hasSize(2); // 空 content 只承载 usage，不进入历史
         assertThat(((UserMessage) messages.getFirst()).content().getFirst())
-            .isEqualTo(new io.javanatic.harness.session.message.TextBlock("你好"));
+            .isEqualTo(new TextBlock("你好"));
     }
 
     @Test
@@ -60,7 +67,7 @@ class SessionTest {
         s.append(new AssistantMessageEvent(4, 0, 0, AssistantMessage.of("（摘要）", MODEL), null,
             new SurfaceOp.Replace(q, q), List.of(q)));
         assertThat(s.deriveMessages())
-            .extracting(m -> ((io.javanatic.harness.session.message.TextBlock) m.content().getFirst()).text())
+            .extracting(m -> ((TextBlock) m.content().getFirst()).text())
             .containsExactly("第一轮", "（摘要）", "第一轮的回答");
         // 事件日志不动——replace 只影响投影
         assertThat(s.events()).hasSize(4);
@@ -177,7 +184,7 @@ class SessionTest {
     }
 
     /** 插件自定义事件：进日志、可遍历、ignorable 自决、不变式复核不设结构要求。 */
-    record CronFired(long time, String cronId) implements io.javanatic.harness.session.event.ExtensionEvent {
+    record CronFired(long time, String cronId) implements ExtensionEvent {
         @Override public String type() { return "cron/fired"; }
         @Override public boolean ignorable() { return true; }
     }
@@ -197,22 +204,22 @@ class SessionTest {
     @Test
     void toolResultProjectsAsUserMessageWithToolSource() {
         Session s = Session.create(Session.newId("a"), null, null);
-        long call = s.append(new io.javanatic.harness.session.event.ToolCallEvent(
-            1, 0, 0, io.javanatic.harness.session.message.CallId.of("c1"),
+        long call = s.append(new ToolCallEvent(
+            1, 0, 0, CallId.of("c1"),
             "fs_read", "{\"path\":\"/tmp\"}")).seq();
-        s.append(new io.javanatic.harness.session.event.ToolResultEvent(2, 0, 0,
-            new io.javanatic.harness.session.message.ToolResultBlock(
-                io.javanatic.harness.session.message.CallId.of("c1"), "hello", false),
+        s.append(new ToolResultEvent(2, 0, 0,
+            new ToolResultBlock(
+                CallId.of("c1"), "hello", false),
             false, new SurfaceOp.Append(), List.of(call)));
         List<Message> messages = s.deriveMessages();
         assertThat(messages).hasSize(1);
         UserMessage projected = (UserMessage) messages.getFirst();
         assertThat(projected.source())
-            .isEqualTo(new io.javanatic.harness.session.message.MessageSource.Tool(
-                io.javanatic.harness.session.message.CallId.of("c1")));
+            .isEqualTo(new MessageSource.Tool(
+                CallId.of("c1")));
         assertThat(projected.content().getFirst())
-            .isInstanceOf(io.javanatic.harness.session.message.ToolResultBlock.class);
-        assertThat(((io.javanatic.harness.session.message.ToolResultBlock) projected.content().getFirst())
+            .isInstanceOf(ToolResultBlock.class);
+        assertThat(((ToolResultBlock) projected.content().getFirst())
             .content()).isEqualTo("hello");
         // tool/call 是 log-only：不进投影
         assertThat(s.events().stream().filter(e -> e.type().equals("tool/call")).count()).isEqualTo(1);
@@ -230,7 +237,7 @@ class SessionTest {
 
     private static AssistantMessageEvent assistantEmptyUsageOnly() {
         return new AssistantMessageEvent(System.currentTimeMillis(), 0, 0,
-            new AssistantMessage(MODEL, List.of()), new io.javanatic.harness.session.message.TokenUsage(1, 2, 3),
+            new AssistantMessage(MODEL, List.of()), new TokenUsage(1, 2, 3),
             new SurfaceOp.Append(), List.of());
     }
 }

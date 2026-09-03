@@ -4,6 +4,7 @@ import io.javanatic.harness.fs.FsService;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.tools.ToolDefinition;
+import io.javanatic.harness.tools.ToolExecutionResult;
 import io.javanatic.harness.tools.ToolRegistry;
 import io.javanatic.harness.tools.ValueSchema;
 
@@ -48,7 +49,7 @@ public final class FsToolPlugin implements Plugin {
     private static ToolDefinition readTool(FsService fs) {
         return ToolDefinition.of("fs_read", "读取文件内容",
             new ValueSchema.Object("参数", Map.of("path", PATH)),
-            (args, ctx) -> io.javanatic.harness.tools.ToolExecutionResult.success(
+            (args, ctx) -> ToolExecutionResult.success(
                 fs.read(Path.of(args.readString("path")))));
     }
 
@@ -57,14 +58,14 @@ public final class FsToolPlugin implements Plugin {
             new ValueSchema.Object("参数", Map.of("path", PATH, "content", CONTENT)),
             (args, ctx) -> {
                 fs.write(Path.of(args.readString("path")), args.readString("content"));
-                return io.javanatic.harness.tools.ToolExecutionResult.success("written");
+                return ToolExecutionResult.success("written");
             });
     }
 
     private static ToolDefinition editTool(FsService fs) {
         return ToolDefinition.of("fs_edit", "精确替换文件中第一处匹配文本",
             new ValueSchema.Object("参数", Map.of("path", PATH, "old_string", OLD, "new_string", NEW)),
-            (args, ctx) -> io.javanatic.harness.tools.ToolExecutionResult.success(
+            (args, ctx) -> ToolExecutionResult.success(
                 fs.edit(Path.of(args.readString("path")),
                     args.readString("old_string"), args.readString("new_string"))));
     }
@@ -74,14 +75,14 @@ public final class FsToolPlugin implements Plugin {
             new ValueSchema.Object("参数", Map.of("path", PATH)),
             (args, ctx) -> {
                 fs.delete(Path.of(args.readString("path")));
-                return io.javanatic.harness.tools.ToolExecutionResult.success("deleted");
+                return ToolExecutionResult.success("deleted");
             });
     }
 
     private static ToolDefinition listTool(FsService fs) {
         return ToolDefinition.of("fs_list", "列出目录条目",
             new ValueSchema.Object("参数", Map.of("path", PATH)),
-            (args, ctx) -> io.javanatic.harness.tools.ToolExecutionResult.success(
+            (args, ctx) -> ToolExecutionResult.success(
                 fs.list(Path.of(args.readString("path"))).stream()
                     .map(e -> (e.directory() ? "d " : "f ") + e.name())
                     .collect(Collectors.joining("\n"))));

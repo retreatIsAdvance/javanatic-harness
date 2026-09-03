@@ -2,8 +2,9 @@ package io.javanatic.harness.tools;
 
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
-import io.javanatic.harness.llm.AbortedException;
+import io.javanatic.harness.kernel.scope.ServiceNotAvailableException;
 import io.javanatic.harness.llm.AbortSignal;
+import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.ToolResultEvent;
@@ -224,7 +225,7 @@ class ToolExecutorTest {
                 new PluginLoader().loadAll(rt, List.of(new ToolsPlugin())))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("rolled back")
-                .hasRootCauseInstanceOf(io.javanatic.harness.kernel.scope.ServiceNotAvailableException.class)
+                .hasRootCauseInstanceOf(ServiceNotAvailableException.class)
                 .getRootCause()
                 .hasMessageContaining("approval");
         }

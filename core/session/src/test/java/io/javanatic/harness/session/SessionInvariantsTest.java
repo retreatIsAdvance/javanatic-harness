@@ -1,6 +1,7 @@
 package io.javanatic.harness.session;
 
 import io.javanatic.harness.session.event.LoggedEvent;
+import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.SurfaceOp;
 import io.javanatic.harness.session.event.TurnEnd;
 import io.javanatic.harness.session.event.TurnEndReason;
@@ -35,7 +36,7 @@ class SessionInvariantsTest {
 
     @Test
     void brokenSeqContiguityRejected() {
-        List<LoggedEvent<io.javanatic.harness.session.event.SessionEvent>> events = new ArrayList<>();
+        List<LoggedEvent<SessionEvent>> events = new ArrayList<>();
         events.add(new LoggedEvent<>(0, new TurnStart(1, 0)));
         events.add(new LoggedEvent<>(2, new TurnEnd(2, 0, new TurnEndReason.Completed()))); // 跳号
         assertThatThrownBy(() -> SessionInvariants.validate(List.copyOf(events)))
@@ -69,10 +70,10 @@ class SessionInvariantsTest {
 
     @Test
     void surfaceReplayCatchesBadProvenance() {
-        List<io.javanatic.harness.session.event.SessionEvent> raw = List.of(
+        List<SessionEvent> raw = List.of(
             new UserMessageEvent(1, UserMessage.of("你好", USER), new SurfaceOp.Append(), List.of(9L)));
         // 绕过 Session.append 的校验，直接构造信封喂给复核器
-        List<LoggedEvent<io.javanatic.harness.session.event.SessionEvent>> events = new ArrayList<>();
+        List<LoggedEvent<SessionEvent>> events = new ArrayList<>();
         for (int i = 0; i < raw.size(); i++) {
             events.add(new LoggedEvent<>(i, raw.get(i)));
         }

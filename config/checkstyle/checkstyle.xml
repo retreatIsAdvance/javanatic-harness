@@ -21,6 +21,15 @@
         <module name="AvoidStarImport"/>       <!-- 禁 * 导入 -->
         <module name="RedundantImport"/>
         <module name="UnusedImports"/>
+        <!-- 禁行内全限定类名：类引用一律走 import；同名冲突按 pre-release 立场重命名解决。
+             package/import 行经负向前瞻豁免；Javadoc {@link} 的全限定名经 ignoreComments 豁免。 -->
+        <module name="RegexpSinglelineJava">
+            <property name="format"
+                      value="^(?!\s*(package|import)\s).*\b(?:io\.javanatic\.harness|java\.(?:util|lang|io|nio))(?:\.[a-z][a-zA-Z0-9]*)+\.[A-Z][A-Za-z0-9]*"/>
+            <property name="ignoreComments" value="true"/>
+            <property name="message"
+                      value="行内全限定类名：改用 import（同名冲突应重命名，万不得已须注释说明）"/>
+        </module>
 
         <!-- 结构 -->
         <module name="OneTopLevelClass"/>      <!-- 每文件一个顶层类型 -->

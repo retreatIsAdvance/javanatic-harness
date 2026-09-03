@@ -4,16 +4,17 @@ import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.session.event.LoggedEvent;
+import io.javanatic.harness.session.event.SurfaceOp;
 import io.javanatic.harness.session.event.TurnStart;
 import io.javanatic.harness.session.event.UserMessageEvent;
-import io.javanatic.harness.session.event.SurfaceOp;
-import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.message.MessageSource;
+import io.javanatic.harness.session.message.UserMessage;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +37,7 @@ class SessionStoreTest {
             new PluginLoader().loadAll(rt, List.of(new SessionStorePlugin()));
             SessionStore store = rt.root().require(SessionStore.KEY);
             Session session = store.create(rt.root(), Session.newId("s1"), CreateOptions.empty());
-            assertThat(latch.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue(); // CREATED 是 fire-and-forget
+            assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue(); // CREATED 是 fire-and-forget
             assertThat(created.get()).isSameAs(session);
             assertThat(store.get(Session.newId("s1"))).isSameAs(session);
             assertThat(store.list()).hasSize(1);
@@ -56,7 +57,7 @@ class SessionStoreTest {
             SessionStore store = rt.root().require(SessionStore.KEY);
             Session session = store.create(rt.root(), Session.newId("s1"), CreateOptions.empty());
             LoggedEvent<TurnStart> entry = session.append(new TurnStart(1, 0));
-            assertThat(latch.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
             assertThat(received.get()).isEqualTo(entry);
         }
     }

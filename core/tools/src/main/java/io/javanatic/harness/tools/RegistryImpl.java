@@ -25,7 +25,7 @@ final class RegistryImpl implements ToolRegistry {
         if (tools.putIfAbsent(tool.name(), tool) != null) {
             throw new IllegalStateException("tool already registered: '" + tool.name() + "'");
         }
-        return io.javanatic.harness.kernel.scope.Disposable.of(
+        return Disposable.of(
             () -> tools.remove(tool.name(), tool));
     }
 

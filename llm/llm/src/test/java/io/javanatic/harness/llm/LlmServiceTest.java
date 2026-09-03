@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,7 +21,7 @@ class LlmServiceTest {
     /** 记录调用并回放固定分块的假 adapter。 */
     private record FakeAdapter(List<StreamChunk> chunks) implements LlmAdapter {
         @Override
-        public java.util.stream.Stream<StreamChunk> stream(LlmCallConfig config, LlmRequest request,
+        public Stream<StreamChunk> stream(LlmCallConfig config, LlmRequest request,
                                                             AbortSignal signal) {
             return chunks.stream();
         }
@@ -90,7 +91,7 @@ class LlmServiceTest {
             ToolSchema schema = new ToolSchema("fs_read", "read", "{}");
             LlmAdapter recorder = (config, request, signal) -> {
                 seen.add(request);
-                return java.util.stream.Stream.of(new StreamChunk.Finish(FinishReason.STOP));
+                return Stream.of(new StreamChunk.Finish(FinishReason.STOP));
             };
             llm.registerAdapter("fake", recorder);
             LlmRequest withTools = new LlmRequest("sys", REQUEST.messages(), List.of(schema),

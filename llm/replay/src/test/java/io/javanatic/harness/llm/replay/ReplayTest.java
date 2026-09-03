@@ -5,9 +5,11 @@ import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.llm.AbortSignal;
+import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.ChunkAssembly;
 import io.javanatic.harness.llm.FinishReason;
 import io.javanatic.harness.llm.LlmCallConfig;
+import io.javanatic.harness.llm.LlmPlugin;
 import io.javanatic.harness.llm.LlmRequest;
 import io.javanatic.harness.llm.LlmService;
 import io.javanatic.harness.llm.StreamChunk;
@@ -61,7 +63,7 @@ class ReplayTest {
         AtomicBoolean aborted = new AtomicBoolean(false);
         AbortSignal signal = () -> {
             if (aborted.get()) {
-                throw new io.javanatic.harness.llm.AbortedException("aborted");
+                throw new AbortedException("aborted");
             }
         };
         ReplayAdapter adapter = new ReplayAdapter(List.of(List.of(
@@ -72,14 +74,14 @@ class ReplayTest {
         assertThat(iterator.next()).isEqualTo(new StreamChunk.Delta("a"));
         aborted.set(true);
         assertThatThrownBy(iterator::hasNext)
-            .isInstanceOf(io.javanatic.harness.llm.AbortedException.class);
+            .isInstanceOf(AbortedException.class);
     }
 
     @Test
     void pluginAssemblesAndStreamsThroughSeam() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new io.javanatic.harness.llm.LlmPlugin(),
+                new LlmPlugin(),
                 new ReplayPlugin(List.of(List.of(
                     new StreamChunk.Delta("回放"),
                     new StreamChunk.Finish(FinishReason.STOP))))));
@@ -117,7 +119,7 @@ class ReplayTest {
                 }
             };
             assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(
-                new io.javanatic.harness.llm.LlmPlugin(), broken)))
+                new LlmPlugin(), broken)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("rolled back");
             LlmService llm = rt.root().require(LlmService.KEY);
