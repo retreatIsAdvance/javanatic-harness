@@ -16,5 +16,10 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-fs-fs</artifactId>
-        </dependency>    </dependencies>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-core</artifactId>
+        </dependency>
+    </dependencies>
 </project>

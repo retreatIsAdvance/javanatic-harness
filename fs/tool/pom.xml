@@ -20,5 +20,12 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-core-tools</artifactId>
-        </dependency>    </dependencies>
+        </dependency>
+        <!-- 端到端测试用 provider（Consumer 主代码不依赖任何 provider） -->
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-fs-local</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

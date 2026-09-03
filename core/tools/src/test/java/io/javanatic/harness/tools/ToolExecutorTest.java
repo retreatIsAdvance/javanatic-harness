@@ -122,13 +122,17 @@ class ToolExecutorTest {
         try (Rig rig = Rig.with(Approvals.auto())) {
             rig.registry.register(echo());
             Session session = Session.create(Session.newId("t"), null, null);
+            // 两个同 id 调用并行提交：谁先占用 callId 不确定，
+            // 但必然恰一个执行成功、恰一个 Duplicate 错误，且都成对落账
             List<LoggedEvent<ToolResultEvent>> out = rig.executor
                 .execute(List.of(call("c1", "{\"path\":\"a\"}"), call("c1", "{\"path\":\"b\"}")),
                     session, 0, 0, AbortSignal.never());
             assertThat(out).hasSize(2);
-            assertThat(out.getFirst().event().block().content()).isEqualTo("a");
-            assertThat(out.get(1).event().block().isError()).isTrue();
-            assertThat(out.get(1).event().block().content()).contains("Duplicate");
+            assertThat(out.stream().filter(e -> e.event().block().isError()).count()).isEqualTo(1);
+            assertThat(out.stream().filter(e -> !e.event().block().isError()).count()).isEqualTo(1);
+            assertThat(out.stream().filter(e -> e.event().block().isError()).findFirst().orElseThrow()
+                .event().block().content()).contains("Duplicate");
+            assertThat(session.events()).hasSize(4); // 两个调用、两个结果，全部留痕
         }
     }
 
