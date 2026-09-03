@@ -152,7 +152,7 @@ public final class Events {
 
     /**
      * 中间件链：按订阅序同步执行在调用方（虚拟）线程。listener 不调 next 即短路；
-     * next 二次调用抛 IllegalStateException；listener 异常包装为 CompletionException。
+     * next 二次调用抛 IllegalStateException；listener 的受检异常包装为 CompletionException，RuntimeException（语义异常）原样上抛。
      *
      * @param <T> 链的返回类型
      * @param key WATERFALL key
@@ -175,6 +175,10 @@ public final class Events {
         try {
             return buildChain(chain, 0, carrier, List.copyOf(args), inner).invoke();
         } catch (CompletionException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            // 语义异常（AbortedException 取消、IAE 校验拒绝等）原样上抛——
+            // 与 ScopeImpl.effect 同一先例：裹皮会吃掉调用方的 catch 语义
             throw e;
         } catch (Exception e) {
             throw new CompletionException("waterfall failed for " + key.name(), e);

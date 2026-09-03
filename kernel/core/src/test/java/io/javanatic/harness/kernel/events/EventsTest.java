@@ -113,9 +113,8 @@ class EventsTest {
                 return args.next();
             });
             assertThatThrownBy(() -> rt.events().waterfall(GATE, rt.root(), this, List.of("x"), none -> "inner"))
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalStateException.class)
-                .hasRootCauseMessage("waterfall next() invoked twice");
+                .isInstanceOf(IllegalStateException.class) // 语义异常裸抛（不裹 CompletionException）
+                .hasMessage("waterfall next() invoked twice");
         }
     }
 
@@ -177,6 +176,21 @@ class EventsTest {
             subscriber.close();
             rt.events().notifyAndWait(PING, rt.root(), this, new Ping("after-close")).join();
             assertThat(received.get()).isZero();
+        }
+    }
+
+    @Test
+    void waterfallRethrowsSemanticRuntimeExceptionsUnwrapped() {
+        // 语义异常（取消/校验拒绝）若被裹进 CompletionException，调用方的
+        // catch 语义即失效（executor 的 AbortedException 处理依赖裸抛）
+        try (Runtime rt = new Runtime()) {
+            rt.root().events().onWaterfall(GATE, (carrier, args) -> {
+                throw new IllegalStateException("semantic");
+            });
+            assertThatThrownBy(() -> rt.events().waterfall(
+                GATE, rt.root(), this, List.of("q"), none -> "inner"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("semantic");
         }
     }
 }
