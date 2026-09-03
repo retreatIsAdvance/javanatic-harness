@@ -396,7 +396,9 @@ public final class Events {
         List<WaterfallListener<T>> chain = /* filter + cast，kernel 内少数同构 unchecked cast */;
         try {
             return buildChain(chain, 0, carrier, args, inner).invoke();
-        } catch (CompletionException e) {
+        } catch (CompletionException | RuntimeException e) {
+            // 语义异常（AbortedException 取消、IAE 校验拒绝、ISE next-twice）
+            // 原样上抛——与 ScopeImpl.effect 同一先例：裹皮会吃掉调用方 catch 语义
             throw e;
         } catch (Exception e) {
             throw new CompletionException("waterfall failed for " + key.name(), e);

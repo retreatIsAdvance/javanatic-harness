@@ -32,7 +32,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 |---|---|---|---|
 | `harness-core-session` | `kernel` | `Session`（事件日志 + `LoggedEvent` 信封）、核心事件类型、消息模型（`Message`/`ContentBlock`）、`SurfaceManager` 投影、`SessionStore` 接口。**零 Jackson 依赖**（codec 在持久化 seam）| `core/session` |
 | `harness-core-system-prompt` | `kernel`, `session` | `SystemPromptService` 组装注册表 | `core/system-prompt` |
-| `harness-core-tools` | `kernel`, `session` | `ToolRegistry`（注册 + schemas）与 `ToolExecutor`（R2 单一分发 pipeline）**同模块分接口**（[05 §8](05-capability-seam.md)）| `core/tools` |
+| `harness-core-tools` | `kernel`, `session`, `llm.llm` | `ToolRegistry`（注册 + schemas）与 `ToolExecutor`（R2 单一分发 pipeline）**同模块分接口**；`ApprovalService` Definition + auto 内置 provider；**首个 Jackson 边界**（ToolArgs 校验模型 tool JSON，08 §6）（[05 §8](05-capability-seam.md)）| `core/tools` |
 | `harness-core-agent` | `kernel`, `session` | `Agent` 接口、`AgentRegistry`（ScopedValue initiator）、`AgentHandle` | `core/agent` |
 | `harness-core-agent-loop` | `agent`, `tools`, `system-prompt`, `llm` | `AgentLoopImpl` 驱动（Turn/Step 状态机）| `core/agent-loop` |
 | `harness-core` | 上述全部 | 聚合（packaging=pom 的 reactor 聚合，无 JPMS re-export）| `core` |

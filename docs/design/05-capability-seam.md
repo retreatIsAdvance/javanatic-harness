@@ -501,6 +501,16 @@ public record ToolDefinition(
 
 渲染意图是工具设计的一部分（移植 dsh："a tool's UI render intent is part of its design, decided up front"）：作者定义时声明，UI 消费者据此选择渲染器。
 
+### 实现落定（迭代 4）
+
+- **`CallId` 归属 session.message**：ToolUseBlock/ToolResultEvent（session 域）需要它配对，llm 已依赖 session，反向引用即成环——dsh 的 type-only import 无此约束，Java 按「消息域身份在被日志的一侧」安置。
+- **executor 的 session 是方法参数**（非构造器字段）：executor 跨会话共享，日志目标随调用到达。
+- **`ApprovalService` Definition 落在 core/tools**（随第一个强制消费者）：内置 `Approvals.auto()/deny()` + `approval-auto` 插件；三模式真实现属 interaction 切片。组合必须先装载某个审批提供者——缺失在 apply 时 fail loud（R4 组合责任）。
+- **`schemas()` 暂无 scope 参数**：per-agent 工具集 overlay 随 core/agent 切片进；当前返回全量（名称排序）。
+- **kernel waterfall 语义异常裸抛**：AbortedException/IAE 等RuntimeException 不再裹 CompletionException（与 ScopeImpl.effect 同例）——executor 的取消传播依赖此契约。
+- **ValueSchema 极简词表**（object/string/number/boolean + description，properties 全必填）；presenter（UiNode）暂缓至 UI 切片。
+- **批内重复 callId 并行语义**：两路同 id 并发时占用者不确定，但恒有恰一个成功 + 恰一个 Duplicate 错误、双双留痕。
+
 ---
 
 ## 9. 完整 Seam 清单（MVP + 留接口）
