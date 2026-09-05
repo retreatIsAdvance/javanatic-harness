@@ -1,7 +1,10 @@
 /**
- * harness-core-system-prompt — skeleton module; JPMS dependency graph enforced from day one
- * (design: docs/design/02-module-layout.md).
+ * harness-core-system-prompt — 系统提示词组装注册表。assemble 只读 session 日志
+ * （R1：同日志必同提示词），contributor 注册随 scope 回收（R3）。
  */
 module io.javanatic.harness.core.system.prompt {
-    requires io.javanatic.harness.kernel;    exports io.javanatic.harness.core.system.prompt;
+    requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.core.session;
+
+    exports io.javanatic.harness.systemprompt;
 }
