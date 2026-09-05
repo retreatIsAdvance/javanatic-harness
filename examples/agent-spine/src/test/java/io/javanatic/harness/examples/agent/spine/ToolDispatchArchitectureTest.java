@@ -24,7 +24,10 @@ import io.javanatic.harness.tools.ToolExecutor;
 
 import org.junit.jupiter.api.Test;
 
-import java.net.URISyntaxException;
+import com.tngtech.archunit.core.importer.Location;
+
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
@@ -76,26 +79,38 @@ class ToolDispatchArchitectureTest {
             .contains(LOOP, EXECUTOR);
     }
 
-    /** 每模块一个锚类；CodeSource 定位其 target/classes 根（classpath 形态无关）。 */
+    /**
+     * 每模块一个锚类，CodeSource 定位其类根。依赖可能是目录（target/classes）或
+     * jar（reactor 打包形态），统一转 ArchUnit Location：file 协议走 Path（目录
+     * 无尾斜杠也能导入），其余（jar:）走 Location.of(URL)。
+     */
     private static JavaClasses importProductionClasses() {
-        List<Path> roots = Stream.of(
+        List<Location> roots = Stream.of(
                 Runtime.class, Id.class, Session.class, ToolExecutor.class,
                 SystemPromptService.class, AgentPlugin.class, AgentLoopPlugin.class,
                 LlmService.class, ReplayPlugin.class, FsService.class,
                 FsLocalPlugin.class, FsToolPlugin.class, SpineMain.class)
-            .map(ToolDispatchArchitectureTest::codeSourcePath)
+            .map(ToolDispatchArchitectureTest::anchorLocation)
             .distinct()
             .toList();
         return new ClassFileImporter()
             .withImportOption(new ImportOption.DoNotIncludeTests())
-            .importPaths(roots);
+            .importLocations(roots);
     }
 
-    private static Path codeSourcePath(Class<?> anchor) {
+    private static Location anchorLocation(Class<?> anchor) {
+        URL url = anchor.getProtectionDomain().getCodeSource().getLocation();
         try {
-            return Path.of(anchor.getProtectionDomain().getCodeSource().getLocation().toURI());
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("anchor class location not a valid URI: " + anchor, e);
+            if ("file".equals(url.getProtocol())) {
+                if (url.getPath().endsWith(".jar")) {
+                    // jar 的 CodeSource 是 file: 协议指向 jar 文件——转 jar: URI 才是导入源
+                    return Location.of(URI.create("jar:" + url.toExternalForm() + "!/").toURL());
+                }
+                return Location.of(Path.of(url.toURI()));
+            }
+            return Location.of(url);
+        } catch (Exception e) {
+            throw new IllegalStateException("anchor class location not importable: " + anchor, e);
         }
     }
 }

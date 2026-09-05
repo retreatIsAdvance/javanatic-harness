@@ -232,12 +232,6 @@
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
-                    <!-- 测试运行走 classpath 而非 module path：ArchUnit 的 classpath
-                         扫描在 JPMS 运行时下看不到模块层（R2 架构测试空转）。
-                         编译期的 JPMS 隔离不受影响。 -->
-                    <configuration>
-                        <useModulePath>false</useModulePath>
-                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>com.diffplug.spotless</groupId>
