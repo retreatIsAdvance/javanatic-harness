@@ -41,5 +41,30 @@
             <groupId>io.javanatic</groupId>
             <artifactId>harness-llm-llm</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-llm-replay</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-fs-fs</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-fs-local</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-fs-tool</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-brand</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

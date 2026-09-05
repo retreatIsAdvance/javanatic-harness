@@ -4,11 +4,16 @@
  */
 module io.javanatic.harness.examples.agent.spine {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.core.system.prompt;
     requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.core.agent;
     requires io.javanatic.harness.core.agent.loop;
     requires io.javanatic.harness.llm.llm;
+    requires io.javanatic.harness.llm.replay;
+    requires io.javanatic.harness.fs.fs;
+    requires io.javanatic.harness.fs.local;
+    requires io.javanatic.harness.fs.tool;
     exports io.javanatic.harness.examples.agent.spine;
 }

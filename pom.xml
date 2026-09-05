@@ -21,6 +21,7 @@
         <junit.version>5.10.2</junit.version>
         <assertj.version>3.25.3</assertj.version>
         <jqwik.version>1.8.5</jqwik.version>
+        <archunit.version>1.5.0</archunit.version>
         <!-- 无 preview：全仓库不启用 Java preview 特性（docs/design/11-java25-upgrade.md） -->
     </properties>
 
@@ -69,6 +70,11 @@
                 <groupId>net.jqwik</groupId>
                 <artifactId>jqwik</artifactId>
                 <version>${jqwik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit</artifactId>
+                <version>${archunit.version}</version>
                 <scope>test</scope>
             </dependency>
             <!-- 内部模块：版本唯一声明处 -->
@@ -226,6 +232,12 @@
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
+                    <!-- 测试运行走 classpath 而非 module path：ArchUnit 的 classpath
+                         扫描在 JPMS 运行时下看不到模块层（R2 架构测试空转）。
+                         编译期的 JPMS 隔离不受影响。 -->
+                    <configuration>
+                        <useModulePath>false</useModulePath>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>com.diffplug.spotless</groupId>
