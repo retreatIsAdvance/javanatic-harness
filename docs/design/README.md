@@ -106,10 +106,11 @@
 ## 实现路线（垂直切片）
 
 1. **Iteration 1（已完成）**：kernel（`brand` 的 `Id<T>` + `core` 的 Scope/Events/Plugin，30+ 测试含 jqwik LIFO 性质测试）。实现相对本设计稿的修正已回写 [01](01-kernel.md)：`parent()` root 返回 null、`Next` varargs + `WaterfallArgs.rest`、订阅类型化双入口、waterfall 守卫包 rest、PluginScope 挂载视图（provide 落共享 root，effect 落私有 child）
-2. **Iteration 2（最小完整竖切）**：core.session → llm.replay → core.tools + fs 最简 seam → core.agent-loop → examples.headless 跑通第一轮 turn。R1–R4 测试随切片走，不是收尾补 ([10](10-testing.md))
-3. **Iteration 3**：system-prompt 组装、shell seam、真实 llm-deepseek、JSONL 持久化 + R1 replay 哈希测试
-4. **Iteration 4**：scope/preset 组合（06）、approval-ask 交互档、`--verify` + policy 档位（R4）
-5. 每实现一个模块先写 invariant/属性测试：先定不变式，再写实现
+2. **Iteration 2（最小完整竖切）**：core.session → llm.replay → core.tools + fs 最简 seam → core.agent-loop → 示例跑通第一轮 turn。R1–R4 测试随切片走，不是收尾补 ([10](10-testing.md))。实际执行拆得更细：it2 session、it3 llm seam + replay、it4 tools + fs、it5 agent-loop + system-prompt + examples/agent-spine 竖切收口（headless runner 依赖 bundle 组合层，随 06/07 切片）
+3. **Iteration 6**：shell seam、真实 llm-deepseek、JSONL 持久化 + R1 replay 哈希测试
+4. **Iteration 7**：scope/preset 组合（06）、approval-ask 交互档、`--verify` + policy 档位（R4）
+5. **Iteration 5（已完成）**：core/agent（契约）+ core/system-prompt（最小组装）+ core/agent-loop（Turn/Step 状态机）+ examples/agent-spine（可运行竖切）+ R2 架构测试（ArchUnit，锚类定位导入）
+6. 每实现一个模块先写 invariant/属性测试：先定不变式，再写实现
 
 ## 许可与引用
 

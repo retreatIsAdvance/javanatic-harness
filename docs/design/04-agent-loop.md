@@ -64,9 +64,11 @@ public interface Agent {
     /**
      * 在 true idle 阶段跑一个非 turn 维护任务（如 compaction、标题生成）。
      * 任务同步启动占住 idle 阶段；后来的 waking input 留 inbox 等任务 settle。
+     * 词表是 Supplier（不带 AbortSignal）：core/agent 不为维护取消引入 llm 依赖边，
+     * 任务自限时；维护取消语义随第一个真实维护消费者（compaction）再定形。
      * @throws IllegalStateException 当 turn 驱动或另一维护任务已占用 agent。
      */
-    <T> CompletableFuture<T> runMaintenance(java.util.function.Function<AbortSignal, T> task);
+    <T> CompletableFuture<T> runMaintenance(java.util.function.Supplier<T> task);
 }
 
 enum AgentStatus { IDLE, RUNNING }
@@ -86,9 +88,8 @@ public final class Inbox {
 
     private final Deque<UserMessage> nextTurn = new ArrayDeque<>();
     private final Deque<UserMessage> nextStep = new ArrayDeque<>();
-    private final Set<String> pendingIds = new HashSet<>();
 
-    /** 追加到指定列表尾部。重复 id fail loud。 */
+    /** 追加到指定列表尾部（消息身份去重随 durable inbox / 消息 id 词表再进）。 */
     public synchronized void append(InboxTarget target, UserMessage msg) { /* ... */ }
 
     /**
@@ -322,35 +323,24 @@ class AgentLoopImpl implements Agent {
 ```java
 // io.javanatic.harness.agentloop.AbortController
 /**
- * 取消控制器：把一个 AgentCancelCause 传播给所有协作者。
+ * 取消控制器：把一个 AgentCancelCause 传播给流式消费与工具执行。
  * first-cause-wins：第一次 cause 生效，后续 cancel no-op。
+ * signal() 返回 llm.AbortSignal 的无状态视图（seam 词表在 llm，executor/stream
+ * 消费它）；cause 经 describe() 转稳定 String 进 TurnEndReason.Aborted——
+ * session 不反向依赖 agent。
  */
 public final class AbortController {
     private final AtomicReference<AgentCancelCause> cause = new AtomicReference<>();
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
-    private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 
-    public AbortSignal signal() { return new AbortSignal(this); }
-    public void cancel(AgentCancelCause c) {
-        if (cancelled.compareAndSet(false, true)) {
-            cause.set(c);
-            listeners.forEach(Runnable::run);
-        }
-    }
+    public AbortSignal signal() { return this::throwIfCancelled; }
+    public synchronized void cancel(AgentCancelCause c) { /* first-cause-wins */ }
     public boolean isAborted() { return cancelled.get(); }
     public AgentCancelCause cause() { return cause.get(); }
-    void addListener(Runnable r) { if (isAborted()) r.run(); else listeners.add(r); }
-}
-
-public record AbortSignal(AbortController controller) {
-    public boolean isAborted() { return controller.isAborted(); }
-    public AgentCancelCause cause() { return controller.cause(); }
-    /** 关键点自查：已取消则抛 AbortedException（含 cause）。 */
-    public void checkAbort() { if (isAborted()) throw new AbortedException(controller.cause()); }
 }
 ```
 
-虚拟线程 + `checkAbort()` 是 JH 的取消机制：不用 `Thread.interrupt()`（不会在任意安全点抛 `InterruptedException`，传播点显式可控）。
+取消传播的取消监听（listeners）未实现——当前没有消费者；真实需要（如流式生产侧主动打断）随其消费者落地。虚拟线程 + `checkAbort()` 是 JH 的取消机制：不用 `Thread.interrupt()`（不会在任意安全点抛 `InterruptedException`，传播点显式可控）。
 
 ## 10. AgentRegistry 与 initiator（ScopedValue 绑定点）
 
@@ -385,7 +375,7 @@ public final class AgentRegistry {
 **绑定规则**（不变式化，09 §并发细述）：
 
 1. **绑定点唯一**：`drainLoop` 整段跑在 `withInitiator(this, ...)` 内。agent 生命周期内的一切模型调用、工具执行、事件派发都发生在绑定内。
-2. **继承发生在创建时**：`ScopedValue` 按线程创建时刻快照继承——绑定后 caller 再绑新值，已派生的子虚拟线程看不到。因此**禁止 pooled-executor 提交**（池化线程的绑定属于别人）；需要并发就 fork 虚拟线程（工具执行、notify 派发都如此）。
+2. **跨线程共享仅限 StructuredTaskScope.fork**（JDK 25 终版 JEP 506 收紧；预览期的「线程创建时快照继承」已不成立——普通 `Thread.ofVirtual().start()` 不继承绑定，有契约测试钉住）。StructuredTaskScope 是 preview、项目禁用，因此 **initiator 归因只覆盖 driver 线程的同步执行段**（turn/step 编排、流式消费、executor 调用点）；工具线程与异步 notify listener 内不可见。STS 转 final 后把工具并行迁到 `fork` 即恢复跨线程归因。执行方法用终版 `Carrier.call`（预览期 `get(Supplier)` 已删）。
 3. **不可变**：绑定期内无人能改写 initiator，杜绝 ThreadLocal 的 set/forget 泄漏。
 
 ## 11. AgentHandle — 所有权与 dispose
@@ -393,18 +383,27 @@ public final class AgentRegistry {
 ```java
 // io.javanatic.harness.agent.AgentHandle
 /**
- * 一个被拥有的 agent + 其 disposer。对应 dsh 的 AgentHandle。
- * dispose 是一个 capability：只有持有 handle 的消费者能 teardown agent。
- * dispose 流程：cancel(Disposed) → 等 driver 退出 → 注销 agent → 回收 agent scope。
+ * 一个被拥有的 agent + 其 dispose 能力。dispose 是 capability：只有持有
+ * handle 的消费者能 teardown agent，且必须显式触发——工厂绝不构造期启动
+ * teardown（创建即 cancel 会清空 inbox，与首个 turn 竞态；实测复现）。
+ * dispose 链：cancel(Disposed) → 等 driver 静止 → 回收 agent scope（注销由
+ * Registry 组合在链尾）。
  */
-public record AgentHandle(Agent agent, CompletableFuture<Void> dispose) {
+public record AgentHandle(Agent agent, Disposer disposer) {
 
-    /** dispose 并阻塞等待完成（虚拟线程上调用）。 */
-    public void disposeAndAwait() { dispose.join(); }
+    /** teardown 能力：触发链并返回其 future。 */
+    @FunctionalInterface
+    public interface Disposer { CompletableFuture<Void> dispose(); }
+
+    /** 触发（幂等：AgentHandle.once 包装后重复触发返回同一 future）。 */
+    public CompletableFuture<Void> dispose() { return disposer.dispose(); }
+
+    /** 触发并阻塞等待完成（虚拟线程上调用）。 */
+    public void disposeAndAwait() { dispose().join(); }
 }
 ```
 
-record 自动生成 `dispose()` 访问器（返回 `CompletableFuture<Void>`）；便捷方法命名 `disposeAndAwait()` 避免与访问器冲突（修正前版同签名重复的编译错误）。dispose future 由工厂用 `CompletableFuture` 组合构建（cancel → whenIdle → scope.close 链），不是裸 lambda。
+热 future（构造期物化 `CompletableFuture` 并启动链）是错误形状：teardown 必须延迟到消费者显式调用。`once` 组合子保证单次执行、幂等返回。
 
 ## 12. 不变式落点
 
@@ -473,3 +472,14 @@ record 自动生成 `dispose()` 访问器（返回 `CompletableFuture<Void>`）�
 | `ctx.agents.currentInitiator()` | ScopedValue，绑定点=drainLoop | 创建时继承，禁池化提交 |
 | 工具 `concludesTurn` | ToolResultEvent.concludesTurn | 数据驱动停 turn |
 | model-visible ⟺ logged | append 先于消费；请求指纹落账 | R1 |
+
+## 15. 实现落定（it5）
+
+- **事件键归属**：`AgentEvents`（STATUS / PRE_STEP / REQUEST / REQUEST_ERROR / TURN_STOPPING）在 core/agent-loop——负载含 llm 词表；core/agent 保持纯契约（依赖 = kernel + brand + session，与 02 表一致）。
+- **驱动线程**：每次唤醒 `Thread.ofVirtual().name("jh-agent-driver")` 直启（不经 Runtime executor，无池化语义）；driver 体异常经 whenComplete 记 ERROR 日志（fail loud，不静默吞 future）。
+- **turn 隔离**：模型侧非取消的意外 `RuntimeException` 收敛为 `turn/end(Error)` 关轮，驱动继续排空后续 work；`REQUEST_ERROR`（firstOf）返回 `RequestErrorDecision(maxRetries)` 时同 step 重试——每次尝试是新的 `step/start` + `llm/request`（R1：每次请求各自留指纹），无人拦截即重抛收敛。
+- **无条件续步**：`shouldContinue` 未实现——工具执行后只要未被取消、无 `concludesTurn`，一律进入下一步（失控由 LoopGuard 兜底；数据驱动停轮保留 `concludesTurn`）。
+- **LoopGuard 计数档先行**：max-turns / max-steps-per-turn（`LoopGuardPlugin` 构造注入 limits，组合期选择）；budget 档（token 计量）随 deepseek。guard 检查在关轮 try 内——超限以 `turn/end(Error)` 收口，不留下开着的 `turn/start`。
+- **user/message 落账位置**：admitted 批在 turn 层一次；steering/注入在认领它的 step 边界（认领后、下一 `step/start` 前），与 §7 一致。
+- **resume**：in-memory `SessionStore.get` 命中即恢复（turn 号从日志 TurnStart 计数派生）；缺失会话由 get 本身 fail loud（NoSuchElementException）。durable 重载随持久化切片。
+- **构造器取总线**：`AgentLoopImpl` 从 `agentScope.require(Runtime.KEY)` 解析事件总线与驱动；装配期缺 Runtime 即失败。
