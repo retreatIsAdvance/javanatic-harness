@@ -1,11 +1,16 @@
 /**
- * harness-core-agent-loop — skeleton module; JPMS dependency graph enforced from day one
- * (design: docs/design/02-module-layout.md).
+ * harness-core-agent-loop — Turn/Step 状态机驱动（R1 落账侧 / R2 分发点 / R4
+ * 构造器强制治理依赖）。事件键（pre-step/request/request-error/turn-stopping）
+ * 在本模块——负载含 llm 词表（design: docs/design/04-agent-loop.md）。
  */
 module io.javanatic.harness.core.agent.loop {
+    requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.brand;
+    requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.core.agent;
     requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.core.system.prompt;
     requires io.javanatic.harness.llm.llm;
-    requires io.javanatic.harness.kernel;    exports io.javanatic.harness.core.agent.loop;
+
+    exports io.javanatic.harness.agentloop;
 }
