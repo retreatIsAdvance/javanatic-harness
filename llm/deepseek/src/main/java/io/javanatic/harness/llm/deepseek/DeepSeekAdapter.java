@@ -182,12 +182,12 @@ final class DeepSeekAdapter implements LlmAdapter {
         if (!text.startsWith("data:")) {
             return heldFinish;
         }
-        StreamChunk chunk = decoder.decode(text.substring("data:".length()).trim());
-        if (chunk instanceof StreamChunk.Finish finish) {
-            return finish;
-        }
-        if (chunk != null) {
-            offer(queue, chunk);
+        for (StreamChunk chunk : decoder.decode(text.substring("data:".length()).trim())) {
+            if (chunk instanceof StreamChunk.Finish finish) {
+                heldFinish = finish;
+            } else {
+                offer(queue, chunk);
+            }
         }
         return heldFinish;
     }

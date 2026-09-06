@@ -110,6 +110,7 @@
 3. **Iteration 6**：shell seam、真实 llm-deepseek、JSONL 持久化 + R1 replay 哈希测试
 4. **Iteration 7**：scope/preset 组合（06）、approval-ask 交互档、`--verify` + policy 档位（R4）
 5. **Iteration 5（已完成）**：core/agent（契约）+ core/system-prompt（最小组装）+ core/agent-loop（Turn/Step 状态机）+ examples/agent-spine（可运行竖切）+ R2 架构测试（ArchUnit，锚类定位导入）
+5b. **Iteration 6（已完成）**：shell 三模块（进程树击杀/输出上限/取消钩子）+ llm/deepseek（SSE/背压/传输重试/空闲看门狗/凭据脱敏）+ persistence seam + JSONL 后端 + R1 回放哈希闭环 + 真实模型全栈 e2e
 6. 每实现一个模块先写 invariant/属性测试：先定不变式，再写实现
 
 ## 许可与引用

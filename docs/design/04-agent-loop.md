@@ -340,7 +340,7 @@ public final class AbortController {
 }
 ```
 
-取消传播的取消监听（listeners）未实现——当前没有消费者；真实需要（如流式生产侧主动打断）随其消费者落地。虚拟线程 + `checkAbort()` 是 JH 的取消机制：不用 `Thread.interrupt()`（不会在任意安全点抛 `InterruptedException`，传播点显式可控）。
+取消监听（onCancel 钩子）已随首个消费者落地（it6 shell 的 kill-tree、deepseek 看门狗旁路）；`llm.AbortSignal` 以 default 方法承载,轮询与监听双通道。虚拟线程 + `checkAbort()` 是 JH 的取消机制：不用 `Thread.interrupt()`（不会在任意安全点抛 `InterruptedException`，传播点显式可控）。
 
 ## 10. AgentRegistry 与 initiator（ScopedValue 绑定点）
 

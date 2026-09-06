@@ -461,6 +461,14 @@ public final class JsonlPersistence implements SessionPersistence {
 }
 ```
 
+### 实现落定（it6）
+
+- **JsonValue 树**:codec 以 seam 自有的 JSON 树成为纯函数(seam 零 Jackson);Jackson 互译归 jsonl 后端。初稿的 JsonSink/JsonSource 流式端口未采用——树形状可无 Jackson 单测。
+- **注册表是服务**:`SessionCodecRegistry`(ServiceKey "session-codecs")而非静态表——注册即 effect、随插件 scope 回收(R3);初稿的静态 register 造型会泄漏。
+- **APPENDED 改 notifyOrdered**:异步派发下两次 append 的落盘任务可能交错,JSONL 行序无法保证;同步顺序派发以 append 路径内联文件写为代价(单进程、逐事件 flush,当前量级可接受;异步双写随持久化后续)。
+- **写侧 fail loud 的路径**:session append 观察者异常按契约 contained(记日志不炸 append)——无 codec 的类型在观察者内只留 ERROR 日志与数据缺口,真正的 fail loud 显形在 `save()` 直调路径。扩展事件插件必须随插件注册自身 codec(装载期组合责任)。
+- **load 重建**:逐行信封,seq == 行号校验(跳号/重复拒绝);未知 type 按信封 ignorable 跳过或拒绝;header 往返含 FORMAT_VERSION。
+
 ## 7. 不变式（invariant companion）
 
 对应 dsh 的 session invariant。`SessionInvariants.validate(List<LoggedEvent<?>>)` 逐条检查：

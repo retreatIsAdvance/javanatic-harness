@@ -182,6 +182,13 @@ final class DeepSeekAdapter implements LlmAdapter {
 }
 ```
 
+### 实现落定（it6）
+
+- **取消钩子**:`llm.AbortSignal` 增加 `default onCancel(Runnable)`(不破坏函数式接口);`AbortController` 实现同步触发、已取消后注册立即执行、动作异常仅记录。轮询覆盖等待间隙,监听覆盖阻塞在不可中断 IO。
+- **deepseek wire 实测**:结束分块把 `content:"" + finish_reason + usage` 合并在**同一事件**(与 OpenAI 分离事件不同)——解码器每事件产出 0..3 个分块;seam 契约「Finish 恒最后一块」由 adapter 持有 Finish 至流尾补发来维持。
+- **JDK HttpClient 事实**(实证):响应流被远端关闭时阻塞 read 返回 -1;被本地 close() 时阻塞 read 抛 `IOException: closed`——空闲看门狗据此掐断挂死连接。`Thread.sleep` 只有毫秒重载,传纳秒会静默睡走数十小时(实测踩坑)。
+- **传输韧性**:429/5xx/IOException 有界重试(指数退避+抖动,尊重 Retry-After 秒值);凭据脱敏(DeepSeekOptions 覆写 toString);配置经构造器注入(ConfigService/CredentialsService 随组合切片接手来源)。
+
 ### Consumer（agent-loop 内部）
 
 agent-loop 通过 `scope.require(LlmService.KEY)` 拿到 LLM，try-with-resources 消费阻塞流，边收边落账（04 §7）。**agent-loop 不 import 任何 Provider**。
@@ -254,18 +261,16 @@ public record ShellResult(int exitCode, String stdout, String stderr, Duration d
 
 ```java
 final class LocalBashExecutor implements ShellExecutor {
-    @Override
-    public ShellResult execute(ShellRequest req, AbortSignal signal) throws Exception {
-        Process p = new ProcessBuilder("bash", "-c", req.command())
-            .directory(req.cwd().toFile())
-            .start();
-        signal.controller().addListener(() -> p.destroyForcibly());   // 取消 → kill
-        boolean finished = p.waitFor(req.timeout().toMillis(), TimeUnit.MILLISECONDS);
-        if (!finished) { p.destroyForcibly(); throw new TimeoutException("bash timeout"); }
-        return new ShellResult(p.exitValue(),
-            new String(p.getInputStream().readAllBytes()),
-            new String(p.getErrorStream().readAllBytes()), Duration.ZERO);
-    }
+    // 生产语义(it6 落地,与初稿差异三处):
+    // 1. 取消经 AbortSignal.onCancel(默认方法钩子)即时击杀 + 等待循环轮询
+    //    checkAbort 双保险——初稿的 signal.controller() 不存在(it3 定型的
+    //    AbortSignal 只有 checkAbort;钩子随 shell 这个首个消费者进入 seam)。
+    // 2. 击杀对象是进程树(ProcessHandle.descendants() 先于本体)——
+    //    destroyForcibly 只杀直接子进程;快速退出进程脱管的孙进程杀不到,
+    //    真隔离(setsid)归 sandbox 切片。
+    // 3. stdout/stderr 并发排水并各设上限(初稿 waitFor 后 readAllBytes 会
+    //    写满管道缓冲死锁子进程);超限截断置标记、继续读丢弃。
+    ShellResult execute(ShellRequest req, AbortSignal signal) throws Exception { /* ... */ }
 }
 ```
 

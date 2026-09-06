@@ -70,5 +70,20 @@
             <artifactId>archunit</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-llm-deepseek</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-shell-bash-local</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-shell-tool</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
