@@ -43,9 +43,6 @@ import io.javanatic.harness.tools.ToolExecutor;
 import io.javanatic.harness.tools.ToolRegistry;
 
 import java.lang.System.Logger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
@@ -344,7 +341,8 @@ public final class AgentLoopImpl implements Agent {
 
             // R1 锚点：请求指纹先于调用落账（消息窗口 = 当前日志前缀）
             session.append(new LlmRequestEvent(clock.millis(), turn, step,
-                sha256(systemPrompt), sha256(fingerprint(schemas)),
+                RequestFingerprints.sha256(systemPrompt),
+                RequestFingerprints.sha256(RequestFingerprints.toolSchemaFingerprint(schemas)),
                 0, session.seq() - 1, Map.of()));
 
             ChunkAssembly.Assembled assembled;
@@ -406,27 +404,4 @@ public final class AgentLoopImpl implements Agent {
         return blocks;
     }
 
-    /** 工具 schema 的确定性指纹原料（同名序 + 定界符拼接，R1 可复算）。 */
-    private static String fingerprint(List<ToolSchema> schemas) {
-        StringBuilder sb = new StringBuilder();
-        for (ToolSchema schema : schemas) {
-            sb.append(schema.name()).append('\n')
-                .append(schema.description()).append('\n')
-                .append(schema.parametersJson()).append('\u0000');
-        }
-        return sb.toString();
-    }
-
-    private static String sha256(String text) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            StringBuilder hex = new StringBuilder();
-            for (byte b : digest.digest(text.getBytes(StandardCharsets.UTF_8))) {
-                hex.append(String.format("%02x", b));
-            }
-            return hex.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 unavailable", e);
-        }
-    }
 }

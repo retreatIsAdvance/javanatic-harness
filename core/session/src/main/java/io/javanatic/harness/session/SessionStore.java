@@ -34,16 +34,16 @@ public final class SessionStore {
     public Session create(Scope owner, Id<Session> id, CreateOptions options) {
         Events bus = owner.require(Runtime.KEY).events();
         List<Session.Observer> observers = List.of((session, entry) ->
-            bus.notify(SessionEvents.APPENDED, owner, session, entry));
+            bus.notifyOrdered(SessionEvents.APPENDED, owner, session, entry));
         Session session = new Session(id, options.seed(), options.header(), observers);
         store.put(id, session);
         owner.onClose(() -> {
             Session removed = store.remove(id);
             if (removed != null) {
-                bus.notify(SessionEvents.DISPOSED, owner, owner, removed);
+                bus.notifyOrdered(SessionEvents.DISPOSED, owner, owner, removed);
             }
         });
-        bus.notify(SessionEvents.CREATED, owner, owner, session);
+        bus.notifyOrdered(SessionEvents.CREATED, owner, owner, session);
         return session;
     }
 

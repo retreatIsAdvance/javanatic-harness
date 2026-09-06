@@ -59,6 +59,10 @@
         </dependency>
         <dependency>
             <groupId>io.javanatic</groupId>
+            <artifactId>harness-session-persistence-jsonl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-kernel-brand</artifactId>
         </dependency>
         <dependency>

@@ -16,5 +16,14 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-session-persistence</artifactId>
-        </dependency>    </dependencies>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+    </dependencies>
 </project>
