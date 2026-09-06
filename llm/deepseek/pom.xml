@@ -20,5 +20,17 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-kernel-core</artifactId>
-        </dependency>    </dependencies>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-brand</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-session</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency></dependencies>
 </project>
