@@ -3,5 +3,8 @@
  * (design: docs/design/02-module-layout.md).
  */
 module io.javanatic.harness.shell.shell {
-    requires io.javanatic.harness.kernel;    exports io.javanatic.harness.shell.shell;
+    requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.llm.llm;
+
+    exports io.javanatic.harness.shell.shell;
 }

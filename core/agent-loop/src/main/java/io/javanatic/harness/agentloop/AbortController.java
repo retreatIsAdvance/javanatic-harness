@@ -5,8 +5,10 @@ import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
 
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.List;
 
 /**
  * 取消控制器：把一个 {@link AgentCancelCause} 传播给流式消费与工具执行。
@@ -17,12 +19,37 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class AbortController {
 
+    private static final System.Logger LOG = System.getLogger(AbortController.class.getName());
+
     private final AtomicReference<AgentCancelCause> cause = new AtomicReference<>();
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
+    private final List<Runnable> cancelActions = new CopyOnWriteArrayList<>();
 
-    /** 取消信号视图（checkAbort 已取消时抛 AbortedException，消息含 cause 描述）。 */
+    /** 取消信号视图（checkAbort 抛取消异常；onCancel 即时击杀类消费者挂监听）。 */
     public AbortSignal signal() {
-        return this::throwIfCancelled;
+        return new AbortSignalView();
+    }
+
+    private final class AbortSignalView implements AbortSignal {
+
+        @Override
+        public void checkAbort() {
+            throwIfCancelled();
+        }
+
+        @Override
+        public void onCancel(Runnable action) {
+            AbortController.this.onCancel(action);
+        }
+    }
+
+    private void onCancel(Runnable action) {
+        Objects.requireNonNull(action, "action");
+        if (isAborted()) {
+            action.run();
+            return;
+        }
+        cancelActions.add(action);
     }
 
     /**
@@ -36,6 +63,15 @@ public final class AbortController {
         if (!cancelled.get()) {
             cause.set(cancelCause);
             cancelled.set(true);
+            // 同步触发已注册动作(如 kill 进程树);动作异常不阻断其余动作与取消语义
+            for (Runnable action : cancelActions) {
+                try {
+                    action.run();
+                } catch (RuntimeException e) {
+                    // cancel 动作失败只记录:取消本身已生效,不因单个动作异常中断其余动作
+                    LOG.log(System.Logger.Level.WARNING, "cancel action failed", e);
+                }
+            }
         }
     }
 

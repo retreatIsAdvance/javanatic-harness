@@ -16,5 +16,14 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-shell-shell</artifactId>
-        </dependency>    </dependencies>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-llm-llm</artifactId>
+        </dependency>
+    </dependencies>
 </project>
