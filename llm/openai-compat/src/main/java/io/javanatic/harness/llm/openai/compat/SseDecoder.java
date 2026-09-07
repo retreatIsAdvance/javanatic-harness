@@ -1,4 +1,4 @@
-package io.javanatic.harness.llm.deepseek;
+package io.javanatic.harness.llm.openai.compat;
 
 import io.javanatic.harness.llm.FinishReason;
 import io.javanatic.harness.llm.StreamChunk;

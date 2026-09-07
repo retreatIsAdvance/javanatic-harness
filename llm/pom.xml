@@ -16,6 +16,7 @@
     <modules>
         <module>llm</module>
         <module>deepseek</module>
+        <module>openai-compat</module>
         <module>replay</module>
     </modules>
 </project>

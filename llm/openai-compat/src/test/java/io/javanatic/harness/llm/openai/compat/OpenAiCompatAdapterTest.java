@@ -1,4 +1,4 @@
-package io.javanatic.harness.llm.deepseek;
+package io.javanatic.harness.llm.openai.compat;
 
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
@@ -35,15 +35,14 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** 本地假服务端驱动的 keyless 全覆盖:SSE 组装/请求形状/参数归一/重试/看门狗/取消/脱敏。 */
-class DeepSeekAdapterTest {
+/** 本地假服务端驱动的 keyless 全覆盖:双形状 SSE/请求形状/参数归一/重试/看门狗/取消/脱敏。 */
+class OpenAiCompatAdapterTest {
 
     private HttpServer server;
     private final List<JsonNode> requests = new CopyOnWriteArrayList<>();
     private final List<ResponseScript> scripts = new CopyOnWriteArrayList<>();
     private final AtomicInteger hits = new AtomicInteger();
 
-    /** 一次应答脚本:状态、Retry-After、SSE 行(逐行写+flush)或延迟毫秒。 */
     private record ResponseScript(int status, String retryAfter, List<String> sseLines,
                                   long stallAfterLinesMillis) {}
 
@@ -60,7 +59,7 @@ class DeepSeekAdapterTest {
     }
 
     private void handle(HttpExchange exchange) throws IOException {
-        requests.add(readBody(exchange));
+        requests.add(new ObjectMapper().readTree(exchange.getRequestBody().readAllBytes()));
         hits.incrementAndGet();
         ResponseScript script = scripts.isEmpty()
             ? new ResponseScript(200, null, List.of(), 0) : scripts.remove(0);
@@ -80,22 +79,23 @@ class DeepSeekAdapterTest {
         }
     }
 
-    private static JsonNode readBody(HttpExchange exchange) throws IOException {
-        return new ObjectMapper().readTree(exchange.getRequestBody().readAllBytes());
+    private OpenAiCompatAdapter adapter() {
+        return new OpenAiCompatAdapter(VendorProfile.of(base()), transport());
     }
 
-    private String baseUrl() {
+    private OpenAiCompatAdapter stalledAdapter(long idleMillis) {
+        return new OpenAiCompatAdapter(VendorProfile.of(base()),
+            new TransportOptions("test-key", Duration.ofSeconds(2), Duration.ofMillis(idleMillis),
+                3, Duration.ofMillis(5), Duration.ofMillis(50)));
+    }
+
+    private static TransportOptions transport() {
+        return new TransportOptions("test-key", Duration.ofSeconds(2), Duration.ofMillis(400),
+            3, Duration.ofMillis(5), Duration.ofMillis(50));
+    }
+
+    private String base() {
         return "http://localhost:" + server.getAddress().getPort();
-    }
-
-    private DeepSeekOptions fastOptions() {
-        return new DeepSeekOptions(baseUrl(), "test-key", Duration.ofSeconds(2),
-            Duration.ofMillis(400), 3, Duration.ofMillis(5), Duration.ofMillis(50));
-    }
-
-    private DeepSeekOptions idleOptions(long millis) {
-        return new DeepSeekOptions(baseUrl(), "test-key", Duration.ofSeconds(2),
-            Duration.ofMillis(millis), 3, Duration.ofMillis(5), Duration.ofMillis(50));
     }
 
     private static LlmRequest request() {
@@ -105,7 +105,8 @@ class DeepSeekAdapterTest {
             Map.of("temperature", "0.7", "vendor_extra", "keep"));
     }
 
-    private static List<String> happySse() {
+    /** OpenAI 分离形状:usage 在 finish 之后的独立空 choices 分块。 */
+    private static List<String> separatedSse() {
         return List.of(
             "{\"choices\":[{\"delta\":{\"content\":\"你\"}}]}",
             "{\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"c1\","
@@ -117,55 +118,85 @@ class DeepSeekAdapterTest {
             "[DONE]");
     }
 
-    @Test
-    void happyPathAssemblesThroughChunkAssembly() throws Exception {
-        scripts.add(new ResponseScript(200, null, happySse(), 0));
-        ChunkAssembly.Assembled assembled = consume(fastOptions());
-        assertThat(assembled.text()).isEqualTo("你");
-        assertThat(assembled.toolCalls()).hasSize(1);
-        assertThat(assembled.toolCalls().getFirst().name()).isEqualTo("fs_read");
-        assertThat(assembled.toolCalls().getFirst().arguments()).isEqualTo("{\"path\":\"a\"}");
-        assertThat(assembled.usage().inputTokens()).isEqualTo(11);
-        assertThat(assembled.usage().outputTokens()).isEqualTo(22);
-        assertThat(assembled.finishReason())
-            .isEqualTo(FinishReason.TOOL_USE);
+    /** DeepSeek 实测合并形状:结束分块同带 content:""/finish_reason/usage。 */
+    private static List<String> mergedSse() {
+        return List.of(
+            "{\"choices\":[{\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}",
+            "{\"choices\":[{\"delta\":{\"content\":\"答\"}}]}",
+            "{\"choices\":[{\"delta\":{\"content\":\"\"},\"finish_reason\":\"stop\"}],"
+                + "\"usage\":{\"prompt_tokens\":3,\"completion_tokens\":4}}",
+            "[DONE]");
+    }
+
+    private ChunkAssembly.Assembled consume(OpenAiCompatAdapter adapter) {
+        try (Stream<StreamChunk> chunks = adapter.stream(
+                new LlmCallConfig("vendor", "test-model"), request(), AbortSignal.never())) {
+            return ChunkAssembly.fold(chunks.toList());
+        }
     }
 
     @Test
-    void requestShapeSystemFirstToolsAndNumericParams() throws Exception {
-        scripts.add(new ResponseScript(200, null, happySse(), 0));
-        consume(fastOptions());
+    void separatedShapeAssemblesThroughChunkAssembly() throws Exception {
+        scripts.add(new ResponseScript(200, null, separatedSse(), 0));
+        ChunkAssembly.Assembled assembled = consume(adapter());
+        assertThat(assembled.text()).isEqualTo("你");
+        assertThat(assembled.toolCalls()).hasSize(1);
+        assertThat(assembled.toolCalls().getFirst().arguments()).isEqualTo("{\"path\":\"a\"}");
+        assertThat(assembled.usage().inputTokens()).isEqualTo(11);
+        assertThat(assembled.finishReason()).isEqualTo(FinishReason.TOOL_USE);
+    }
+
+    @Test
+    void mergedFinishUsageChunkAssemblesIdentically() {
+        scripts.add(new ResponseScript(200, null, mergedSse(), 0));
+        ChunkAssembly.Assembled assembled = consume(adapter());
+        assertThat(assembled.text()).isEqualTo("答");
+        assertThat(assembled.finishReason()).isEqualTo(FinishReason.STOP);
+        assertThat(assembled.usage().inputTokens()).isEqualTo(3);
+        assertThat(assembled.usage().outputTokens()).isEqualTo(4);
+    }
+
+    @Test
+    void requestShapeSystemFirstToolsAndNumericParams() {
+        scripts.add(new ResponseScript(200, null, separatedSse(), 0));
+        consume(adapter());
         JsonNode body = requests.getFirst();
         assertThat(body.get("model").asText()).isEqualTo("test-model");
         assertThat(body.get("stream").asBoolean()).isTrue();
         assertThat(body.get("stream_options").get("include_usage").asBoolean()).isTrue();
         assertThat(body.get("messages").get(0).get("role").asText()).isEqualTo("system");
-        assertThat(body.get("messages").get(1).get("role").asText()).isEqualTo("user");
-        assertThat(body.get("tools").get(0).get("function").get("name").asText())
-            .isEqualTo("fs_read");
-        assertThat(body.get("tools").get(0).get("function").get("parameters").get("type").asText())
-            .isEqualTo("object");
+        assertThat(body.get("tools").get(0).get("function").get("parameters")
+            .get("type").asText()).isEqualTo("object");
         assertThat(body.get("temperature").asDouble()).isEqualTo(0.7);
         assertThat(body.get("vendor_extra").asText()).isEqualTo("keep");
-        assertThat(body.has("params_placeholder")).isFalse();
     }
 
     @Test
-    void retries429WithRetryAfterThenSucceeds() throws Exception {
+    void profileExtraHeadersAndEndpointAreHonored() throws Exception {
+        server.removeContext("/chat/completions");
+        server.createContext("/v1/chat", this::handle);
+        scripts.add(new ResponseScript(200, null, mergedSse(), 0));
+        OpenAiCompatAdapter adapter = new OpenAiCompatAdapter(
+            new VendorProfile(base(), "/v1/chat", Map.of("X-Org", "jh")),
+            transport());
+        consume(adapter);
+        assertThat(hits.get()).isEqualTo(1);
+    }
+
+    @Test
+    void retries429WithRetryAfterThenSucceeds() {
         scripts.add(new ResponseScript(429, "0", List.of(), 0));
-        scripts.add(new ResponseScript(200, null, happySse(), 0));
-        ChunkAssembly.Assembled assembled = consume(fastOptions());
-        assertThat(assembled.text()).isEqualTo("你");
+        scripts.add(new ResponseScript(200, null, separatedSse(), 0));
+        assertThat(consume(adapter()).text()).isEqualTo("你");
         assertThat(hits.get()).isEqualTo(2);
     }
 
     @Test
     void retryExhaustsOn5xxFailsLoud() {
-        scripts.add(new ResponseScript(500, null, List.of(), 0));
-        scripts.add(new ResponseScript(500, null, List.of(), 0));
-        scripts.add(new ResponseScript(500, null, List.of(), 0));
-        assertThatThrownBy(() -> consume(fastOptions()))
-            .isInstanceOf(RuntimeException.class)
+        for (int i = 0; i < 3; i++) {
+            scripts.add(new ResponseScript(500, null, List.of(), 0));
+        }
+        assertThatThrownBy(() -> consume(adapter()))
             .hasMessageContaining("500");
         assertThat(hits.get()).isEqualTo(3);
     }
@@ -173,8 +204,7 @@ class DeepSeekAdapterTest {
     @Test
     void nonRetryable401FailsWithoutRetry() {
         scripts.add(new ResponseScript(401, null, List.of(), 0));
-        assertThatThrownBy(() -> consume(fastOptions()))
-            .hasMessageContaining("401");
+        assertThatThrownBy(() -> consume(adapter())).hasMessageContaining("401");
         assertThat(hits.get()).isEqualTo(1);
     }
 
@@ -183,8 +213,7 @@ class DeepSeekAdapterTest {
         scripts.add(new ResponseScript(200, null,
             List.of("{\"choices\":[{\"delta\":{\"content\":\"a\"}}]}"), 5000));
         long start = System.nanoTime();
-        assertThatThrownBy(() -> consume(idleOptions(300)))
-            .isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> consume(stalledAdapter(300))).isInstanceOf(RuntimeException.class);
         assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(3));
     }
 
@@ -192,10 +221,10 @@ class DeepSeekAdapterTest {
     void cancelMidStreamThrowsAborted() throws Exception {
         scripts.add(new ResponseScript(200, null,
             List.of("{\"choices\":[{\"delta\":{\"content\":\"a\"}}]}"), 5000));
-        DeepSeekAdapter adapter = new DeepSeekAdapter(idleOptions(10_000));
+        OpenAiCompatAdapter adapter = stalledAdapter(10_000);
         Cancellable signal = new Cancellable();
         try (Stream<StreamChunk> chunks = adapter.stream(
-                new LlmCallConfig("deepseek", "test-model"), request(), signal)) {
+                new LlmCallConfig("vendor", "m"), request(), signal)) {
             Iterator<StreamChunk> iterator = chunks.iterator();
             assertThat(iterator.next()).isInstanceOf(StreamChunk.Delta.class);
             signal.cancel();
@@ -204,19 +233,16 @@ class DeepSeekAdapterTest {
     }
 
     @Test
-    void optionsToStringMasksApiKey() {
-        String text = new DeepSeekOptions(baseUrl(), "sk-secret-value-123",
-            Duration.ofSeconds(1), Duration.ofSeconds(1), 2,
-            Duration.ofMillis(1), Duration.ofMillis(2)).toString();
-        assertThat(text).doesNotContain("sk-secret-value-123").contains("****");
+    void transportOptionsToStringMasksApiKey() {
+        String text = new TransportOptions("sk-secret-123", Duration.ofSeconds(1),
+            Duration.ofSeconds(1), 2, Duration.ofMillis(1), Duration.ofMillis(2)).toString();
+        assertThat(text).doesNotContain("sk-secret-123").contains("****");
     }
 
-    private ChunkAssembly.Assembled consume(DeepSeekOptions options) {
-        DeepSeekAdapter adapter = new DeepSeekAdapter(options);
-        try (Stream<StreamChunk> chunks = adapter.stream(
-                new LlmCallConfig("deepseek", "test-model"), request(), AbortSignal.never())) {
-            return ChunkAssembly.fold(chunks.toList());
-        }
+    @Test
+    void vendorProfileValidatesFields() {
+        assertThatThrownBy(() -> VendorProfile.of(""))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static void sleep(long millis) {

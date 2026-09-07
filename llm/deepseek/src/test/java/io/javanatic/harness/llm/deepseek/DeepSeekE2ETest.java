@@ -6,6 +6,9 @@ import io.javanatic.harness.llm.FinishReason;
 import io.javanatic.harness.llm.LlmCallConfig;
 import io.javanatic.harness.llm.LlmRequest;
 import io.javanatic.harness.llm.StreamChunk;
+import io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter;
+import io.javanatic.harness.llm.openai.compat.TransportOptions;
+import io.javanatic.harness.llm.openai.compat.VendorProfile;
 import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.UserMessage;
 
@@ -27,9 +30,9 @@ class DeepSeekE2ETest {
 
     @Test
     void realCompletionRoundTrips() {
-        DeepSeekAdapter adapter = new DeepSeekAdapter(new DeepSeekOptions(
-            DeepSeekOptions.DEFAULT_BASE_URL, System.getenv("DEEPSEEK_API_KEY"),
-            null, null, 2, null, null));
+        OpenAiCompatAdapter adapter = new OpenAiCompatAdapter(
+            VendorProfile.of(DeepSeekOptions.DEFAULT_BASE_URL),
+            new TransportOptions(System.getenv("DEEPSEEK_API_KEY"), null, null, 2, null, null));
         LlmRequest request = new LlmRequest(null,
             List.of(UserMessage.of("用恰好四个汉字回答:1+1 等于几?", new MessageSource.User())),
             List.of(), Map.of());

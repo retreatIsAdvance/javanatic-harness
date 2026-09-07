@@ -1,4 +1,4 @@
-package io.javanatic.harness.llm.deepseek;
+package io.javanatic.harness.llm.openai.compat;
 
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
@@ -17,6 +17,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -29,11 +30,12 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * DeepSeek 流式适配器：producer 虚拟线程逐行 SSE → 有界队列(64,满则挂起=背压)；
+ * OpenAI 兼容流式适配器：producer 虚拟线程逐行 SSE → 有界队列(64,满则挂起=背压)；
  * consumer 阻塞 Stream 轮询消费。传输韧性:429/5xx/连接错误按指数退避+抖动有界重试
  * (尊重 Retry-After);空闲看门狗掐断挂死连接;取消经 checkAbort 轮询。
+ * 厂商差异收敛在 {@link VendorProfile}(baseUrl/端点/附加头)。
  */
-final class DeepSeekAdapter implements LlmAdapter {
+public final class OpenAiCompatAdapter implements LlmAdapter {
 
     private static final int QUEUE_CAPACITY = 64;
     private static final long POLL_SLICE_MS = 100;
@@ -41,10 +43,13 @@ final class DeepSeekAdapter implements LlmAdapter {
     private record End() {}
     private record Failed(Throwable cause) {}
 
-    private final DeepSeekOptions options;
+    private final VendorProfile profile;
+    private final TransportOptions options;
     private final HttpClient http;
 
-    DeepSeekAdapter(DeepSeekOptions options) {
+    /** @param profile 厂商差异(baseUrl/端点/附加头) @param options 传输韧性参数(含凭据) */
+    public OpenAiCompatAdapter(VendorProfile profile, TransportOptions options) {
+        this.profile = profile;
         this.options = options;
         this.http = HttpClient.newBuilder().connectTimeout(options.connectTimeout()).build();
     }
@@ -77,15 +82,18 @@ final class DeepSeekAdapter implements LlmAdapter {
     /** 传输重试:429/5xx/IOException;退避 = base*2^(n-1)+抖动,封顶 backoffMax。 */
     private HttpResponse<InputStream> sendWithRetry(LlmCallConfig config, LlmRequest request,
                                                     AbortSignal signal) throws Exception {
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-            .uri(URI.create(options.baseUrl() + "/chat/completions"))
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+            .uri(URI.create(profile.baseUrl() + profile.endpointPath()))
             .timeout(options.idleTimeout())
             .header("Authorization", "Bearer " + options.apiKey())
             .header("Accept", "text/event-stream")
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(
-                RequestBody.build(config, request).toString(), StandardCharsets.UTF_8))
-            .build();
+                RequestBody.build(config, request).toString(), StandardCharsets.UTF_8));
+        for (Map.Entry<String, String> header : profile.extraHeaders().entrySet()) {
+            builder.header(header.getKey(), header.getValue());
+        }
+        HttpRequest httpRequest = builder.build();
         Exception last = null;
         for (int attempt = 1; attempt <= options.maxAttempts(); attempt++) {
             signal.checkAbort();

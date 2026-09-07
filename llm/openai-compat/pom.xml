@@ -10,7 +10,7 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>harness-llm-deepseek</artifactId>
+    <artifactId>harness-llm-openai-compat</artifactId>
 
     <dependencies>
         <dependency>
@@ -30,7 +30,8 @@
             <artifactId>harness-core-session</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
-            <artifactId>harness-llm-openai-compat</artifactId>
-        </dependency></dependencies>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+    </dependencies>
 </project>
