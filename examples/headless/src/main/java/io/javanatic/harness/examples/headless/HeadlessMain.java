@@ -15,8 +15,9 @@ import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.llm.LlmPlugin;
-import io.javanatic.harness.llm.deepseek.DeepSeekOptions;
-import io.javanatic.harness.llm.deepseek.DeepSeekPlugin;
+import io.javanatic.harness.llm.openai.compat.OpenAiCompatPlugin;
+import io.javanatic.harness.llm.openai.compat.TransportOptions;
+import io.javanatic.harness.llm.openai.compat.VendorProfile;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.message.MessageSource;
@@ -38,16 +39,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 一次性命令行 runner。用法：
  * <pre>
- *   java -m io.javanatic.harness.examples.headless "任务文本"          # 真实跑通(需 DEEPSEEK_API_KEY)
- *   java -m io.javanatic.harness.examples.headless --verify           # 治理断言,无 key 可跑
- *   java -m io.javanatic.harness.examples.headless --verify --policy PRODUCTION
+ *   java -m io.javanatic.harness.examples.headless "任务文本"                # 默认 deepseek(需 DEEPSEEK_API_KEY)
+ *   java -m … "任务文本" --api-key-env=MOONSHOT_KEY \\
+ *       --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi   # 任意 OpenAI 兼容厂商
+ *   java -m … --verify                      # 治理断言,无 key 可跑
+ *   java -m … --verify --policy=PRODUCTION
  * </pre>
- * 组合为直装(it8 bundle 层落地后本模块改为薄入口)。
+ * 组合为直装(it8 bundle/ConfigService 落地后同组参数换轨 YAML,CLI 形状不变)。
  */
 public final class HeadlessMain {
 
@@ -56,21 +60,29 @@ public final class HeadlessMain {
     private HeadlessMain() {
     }
 
-    /** @param args "task" 或 --verify [--policy STANDARD|PRODUCTION] */
-    public static void main(String[] args) throws Exception {
-        boolean verify = false;
-        Policy policy = Policy.STANDARD;
-        String task = null;
-        for (String arg : args) {
-            if ("--verify".equals(arg)) {
-                verify = true;
-            } else if (arg.startsWith("--policy=")) {
-                policy = Policy.valueOf(arg.substring("--policy=".length()));
-            } else {
-                task = arg;
+    /** 运行时配置（解析自 CLI;默认值集中在此——组合位的显式 resolve 点）。 */
+    record RunnerOptions(String task, boolean verify, Policy policy, String provider, String model,
+                         String baseUrl, String apiKeyEnv, String apiKeyLiteral) {
+
+        static final String DEFAULT_PROVIDER = "deepseek";
+        static final String DEFAULT_MODEL = "deepseek-chat";
+        static final String DEFAULT_BASE_URL = "https://api.deepseek.com";
+        static final String DEFAULT_API_KEY_ENV = "DEEPSEEK_API_KEY";
+
+        /** 字面量优先于环境变量;均缺省时为 null(verify 路径可用,任务路径报缺 key)。 */
+        String resolvedApiKey() {
+            if (apiKeyLiteral != null && !apiKeyLiteral.isEmpty()) {
+                return apiKeyLiteral;
             }
+            String fromEnv = System.getenv(apiKeyEnv);
+            return fromEnv == null || fromEnv.isEmpty() ? null : fromEnv;
         }
-        int exit = run(task, verify, policy,
+    }
+
+    /** @param args "task" 与 flags（--verify/--policy=/--provider=/--model=/--base-url=/--api-key-env=/--api-key=） */
+    public static void main(String[] args) throws Exception {
+        RunnerOptions options = parse(args);
+        int exit = run(options,
             Files.createTempDirectory("jh-headless"),
             Files.createTempDirectory("jh-headless-sessions"));
         if (exit != 0) {
@@ -78,32 +90,79 @@ public final class HeadlessMain {
         }
     }
 
-    static int run(String task, boolean verify, Policy policy, Path workspace, Path sessions)
-            throws Exception {
-        String apiKey = System.getenv("DEEPSEEK_API_KEY");
+    static RunnerOptions parse(String[] args) {
+        boolean verify = false;
+        Policy policy = Policy.STANDARD;
+        String task = null;
+        String provider = null;
+        String model = null;
+        String baseUrl = null;
+        String apiKeyEnv = null;
+        String apiKeyLiteral = null;
+        for (String arg : args) {
+            if ("--verify".equals(arg)) {
+                verify = true;
+            } else if (arg.startsWith("--policy=")) {
+                policy = Policy.valueOf(arg.substring("--policy=".length()));
+            } else if (arg.startsWith("--provider=")) {
+                provider = valueOf(arg);
+            } else if (arg.startsWith("--model=")) {
+                model = valueOf(arg);
+            } else if (arg.startsWith("--base-url=")) {
+                baseUrl = valueOf(arg);
+            } else if (arg.startsWith("--api-key-env=")) {
+                apiKeyEnv = valueOf(arg);
+            } else if (arg.startsWith("--api-key=")) {
+                apiKeyLiteral = valueOf(arg);
+            } else if (arg.startsWith("--")) {
+                throw new IllegalArgumentException("未知参数: " + arg);
+            } else if (task == null) {
+                task = arg;
+            } else {
+                throw new IllegalArgumentException("任务文本只能有一个: " + arg);
+            }
+        }
+        return new RunnerOptions(task, verify, policy,
+            provider == null ? RunnerOptions.DEFAULT_PROVIDER : provider,
+            model == null ? RunnerOptions.DEFAULT_MODEL : model,
+            baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
+            apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
+            apiKeyLiteral);
+    }
+
+    private static String valueOf(String flag) {
+        String value = flag.substring(flag.indexOf('=') + 1);
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("参数缺值: " + flag);
+        }
+        return value;
+    }
+
+    static int run(RunnerOptions options, Path workspace, Path sessions) throws Exception {
+        String apiKey = options.resolvedApiKey();
         try (Runtime rt = new Runtime()) {
-            PluginLoader loader = new PluginLoader();
-            loader.loadAll(rt, composition(workspace, sessions, apiKey));
+            new PluginLoader().loadAll(rt, composition(workspace, sessions, apiKey, options));
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
             prompts.register(new PromptSection(0, "You are Javanatic Harness (headless). Be terse."));
 
-            if (verify) {
-                return verifyAndReport(rt, policy);
+            if (options.verify()) {
+                return verifyAndReport(rt, options.policy());
             }
-            if (task == null) {
+            if (options.task() == null) {
                 LOG.log(Level.ERROR, "缺少任务文本（用法:java -m …io.javanatic.harness.examples.headless \"task\"）");
                 return 2;
             }
-            if (apiKey == null || apiKey.isEmpty()) {
-                LOG.log(Level.ERROR, "DEEPSEEK_API_KEY 未设置（--verify 可无 key 运行）");
+            if (apiKey == null) {
+                LOG.log(Level.ERROR, "API key 未提供（--api-key=… 或环境变量 {0}；--verify 可无 key 运行）",
+                    options.apiKeyEnv());
                 return 2;
             }
             AgentRegistry agents = rt.root().require(AgentRegistry.KEY);
             AgentHandle handle = agents.create(rt.root(),
                 CreateAgentOptions.of(Session.newId("headless-1"),
-                    new AgentOptions("deepseek", "deepseek-chat")));
+                    new AgentOptions(options.provider(), options.model())));
             Agent agent = handle.agent();
-            agent.followup(UserMessage.of(task, new MessageSource.User()));
+            agent.followup(UserMessage.of(options.task(), new MessageSource.User()));
             agent.whenIdle().join();
             agent.session().events().forEach(entry ->
                 LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
@@ -113,18 +172,20 @@ public final class HeadlessMain {
         }
     }
 
-    static List<Plugin> composition(Path workspace, Path sessions, String apiKey) {
-        List<Plugin> plugins = new java.util.ArrayList<>(List.of(
+    static List<Plugin> composition(Path workspace, Path sessions, String apiKey,
+                                    RunnerOptions options) {
+        List<Plugin> plugins = new ArrayList<>(List.of(
             new SessionStorePlugin(),
             new JsonlPersistencePlugin(sessions),
             new AgentPlugin(),
             new LoopGuardPlugin(new LoopGuard.Limits(50, 40)),
             new SystemPromptPlugin(),
             new LlmPlugin()));
-        // --verify 无 key 时不装配 provider——治理断言不依赖模型路由
-        if (apiKey != null && !apiKey.isEmpty()) {
-            plugins.add(new DeepSeekPlugin(new DeepSeekOptions(
-                DeepSeekOptions.DEFAULT_BASE_URL, apiKey, null, null, 2, null, null)));
+        // 无 key（--verify）时不装配 provider——治理断言不依赖模型路由
+        if (apiKey != null) {
+            plugins.add(new OpenAiCompatPlugin(options.provider(),
+                VendorProfile.of(options.baseUrl()),
+                new TransportOptions(apiKey, null, null, 2, null, null)));
         }
         // headless 无人值守:默认 AUTO;--policy PRODUCTION 校验会拒绝并提示换 ask
         plugins.addAll(List.of(
@@ -145,7 +206,7 @@ public final class HeadlessMain {
             rt.root().resolve(ApprovalService.KEY)
                 .map(ApprovalService::mode).orElse(null),
             rt.root().resolve(SessionPersistence.KEY).map(SessionPersistence::durable).orElse(null),
-            rt.root().resolve(LoopGuard.KEY).map(g -> g.limits()).orElse(null));
+            rt.root().resolve(LoopGuard.KEY).map(LoopGuard::limits).orElse(null));
         if (!violations.isEmpty()) {
             violations.forEach(v -> LOG.log(Level.ERROR, "违规: {0}", v));
             return 1;
@@ -153,5 +214,4 @@ public final class HeadlessMain {
         LOG.log(Level.INFO, "verify 通过");
         return 0;
     }
-
 }

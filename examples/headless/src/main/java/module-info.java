@@ -12,7 +12,7 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.core.agent.loop;
     requires io.javanatic.harness.core.system.prompt;
     requires io.javanatic.harness.llm.llm;
-    requires io.javanatic.harness.llm.deepseek;
+    requires io.javanatic.harness.llm.openai.compat;
     requires io.javanatic.harness.fs.fs;
     requires io.javanatic.harness.fs.local;
     requires io.javanatic.harness.fs.tool;
@@ -22,6 +22,7 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.session.persistence;
     requires io.javanatic.harness.session.persistence.jsonl;
     requires io.javanatic.harness.interaction.approval;
+    requires jdk.httpserver; // 测试:本地假服务端 e2e
 
     exports io.javanatic.harness.examples.headless;
 }

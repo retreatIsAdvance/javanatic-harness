@@ -54,7 +54,11 @@ git config core.hooksPath .githooks   # 一次性：启用 pre-commit/pre-push �
 ```sh
 mvn -B -q -pl examples/headless -am package
 java --module-path <各模块 target/classes 与 jackson jar> \
-     -m io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain "任务文本"   # 需 DEEPSEEK_API_KEY
+     -m io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain "任务文本"
+# 默认 deepseek + DEEPSEEK_API_KEY;任意 OpenAI 兼容厂商经 CLI 适配(it7.1):
+#   … HeadlessMain "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 \
+#                      --model=kimi-k2 --provider=kimi
+#   … HeadlessMain "任务" --api-key=sk-…        # 字面量优先于 env(注意 shell history)
 # 治理断言（无 key 可跑）：
 #   … HeadlessMain --verify
 #   … HeadlessMain --verify --policy=PRODUCTION   # 拒 AUTO 审批等不合格组合，exit 1
