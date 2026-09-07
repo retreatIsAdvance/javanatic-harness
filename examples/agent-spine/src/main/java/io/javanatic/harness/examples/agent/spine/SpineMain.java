@@ -87,7 +87,7 @@ public final class SpineMain {
                 new LoopGuardPlugin(new LoopGuard.Limits(10, 10)),
                 new SystemPromptPlugin(), new LlmPlugin(), new ReplayPlugin(scripts),
                 new ApprovalAutoPlugin(), new ToolsPlugin(),
-                new FsLocalPlugin(), new FsToolPlugin(),
+                new FsLocalPlugin(workspace), new FsToolPlugin(),
                 new AgentLoopPlugin(Clock.systemUTC())));
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
             prompts.register(new PromptSection(0, "You are the JH agent-spine demo agent."));

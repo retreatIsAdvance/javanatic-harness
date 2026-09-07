@@ -71,7 +71,7 @@ class R1ReplayHashTest {
                 new LoopGuardPlugin(new LoopGuard.Limits(10, 10)),
                 new SystemPromptPlugin(), new LlmPlugin(), new ReplayPlugin(scripts),
                 new ApprovalAutoPlugin(), new ToolsPlugin(),
-                new FsLocalPlugin(),
+                new FsLocalPlugin(workspace),
                 new FsToolPlugin(),
                 new JsonlPersistencePlugin(sessionsRoot),
                 new AgentLoopPlugin(Clock.systemUTC())));
@@ -95,7 +95,7 @@ class R1ReplayHashTest {
                 new LoopGuardPlugin(new LoopGuard.Limits(10, 10)),
                 new SystemPromptPlugin(), new LlmPlugin(),
                 new ApprovalAutoPlugin(), new ToolsPlugin(),
-                new FsLocalPlugin(), new FsToolPlugin(),
+                new FsLocalPlugin(workspace), new FsToolPlugin(),
                 new JsonlPersistencePlugin(sessionsRoot),
                 new AgentLoopPlugin(Clock.systemUTC())));
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);

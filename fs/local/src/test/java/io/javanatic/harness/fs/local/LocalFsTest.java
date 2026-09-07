@@ -11,53 +11,76 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** 本地实现直测：读写改删列 + fail loud 契约。 */
+/** 本地实现直测：读写改删列 + fail loud 契约 + 根目录越界策略。 */
 class LocalFsTest {
 
     @TempDir
     Path dir;
 
-    private final FsService fs = new LocalFs();
+    private LocalFs fs() {
+        return new LocalFs(dir);
+    }
 
     @Test
     void writeCreatesParentsReadRoundTrips() throws IOException {
         Path file = dir.resolve("a/b/c.txt");
-        fs.write(file, "hello");
-        assertThat(fs.read(file)).isEqualTo("hello");
+        fs().write(file, "hello");
+        assertThat(fs().read(file)).isEqualTo("hello");
+    }
+
+    @Test
+    void relativePathResolvesAgainstRoot() throws IOException {
+        fs().write(Path.of("rel.txt"), "相对");
+        assertThat(fs().read(Path.of("rel.txt"))).isEqualTo("相对");
+        assertThat(Files.readString(dir.resolve("rel.txt"))).isEqualTo("相对");
+    }
+
+    @Test
+    void absolutePathOutsideRootFailsLoud() {
+        assertThatThrownBy(() -> fs().read(Path.of("/etc/hosts")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("escapes workspace root");
+    }
+
+    @Test
+    void dotDotEscapeFailsLoud() {
+        assertThatThrownBy(() -> fs().read(Path.of("../outside.txt")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("escapes workspace root");
     }
 
     @Test
     void editReplacesFirstOccurrenceOnly() throws IOException {
         Path file = dir.resolve("f.txt");
-        fs.write(file, "x old x old");
-        String edited = fs.edit(file, "old", "new");
+        fs().write(file, "x old x old");
+        String edited = fs().edit(file, "old", "new");
         assertThat(edited).isEqualTo("x new x old");
-        assertThat(fs.read(file)).isEqualTo("x new x old");
+        assertThat(fs().read(file)).isEqualTo("x new x old");
     }
 
     @Test
     void editMissingOldStringFailsLoud() throws IOException {
         Path file = dir.resolve("f.txt");
-        fs.write(file, "content");
-        assertThatThrownBy(() -> fs.edit(file, "absent", "x"))
+        fs().write(file, "content");
+        assertThatThrownBy(() -> fs().edit(file, "absent", "x"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("oldString not found");
     }
 
     @Test
     void listIsSortedByNameWithType() throws IOException {
-        fs.write(dir.resolve("b.txt"), "1");
-        fs.write(dir.resolve("a.txt"), "2");
+        fs().write(dir.resolve("b.txt"), "1");
+        fs().write(dir.resolve("a.txt"), "2");
         Files.createDirectory(dir.resolve("zdir"));
-        assertThat(fs.list(dir))
+        assertThat(fs().list(dir))
             .extracting(FsService.DirEntry::name)
             .containsExactly("a.txt", "b.txt", "zdir");
-        assertThat(fs.list(dir).getLast().directory()).isTrue();
+        assertThat(fs().list(dir).getLast().directory()).isTrue();
     }
 
     @Test
     void deleteMissingFileFailsLoud() {
-        assertThatThrownBy(() -> fs.delete(dir.resolve("ghost")))
+        assertThatThrownBy(() -> fs().delete(dir.resolve("ghost")))
             .isInstanceOf(IOException.class);
     }
 }

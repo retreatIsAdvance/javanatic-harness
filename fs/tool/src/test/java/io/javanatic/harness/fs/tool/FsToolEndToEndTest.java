@@ -32,7 +32,7 @@ class FsToolEndToEndTest {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
                 new ApprovalAutoPlugin(), new ToolsPlugin(),
-                new FsLocalPlugin(), new FsToolPlugin()));
+                new FsLocalPlugin(dir), new FsToolPlugin()));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             ToolRegistry registry = rt.root().require(ToolRegistry.KEY);
             assertThat(registry.schemas()).extracting(s -> s.name())
