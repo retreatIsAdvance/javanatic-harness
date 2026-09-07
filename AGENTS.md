@@ -17,7 +17,7 @@ Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 
 
 ## 现状
 
-- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 三模块（bash 真执行）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）。
+- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 三模块（bash 真执行）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval）；`examples/headless`（CLI runner + --verify/policy）。
 - **占位**：其余叶子模块只有 `module-info.java` + 标记类——依赖图从第一天起由 JPMS 编译器强制，不是待办清单，而是模块契约。
 - **Pre-release**：无外部消费者。正确地基 > 兼容包袱：可自由重命名/重排包并同步全部引用，不写兼容垫片。
 
@@ -30,7 +30,7 @@ llm/         llm（seam）、deepseek（真实 provider）、replay（录制回�
 fs/ shell/   capability 三角色：seam / local provider / tool consumer（均已实现；sandbox 占位）
 session/     persistence seam + jsonl 后端（占位）
 sandbox/ interaction/   沙箱与审批（approval 三模式，executor 固定 stage）
-bundle/ examples/       base/headless 组合与可运行示例（占位）
+bundle/ examples/       base 组合（占位）；agent-spine 与 headless（已实现）
 docs/        design/ 12 篇设计文档 + dsh-reference.md；plan/ 逐迭代验收清单（[README](docs/plan/README.md)）
 ```
 
@@ -49,7 +49,16 @@ git config core.hooksPath .githooks   # 一次性：启用 pre-commit/pre-push �
 
 无 mvnw wrapper，用系统 Maven 3.8+。测试栈：JUnit 5 + AssertJ + jqwik（根 POM 统一注入，叶子 POM 不写测试依赖）。
 
-<!-- TODO(产品运行入口)：examples/headless 落地后，此处必须补「跑一个 task」的完整命令（如 jh --profile headless "task" 的等价物）——补此命令是硬要求，不许拖延 -->
+### 跑一个 task（examples/headless，it7 已落地）
+
+```sh
+mvn -B -q -pl examples/headless -am package
+java --module-path <各模块 target/classes 与 jackson jar> \
+     -m io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain "任务文本"   # 需 DEEPSEEK_API_KEY
+# 治理断言（无 key 可跑）：
+#   … HeadlessMain --verify
+#   … HeadlessMain --verify --policy=PRODUCTION   # 拒 AUTO 审批等不合格组合，exit 1
+```
 
 ### 命令权限分级
 
@@ -130,6 +139,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - VS Code Java（jdt.ls）与 Maven 并发写 `target/` 会互相污染：症状是 surefire 跑出带 `Unresolved compilation problems` 的 ECJ 假类、或 mvn 对已修代码报陈旧错误。处置：干净失败先删可疑模块 `target/` 再重建；`.vscode` 已关 autobuild 并忽略 APILeak 告警（非 transitive 政策的预期 IDE 噪音，javac 不报）。
 - ArchUnit 扫描：1.3.0 的 ASM 不认 Java 25 字节码（major 69）且静默丢类（警告走无 provider 的 slf4j 被吞）——用 1.5.0+；surefire 的 manifest-boot jar 使 `java.class.path` 无真实条目，类导入走锚类 `CodeSource` 定位（见 `ToolDispatchArchitectureTest`）。
 - JDK HttpClient：响应流远端关闭时阻塞 read 返回 -1、本地 close() 会唤醒阻塞 read 抛 IOException(看门狗据此掐断);`Thread.sleep` 无纳秒重载,传错会静默睡走数十小时——用 `sleep(Duration)`。
+- surefire 下 `System.in` 不是 EOF 而是挂起流:stdin 相关测试必须 `System.setIn(空流)` 注入,否则测试类永久挂死。
 - ECJ/JDT 对「导出 API 引用他模块类型」报 *missing requires transitive*（IDE 告警 8390067）——非 transitive 政策（02 §748）的预期代价，不要用 `requires transitive` 消音；IDE 侧经 `java.settings.url` 忽略 APILeak。
 - javac 25：泛型推断下零参隐式 lambda 对 varargs 抽象方法编译失败（`() -> null` ✗）；用单参 lambda（`overrideArgs -> null` ✓，[Next 的 Javadoc](kernel/core/src/main/java/io/javanatic/harness/kernel/events/Next.java)）。
 - `.jqwik-database`（jqwik 模糊缓存）不入库，已在 .gitignore。

@@ -64,6 +64,11 @@ public final class JsonlPersistence implements SessionPersistence {
     }
 
     @Override
+    public boolean durable() {
+        return true;
+    }
+
+    @Override
     public void save(Session session) throws IOException {
         writer(session).rewrite(session);
     }

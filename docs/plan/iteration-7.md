@@ -1,8 +1,8 @@
-# 迭代 7 — openai-compat 重构 + 治理上线(verify/policy + 审批三模式 + fs 根目录)(进行中)
+# 迭代 7 — openai-compat 重构 + 治理上线(verify/policy + 审批三模式 + fs 根目录)(已完成)
 
 模块:llm/openai-compat(新)+ llm/deepseek(薄化)、fs/local、core/tools + interaction/approval、session/persistence(durable 自述)、examples/headless(新)(设计:05、07 §6、02)
-提交:①openai-compat 重构 → ②fs 根目录 → ③审批三模式 → ④verify/policy + headless → ⑤文档收尾
-四确认日期:2026-09-07
+提交:fb53db4(openai-compat)→ 1817fb6(fs 根目录)→ f51a9c7(审批三模式)→ 收尾提交
+四确认日期:2026-09-07;验收日期:2026-09-07
 
 ## 四确认(已确认 2026-09-07)
 
@@ -17,15 +17,16 @@
 
 ## 验收(证据 = 实际执行的命令与结果)
 
-- [ ] 开头重构提交后:全 reactor package 绿;deepseek 假服务端测试全部迁至 openai-compat 并新增合并分块/分离形状双用例;DeepSeekE2ETest 留在 deepseek 且带 key 通过;deepseek 主代码 ≤200 行
-- [ ] fs 根目录:root 内绝对/相对路径可用;越界(../ 逃逸、root 外绝对)fail loud;agent-spine 与既有测试全部改经 root
-- [ ] 审批:ask 经回调注入 y→放行/n→denied error result;stdin 非交互(EOF)→ 拒绝;deny 全拒;mode() 三实现自述正确
-- [ ] verify/policy:STANDARD+auto 过;PRODUCTION+auto 拒(退出非零且指出违规项);PRODUCTION+durable+ask+limits 过;无 key 时 --verify 可跑(不装配 provider)
-- [ ] headless:带 key 真实跑通一个 task(命令与输出摘要落案);`--verify` 输出治理摘要;AGENTS 命令段落补「跑一个 task」
-- [ ] 预算:openai-compat ≤750 / interaction-approval ≤250 / headless ≤450 / fs-local 增量 ≤80
-- [ ] 文档同步:05(openai-compat 分层 + fs 根目录)、07(§6 实现落定:程序化组合口径)、02/README/AGENTS(现状 + 运行命令)、iteration-7 验收
+- [x] openai-compat:717 行 ≤750,deepseek 主代码 109 行 ≤200;假服务端测试 11 个迁入并新增**合并分块(DeepSeek 实测)/分离形状(OpenAI)双用例** + profile 端点/附加头用例;DeepSeekE2ETest 带 key 通过(2.3s);DeepSeekPluginTest 经 seam 冒烟
+- [x] fs 根目录:LocalFsTest 8 测试(相对解析到 root、/etc/hosts 越界拒绝、../ 逃逸拒绝 + 原有读写改删列);SpineMain/R1/工具 e2e 全部改经 root
+- [x] 审批:ApprovalModesTest 4 测试(ask 回调放行计数/denied error result 含原因/deny 全拒+DENY_ALL 自述/stdin n 与 EOF 均拒绝);HUMAN_GATE 自述;interaction/approval 主代码 119 行 ≤250
+- [x] verify/policy:CLI 实跑证据——STANDARD 输出治理摘要(审批=AUTO 持久化durable=true limits=…)exit 0;PRODUCTION 拒 AUTO 且逐项指出「违规: policy=PRODUCTION 但审批为 AUTO(换 approval-ask / approval-deny)」exit 1;无 key 不装配 provider;HeadlessVerifyTest 3 测试
+- [x] headless 真实跑通:`java -m …HeadlessMain "用 bash 执行 date +%Y-%m 并原样告诉我"` → 真模型 tool_use → bash 真执行 → 二步终答,12 事件完整落账(user/message→step→llm/request→assistant→tool/call→tool/result→step→…→turn/end)exit 0;AGENTS 命令段已补完整运行命令(TODO 偿还)
+- [x] 预算:openai-compat 717≤750 / interaction-approval 119≤250 / headless ~330≤450 / fs-local 增量 ~45≤80 全达标
+- [x] 文档同步:05(it7 增补两条)、07(§6 实现落定:程序化口径/无 key verify/三模式齐备)、README(状态行+路线表 7✅)、AGENTS(运行命令 TODO 偿还 + 现状 + stdin 测试坑)
 
 ## 验收后修正(如有)
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| f51a9c7 | surefire 下 `System.in` 是挂起流而非 EOF:stdinPromptRejectsOnEof 直接 readLine() 把测试类永久挂死 | 测试注入 `System.setIn(空流/含 n 流)` 并恢复;AGENTS 已知坑回填 |

@@ -200,6 +200,8 @@ exit 0
 
 - `--verify` **不创建 agent、不需要 API key**，组合 + 断言后以 exit 0/1 退出——进 CI，机器可检查。
 - 治理摘要来自实现自述：`ApprovalService.mode()`（`AUTO` / `HUMAN_GATE` / `DENY_ALL`）、`SessionPersistence.durable()`、`LoopGuard.limits()`。实现类如实报告，档位校验负责拒绝不合格组合（fail loud at boot）。
+
+实现落定（it7）：`Policy`（STANDARD/PRODUCTION）与治理断言在 `examples/headless` 落地——程序化组合口径（直装插件清单，非 YAML rows；YAML/ConfigService/bundle 层随 it8）。`--verify` 无 key 可跑（不装配 provider）；审批三模式齐备（auto 留 core/tools 作 executor 锚，ask/deny 在 interaction/approval；ask 缺省即拒绝语义）。PRODUCTION 拒 AUTO / 非 durable / 零 limits，违规逐项指出、exit 1。it8 bundle 落地时 Policy 校验上移到 boot。
 - `--dump-config` 回答"组成了什么"；`--verify` 回答"治理够不够"。两个都是纯组合期操作。
 
 ## 7. Headless Profile（MVP 默认）

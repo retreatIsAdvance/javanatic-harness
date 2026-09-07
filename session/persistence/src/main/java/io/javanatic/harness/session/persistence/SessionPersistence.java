@@ -18,6 +18,11 @@ public interface SessionPersistence {
     /** 本服务的服务键。 */
     ServiceKey<SessionPersistence> KEY = new ServiceKey<>("session-persistence");
 
+    /** 是否耐久落盘(治理摘要与 policy 档位校验读它,07 §6;内存实现为 false)。 */
+    default boolean durable() {
+        return false;
+    }
+
     /**
      * 全量重写(fork 导出用);常规增量由实现订阅 session/appended 完成。
      *
