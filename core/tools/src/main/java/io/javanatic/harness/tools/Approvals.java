@@ -8,13 +8,27 @@ public final class Approvals {
 
     /** 全放行。 */
     public static ApprovalService auto() {
-        return request -> { };
+        return new ApprovalService() {
+            @Override public ApprovalService.Mode mode() {
+                return Mode.AUTO;
+            }
+
+            @Override public void require(ApprovalRequest request) {
+                // AUTO:放行
+            }
+        };
     }
 
     /** 全拒绝。 */
     public static ApprovalService deny() {
-        return request -> {
-            throw new ApprovalDeniedException("denied by policy: " + request.toolName());
+        return new ApprovalService() {
+            @Override public ApprovalService.Mode mode() {
+                return Mode.DENY_ALL;
+            }
+
+            @Override public void require(ApprovalRequest request) {
+                throw new ApprovalDeniedException("denied by policy: " + request.toolName());
+            }
         };
     }
 }
