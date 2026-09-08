@@ -10,7 +10,7 @@ import java.util.Objects;
  * flat YAML → 变体的解析与组合矛盾拦截（replace+remove 同现等）归装载
  * 工厂（bundle/base），下游合并器对变体穷尽 switch。
  */
-public sealed interface ConfigRowSpec permits Include, Replace, Remove, Insert {
+public sealed interface ConfigRowSpec {
 
     /** 追加；同 id 已存在则替换整行（宽松）。 */
     record Include(String plugin, Map<String, Object> config, String disabled)
