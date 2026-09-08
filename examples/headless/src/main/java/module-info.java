@@ -5,6 +5,7 @@
  */
 module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
     requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.core.tools;
@@ -22,6 +23,8 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.session.persistence;
     requires io.javanatic.harness.session.persistence.jsonl;
     requires io.javanatic.harness.interaction.approval;
+    requires io.javanatic.harness.bundle.base;
+    requires org.yaml.snakeyaml;
     requires jdk.httpserver; // 测试:本地假服务端 e2e
 
     exports io.javanatic.harness.examples.headless;

@@ -3,44 +3,26 @@ package io.javanatic.harness.examples.headless;
 import io.javanatic.harness.agent.Agent;
 import io.javanatic.harness.agent.AgentHandle;
 import io.javanatic.harness.agent.AgentOptions;
-import io.javanatic.harness.agent.AgentPlugin;
 import io.javanatic.harness.agent.AgentRegistry;
 import io.javanatic.harness.agent.CreateAgentOptions;
-import io.javanatic.harness.agentloop.AgentLoopPlugin;
-import io.javanatic.harness.agentloop.LoopGuard;
-import io.javanatic.harness.agentloop.LoopGuardPlugin;
-import io.javanatic.harness.fs.local.FsLocalPlugin;
-import io.javanatic.harness.fs.tool.FsToolPlugin;
-import io.javanatic.harness.kernel.plugin.Plugin;
-import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
-import io.javanatic.harness.llm.LlmPlugin;
-import io.javanatic.harness.llm.openai.compat.OpenAiCompatPlugin;
-import io.javanatic.harness.llm.openai.compat.TransportOptions;
-import io.javanatic.harness.llm.openai.compat.VendorProfile;
+import io.javanatic.harness.boot.AppBoot;
+import io.javanatic.harness.boot.Policy;
+import io.javanatic.harness.kernel.config.ConfigRowSpec;
 import io.javanatic.harness.session.Session;
-import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.persistence.SessionPersistence;
-import io.javanatic.harness.session.persistence.jsonl.JsonlPersistencePlugin;
-import io.javanatic.harness.shell.bash.local.BashLocalOptions;
-import io.javanatic.harness.shell.bash.local.BashLocalPlugin;
-import io.javanatic.harness.shell.tool.ShellToolPlugin;
 import io.javanatic.harness.systemprompt.PromptSection;
-import io.javanatic.harness.systemprompt.SystemPromptPlugin;
 import io.javanatic.harness.systemprompt.SystemPromptService;
-import io.javanatic.harness.tools.ApprovalService;
-import io.javanatic.harness.tools.ApprovalAutoPlugin;
-import io.javanatic.harness.tools.ToolsPlugin;
 
 import java.lang.System.Logger.Level;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Clock;
-import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 一次性命令行 runner。用法：
@@ -139,14 +121,36 @@ public final class HeadlessMain {
     }
 
     static int run(RunnerOptions options, Path workspace, Path sessions) throws Exception {
-        String apiKey = options.resolvedApiKey();
-        try (Runtime rt = new Runtime()) {
-            new PluginLoader().loadAll(rt, composition(workspace, sessions, apiKey, options));
-            SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
-            prompts.register(new PromptSection(0, "You are Javanatic Harness (headless). Be terse."));
+        Path profile = Files.writeString(Files.createTempFile("jh-headless-profile", ".yml"), """
+                name: headless
+                policy: standard
+                bundles: [base]
+                rows: []
+                """).normalize();
 
+        List<ConfigRowSpec> overlays = new ArrayList<>(List.of(
+            new ConfigRowSpec.Replace("fs-local", Map.of("root", workspace.toString()), null),
+            new ConfigRowSpec.Replace("shell-tool",
+                Map.of("workspace", workspace.toString(), "timeoutSeconds", 60), null),
+            new ConfigRowSpec.Replace("persistence-jsonl",
+                Map.of("root", sessions.toString()), null)));
+        String apiKey = options.resolvedApiKey();
+        if (apiKey != null) {
+            Map<String, Object> provider = new HashMap<>(Map.of(
+                "name", options.provider(), "baseUrl", options.baseUrl()));
+            if (options.apiKeyLiteral() != null) {
+                provider.put("apiKey", options.apiKeyLiteral());
+            } else {
+                provider.put("apiKeyEnv", options.apiKeyEnv());
+            }
+            overlays.add(new ConfigRowSpec.Replace("llm-openai-compat", provider, null));
+        }
+        AppBoot.BootOptions boot = new AppBoot.BootOptions(profile, overlays,
+            options.verify(), options.policy());
+        try (Runtime rt = AppBoot.boot(boot)) {
             if (options.verify()) {
-                return verifyAndReport(rt, options.policy());
+                LOG.log(Level.INFO, "verify 通过");
+                return 0;
             }
             if (options.task() == null) {
                 LOG.log(Level.ERROR, "缺少任务文本（用法:java -m …io.javanatic.harness.examples.headless \"task\"）");
@@ -157,6 +161,8 @@ public final class HeadlessMain {
                     options.apiKeyEnv());
                 return 2;
             }
+            SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
+            prompts.register(new PromptSection(0, "You are Javanatic Harness (headless). Be terse."));
             AgentRegistry agents = rt.root().require(AgentRegistry.KEY);
             AgentHandle handle = agents.create(rt.root(),
                 CreateAgentOptions.of(Session.newId("headless-1"),
@@ -169,49 +175,9 @@ public final class HeadlessMain {
             handle.disposeAndAwait();
             rt.root().require(SessionPersistence.KEY).save(agent.session());
             return 0;
-        }
-    }
-
-    static List<Plugin> composition(Path workspace, Path sessions, String apiKey,
-                                    RunnerOptions options) {
-        List<Plugin> plugins = new ArrayList<>(List.of(
-            new SessionStorePlugin(),
-            new JsonlPersistencePlugin(sessions),
-            new AgentPlugin(),
-            new LoopGuardPlugin(new LoopGuard.Limits(50, 40)),
-            new SystemPromptPlugin(),
-            new LlmPlugin()));
-        // 无 key（--verify）时不装配 provider——治理断言不依赖模型路由
-        if (apiKey != null) {
-            plugins.add(new OpenAiCompatPlugin(options.provider(),
-                VendorProfile.of(options.baseUrl()),
-                new TransportOptions(apiKey, null, null, 2, null, null)));
-        }
-        // headless 无人值守:默认 AUTO;--policy PRODUCTION 校验会拒绝并提示换 ask
-        plugins.addAll(List.of(
-            new ApprovalAutoPlugin(),
-            new ToolsPlugin(),
-            new FsLocalPlugin(workspace),
-            new FsToolPlugin(),
-            new BashLocalPlugin(new BashLocalOptions(256 * 1024)),
-            new ShellToolPlugin(workspace, Duration.ofSeconds(60)),
-            new AgentLoopPlugin(Clock.systemUTC())));
-        return plugins;
-    }
-
-    private static int verifyAndReport(Runtime rt, Policy policy) {
-        List<String> violations = policy.check(rt.root());
-        LOG.log(Level.INFO, "policy={0} 治理摘要:审批={1} 持久化durable={2} limits={3}",
-            policy,
-            rt.root().resolve(ApprovalService.KEY)
-                .map(ApprovalService::mode).orElse(null),
-            rt.root().resolve(SessionPersistence.KEY).map(SessionPersistence::durable).orElse(null),
-            rt.root().resolve(LoopGuard.KEY).map(LoopGuard::limits).orElse(null));
-        if (!violations.isEmpty()) {
-            violations.forEach(v -> LOG.log(Level.ERROR, "违规: {0}", v));
+        } catch (AppBoot.VerifyFailedException e) {
+            e.violations().forEach(v -> LOG.log(Level.ERROR, "违规: {0}", v));
             return 1;
         }
-        LOG.log(Level.INFO, "verify 通过");
-        return 0;
     }
 }
