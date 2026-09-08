@@ -17,7 +17,7 @@ Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 
 
 ## 现状
 
-- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 三模块（bash 真执行）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval）；`examples/headless`（CLI runner + --verify/policy）。
+- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 三模块（bash 真执行）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval）；`examples/headless`（CLI runner + --verify/policy，经 AppBoot 数据化组合）；kernel/config + bundle/base（ConfigService/AppBoot/YAML 三层/CompositionManifest）。
 - **占位**：其余叶子模块只有 `module-info.java` + 标记类——依赖图从第一天起由 JPMS 编译器强制，不是待办清单，而是模块契约。
 - **Pre-release**：无外部消费者。正确地基 > 兼容包袱：可自由重命名/重排包并同步全部引用，不写兼容垫片。
 
@@ -53,12 +53,12 @@ git config core.hooksPath .githooks   # 一次性：启用 pre-commit/pre-push �
 
 ```sh
 mvn -B -q -pl examples/headless -am package
-java --module-path <各模块 target/classes 与 jackson jar> \
+java --module-path <各模块 target/classes 与 jackson/snakeyaml jar> \
      -m io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain "任务文本"
-# 默认 deepseek + DEEPSEEK_API_KEY;任意 OpenAI 兼容厂商经 CLI 适配(it7.1):
+# 组合是数据(it8):内置 headless profile → base bundle 行资源 → CLI flag overlay 经 AppBoot 装配
+# 任意 OpenAI 兼容厂商:
 #   … HeadlessMain "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 \
 #                      --model=kimi-k2 --provider=kimi
-#   … HeadlessMain "任务" --api-key=sk-…        # 字面量优先于 env(注意 shell history)
 # 治理断言（无 key 可跑）：
 #   … HeadlessMain --verify
 #   … HeadlessMain --verify --policy=PRODUCTION   # 拒 AUTO 审批等不合格组合，exit 1

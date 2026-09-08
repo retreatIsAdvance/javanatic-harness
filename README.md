@@ -2,7 +2,7 @@
 
 基于 JVM 的插件化 Agent Harness —— **Java 25 LTS / JPMS / Maven**。把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 Java 体系：**思想照搬，形状不照搬**。
 
-> **状态**：kernel、core 全主干（session/tools/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7（openai-compat + fs 根目录 + 审批三模式 + --verify/policy + headless CLI）已完成——`--verify` 无 key 可跑、真实任务经 CLI 跑通；其余 7 个叶子模块为 `module-info.java` + 标记类——依赖图从第一天起由编译器强制执行。
+> **状态**：kernel、core 全主干（session/tools/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7/8（openai-compat、治理上线、AppBoot 组合数据化：ConfigService + YAML 三层 + CompositionManifest）已完成——组合是数据、R1 三规则齐备、真实任务经 CLI 跑通；其余 6 个叶子模块为 `module-info.java` + 标记类——依赖图从第一天起由编译器强制执行。
 >
 > 命名：JPMS 根名 / 包名 `io.javanatic.harness.*`，Maven `io.javanatic:harness-*`。
 
@@ -83,7 +83,8 @@ bundle/ examples/   base/headless 组合（占位/it7）与可运行示例（age
 | 5 ✅ | `core.agent` + `core.agent-loop` + `examples/agent-spine`（竖切闭环 + R2 架构测试）| [04-agent-loop.md](docs/design/04-agent-loop.md) |
 | 6 ✅ | `shell.*` + `llm.deepseek` + 持久化 JSONL + R1 回放哈希闭环 + 真实模型全栈 e2e | [05](docs/design/05-capability-seam.md) / [03](docs/design/03-session-event-sourcing.md) |
 | 7 ✅ | `llm.openai-compat` 重构 + fs 根目录 + 审批三模式 + `--verify`/policy + `examples.headless` | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
-| 8 | scope/preset 组合 + YAML/ConfigService/bundle 层 | [06-scope.md](docs/design/06-scope.md) |
+| 8 ✅ | AppBoot 组合数据化：kernel/config + bundle/base + CompositionManifest + headless 迁移 | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
+| 9 | scope/preset 组合（subagent 语境）+ home profile 发现 + bundle GAV 钉扎 | [06-scope.md](docs/design/06-scope.md) |
 
 R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 
