@@ -12,6 +12,13 @@ import java.util.Objects;
  */
 public sealed interface ConfigRowSpec {
 
+    /** 行引用的插件 id(各变体的记录组件;合并/dump/清单统一读它)。 */
+    String plugin();
+    /** 行配置(Remove 无配置,恒空)。 */
+    default Map<String, Object> config() {
+        return Map.of();
+    }
+
     /** 追加；同 id 已存在则替换整行（宽松）。 */
     record Include(String plugin, Map<String, Object> config, String disabled)
             implements ConfigRowSpec {
@@ -21,7 +28,13 @@ public sealed interface ConfigRowSpec {
             plugin = requirePlugin(plugin);
             config = normalize(config);
         }
+
+        /** 便捷工厂:启用行(plugin + config)。 */
+        public static Include of(String plugin, Map<String, Object> config) {
+            return new Include(plugin, config, null);
+        }
     }
+
 
     /** 强制替换；目标不存在由合并器 fail loud（严格）。 */
     record Replace(String plugin, Map<String, Object> config, String disabled)

@@ -1,0 +1,34 @@
+# base bundle——每个 profile 的首层(07 §1)。行引用插件 id(ServiceLoader 发现);
+# 安全边界值(root/workspace)在此显式给出,profile patch 可整行替换。
+name: base
+description: First layer of every profile
+rows:
+  - plugin: session-store
+  - plugin: persistence-jsonl
+    config:
+      root: ${home}/.harness/sessions
+  - plugin: agents
+  - plugin: loop-guard
+  - plugin: system-prompt
+  - plugin: llm
+  - plugin: llm-openai-compat
+    config:
+      name: deepseek
+      baseUrl: ${env:DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+    disabled: ${env:DEEPSEEK_API_KEY} == null
+  - plugin: approval-auto
+  - plugin: approval-ask
+    disabled: true
+  - plugin: approval-deny
+    disabled: true
+  - plugin: tools
+  - plugin: fs-local
+    config:
+      root: ${cwd}
+  - plugin: fs-tool
+  - plugin: shell-bash-local
+  - plugin: shell-tool
+    config:
+      workspace: ${cwd}
+      timeoutSeconds: 60
+  - plugin: agent-loop

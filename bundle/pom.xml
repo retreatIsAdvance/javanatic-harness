@@ -15,6 +15,5 @@
 
     <modules>
         <module>base</module>
-        <module>headless</module>
     </modules>
 </project>

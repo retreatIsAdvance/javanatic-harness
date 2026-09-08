@@ -8,6 +8,7 @@ import io.javanatic.harness.session.SessionHeader;
 import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.session.event.ExtensionEvent;
 import io.javanatic.harness.session.event.LoggedEvent;
+import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.persistence.JsonValue;
 import io.javanatic.harness.session.persistence.SessionCodecRegistry;
@@ -180,7 +181,7 @@ public final class JsonlPersistence implements SessionPersistence {
         }
     }
 
-    /** header 编解码(盘上 5 字段;parent 为 null 时省略)。 */
+    /** header 编解码(盘上字段 + 组合清单;parent/manifest 为 null 时省略)。 */
     private static final class HeaderCodec {
         static JsonValue.Obj write(SessionHeader header) {
             JsonValue.Builder builder = JsonValue.object()
@@ -191,15 +192,63 @@ public final class JsonlPersistence implements SessionPersistence {
             if (header.parentSession() != null) {
                 builder.set("parentSession", header.parentSession().value());
             }
+            if (header.manifest() != null) {
+                java.util.List<JsonValue> rows = new java.util.ArrayList<>();
+                for (CompositionManifest.Row row : header.manifest().rows()) {
+                    JsonValue.Builder config = JsonValue.object();
+                    row.config().forEach((key, value) ->
+                        config.set(key, configValue(row.plugin(), key, value)));
+                    rows.add(JsonValue.object().set("plugin", row.plugin())
+                        .set("config", config.build()).build());
+                }
+                builder.set("manifest", new JsonValue.Arr(rows));
+            }
             return builder.build();
         }
 
         static SessionHeader read(JsonValue.Obj obj) {
+            CompositionManifest manifest = null;
+            JsonValue manifestValue = obj.get("manifest");
+            if (manifestValue instanceof JsonValue.Arr arr) {
+                java.util.List<CompositionManifest.Row> rows = new java.util.ArrayList<>();
+                for (JsonValue item : arr.items()) {
+                    JsonValue.Obj row = (JsonValue.Obj) item;
+                    java.util.Map<String, Object> config = new java.util.LinkedHashMap<>();
+                    row.get("config").asObj().fields().forEach(
+                        (key, value) -> config.put(key, plainValue(value)));
+                    rows.add(new CompositionManifest.Row(row.get("plugin").asString(), config));
+                }
+                manifest = new CompositionManifest(rows);
+            }
             return new SessionHeader((int) obj.get("version").asLong(),
                 Session.newId(obj.get("id").asString()), obj.get("createdAt").asLong(),
                 obj.get("parentSession").asString() == null ? null
                     : Session.newId(obj.get("parentSession").asString()),
-                (int) obj.get("seedLength").asLong());
+                (int) obj.get("seedLength").asLong(), manifest);
+        }
+
+        /** manifest config 值只允许原语(YAML 边界),其余 fail loud。 */
+        private static JsonValue configValue(String plugin, String key, Object value) {
+            if (value instanceof String text) {
+                return new JsonValue.Str(text);
+            }
+            if (value instanceof Number number) {
+                return new JsonValue.Num(number.longValue());
+            }
+            if (value instanceof Boolean bool) {
+                return new JsonValue.Bool(bool);
+            }
+            throw new IllegalStateException("manifest config '" + key + "' for '" + plugin
+                + "' not primitive: " + value.getClass().getSimpleName());
+        }
+
+        private static Object plainValue(JsonValue value) {
+            return switch (value) {
+                case JsonValue.Str str -> str.value();
+                case JsonValue.Num num -> num.value();
+                case JsonValue.Bool bool -> bool.value();
+                default -> throw new IllegalStateException("manifest config value not primitive: " + value);
+            };
         }
     }
 }

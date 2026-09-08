@@ -19,6 +19,14 @@
         </dependency>
         <dependency>
             <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-kernel-brand</artifactId>
         </dependency>
     </dependencies>

@@ -1,6 +1,7 @@
 package io.javanatic.harness.session;
 
 import io.javanatic.harness.kernel.brand.Id;
+import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.SessionEndSeedEvent;
 import io.javanatic.harness.session.event.SessionEvent;
@@ -50,7 +51,8 @@ public final class Session {
     private int derivedNodes;
     private long derivedGeneration = -1;
 
-    Session(Id<Session> id, List<SessionEvent> seed, SessionHeader header, List<Observer> observers) {
+    Session(Id<Session> id, List<SessionEvent> seed, SessionHeader header,
+            CompositionManifest manifest, List<Observer> observers) {
         this.id = Objects.requireNonNull(id, "id");
         this.observers = List.copyOf(observers);
         if (seed != null) {
@@ -59,16 +61,19 @@ public final class Session {
             }
         }
         this.firstLiveSeq = log.size();
-        this.header = header == null ? SessionHeader.fresh(id) : header;
+        this.header = header == null
+            ? new SessionHeader(SessionHeader.FORMAT_VERSION, id, System.currentTimeMillis(),
+                null, 0, manifest)
+            : header;
         // seed 末尾标记：本生命周期不产生它之前的任何事件；已以其结尾则不重标（重开不增长日志）
         if (seed != null && !(log.get(log.size() - 1).event() instanceof SessionEndSeedEvent)) {
             accept(new SessionEndSeedEvent(System.currentTimeMillis()), false);
         }
     }
 
-    /** 分离会话（无观察者）：seed 重放走与 append 相同的校验。 */
+    /** 分离会话（无观察者）：seed 重放走与 append 相同的校验（组合未知）。 */
     public static Session create(Id<Session> id, List<SessionEvent> seed, SessionHeader header) {
-        return new Session(id, seed, header, List.of());
+        return new Session(id, seed, header, null, List.of());
     }
 
     /** 会话 id 工厂（品牌类型，见 kernel.brand.Id）。 */

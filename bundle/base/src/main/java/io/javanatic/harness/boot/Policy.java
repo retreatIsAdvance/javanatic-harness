@@ -1,4 +1,4 @@
-package io.javanatic.harness.examples.headless;
+package io.javanatic.harness.boot;
 
 import io.javanatic.harness.agentloop.LoopGuard;
 import io.javanatic.harness.kernel.scope.Scope;

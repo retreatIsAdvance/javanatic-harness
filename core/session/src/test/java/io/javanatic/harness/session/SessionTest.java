@@ -135,7 +135,7 @@ class SessionTest {
     @Test
     void reentrantAppendThrowsAndGuardResets() {
         List<Session.Observer> observers = new ArrayList<>();
-        Session s = new Session(Session.newId("a"), null, null, observers);
+        Session s = new Session(Session.newId("a"), null, null, null, observers);
         observers.add((session, event) -> {
             assertThatThrownBy(() -> session.append(new TurnStart(99, 9)))
                 .isInstanceOf(IllegalStateException.class)
@@ -149,7 +149,7 @@ class SessionTest {
     @Test
     void observerFailureIsContained() {
         AtomicInteger seen = new AtomicInteger();
-        Session s = new Session(Session.newId("a"), null, null, List.of(
+        Session s = new Session(Session.newId("a"), null, null, null, List.of(
             (session, event) -> {
                 throw new IllegalStateException("observer boom");
             },

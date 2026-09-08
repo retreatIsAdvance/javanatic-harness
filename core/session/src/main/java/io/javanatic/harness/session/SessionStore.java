@@ -1,6 +1,7 @@
 package io.javanatic.harness.session;
 
 import io.javanatic.harness.kernel.brand.Id;
+import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.kernel.events.Events;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
@@ -21,6 +22,12 @@ public final class SessionStore {
     public static final ServiceKey<SessionStore> KEY = new ServiceKey<>("session-store");
 
     private final ConcurrentHashMap<Id<Session>, Session> store = new ConcurrentHashMap<>();
+    private final CompositionManifest manifest;
+
+    /** @param manifest 组合清单（null = 组合未知——直装组合没有 boot 清单） */
+    public SessionStore(CompositionManifest manifest) {
+        this.manifest = manifest;
+    }
 
     /**
      * 创建会话并接线：append 通知经总线以 owner 为 origin 派发 session/appended；
@@ -35,7 +42,7 @@ public final class SessionStore {
         Events bus = owner.require(Runtime.KEY).events();
         List<Session.Observer> observers = List.of((session, entry) ->
             bus.notifyOrdered(SessionEvents.APPENDED, owner, session, entry));
-        Session session = new Session(id, options.seed(), options.header(), observers);
+        Session session = new Session(id, options.seed(), options.header(), manifest, observers);
         store.put(id, session);
         owner.onClose(() -> {
             Session removed = store.remove(id);
