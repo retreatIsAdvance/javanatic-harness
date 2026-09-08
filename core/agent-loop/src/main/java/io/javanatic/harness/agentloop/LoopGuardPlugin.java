@@ -1,23 +1,37 @@
 package io.javanatic.harness.agentloop;
 
+import io.javanatic.harness.kernel.config.ConfigService;
+import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.session.Session;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
- * 提供计数上限版 LoopGuard（id "loop-guard"，limits 是组合期选择——
- * 构造注入，无隐式默认）。budget 档（token 计量）随 deepseek 切片。
+ * 提供计数上限版 LoopGuard（id "loop-guard"）。两条装配路径等价：
+ * 显式构造器（程序化组合）或无参 + ConfigService 行配置（数据组合，07 §4）——
+ * config 只携带组合层给出的值，未给的用插件侧文档化默认（50/40）。
+ * budget 档（token 计量）随 deepseek 切片。
  */
 public final class LoopGuardPlugin implements Plugin {
 
-    private final LoopGuard guard;
+    /** 数据组合路径的文档化默认（组合层未给 config 时生效）。 */
+    public static final long DEFAULT_MAX_TURNS = 50;
+    public static final long DEFAULT_MAX_STEPS_PER_TURN = 40;
 
-    /** @param limits 上限（显式组合选择） */
+    private final LoopGuard explicit;
+
+    /** 数据组合路径：limits 从行配置解析（maxTurns/maxStepsPerTurn）。 */
+    public LoopGuardPlugin() {
+        this.explicit = null;
+    }
+
+    /** @param limits 上限（程序化组合的显式选择） */
     public LoopGuardPlugin(LoopGuard.Limits limits) {
         Objects.requireNonNull(limits, "limits");
-        this.guard = new ConfigurableGuard(limits);
+        this.explicit = new ConfigurableGuard(limits);
     }
 
     @Override
@@ -27,7 +41,14 @@ public final class LoopGuardPlugin implements Plugin {
 
     @Override
     public void apply(Scope scope) {
-        scope.provide(LoopGuard.KEY, guard);
+        scope.provide(LoopGuard.KEY, explicit != null ? explicit : fromConfig(scope));
+    }
+
+    private LoopGuard fromConfig(Scope scope) {
+        Map<String, Object> config = scope.require(ConfigService.KEY).configFor(id());
+        return new ConfigurableGuard(new LoopGuard.Limits(
+            (int) ConfigValues.longValue(config, id(), "maxTurns", DEFAULT_MAX_TURNS),
+            (int) ConfigValues.longValue(config, id(), "maxStepsPerTurn", DEFAULT_MAX_STEPS_PER_TURN)));
     }
 
     private static final class ConfigurableGuard implements LoopGuard {

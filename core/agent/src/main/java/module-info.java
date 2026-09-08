@@ -7,6 +7,7 @@ module io.javanatic.harness.core.agent {
     requires io.javanatic.harness.kernel;
     requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.core.session;
+    provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.agent.AgentPlugin;
 
     exports io.javanatic.harness.agent;
 }

@@ -5,12 +5,14 @@
  */
 module io.javanatic.harness.llm.openai.compat {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
     requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.llm.llm;
     requires com.fasterxml.jackson.databind;
     requires java.net.http;
     requires jdk.httpserver; // 测试用本地假服务端(keyless 双形状覆盖)
+    provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.llm.openai.compat.OpenAiCompatPlugin;
 
     exports io.javanatic.harness.llm.openai.compat;
 }

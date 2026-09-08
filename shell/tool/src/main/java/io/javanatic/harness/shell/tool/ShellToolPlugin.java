@@ -1,5 +1,7 @@
 package io.javanatic.harness.shell.tool;
 
+import io.javanatic.harness.kernel.config.ConfigService;
+import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.shell.shell.ShellExecutor;
@@ -27,19 +29,45 @@ public final class ShellToolPlugin implements Plugin {
 
     private static final ValueSchema.Str COMMAND = new ValueSchema.Str("要执行的 bash 命令");
 
-    private final Path workspace;
-    private final Duration timeout;
+    /** 数据组合路径的超时文档化默认（60s）。 */
+    public static final long DEFAULT_TIMEOUT_SECONDS = 60;
+
+    private final Path explicitWorkspace;
+    private final Duration explicitTimeout;
+
+    /** 数据组合路径：workspace 必填（命令执行边界无默认）、timeoutSeconds 默认 60。 */
+    public ShellToolPlugin() {
+        this.explicitWorkspace = null;
+        this.explicitTimeout = null;
+    }
 
     /**
      * @param workspace 工作目录（绝对路径；agent 在哪执行命令由组合决定）
      * @param timeout   每条命令的超时（组合期上限）
      */
     public ShellToolPlugin(Path workspace, Duration timeout) {
-        this.workspace = Objects.requireNonNull(workspace, "workspace");
+        this.explicitWorkspace = Objects.requireNonNull(workspace, "workspace");
         if (!workspace.isAbsolute()) {
             throw new IllegalArgumentException("workspace must be absolute: " + workspace);
         }
-        this.timeout = Objects.requireNonNull(timeout, "timeout");
+        this.explicitTimeout = Objects.requireNonNull(timeout, "timeout");
+    }
+
+    private Path workspace(Scope scope) {
+        if (explicitWorkspace != null) {
+            return explicitWorkspace;
+        }
+        return Path.of(ConfigValues.requireString(
+            scope.require(ConfigService.KEY).configFor(id()), id(), "workspace"));
+    }
+
+    private Duration timeout(Scope scope) {
+        if (explicitTimeout != null) {
+            return explicitTimeout;
+        }
+        return Duration.ofSeconds(ConfigValues.longValue(
+            scope.require(ConfigService.KEY).configFor(id()), id(),
+            "timeoutSeconds", DEFAULT_TIMEOUT_SECONDS));
     }
 
     @Override
@@ -61,7 +89,8 @@ public final class ShellToolPlugin implements Plugin {
             RenderIntent.TERMINAL,
             (args, ctx) -> {
                 ShellResult result = shell.execute(
-                    new ShellRequest(args.readString("command"), workspace, timeout, Map.of()),
+                    new ShellRequest(args.readString("command"),
+                        workspace(scope), timeout(scope), Map.of()),
                     ctx.signal());
                 return result.exitCode() == 0
                     ? ToolExecutionResult.success(format(result))

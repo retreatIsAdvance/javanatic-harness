@@ -10,6 +10,7 @@ module io.javanatic.harness.core.tools {
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.llm.llm;
     requires com.fasterxml.jackson.databind;
+    provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.tools.ApprovalAutoPlugin, io.javanatic.harness.tools.ToolsPlugin;
 
     exports io.javanatic.harness.tools;
 }

@@ -6,6 +6,7 @@
 module io.javanatic.harness.core.session {
     requires io.javanatic.harness.kernel;
     requires io.javanatic.harness.kernel.brand;
+    provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.session.SessionStorePlugin;
 
     exports io.javanatic.harness.session;
     exports io.javanatic.harness.session.event;

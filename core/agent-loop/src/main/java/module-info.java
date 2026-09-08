@@ -5,12 +5,14 @@
  */
 module io.javanatic.harness.core.agent.loop {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
     requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.core.agent;
     requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.core.system.prompt;
     requires io.javanatic.harness.llm.llm;
+    provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.agentloop.LoopGuardPlugin, io.javanatic.harness.agentloop.AgentLoopPlugin;
 
     exports io.javanatic.harness.agentloop;
 }

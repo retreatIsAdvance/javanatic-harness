@@ -8,6 +8,7 @@ module io.javanatic.harness.interaction.approval {
     requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.core.session; // 测试直用 Session 词表
     requires io.javanatic.harness.llm.llm;
+    provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.interaction.approval.ApprovalAskPlugin, io.javanatic.harness.interaction.approval.ApprovalDenyPlugin;
 
     exports io.javanatic.harness.interaction.approval;
 }

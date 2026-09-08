@@ -2,6 +2,8 @@ package io.javanatic.harness.fs.local;
 
 import io.javanatic.harness.fs.FsService;
 import io.javanatic.harness.kernel.plugin.Plugin;
+import io.javanatic.harness.kernel.config.ConfigService;
+import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.scope.Scope;
 
 import java.nio.file.Path;
@@ -9,11 +11,16 @@ import java.nio.file.Path;
 /** 提供本地文件系统实现（id "fs-local"，Files.* 直包装，根目录限制强制在此）。 */
 public final class FsLocalPlugin implements Plugin {
 
-    private final LocalFs fs;
+    private final LocalFs explicit;
 
-    /** @param root 工作区根(绝对路径;组合期决定 agent 可触达的文件范围) */
+    /** 数据组合路径：root 从行配置解析——安全边界无默认，缺失 fail loud。 */
+    public FsLocalPlugin() {
+        this.explicit = null;
+    }
+
+    /** @param root 工作区根(绝对路径;程序化组合的显式选择) */
     public FsLocalPlugin(Path root) {
-        this.fs = new LocalFs(root);
+        this.explicit = new LocalFs(root);
     }
 
     @Override
@@ -23,6 +30,12 @@ public final class FsLocalPlugin implements Plugin {
 
     @Override
     public void apply(Scope scope) {
+        LocalFs fs = explicit;
+        if (fs == null) {
+            String root = ConfigValues.requireString(
+                scope.require(ConfigService.KEY).configFor(id()), id(), "root");
+            fs = new LocalFs(Path.of(root));
+        }
         scope.provide(FsService.KEY, fs);
     }
 }

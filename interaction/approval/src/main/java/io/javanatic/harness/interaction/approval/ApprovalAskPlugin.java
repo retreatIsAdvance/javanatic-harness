@@ -15,6 +15,11 @@ public final class ApprovalAskPlugin implements Plugin {
 
     private final ApprovalPrompt prompt;
 
+    /** 数据组合路径：headless stdin 人闸（UI 接管经显式构造器注入回调）。 */
+    public ApprovalAskPlugin() {
+        this(ApprovalPrompt.stdin());
+    }
+
     /** @param prompt 交互通道（默认 {@link ApprovalPrompt#stdin()}） */
     public ApprovalAskPlugin(ApprovalPrompt prompt) {
         this.prompt = Objects.requireNonNull(prompt, "prompt");

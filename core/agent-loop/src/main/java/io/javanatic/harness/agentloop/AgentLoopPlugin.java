@@ -32,6 +32,11 @@ public final class AgentLoopPlugin implements Plugin {
 
     private final Clock clock;
 
+    /** 数据组合路径：系统时钟（测试注入冻结钟用显式构造器）。 */
+    public AgentLoopPlugin() {
+        this(Clock.systemUTC());
+    }
+
     /** @param clock 事件时间来源（R1：测试注入冻结钟） */
     public AgentLoopPlugin(Clock clock) {
         this.clock = Objects.requireNonNull(clock, "clock");

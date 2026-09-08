@@ -5,10 +5,12 @@
  */
 module io.javanatic.harness.session.persistence.jsonl {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
     requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.session.persistence;
     requires com.fasterxml.jackson.databind;
+    provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.session.persistence.jsonl.JsonlPersistencePlugin;
 
     exports io.javanatic.harness.session.persistence.jsonl;
 }

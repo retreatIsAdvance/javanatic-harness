@@ -1,9 +1,12 @@
 package io.javanatic.harness.llm.openai.compat;
 
+import io.javanatic.harness.kernel.config.ConfigService;
+import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.llm.LlmService;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -14,8 +17,18 @@ import java.util.Set;
  */
 public final class OpenAiCompatPlugin implements Plugin {
 
-    private final String adapterName;
-    private final OpenAiCompatAdapter adapter;
+    /** 数据组合路径的文档化默认。 */
+    public static final String DEFAULT_BASE_URL = "https://api.deepseek.com";
+    public static final String DEFAULT_API_KEY_ENV = "DEEPSEEK_API_KEY";
+
+    private final String explicitName;
+    private final OpenAiCompatAdapter explicitAdapter;
+
+    /** 数据组合路径：name/baseUrl/apiKeyEnv/apiKey 从行配置解析；无 key 时 fail loud（无 key 场景应 disabled 该行）。 */
+    public OpenAiCompatPlugin() {
+        this.explicitName = null;
+        this.explicitAdapter = null;
+    }
 
     /**
      * @param adapterName adapter 注册名（路由键，如 "deepseek"、"kimi"、"local"）
@@ -27,8 +40,8 @@ public final class OpenAiCompatPlugin implements Plugin {
         if (adapterName.isEmpty()) {
             throw new IllegalArgumentException("adapterName must be non-empty");
         }
-        this.adapterName = adapterName;
-        this.adapter = new OpenAiCompatAdapter(profile, options);
+        this.explicitName = adapterName;
+        this.explicitAdapter = new OpenAiCompatAdapter(profile, options);
     }
 
     @Override
@@ -44,6 +57,22 @@ public final class OpenAiCompatPlugin implements Plugin {
     @Override
     public void apply(Scope scope) {
         LlmService llm = scope.require(LlmService.KEY);
-        scope.onClose(llm.registerAdapter(adapterName, adapter));
+        if (explicitAdapter != null) {
+            scope.onClose(llm.registerAdapter(explicitName, explicitAdapter));
+            return;
+        }
+        Map<String, Object> config = scope.require(ConfigService.KEY).configFor(id());
+        String name = ConfigValues.requireString(config, id(), "name");
+        String baseUrl = ConfigValues.stringValue(config, id(), "baseUrl", DEFAULT_BASE_URL);
+        String apiKeyEnv = ConfigValues.stringValue(config, id(), "apiKeyEnv", DEFAULT_API_KEY_ENV);
+        String literal = ConfigValues.stringValue(config, id(), "apiKey", null);
+        String apiKey = literal != null ? literal : System.getenv(apiKeyEnv);
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new IllegalStateException("llm-openai-compat: no api key (config 'apiKey' or env "
+                + apiKeyEnv + "); keyless compositions should disable this row");
+        }
+        scope.onClose(llm.registerAdapter(name,
+            new OpenAiCompatAdapter(VendorProfile.of(baseUrl),
+                new TransportOptions(apiKey, null, null, 2, null, null))));
     }
 }

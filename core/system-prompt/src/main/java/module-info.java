@@ -5,6 +5,7 @@
 module io.javanatic.harness.core.system.prompt {
     requires io.javanatic.harness.kernel;
     requires io.javanatic.harness.core.session;
+    provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.systemprompt.SystemPromptPlugin;
 
     exports io.javanatic.harness.systemprompt;
 }
