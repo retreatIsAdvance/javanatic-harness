@@ -99,7 +99,9 @@ public final class ExpressionResolver {
      */
     public boolean evaluate(String expression) {
         Objects.requireNonNull(expression, "expression");
-        Matcher comparison = COMPARISON.matcher(expression.trim());
+        String trimmed = expression.trim();
+        rejectUnsupportedOperators(trimmed);
+        Matcher comparison = COMPARISON.matcher(trimmed);
         if (comparison.matches()) {
             String left = interpolate(comparison.group(1).trim());
             String operator = comparison.group(2);
@@ -107,8 +109,17 @@ public final class ExpressionResolver {
             String right = "null".equals(rightToken) ? null : rightToken.substring(1, rightToken.length() - 1);
             return "==".equals(operator) ? Objects.equals(left, right) : !Objects.equals(left, right);
         }
-        String operand = interpolate(expression.trim());
+        String operand = interpolate(trimmed);
         return operand != null && !operand.isEmpty();
+    }
+
+    /** 运算白名单外(<、>、单 =、<=、>=)出现即 fail loud——静默当裸操作数是错配吞掉。 */
+    private static void rejectUnsupportedOperators(String expression) {
+        if (expression.contains("<") || expression.contains(">")
+            || expression.contains(" = ") || expression.endsWith(" =")
+            || expression.startsWith("= ")) {
+            throw new IllegalStateException("expression operator not allowed: " + expression);
+        }
     }
 
     private String resolveVariable(String inner, String whole) {
