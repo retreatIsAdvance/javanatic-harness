@@ -84,6 +84,7 @@ public final class AgentLoopImpl implements Agent {
     private CompletableFuture<Void> driver;
     private CompletableFuture<Void> idleFuture = CompletableFuture.completedFuture(null);
 
+    // CHECKSTYLE:OFF ParameterNumber —— R4 构造器强制:治理依赖全显式注入(04 §4),拆分即弱化证明
     AgentLoopImpl(Scope agentScope, Session session, LlmService llm, ToolRegistry tools,
                   ToolExecutor executor, SystemPromptService prompts, LoopGuard guard,
                   AgentRegistry registry, Clock clock, AgentOptions options) {
@@ -101,6 +102,8 @@ public final class AgentLoopImpl implements Agent {
         this.nextTurn = (int) session.events().stream()
             .filter(entry -> entry.event() instanceof TurnStart).count();
     }
+
+    // CHECKSTYLE:ON ParameterNumber
 
     @Override
     public Id<Session> id() {

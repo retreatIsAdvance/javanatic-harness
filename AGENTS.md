@@ -106,7 +106,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - **命名**：类 `UpperCamelCase` 名词结尾；方法/变量 `lowerCamelCase` 动词开头；常量 `UPPER_SNAKE_CASE`；包全小写；抽象类 `Abstract*`；异常 `*Exception`；测试 `*Test` 与被测类同名；POJO 布尔**不用** `is` 前缀。JH 专有：插件 id kebab-case（`fs-local`）；`EventKey` 名小写斜杠（`session/created`）；`ServiceKey` 名短稳定名（`clock`）；JPMS 名 `io.javanatic.harness.<pkg>`；artifactId `harness-<group>-<pkg>`。
 - **魔法值禁止**：字面量出现第二次前提成常量或 enum。
 - **类引用走 import**：可执行代码禁行内全限定类名；跨包同名冲突按 pre-release 立场重命名解决，万不得已用 FQN 须同处注释说明。Javadoc `{@link}` 的全限定名不受限（目标类未 import 时它是唯一写法）。
-- **类型纪律**（[08](docs/design/08-type-discipline.md)）：不可变数据用 `record`；判别联合用 `sealed interface` + `record` + 穷尽 `switch`，封闭联合的 default 分支抛 `IllegalStateException`（assertNever 等价）；**禁止判别式 if 链**；构造器内 fail-loud 校验（JEP 513 灵活构造器体）；跨边界 id 用 `Id<T>` 品牌，不裸传 `String`。
+- **类型纪律**（[08](docs/design/08-type-discipline.md)）：不可变数据用 `record`；判别联合用 `sealed interface` + `record` + 穷尽 `switch`，封闭联合的 default 分支抛 `IllegalStateException`（assertNever 等价）；**禁止判别式 if 链**、**互斥动作/模式不落字段**（replace/remove/insert 这类互斥动作用 sealed 联合变体——多个互斥布尔参数就是被摊平的判别式 if 链）；构造器内 fail-loud 校验（JEP 513 灵活构造器体）；跨边界 id 用 `Id<T>` 品牌，不裸传 `String`。
 - **泛型**：`@SuppressWarnings("unchecked")` 必须附注释说明为何收窄不可行；unchecked cast 仅限内核登记处的同构点。
 - **异常**：不捕获 `Throwable`；catch 要么处理要么翻译上抛，空 catch 必须注释吞了什么、为何无他物可达；不用异常做流程控制；try-with-resources 优先；语义性 `RuntimeException` 原样上抛不裹第二层皮（丢失消息）。
 - **并发**：共享可变表用 `ConcurrentHashMap`；双检锁字段必须 `volatile`；虚拟线程 executor 用 `Executors.newVirtualThreadPerTaskExecutor()`；异步边界（worker/进程/HTTP）才做运行时校验，同进程类型化边界信任编译器。
@@ -114,7 +114,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - **注释与 Javadoc**：每个模块/导出的非显然契约有简洁中文 Javadoc，函数式导出带 `@param`/`@return`；注释写契约与不变量，不写代码复述、不写"我改了什么"；TODO 按 `FIXME`/`TODO`/`XXX` 紧急度分级；文件恰好一个结尾换行。
 - **方法体量**：单方法显著超过 ~80 行先想拆分（阿里手册）；kernel/core 主代码预算 ≤1200 行，超了先删而不是挪。
 
-以上白空格/结尾换行/无用 import/星号导入/行内全限定名/命名/制表符等规则**已执法化**：`mvn -B -q validate` 即 spotless + checkstyle 门禁，CI 同口径；规则集在 [config/checkstyle/checkstyle.xml](config/checkstyle/checkstyle.xml)，先绿后严，收紧或放宽须在 PR 说明理由。
+以上白空格/结尾换行/无用 import/星号导入/行内全限定名/命名/制表符/参数上限（max 6；数据束、依赖注入构造器等合法超限经 `CHECKSTYLE:OFF ParameterNumber` 注释豁免并写明理由）等规则**已执法化**：`mvn -B -q validate` 即 spotless + checkstyle 门禁，CI 同口径；规则集在 [config/checkstyle/checkstyle.xml](config/checkstyle/checkstyle.xml)，先绿后严，收紧或放宽须在 PR 说明理由。
 
 ## 模块与构建规则（[02](docs/design/02-module-layout.md)）
 

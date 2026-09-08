@@ -15,6 +15,7 @@ import java.util.Objects;
  * @param backoffBase    退避基值（指数增长，附抖动）
  * @param backoffMax     退避上限
  */
+// CHECKSTYLE:OFF ParameterNumber —— 选项数据束:传输韧性参数,均为独立维度,无互斥判别
 public record DeepSeekOptions(String baseUrl, String apiKey, Duration connectTimeout,
                               Duration idleTimeout, int maxAttempts,
                               Duration backoffBase, Duration backoffMax) {
@@ -50,3 +51,4 @@ public record DeepSeekOptions(String baseUrl, String apiKey, Duration connectTim
             + ", backoffBase=" + backoffBase + ", backoffMax=" + backoffMax + "]";
     }
 }
+// CHECKSTYLE:ON ParameterNumber

@@ -55,5 +55,16 @@
         <module name="ParameterName"/>
         <module name="LocalVariableName"/>
         <module name="LocalFinalVariableName"/>
+
+        <!-- 参数上限 tripwire:互斥判别被摊平成参数堆叠的前兆(6=现有合法形状的最大值)。
+             数据束(选项 record)与依赖注入构造器(R4)等合法超限经注释豁免并写明理由。 -->
+        <module name="ParameterNumber">
+            <property name="max" value="6"/>
+        </module>
+        <module name="SuppressionCommentFilter">
+            <property name="offCommentFormat" value="CHECKSTYLE:OFF ParameterNumber"/>
+            <property name="onCommentFormat" value="CHECKSTYLE:ON ParameterNumber"/>
+            <property name="checkFormat" value="ParameterNumber"/>
+        </module>
     </module>
 </module>

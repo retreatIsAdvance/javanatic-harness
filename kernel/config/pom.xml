@@ -13,5 +13,9 @@
     <artifactId>harness-kernel-config</artifactId>
 
     <dependencies>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-kernel-core</artifactId>
+        </dependency>
     </dependencies>
 </project>
