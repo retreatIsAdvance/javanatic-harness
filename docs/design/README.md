@@ -103,15 +103,20 @@
 | 响应式 reload / 热重载 | 内建 | 不做（静态组合）| JVM 生态习惯重启 |
 | 持久化 JSON 注解 | 类型层注解散布 | domain 零注解，codec 归 seam | 边界纪律 |
 
-## 实现路线（垂直切片）
+## 实现路线（垂直切片；2026-09 开源目标修订）
 
-1. **Iteration 1（已完成）**：kernel（`brand` 的 `Id<T>` + `core` 的 Scope/Events/Plugin，30+ 测试含 jqwik LIFO 性质测试）。实现相对本设计稿的修正已回写 [01](01-kernel.md)：`parent()` root 返回 null、`Next` varargs + `WaterfallArgs.rest`、订阅类型化双入口、waterfall 守卫包 rest、PluginScope 挂载视图（provide 落共享 root，effect 落私有 child）
-2. **Iteration 2（最小完整竖切）**：core.session → llm.replay → core.tools + fs 最简 seam → core.agent-loop → 示例跑通第一轮 turn。R1–R4 测试随切片走，不是收尾补 ([10](10-testing.md))。实际执行拆得更细：it2 session、it3 llm seam + replay、it4 tools + fs、it5 agent-loop + system-prompt + examples/agent-spine 竖切收口（headless runner 依赖 bundle 组合层，随 06/07 切片）
-3. **Iteration 6**：shell seam、真实 llm-deepseek、JSONL 持久化 + R1 replay 哈希测试
-4. **Iteration 7**：scope/preset 组合（06）、approval-ask 交互档、`--verify` + policy 档位（R4）
-5. **Iteration 5（已完成）**：core/agent（契约）+ core/system-prompt（最小组装）+ core/agent-loop（Turn/Step 状态机）+ examples/agent-spine（可运行竖切）+ R2 架构测试（ArchUnit，锚类定位导入）
-5b. **Iteration 6（已完成）**：shell 三模块（进程树击杀/输出上限/取消钩子）+ llm/deepseek（SSE/背压/传输重试/空闲看门狗/凭据脱敏）+ persistence seam + JSONL 后端 + R1 回放哈希闭环 + 真实模型全栈 e2e
-6. 每实现一个模块先写 invariant/属性测试：先定不变式，再写实现
+已完成的垂直切片（it1 kernel / it2 session / it3 llm seam + replay / it4 tools + fs / it5 agent-loop + 竖切 / it6 shell + deepseek + 持久化 + R1 闭环 / it7 openai-compat + 治理上线 / it7.1 厂商灵活化 / it8 组合数据化 AppBoot + ConfigService + manifest）。R1–R4 测试随切片走，不做收尾补（[10](10-testing.md)）。
+
+**开源决策（2026-09-08 确认）**：License Apache-2.0；JDK 25 LTS 单版本（不降 21——ScopedValue 终版叙事与差异化优先，采用税在文档中明示）；首发同时面向国际与中文社区。
+
+后续路线按「最后的 API 破坏性迭代 → 发布工程 → 首发 → 社区驱动」排序：
+
+| 迭代 | 内容 | 性质 |
+|---|---|---|
+| it9 | scope/preset：ScopedToolRegistry + setup window + preset 组合 + home profile 发现 | **最后的 API 破坏性迭代**（ToolRegistry/ToolExecutor 签名变更） |
+| it10 | 发布工程：CI 矩阵、Maven Central 管线、LICENSE 落地、门面 API（quickstart）、双语 README、javadoc 发布、安全默认 | 冲刺 |
+| **0.1.0** | 四 seam（kernel/session/tools/llm）冻结为公开契约 + quickstart + 诚实安全标注 | 🚀 首发 |
+| it11+ | sandbox（JVM native 路径设计先行）、compaction 生产者、budget 档、resume CLI、subagent、skills/web 按社区 issue 声音排序 | 社区驱动 |
 
 ## 许可与引用
 

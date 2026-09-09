@@ -84,10 +84,12 @@ bundle/ examples/   base/headless 组合（占位/it7）与可运行示例（age
 | 6 ✅ | `shell.*` + `llm.deepseek` + 持久化 JSONL + R1 回放哈希闭环 + 真实模型全栈 e2e | [05](docs/design/05-capability-seam.md) / [03](docs/design/03-session-event-sourcing.md) |
 | 7 ✅ | `llm.openai-compat` 重构 + fs 根目录 + 审批三模式 + `--verify`/policy + `examples.headless` | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
 | 8 ✅ | AppBoot 组合数据化：kernel/config + bundle/base + CompositionManifest + headless 迁移 | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
-| 9 | scope/preset 组合（subagent 语境）+ home profile 发现 + bundle GAV 钉扎 | [06-scope.md](docs/design/06-scope.md) |
+| 9 🔄 | scope/preset：ScopedToolRegistry + setup window + preset 组合 + home profile 发现（最后的 API 破坏性迭代） | [06-scope.md](docs/design/06-scope.md) |
+| 10 | 发布工程：CI、Maven Central、门面 API、双语 README、安全默认 → **0.1.0 首发**（四 seam 冻结） | — |
+| 11+ | sandbox、compaction、budget、resume、subagent——按社区声音排序 | — |
 
 R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 
 ## 许可
 
-架构设计源自对 dsh 的移植分析（见 [docs/dsh-reference.md](docs/dsh-reference.md)）；本仓库代码为原创实现。
+**Apache-2.0**（2026-09-08 确认）。架构思想源自对 dsh 的移植分析（见 [docs/dsh-reference.md](docs/dsh-reference.md)）；本仓库代码为原创实现。目标：开源供社区使用——JDK 25 LTS 单版本（ScopedValue 终版叙事优先），首发同时面向国际与中文社区。
