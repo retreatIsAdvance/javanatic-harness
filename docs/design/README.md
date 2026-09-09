@@ -114,9 +114,11 @@
 | 迭代 | 内容 | 性质 |
 |---|---|---|
 | it9 | scope/preset：ScopedToolRegistry + setup window + preset 组合 + home profile 发现 | **最后的 API 破坏性迭代**（ToolRegistry/ToolExecutor 签名变更） |
-| it10 | 发布工程：CI 矩阵、Maven Central 管线、LICENSE 落地、门面 API（quickstart）、双语 README、javadoc 发布、安全默认 | 冲刺 |
-| **0.1.0** | 四 seam（kernel/session/tools/llm）冻结为公开契约 + quickstart + 诚实安全标注 | 🚀 首发 |
-| it11+ | sandbox（JVM native 路径设计先行）、compaction 生产者、budget 档、resume CLI、subagent、skills/web 按社区 issue 声音排序 | 社区驱动 |
+| it10 | 长跑能力：compaction + budget + --resume + request-context | 生产模拟门槛前半 |
+| it11 | todo_write + 计划模式（落账状态） | 能干活 |
+| it12 | sandbox（Linux landlock/FFM）+ restriction | 敢让人跑 |
+| it13 | 发布工程（CI/Central/门面/双语 README）→ **0.1.0** | **判据：生产模拟场景（PRODUCTION policy + 多步工具任务 + 中途 compaction + 重启 resume + budget 优雅停 + R1 全比对）进 CI 常绿** |
+| it14+ | subagent、skills、web、LSP——按社区 issue 声音排序 | 社区驱动 |
 
 ## 许可与引用
 
