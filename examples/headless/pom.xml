@@ -85,5 +85,9 @@
             <groupId>io.javanatic</groupId>
             <artifactId>harness-bundle-base</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-preset</artifactId>
+        </dependency>
     </dependencies>
 </project>

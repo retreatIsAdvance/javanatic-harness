@@ -44,7 +44,7 @@ public final class HeadlessMain {
 
     /** 运行时配置（解析自 CLI;默认值集中在此——组合位的显式 resolve 点）。 */
     record RunnerOptions(String task, boolean verify, Policy policy, String provider, String model,
-                         String baseUrl, String apiKeyEnv, String apiKeyLiteral) {
+                         String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -81,6 +81,7 @@ public final class HeadlessMain {
         String baseUrl = null;
         String apiKeyEnv = null;
         String apiKeyLiteral = null;
+        String profile = null;
         for (String arg : args) {
             if ("--verify".equals(arg)) {
                 verify = true;
@@ -96,6 +97,8 @@ public final class HeadlessMain {
                 apiKeyEnv = valueOf(arg);
             } else if (arg.startsWith("--api-key=")) {
                 apiKeyLiteral = valueOf(arg);
+            } else if (arg.startsWith("--profile=")) {
+                profile = valueOf(arg);
             } else if (arg.startsWith("--")) {
                 throw new IllegalArgumentException("未知参数: " + arg);
             } else if (task == null) {
@@ -109,7 +112,7 @@ public final class HeadlessMain {
             model == null ? RunnerOptions.DEFAULT_MODEL : model,
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
-            apiKeyLiteral);
+            apiKeyLiteral, profile);
     }
 
     private static String valueOf(String flag) {
@@ -120,13 +123,25 @@ public final class HeadlessMain {
         return value;
     }
 
+/** --profile 值:存在的文件路径直接用;否则按名字解析 ~/.harness/profiles/<name>/profile.yml。 */
+    static Path resolveProfile(String value) throws Exception {
+        if (value == null) {
+            return Files.writeString(Files.createTempFile("jh-headless-profile", ".yml"),
+                "name: headless\npolicy: standard\nbundles: [base]\nrows: []\n").normalize();
+        }
+        Path direct = Path.of(value);
+        if (Files.isRegularFile(direct)) {
+            return direct;
+        }
+        Path named = Path.of(System.getProperty("user.home"), ".harness", "profiles", value, "profile.yml");
+        if (Files.isRegularFile(named)) {
+            return named;
+        }
+        throw new IllegalArgumentException("--profile 既不是文件,也不存在 ~/.harness/profiles/" + value + "/profile.yml");
+    }
+
     static int run(RunnerOptions options, Path workspace, Path sessions) throws Exception {
-        Path profile = Files.writeString(Files.createTempFile("jh-headless-profile", ".yml"), """
-                name: headless
-                policy: standard
-                bundles: [base]
-                rows: []
-                """).normalize();
+        Path profile = resolveProfile(options.profile());
 
         List<ConfigRowSpec> overlays = new ArrayList<>(List.of(
             new ConfigRowSpec.Replace("fs-local", Map.of("root", workspace.toString()), null),

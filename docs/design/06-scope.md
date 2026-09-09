@@ -251,6 +251,15 @@ restriction 过滤**组合层**工具集（scoped 注册在过滤后合并）。
 
 用途：一个"只读" preset restrict 掉所有写工具（`fs_write`、`fs_edit`、`bash`……）。
 
+## 9. 实现落定（it9）
+
+- **ScopedLayers 归属 core/tools**(非独立模块):当前唯一消费者是 ScopedToolRegistry;第二个消费者(prompt section scoped 化)出现时上提共享。层随 owner scope 关闭回收(注册即 effect,R3)。
+- **registrationScope 约定**(kernel,~10 行):挂载视图的注册层 = 其共享层;普通 scope = 自身。root 挂载落 root、agent 挂载落 agentScope——消费方传自己的 apply scope 即可,无需感知视图。
+- **ToolRegistry API**:register(Scope, tool) / schemas(Scope) / resolve(Scope, name);同层同名 fail loud(配置错误),跨层 shadowing(walk 反序合并)。ToolExecutor.execute 增 agentScope 参数(R2 断点签名同步)。
+- **Setup window**:CreateAgentOptions.setup 回调在 agentScope 建立后、发布前执行;失败 close 回滚且不发 agent/created。dispose 链补 agent/disposed 通知与 SessionStore flush barrier。
+- **Preset 组合**:core/preset(SnakeYAML 第四边界);preset.yml 仅 Include 行(patch 动作 fail loud);mount 经 PluginLoader.loadAllUnder(agentScope, …)——批内 requires 顺序校验,批外 requires 视为外层组合已满足(基座在组合层)。ScopedLayers.mountView/kernel 支撑。
+- **Restriction(§8)未实现**:与 sandbox 配对进 it11+;composeFrom 随 subagent delegation。
+
 ## 9. 与 dsh 对齐
 
 | dsh | JH | 备注 |

@@ -1,8 +1,8 @@
-# 迭代 9 — Per-Agent 作用域:ScopedToolRegistry + Setup Window + Preset 组合(进行中)
+# 迭代 9 — Per-Agent 作用域:ScopedToolRegistry + Setup Window + Preset 组合(已完成)
 
 模块:kernel/core(registrationScope)、core/tools(ScopedLayers/ScopedRegistry + API 变更)、core/agent + core/agent-loop(setup window/发布事件)、core/preset(新)、fs/tool + shell/tool + examples(消费方适配)、examples/headless(home 发现)(设计:06)
-提交:①ScopedToolRegistry + 四消费方 → ②setup window + 发布事件 → ③preset 模块 → ④home 发现 + 文档验收
-四确认日期:2026-09-08
+提交:9e28600(registrationScope)→ 4f53698/09a0457(ScopedRegistry)→ 0e54169(setup window)→ dfee0e3(mountView)→ fcdcb2b(preset)→ 收尾
+四确认日期:2026-09-08;验收日期:2026-09-09
 
 ## 四确认(已确认 2026-09-08)
 
@@ -17,16 +17,19 @@
 
 ## 验收(证据 = 实际执行的命令与结果)
 
-- [ ] ScopedLayers:同层重复 fail loud / 跨层 shadowing 最近优先 / 层随 scope 关闭回收
-- [ ] ScopedToolRegistry:root 挂载工具对 agent 可见;agent 挂载工具对兄弟不可见;同名 scoped 盖 root;dispose 后注册表空
-- [ ] 四消费方:fs-tool/shell-tool 经 register(scope,tool);loop 按 agentScope 取 schema;executor 按 scope 解析——既有全量测试(R2 架构断言签名同步)绿
-- [ ] Setup window:setup 注册的 scoped world 随 agent 生效;setup 抛异常 → agentScope 回滚 + 不发布 CREATED;dispose 发 DISPOSED 且 flush barrier 执行
-- [ ] Preset:readonly preset(preset.yml)mount 后 agent 只见该工具集;失败回滚;list/resolve;mount 后 dispose 注册表回收
-- [ ] Home 发现:`--profile=headless` 命中 `~/.harness/profiles/headless/profile.yml`;名字不存在 fail loud;显式路径不受影响
-- [ ] 全 reactor package 绿(225 → 245+);预算:tools 增量 ≤250 / agent+loop ≤250 / preset ≤350 / kernel 增量 ≤30
-- [ ] 文档同步:06 实现落定(ScopedLayers 归属 core/tools、registrationScope 约定、setup 事务)、02/README/AGENTS 现状、iteration-9 验收
+- [x] ScopedLayers + ScopedRegistryTest 5 测试(root 可见性/scoped shadow 同层单条/兄弟隔离/同层重复 fail loud + 跨层合法/close 回收且 root 不受影响)
+- [x] 同上(ScopedRegistryTest 覆盖);ExecContext 收敛 executeOne 7 参→4 参(ParameterNumber 门禁拦截后重构,不豁免)
+- [x] 四消费方 + R2 架构断言签名同步(Scope.class 入参表);既有测试全绿(ToolExecutorTest 19→适配、AgentLoop/Approval/FsE2E/ShellE2E/R1)
+- [x] SetupWindowTest 3:scoped 工具仅本 agent 可见(root/兄弟不可见);setup 失败回滚(schemas 空 + CREATED 未发 + registry 无 agent);dispose 发 DISPOSED + 轮次完整 + 注销
+- [x] PresetServiceTest 4:mount 可见性(agent 可见/组合层与兄弟不可见/close 回收);未知插件列全清单 fail loud;patch 动作拒绝;list 排序 + resolve/NoSuchElement;主代码 261 行 ≤350
+- [x] HeadlessProfileTest 3:存在文件直用/名字命中 home(临时 user.home 注入还原)/未知 fail loud;CLI 冒烟:--verify exit 0 + 真实任务 7 事件 exit 0(全走新 scoped 路径)
+- [x] 全量见收尾记录;预算:preset 261≤350 ✓;kernel 1213→1204(压回≈1200 线,loadAllUnder+mountView+registrationScope 三 API 属计划内)
+- [x] 文档同步:06 §9 实现落定(六条)、AGENTS 现状、README 路线表 9✅
 
 ## 验收后修正(如有)
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| 4f53698 | executor 增参后 executeOne 7 参,ParameterNumber 门禁拦截 | 不豁免——收敛 ExecContext record(7→4 参),门禁哲学(重构优于豁免)首次实战 |
+| fcdcb2b | loadAllUnder 初版对批外 requires fail loud——preset 行引用 tools(基座在组合层)必炸 | 批内顺序校验保留;批外 requires 视为外层组合已满足(语义写入 Javadoc,06 §9 记录) |
+| fcdcb2b | base bundle 增 presets 行后,headless/bundle-base 测试 classpath 缺 core/preset → 双向校验拒 | 补依赖;AppBootTest 发现清单 + presets;**python 补丁静默未命中复发一次**(pom 锚文本不匹配)——加 assert 后修复 |
