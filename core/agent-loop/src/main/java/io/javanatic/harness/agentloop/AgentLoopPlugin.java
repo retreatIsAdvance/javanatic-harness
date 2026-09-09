@@ -9,6 +9,7 @@ import io.javanatic.harness.agent.CancelOptions;
 import io.javanatic.harness.agent.CreateAgentOptions;
 import io.javanatic.harness.agent.ResumeAgentOptions;
 import io.javanatic.harness.kernel.plugin.Plugin;
+import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.llm.LlmService;
 import io.javanatic.harness.session.CreateOptions;
@@ -19,6 +20,7 @@ import io.javanatic.harness.tools.ToolExecutor;
 import io.javanatic.harness.tools.ToolRegistry;
 
 import java.time.Clock;
+import java.util.function.Consumer;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -74,20 +76,32 @@ public final class AgentLoopPlugin implements Plugin {
             SessionStore store = owner.require(SessionStore.KEY);
             Session session = store.create(owner, options.sessionId(),
                 new CreateOptions(options.seed(), options.header()));
-            return mount(owner, session, options.options());
+            return mount(owner, session, options.options(), options.setup());
         }
 
         @Override
         public AgentHandle resume(Scope owner, ResumeAgentOptions options) {
             SessionStore store = owner.require(SessionStore.KEY);
             // get 对缺失会话本身 fail loud（NoSuchElementException）
-            return mount(owner, store.get(options.sessionId()), options.options());
+            return mount(owner, store.get(options.sessionId()), options.options(), null);
         }
 
-        private AgentHandle mount(Scope owner, Session session, AgentOptions agentOptions) {
+        private AgentHandle mount(Scope owner, Session session, AgentOptions agentOptions,
+                                  Consumer<Scope> setup) {
             Scope agentScope = owner.child();
+            // setup window（06 §5）：发布前组装 scoped world；失败整体回滚、不发布
+            if (setup != null) {
+                try {
+                    setup.accept(agentScope);
+                } catch (Exception e) {
+                    agentScope.close();
+                    throw new IllegalStateException("Setup failed and rolled back", e);
+                }
+            }
             AgentLoopImpl agent = new AgentLoopImpl(agentScope, session, llm(), tools(), executor(),
                 prompts(), guard(), registry(), clock(), agentOptions);
+            agentScope.require(Runtime.KEY).events()
+                .notify(AgentEvents.CREATED, agentScope, agent, agent);
             // dispose 是显式触发的能力：工厂绝不构造期启动 teardown（创建即 cancel
             // 会清空 inbox，与首个 turn 竞态——04 §11 实现落定）
             return new AgentHandle(agent, AgentHandle.once(() -> {
@@ -96,6 +110,10 @@ public final class AgentLoopPlugin implements Plugin {
                     try {
                         agent.cancel(new AgentCancelCause.Disposed(), CancelOptions.DEFAULT);
                         agent.whenIdle().join();
+                        SessionStore store = owner.require(SessionStore.KEY);
+                        agentScope.require(Runtime.KEY).events()
+                            .notify(AgentEvents.DISPOSED, agentScope, agent, agent);
+                        store.flush(agentScope, session);
                         agentScope.close();
                         done.complete(null);
                     } catch (Throwable t) {

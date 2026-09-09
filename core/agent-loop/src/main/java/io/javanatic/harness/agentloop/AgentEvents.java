@@ -1,5 +1,6 @@
 package io.javanatic.harness.agentloop;
 
+import io.javanatic.harness.agent.Agent;
 import io.javanatic.harness.agent.AgentStatus;
 import io.javanatic.harness.kernel.events.EventKey;
 import io.javanatic.harness.llm.LlmCallConfig;
@@ -25,6 +26,12 @@ public final class AgentEvents {
     /** turn 排空完毕、关轮前（NOTIFY，同步顺序派发；listener 可 steer() 复活循环）。payload=turn。 */
     public static final EventKey<TurnStopping> TURN_STOPPING =
         EventKey.notify("agent/turn-stopping", TurnStopping.class);
+
+    /** agent 构造完成、发布（NOTIFY；payload = agent）。 */
+    public static final EventKey<Agent> CREATED = EventKey.notify("agent/created", Agent.class);
+
+    /** agent 开始 teardown（NOTIFY；payload = agent）。 */
+    public static final EventKey<Agent> DISPOSED = EventKey.notify("agent/disposed", Agent.class);
 
     private AgentEvents() {
     }
