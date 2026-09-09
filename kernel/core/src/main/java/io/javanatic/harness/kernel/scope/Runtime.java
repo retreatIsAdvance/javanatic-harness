@@ -42,7 +42,7 @@ public final class Runtime implements AutoCloseable {
      * @return 挂载视图
      */
     public Scope mountScope() {
-        return new PluginScope(root, root.child());
+        return root.mountView();
     }
 
     /**

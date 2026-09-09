@@ -60,6 +60,12 @@ final class PluginScope implements Scope {
         return own.parent();
     }
 
+    /** 挂载视图的挂载视图即自身(视图已可作装载根)。 */
+    @Override
+    public Scope mountView() {
+        return this;
+    }
+
     /** 注册归属 = 共享层。 */
     @Override
     public Scope registrationScope() {

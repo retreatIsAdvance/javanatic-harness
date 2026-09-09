@@ -75,6 +75,9 @@ public interface Scope extends AutoCloseable {
         return this;
     }
 
+    /** 任意 scope 下创建插件挂载视图(preset 等 scope 内装载;root 场景经 Runtime.mountScope)。 */
+    Scope mountView();
+
     /**
      * 父 scope；root 返回 null。事件冒泡与 overlay 以父链为据。
      * @return 父 scope；本 scope 为 root 时为 null

@@ -104,6 +104,11 @@ final class ScopeImpl implements Scope {
     }
 
     @Override
+    public Scope mountView() {
+        return new PluginScope(this, child());
+    }
+
+    @Override
     public Scope child() {
         ensureActive();
         ScopeImpl child = new ScopeImpl(this, runtime);
