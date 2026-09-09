@@ -31,4 +31,5 @@ rows:
     config:
       workspace: ${cwd}
       timeoutSeconds: 60
+  - plugin: presets
   - plugin: agent-loop

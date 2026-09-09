@@ -19,5 +19,6 @@
         <module>tools</module>
         <module>agent</module>
         <module>agent-loop</module>
+        <module>preset</module>
     </modules>
 </project>

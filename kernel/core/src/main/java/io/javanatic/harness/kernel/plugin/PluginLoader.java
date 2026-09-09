@@ -57,27 +57,36 @@ public final class PluginLoader {
     /**
      * 按给定顺序加载：每个 plugin 一个挂载视图（{@link io.javanatic.harness.kernel.scope.Runtime#mountScope()}，
      * provide 落共享 root，effect/订阅落插件私有 child）。
-     * requires 中出现尚未加载的 id → fail loud（顺序错了）；列表内重复 id → fail loud。
-     * apply 抛异常 → 立即 close 该视图（回滚全部副作用，含已 provide 的服务）→ 异常上抛。
-     * 加载逐插件原子：不存在半挂载的插件（R3）。
-     * @param runtime 目标运行时（挂载根为其 root scope）
-     * @param ordered 加载顺序（boot rows 序或 topoSort 结果）
+     * requires 未先行/重复 id/apply 抛异常 → fail loud,逐插件原子回滚(R3)。
+     * @param runtime 目标运行时 @param ordered 加载顺序
      */
     public void loadAll(Runtime runtime, List<Plugin> ordered) {
-        Scope root = runtime.root();
+        loadAllUnder(runtime.root(), ordered);
+    }
+
+    /**
+     * 任意 scope 下装载(preset 等 agent-scope 挂载,06 §6):视图共享层=该 scope。
+     * 批内 requires 顺序校验同 loadAll;不在批内的 requires 视为由外层组合满足
+     * (preset 是增量能力集,tools 等基座在组合层已装载)。
+     */
+    public void loadAllUnder(Scope shared, List<Plugin> ordered) {
         Set<String> loaded = new HashSet<>();
         for (Plugin p : ordered) {
             if (!loaded.add(p.id())) {
                 throw new IllegalStateException("Plugin '" + p.id() + "' appears twice in load order");
             }
             for (String dep : p.requires()) {
+                if (ordered.stream().noneMatch(candidate -> candidate.id().equals(dep))
+                        && !loaded.contains(dep)) {
+                    continue; // 批外依赖:外层组合负责
+                }
                 if (!loaded.contains(dep)) {
                     throw new IllegalStateException(
                         "Plugin '" + p.id() + "' requires '" + dep
-                            + "' which is not loaded before it (check row order)");
+                            + "' which is not loaded before it (check preset row order)");
                 }
             }
-            Scope mount = runtime.mountScope();
+            Scope mount = shared.mountView();
             try {
                 p.apply(mount);
             } catch (Exception e) {

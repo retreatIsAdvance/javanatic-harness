@@ -38,7 +38,6 @@ public final class Runtime implements AutoCloseable {
      * 为插件装载创建挂载视图（PluginScope，.scope 包内核装配）：
      * provide 落共享 root（跨插件可见），effect/订阅落插件私有 child
      * （close 即整体回滚）。PluginLoader.loadAll 逐插件调用。
-     *
      * @return 挂载视图
      */
     public Scope mountScope() {
@@ -48,7 +47,6 @@ public final class Runtime implements AutoCloseable {
     /**
      * 全局事件总线。订阅请优先走 {@link Scope#events()}（随 scope 回收）；
      * 本方法用于派发与进程级全局订阅。
-     *
      * @return 事件总线
      */
     public Events events() {
