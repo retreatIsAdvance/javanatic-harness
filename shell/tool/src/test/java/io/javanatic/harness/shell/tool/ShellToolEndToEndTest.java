@@ -40,14 +40,14 @@ class ShellToolEndToEndTest {
                 new ShellToolPlugin(workspace, Duration.ofSeconds(10))));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             ToolRegistry registry = rt.root().require(ToolRegistry.KEY);
-            assertThat(registry.schemas().stream().map(schema -> schema.name()).toList())
+            assertThat(registry.schemas(rt.root()).stream().map(schema -> schema.name()).toList())
                 .contains("bash");
 
             Session session = Session.create(Session.newId("st"), null, null);
             List<LoggedEvent<ToolResultEvent>> results = executor.execute(
                 List.of(new ToolUseBlock(CallId.of("c1"), "bash",
                     "{\"command\":\"echo tool-ran > proof.txt && cat proof.txt\"}")),
-                session, 0, 0, AbortSignal.never());
+                session, 0, 0, rt.root(), AbortSignal.never());
 
             assertThat(results).hasSize(1);
             ToolResultEvent result = results.getFirst().event();
@@ -71,7 +71,7 @@ class ShellToolEndToEndTest {
             List<LoggedEvent<ToolResultEvent>> results = executor.execute(
                 List.of(new ToolUseBlock(CallId.of("c1"), "bash",
                     "{\"command\":\"echo bad >&2; exit 7\"}")),
-                session, 0, 0, AbortSignal.never());
+                session, 0, 0, rt.root(), AbortSignal.never());
 
             assertThat(results.getFirst().event().block().isError()).isTrue();
             assertThat(results.getFirst().event().block().content())

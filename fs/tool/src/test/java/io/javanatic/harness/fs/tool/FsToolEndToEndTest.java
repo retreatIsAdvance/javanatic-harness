@@ -35,7 +35,7 @@ class FsToolEndToEndTest {
                 new FsLocalPlugin(dir), new FsToolPlugin()));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             ToolRegistry registry = rt.root().require(ToolRegistry.KEY);
-            assertThat(registry.schemas()).extracting(s -> s.name())
+            assertThat(registry.schemas(rt.root())).extracting(s -> s.name())
                 .containsExactly("fs_delete", "fs_edit", "fs_list", "fs_read", "fs_write");
 
             Path file = dir.resolve("note.txt");
@@ -43,10 +43,10 @@ class FsToolEndToEndTest {
             executor.execute(List.of(
                 new ToolUseBlock(CallId.of("w1"), "fs_write",
                     "{\"path\":\"" + file + "\",\"content\":\"hello fs\"}")),
-                session, 0, 0, AbortSignal.never());
+                session, 0, 0, rt.root(), AbortSignal.never());
             List<LoggedEvent<ToolResultEvent>> reads = executor.execute(List.of(
                 new ToolUseBlock(CallId.of("r1"), "fs_read", "{\"path\":\"" + file + "\"}")),
-                session, 0, 1, AbortSignal.never());
+                session, 0, 1, rt.root(), AbortSignal.never());
 
             assertThat(reads.getFirst().event().block().content()).isEqualTo("hello fs");
             assertThat(session.events().stream().map(LoggedEvent::type)).containsExactly(

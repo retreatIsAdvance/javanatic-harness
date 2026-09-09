@@ -96,7 +96,7 @@ public final class ShellToolPlugin implements Plugin {
                     ? ToolExecutionResult.success(format(result))
                     : ToolExecutionResult.error(format(result));
             });
-        scope.onClose(registry.register(bash));
+        scope.onClose(registry.register(scope, bash));
     }
 
     private static String format(ShellResult result) {

@@ -195,7 +195,7 @@ class AgentLoopTest {
     void toolCallGoesThroughExecutorAndFeedsNextStep() {
         try (Rig rig = new Rig(List.of(
                 useTool("c1", "echo", "{\"path\":\"hello\"}"), say("done")))) {
-            rig.tools.register(echoTool());
+            rig.tools.register(rig.rt.root(), echoTool());
             Agent agent = rig.agent("a2").agent();
             agent.followup(text("echo hello"));
             agent.whenIdle().join();
@@ -233,7 +233,7 @@ class AgentLoopTest {
     void cancelDuringToolExecutionAbortsTurn() throws Exception {
         CountDownLatch started = new CountDownLatch(1);
         try (Rig rig = new Rig(List.of(useTool("c1", "blocker", "{}")))) {
-            rig.tools.register(blockingTool(started));
+            rig.tools.register(rig.rt.root(), blockingTool(started));
             Agent agent = rig.agent("a4").agent();
             agent.followup(text("go"));
             assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
@@ -252,7 +252,7 @@ class AgentLoopTest {
     void injectedContextAppearsInNextStepNotCurrent() {
         try (Rig rig = new Rig(List.of(
                 useTool("c1", "echo", "{\"path\":\"x\"}"), say("ok")))) {
-            rig.tools.register(echoTool());
+            rig.tools.register(rig.rt.root(), echoTool());
             Agent agent = rig.agent("a5").agent();
             agent.inject(text("ctx-fact"));
             agent.followup(text("task"));
@@ -380,7 +380,7 @@ class AgentLoopTest {
     void maintenanceRunsWhenIdleAndRejectsWhenBusy() throws Exception {
         CountDownLatch started = new CountDownLatch(1);
         try (Rig rig = new Rig(List.of(useTool("c1", "blocker", "{}"), say("tail")))) {
-            rig.tools.register(blockingTool(started));
+            rig.tools.register(rig.rt.root(), blockingTool(started));
             Agent agent = rig.agent("a10").agent();
 
             assertThat(agent.runMaintenance(() -> "ok").join()).isEqualTo("ok");
@@ -400,7 +400,7 @@ class AgentLoopTest {
     void disposeCancelsDeregistersAndEndsTurnAsDisposed() throws Exception {
         CountDownLatch started = new CountDownLatch(1);
         try (Rig rig = new Rig(List.of(useTool("c1", "blocker", "{}")))) {
-            rig.tools.register(blockingTool(started));
+            rig.tools.register(rig.rt.root(), blockingTool(started));
             Id<Session> id = Session.newId("a11");
             AgentHandle handle = rig.agents.create(rig.rt.root(),
                 CreateAgentOptions.of(id, OPTIONS));

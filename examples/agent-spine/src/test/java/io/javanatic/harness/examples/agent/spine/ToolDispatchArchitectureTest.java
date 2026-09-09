@@ -12,6 +12,7 @@ import io.javanatic.harness.fs.local.FsLocalPlugin;
 import io.javanatic.harness.fs.tool.FsToolPlugin;
 import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.kernel.scope.Runtime;
+import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.llm.LlmService;
 import io.javanatic.harness.llm.replay.ReplayPlugin;
@@ -52,7 +53,8 @@ class ToolDispatchArchitectureTest {
     private static final ArchRule ONLY_LOOP_DISPATCHES_MODEL_TOOL_CALLS = noClasses()
         .that().doNotHaveFullyQualifiedName(LOOP)
         .should().callMethod(ToolExecutor.class, "execute",
-            List.class, Session.class, int.class, int.class, AbortSignal.class)
+            List.class, Session.class, int.class, int.class,
+        Scope.class, AbortSignal.class)
         .because("R2：新增第二条分发路径（如插件直接 execute 模型 toolCall）即破不变式");
 
     /** tool/result 审计落账归属 executor：只有 ToolExecutorImpl 构造 ToolResultEvent。 */

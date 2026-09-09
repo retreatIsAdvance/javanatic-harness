@@ -45,7 +45,7 @@ class ApprovalModesTest {
                     return true;
                 }),
                 new ToolsPlugin()));
-            rt.root().require(ToolRegistry.KEY).register(echoTool());
+            rt.root().require(ToolRegistry.KEY).register(rt.root(), echoTool());
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             assertThat(rt.root().require(ApprovalService.KEY).mode())
                 .isEqualTo(ApprovalService.Mode.HUMAN_GATE);
@@ -59,7 +59,7 @@ class ApprovalModesTest {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
                 new ApprovalAskPlugin(request -> false), new ToolsPlugin()));
-            rt.root().require(ToolRegistry.KEY).register(echoTool());
+            rt.root().require(ToolRegistry.KEY).register(rt.root(), echoTool());
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             var result = execute(executor, rt);
             assertThat(result.block().isError()).isTrue();
@@ -72,7 +72,7 @@ class ApprovalModesTest {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
                 new ApprovalDenyPlugin(), new ToolsPlugin()));
-            rt.root().require(ToolRegistry.KEY).register(echoTool());
+            rt.root().require(ToolRegistry.KEY).register(rt.root(), echoTool());
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             assertThat(rt.root().require(ApprovalService.KEY).mode())
                 .isEqualTo(ApprovalService.Mode.DENY_ALL);
@@ -101,6 +101,6 @@ class ApprovalModesTest {
         return executor.execute(
             List.of(new ToolUseBlock(CallId.of("c1"), "echo", "{}")),
             Session.create(Session.newId("a"), null, null),
-            0, 0, AbortSignal.never()).getFirst().event();
+            0, 0, rt.root(), AbortSignal.never()).getFirst().event();
     }
 }

@@ -19,7 +19,7 @@ public final class ToolsPlugin implements Plugin {
 
     @Override
     public void apply(Scope scope) {
-        RegistryImpl registry = new RegistryImpl();
+        ScopedRegistry registry = new ScopedRegistry();
         scope.provide(ToolRegistry.KEY, registry);
         ApprovalService approval = scope.require(ApprovalService.KEY);
         Events events = scope.require(Runtime.KEY).events();

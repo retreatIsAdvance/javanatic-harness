@@ -41,16 +41,22 @@ final class ToolExecutorImpl implements ToolExecutor {
         this.origin = origin;
     }
 
+    /** 一次批次内的执行上下文(落账与解析依据,五段 pipeline 全程携带)。 */
+    private record ExecContext(Session session, int turn, int step, Scope agentScope) {
+    }
+
     @Override
     public List<LoggedEvent<ToolResultEvent>> execute(List<ToolUseBlock> calls, Session session,
-                                                      int turn, int step, AbortSignal signal) {
+                                                      int turn, int step, Scope agentScope,
+                                                      AbortSignal signal) {
+        ExecContext context = new ExecContext(session, turn, step, agentScope);
         Set<Id<CallId>> batchIds = ConcurrentHashMap.newKeySet();
         List<CompletableFuture<LoggedEvent<ToolResultEvent>>> futures = new ArrayList<>(calls.size());
         for (ToolUseBlock call : calls) {
             CompletableFuture<LoggedEvent<ToolResultEvent>> future = new CompletableFuture<>();
             Thread.ofVirtual().start(() -> {
                 try {
-                    future.complete(executeOne(call, session, turn, step, signal, batchIds));
+                    future.complete(executeOne(call, context, signal, batchIds));
                 } catch (Throwable t) {
                     future.completeExceptionally(t);
                 }
@@ -71,9 +77,12 @@ final class ToolExecutorImpl implements ToolExecutor {
         return results;
     }
 
-    private LoggedEvent<ToolResultEvent> executeOne(ToolUseBlock call, Session session,
-                                                    int turn, int step, AbortSignal signal,
+    private LoggedEvent<ToolResultEvent> executeOne(ToolUseBlock call, ExecContext context,
+                                                    AbortSignal signal,
                                                     Set<Id<CallId>> batchIds) {
+        Session session = context.session();
+        int turn = context.turn();
+        int step = context.step();
         // 1. 审计落账：先于一切裁决——尝试本身即事实
         session.append(new ToolCallEvent(System.currentTimeMillis(), turn, step,
             call.id(), call.name(), call.arguments()));
@@ -94,7 +103,7 @@ final class ToolExecutorImpl implements ToolExecutor {
                 call.name(), call.name() + " " + call.arguments(), call.arguments());
             approval.require(request);
             // 4. 执行（未知工具与异常 → error result；错误即数据）
-            ToolDefinition tool = registry.resolve(call.name()).orElse(null);
+            ToolDefinition tool = registry.resolve(context.agentScope(), call.name()).orElse(null);
             if (tool == null) {
                 return appendResult(call, session, turn, step,
                     ToolExecutionResult.error("Unknown tool: " + call.name()));

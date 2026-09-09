@@ -1,5 +1,6 @@
 package io.javanatic.harness.tools;
 
+import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.kernel.scope.ServiceKey;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.session.Session;
@@ -21,8 +22,9 @@ public interface ToolExecutor {
      * {@link io.javanatic.harness.llm.AbortedException} 传播（取消收敛 turn）。
      *
      * @param session 落账目标会话（executor 跨会话共享，会话是参数而非字段）
+     * @param agentScope 发起 agent 的 scope（scoped 工具解析依据，06 §4）
      * @param signal  取消信号
      */
     List<LoggedEvent<ToolResultEvent>> execute(List<ToolUseBlock> calls, Session session,
-                                               int turn, int step, AbortSignal signal);
+                                               int turn, int step, Scope agentScope, AbortSignal signal);
 }

@@ -337,7 +337,7 @@ public final class AgentLoopImpl implements Agent {
             session.append(new StepStart(clock.millis(), turn, step));
 
             String systemPrompt = prompts.assemble(session);
-            List<ToolSchema> schemas = tools.schemas();
+            List<ToolSchema> schemas = tools.schemas(agentScope);
             LlmCallConfig config = events.waterfall(AgentEvents.REQUEST, agentScope, this,
                 List.of(turn, step, signal),
                 fallback -> new LlmCallConfig(options.provider(), options.model()));
@@ -377,7 +377,8 @@ public final class AgentLoopImpl implements Agent {
                 session.append(new StepEnd(clock.millis(), turn, step));
                 return;
             }
-            List<LoggedEvent<ToolResultEvent>> results = executor.execute(calls, session, turn, step, signal);
+            List<LoggedEvent<ToolResultEvent>> results = executor.execute(calls, session, turn,
+                step, agentScope, signal);
             session.append(new StepEnd(clock.millis(), turn, step));
 
             if (abort.isAborted()) {

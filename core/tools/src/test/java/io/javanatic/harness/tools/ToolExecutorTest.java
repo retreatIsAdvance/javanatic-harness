@@ -35,16 +35,15 @@ class ToolExecutorTest {
         return new ToolUseBlock(CallId.of(id), "echo", args);
     }
 
-    /** 直接装配（绕过插件）：registry + 手选审批实现。 */
     /** 直接装配（绕过插件）：registry + 手选审批实现；close 收拢 Runtime。 */
     private static final class Rig implements AutoCloseable {
         final Runtime rt;
-        final RegistryImpl registry;
+        final ScopedRegistry registry;
         final ToolExecutor executor;
 
         private Rig(ApprovalService approval) {
             this.rt = new Runtime();
-            this.registry = new RegistryImpl();
+            this.registry = new ScopedRegistry();
             this.executor = new ToolExecutorImpl(registry, approval, rt.events(), rt.root());
         }
 
@@ -61,10 +60,10 @@ class ToolExecutorTest {
     @Test
     void successPathPairsCallAndResultEvents() {
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(echo());
+            rig.registry.register(rig.rt.root(), echo());
             Session session = Session.create(Session.newId("t"), null, null);
             List<LoggedEvent<ToolResultEvent>> out = rig.executor
-                .execute(List.of(call("c1", "{\"path\":\"hello\"}")), session, 0, 0,
+                .execute(List.of(call("c1", "{\"path\":\"hello\"}")), session, 0, 0, rig.rt.root(),
                     AbortSignal.never());
             assertThat(out).hasSize(1);
             assertThat(out.getFirst().event().block().isError()).isFalse();
@@ -80,11 +79,11 @@ class ToolExecutorTest {
             throw new IllegalStateException("boom");
         });
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(bomb);
+            rig.registry.register(rig.rt.root(), bomb);
             Session session = Session.create(Session.newId("t"), null, null);
             List<LoggedEvent<ToolResultEvent>> out = rig.executor
                 .execute(List.of(new ToolUseBlock(CallId.of("c1"), "bomb", "{\"path\":\"x\"}")),
-                    session, 0, 0, AbortSignal.never());
+                    session, 0, 0, rig.rt.root(), AbortSignal.never());
             assertThat(out.getFirst().event().block().isError()).isTrue();
             assertThat(out.getFirst().event().block().content()).contains("boom");
             assertThat(session.events()).hasSize(2); // 错误也成对落账
@@ -94,12 +93,12 @@ class ToolExecutorTest {
     @Test
     void preExecuteVetoDeniesWithoutExecution() {
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(echo());
+            rig.registry.register(rig.rt.root(), echo());
             rig.rt.root().events().onWaterfall(ToolEvents.PRE_EXECUTE, (carrier, args) ->
                 ToolExecutionPlan.veto("policy"));
             Session session = Session.create(Session.newId("t"), null, null);
             List<LoggedEvent<ToolResultEvent>> out = rig.executor
-                .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, AbortSignal.never());
+                .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, rig.rt.root(), AbortSignal.never());
             assertThat(out.getFirst().event().block().isError()).isTrue();
             assertThat(out.getFirst().event().block().content()).contains("vetoed").contains("policy");
         }
@@ -108,10 +107,10 @@ class ToolExecutorTest {
     @Test
     void approvalDenialBecomesErrorResult() {
         try (Rig rig = Rig.with(Approvals.deny())) {
-            rig.registry.register(echo());
+            rig.registry.register(rig.rt.root(), echo());
             Session session = Session.create(Session.newId("t"), null, null);
             List<LoggedEvent<ToolResultEvent>> out = rig.executor
-                .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, AbortSignal.never());
+                .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, rig.rt.root(), AbortSignal.never());
             assertThat(out.getFirst().event().block().isError()).isTrue();
             assertThat(out.getFirst().event().block().content()).contains("denied");
             assertThat(session.events()).hasSize(2);
@@ -121,13 +120,13 @@ class ToolExecutorTest {
     @Test
     void duplicateCallIdInBatchYieldsErrorResult() {
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(echo());
+            rig.registry.register(rig.rt.root(), echo());
             Session session = Session.create(Session.newId("t"), null, null);
             // 两个同 id 调用并行提交：谁先占用 callId 不确定，
             // 但必然恰一个执行成功、恰一个 Duplicate 错误，且都成对落账
             List<LoggedEvent<ToolResultEvent>> out = rig.executor
                 .execute(List.of(call("c1", "{\"path\":\"a\"}"), call("c1", "{\"path\":\"b\"}")),
-                    session, 0, 0, AbortSignal.never());
+                    session, 0, 0, rig.rt.root(), AbortSignal.never());
             assertThat(out).hasSize(2);
             assertThat(out.stream().filter(e -> e.event().block().isError()).count()).isEqualTo(1);
             assertThat(out.stream().filter(e -> !e.event().block().isError()).count()).isEqualTo(1);
@@ -143,7 +142,7 @@ class ToolExecutorTest {
             Session session = Session.create(Session.newId("t"), null, null);
             List<LoggedEvent<ToolResultEvent>> out = rig.executor
                 .execute(List.of(new ToolUseBlock(CallId.of("c1"), "ghost", "{}")),
-                    session, 0, 0, AbortSignal.never());
+                    session, 0, 0, rig.rt.root(), AbortSignal.never());
             assertThat(out.getFirst().event().block().isError()).isTrue();
             assertThat(out.getFirst().event().block().content()).contains("Unknown tool");
         }
@@ -152,13 +151,13 @@ class ToolExecutorTest {
     @Test
     void abortPropagatesInsteadOfBecomingErrorResult() {
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(echo());
+            rig.registry.register(rig.rt.root(), echo());
             rig.rt.root().events().onWaterfall(ToolEvents.PRE_EXECUTE, (carrier, args) -> {
                 throw new AbortedException("cancelled");
             });
             Session session = Session.create(Session.newId("t"), null, null);
             assertThatThrownBy(() -> rig.executor
-                .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, AbortSignal.never()))
+                .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, rig.rt.root(), AbortSignal.never()))
                 .isInstanceOf(AbortedException.class);
             assertThat(session.events()).hasSize(1); // 只有 tool/call——取消不伪造结果
         }
@@ -171,13 +170,13 @@ class ToolExecutorTest {
             return ToolExecutionResult.success(args.readString("path"));
         });
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(slow);
-            rig.registry.register(echo());
+            rig.registry.register(rig.rt.root(), slow);
+            rig.registry.register(rig.rt.root(), echo());
             Session session = Session.create(Session.newId("t"), null, null);
             List<LoggedEvent<ToolResultEvent>> out = rig.executor.execute(
                 List.of(new ToolUseBlock(CallId.of("a"), "slow", "{\"path\":\"first\"}"),
                     call("b", "{\"path\":\"second\"}")),
-                session, 0, 0, AbortSignal.never());
+                session, 0, 0, rig.rt.root(), AbortSignal.never());
             assertThat(out).extracting(e -> e.event().block().content())
                 .containsExactly("first", "second"); // 同序，尽管 first 慢后完成
         }
@@ -186,12 +185,12 @@ class ToolExecutorTest {
     @Test
     void postExecuteCanRewriteResult() {
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(echo());
+            rig.registry.register(rig.rt.root(), echo());
             rig.rt.root().events().onWaterfall(ToolEvents.POST_EXECUTE, (carrier, args) ->
                 ToolExecutionResult.error("spilled"));
             Session session = Session.create(Session.newId("t"), null, null);
             List<LoggedEvent<ToolResultEvent>> out = rig.executor
-                .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, AbortSignal.never());
+                .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, rig.rt.root(), AbortSignal.never());
             assertThat(out.getFirst().event().block().content()).isEqualTo("spilled");
         }
     }
@@ -199,10 +198,10 @@ class ToolExecutorTest {
     @Test
     void toolResultProjectsIntoDerivedMessages() {
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(echo());
+            rig.registry.register(rig.rt.root(), echo());
             Session session = Session.create(Session.newId("t"), null, null);
             rig.executor.execute(List.of(call("c1", "{\"path\":\"hello\"}")),
-                session, 0, 0, AbortSignal.never());
+                session, 0, 0, rig.rt.root(), AbortSignal.never());
             List<Message> messages = session.deriveMessages();
             assertThat(messages).hasSize(1);
             assertThat(messages.getFirst().source())
@@ -234,16 +233,16 @@ class ToolExecutorTest {
     @Test
     void registryRejectsDuplicatesAndSchemasAreSorted() {
         try (Rig rig = Rig.with(Approvals.auto())) {
-            rig.registry.register(echo());
-            assertThatThrownBy(() -> rig.registry.register(echo()))
+            rig.registry.register(rig.rt.root(), echo());
+            assertThatThrownBy(() -> rig.registry.register(rig.rt.root(), echo()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("echo");
-            rig.registry.register(ToolDefinition.of("aaa", "first", ARGS, (a, c) ->
+            rig.registry.register(rig.rt.root(), ToolDefinition.of("aaa", "first", ARGS, (a, c) ->
                 ToolExecutionResult.success("x")));
-            assertThat(rig.registry.schemas()).extracting(s -> s.name())
+            assertThat(rig.registry.schemas(rig.rt.root())).extracting(s -> s.name())
                 .containsExactly("aaa", "echo"); // 名称排序，确定性
-            assertThat(rig.registry.schemas().get(1).parametersJson()).contains("\"path\"");
-            assertThat(rig.registry.resolve("ghost")).isEmpty();
+            assertThat(rig.registry.schemas(rig.rt.root()).get(1).parametersJson()).contains("\"path\"");
+            assertThat(rig.registry.resolve(rig.rt.root(), "ghost")).isEmpty();
         }
     }
 

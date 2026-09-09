@@ -39,11 +39,11 @@ public final class FsToolPlugin implements Plugin {
     public void apply(Scope scope) {
         ToolRegistry registry = scope.require(ToolRegistry.KEY);
         FsService fs = scope.require(FsService.KEY);
-        scope.onClose(registry.register(readTool(fs)));
-        scope.onClose(registry.register(writeTool(fs)));
-        scope.onClose(registry.register(editTool(fs)));
-        scope.onClose(registry.register(deleteTool(fs)));
-        scope.onClose(registry.register(listTool(fs)));
+        scope.onClose(registry.register(scope, readTool(fs)));
+        scope.onClose(registry.register(scope, writeTool(fs)));
+        scope.onClose(registry.register(scope, editTool(fs)));
+        scope.onClose(registry.register(scope, deleteTool(fs)));
+        scope.onClose(registry.register(scope, listTool(fs)));
     }
 
     private static ToolDefinition readTool(FsService fs) {

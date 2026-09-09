@@ -1,6 +1,7 @@
 package io.javanatic.harness.tools;
 
 import io.javanatic.harness.kernel.scope.Disposable;
+import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.kernel.scope.ServiceKey;
 import io.javanatic.harness.llm.ToolSchema;
 
@@ -14,14 +15,19 @@ public interface ToolRegistry {
     ServiceKey<ToolRegistry> KEY = new ServiceKey<>("tools");
 
     /**
-     * @throws IllegalStateException 同名工具已注册
-     * @return 注销凭据（工具插件挂自身 scope，R3）
+     * 注册到 owner 的层（06 §4：层键 = registrationScope——root 挂载对每个
+     * agent 可见，agent 挂载仅本 agent 子树可见；同名跨层 shadowing）。
+     *
+     * @param owner 注册归属（插件传自己的 apply scope 即可）
+     * @param tool 工具定义
+     * @throws IllegalStateException 同层同名工具已注册（配置错误）
+     * @return 注销凭据（层随 owner 关闭兜底回收，R3）
      */
-    Disposable register(ToolDefinition tool);
+    Disposable register(Scope owner, ToolDefinition tool);
 
-    /** 当前已注册工具的 schema（名称排序，确定性）。 */
-    List<ToolSchema> schemas();
+    /** 该 scope 可见的工具 schema（层合并 shadowing，名称排序确定性；agent-loop 组装请求的唯一来源，R2）。 */
+    List<ToolSchema> schemas(Scope scope);
 
-    /** @return 按名解析的工具定义 */
-    Optional<ToolDefinition> resolve(String name);
+    /** @return 该 scope 可见范围内按名解析的工具定义 */
+    Optional<ToolDefinition> resolve(Scope scope, String name);
 }
