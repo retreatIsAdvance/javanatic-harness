@@ -14,6 +14,7 @@ public sealed interface SessionEvent permits
     TurnStart, TurnEnd, StepStart, StepEnd,
     UserMessageEvent, AssistantMessageEvent, LlmRequestEvent,
     ToolCallEvent, ToolResultEvent,
+    CompactionStart, CompactionSummary, CompactionEnd, RequestHeader,
     SessionEndSeedEvent, ExtensionEvent {
 
     /** Unix epoch 毫秒。 */

@@ -17,4 +17,7 @@ public interface MessageSource {
 
     /** 工具结果（toolUseId 即其响应的那个调用）。 */
     record Tool(Id<CallId> toolUseId) implements MessageSource {}
+
+    /** 压缩 checkpoint(自动生成的既定背景,不作为新指令)。 */
+    record Compaction() implements MessageSource {}
 }

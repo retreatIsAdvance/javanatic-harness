@@ -1,22 +1,29 @@
 package io.javanatic.harness.session.persistence.jsonl;
 
-
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.session.CreateOptions;
+import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionStore;
+import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.AssistantMessageEvent;
+import io.javanatic.harness.session.event.CompactionEnd;
+import io.javanatic.harness.session.event.CompactionStart;
+import io.javanatic.harness.session.event.CompactionSummary;
 import io.javanatic.harness.session.event.ExtensionEvent;
 import io.javanatic.harness.session.event.LlmRequestEvent;
+import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.StepEnd;
-import io.javanatic.harness.session.event.SurfaceOp;
 import io.javanatic.harness.session.event.StepStart;
+import io.javanatic.harness.session.event.SurfaceOp;
 import io.javanatic.harness.session.event.ToolCallEvent;
 import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.event.TurnEnd;
 import io.javanatic.harness.session.event.TurnEndReason;
 import io.javanatic.harness.session.event.TurnStart;
 import io.javanatic.harness.session.event.UserMessageEvent;
+import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.message.AssistantMessage;
 import io.javanatic.harness.session.message.CallId;
 import io.javanatic.harness.session.message.MessageSource;
@@ -24,24 +31,25 @@ import io.javanatic.harness.session.message.TextBlock;
 import io.javanatic.harness.session.message.TokenUsage;
 import io.javanatic.harness.session.message.ToolResultBlock;
 import io.javanatic.harness.session.message.ToolUseBlock;
-import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.persistence.SessionPersistence;
-import io.javanatic.harness.session.Session;
-import io.javanatic.harness.session.SessionStore;
-import io.javanatic.harness.session.SessionStorePlugin;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Map;
-
+import java.util.NoSuchElementException;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+
+
+
+
+
+
+
 
 /** JSONL 往返、seq 校验、ignorable 决策、全事件落盘重载。 */
 class JsonlPersistenceTest {
@@ -74,7 +82,18 @@ class JsonlPersistenceTest {
                 new AssistantMessage(new MessageSource.Model("replay", "m"),
                     List.of(new TextBlock("答案"))), null, new SurfaceOp.Append(), null),
             new StepEnd(12, 1, 1),
-            new TurnEnd(13, 1, new TurnEndReason.Completed()));
+            new TurnEnd(13, 1, new TurnEndReason.Completed()),
+            new CompactionStart(14, 1),
+            new CompactionSummary(15, 1, "摘要", "replay", "m",
+                new TokenUsage(100, 20, 0), 1, 6),
+            new UserMessageEvent(16,
+                new UserMessage(
+                    new MessageSource.Compaction(),
+                    List.of(new TextBlock("背景…"))),
+                new SurfaceOp.Replace(1, 6),
+                List.of(1L, 2L, 3L, 4L, 5L, 6L)),
+            new CompactionEnd(17, 1, null),
+            new RequestHeader(18, "/w", "2026-09-09"));
     }
 
     @Test

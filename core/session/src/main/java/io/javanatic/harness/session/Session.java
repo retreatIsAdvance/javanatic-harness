@@ -139,6 +139,20 @@ public final class Session {
         return List.copyOf(derived);
     }
 
+    /** 当前 surface 节点 seq 列表(位置序;压缩 Replace 区间端点与保留尾选择的依据)。 */
+    public synchronized java.util.List<Long> surfaceSeqs() {
+        java.util.List<Long> seqs = new java.util.ArrayList<>(surface.nodeCount());
+        for (int i = 0; i < surface.nodeCount(); i++) {
+            seqs.add(surface.nodeAt(i));
+        }
+        return List.copyOf(seqs);
+    }
+
+    /** 按日志 seq 取事件(本进程内;越界 IllegalArgumentException——seq 即日志下标)。 */
+    public synchronized SessionEvent eventAt(long seq) {
+        return log.get((int) seq).event();
+    }
+
     /** 日志快照（不可变；调用方遍历不受并发 append 影响，旧快照不增长）。 */
     public synchronized List<LoggedEvent<? extends SessionEvent>> events() {
         return List.copyOf(log);

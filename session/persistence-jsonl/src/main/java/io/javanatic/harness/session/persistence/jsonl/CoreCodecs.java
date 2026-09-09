@@ -4,6 +4,10 @@ import io.javanatic.harness.session.event.AssistantMessageEvent;
 import io.javanatic.harness.session.event.LlmRequestEvent;
 import io.javanatic.harness.session.event.SessionEndSeedEvent;
 import io.javanatic.harness.session.event.SessionEvent;
+import io.javanatic.harness.session.event.CompactionEnd;
+import io.javanatic.harness.session.event.CompactionStart;
+import io.javanatic.harness.session.event.CompactionSummary;
+import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.StepEnd;
 import io.javanatic.harness.session.event.SurfaceOp;
 import io.javanatic.harness.session.event.StepStart;
@@ -65,10 +69,32 @@ final class CoreCodecs {
                 b -> new StepEnd(b.get("time").asLong(), (int) b.get("turn").asLong(),
                     (int) b.get("step").asLong())),
             codec("user/message", UserMessageEvent.class,
-                e -> JsonValue.object().set("time", e.time())
-                    .set("message", message(e.message())).build(),
-                b -> new UserMessageEvent(b.get("time").asLong(),
-                    userMessage(b.get("message").asObj()), new SurfaceOp.Append(), null)),
+                e -> {
+                    JsonValue.Builder b = JsonValue.object().set("time", e.time())
+                        .set("message", message(e.message()));
+                    if (e.surfaceOp() instanceof SurfaceOp.Replace r) {
+                        b.set("replaceStart", r.start()).set("replaceEnd", r.end());
+                        if (e.sourceEventSeqs() != null) {
+                            b.set("sourceEventSeqs", new JsonValue.Arr(e.sourceEventSeqs().stream()
+                                    .map(seq -> (JsonValue) new JsonValue.Num(seq)).toList()));
+                        }
+                    }
+                    return b.build();
+                },
+                b -> {
+                    SurfaceOp op = new SurfaceOp.Append();
+                    List<Long> seqs = null;
+                    if (b.get("replaceStart").asLong() > 0 || b.get("replaceEnd").asLong() > 0) {
+                        op = new SurfaceOp.Replace(b.get("replaceStart").asLong(),
+                            b.get("replaceEnd").asLong());
+                        JsonValue raw = b.get("sourceEventSeqs");
+                        if (raw instanceof JsonValue.Arr arr) {
+                            seqs = arr.items().stream().map(JsonValue::asLong).toList();
+                        }
+                    }
+                    return new UserMessageEvent(b.get("time").asLong(),
+                        userMessage(b.get("message").asObj()), op, seqs);
+                }),
             codec("assistant/message", AssistantMessageEvent.class,
                 e -> JsonValue.object().set("time", e.time()).set("turn", e.turn())
                     .set("step", e.step()).set("message", message(e.message()))
@@ -109,6 +135,31 @@ final class CoreCodecs {
                     new ToolResultBlock(CallId.of(b.get("toolUseId").asString()),
                         b.get("content").asString(), b.get("isError").asBool()),
                     b.get("concludesTurn").asBool(), new SurfaceOp.Append(), null)),
+            codec("compaction/start", CompactionStart.class,
+                e -> JsonValue.object().set("time", e.time()).set("turn", e.turn()).build(),
+                b -> new CompactionStart(
+                    b.get("time").asLong(), (int) b.get("turn").asLong())),
+            codec("compaction/summary", CompactionSummary.class,
+                e -> JsonValue.object().set("time", e.time()).set("turn", e.turn())
+                    .set("summary", e.summary()).set("provider", e.provider())
+                    .set("model", e.model()).set("usage", usage(e.usage()))
+                    .set("shadowedStart", e.shadowedStart()).set("shadowedEnd", e.shadowedEnd()).build(),
+                b -> new CompactionSummary(
+                    b.get("time").asLong(), (int) b.get("turn").asLong(),
+                    b.get("summary").asString(), b.get("provider").asString(),
+                    b.get("model").asString(), usage(b.get("usage").asObj()),
+                    b.get("shadowedStart").asLong(), b.get("shadowedEnd").asLong())),
+            codec("compaction/end", CompactionEnd.class,
+                e -> JsonValue.object().set("time", e.time()).set("turn", e.turn())
+                    .set("error", e.error()).build(),
+                b -> new CompactionEnd(
+                    b.get("time").asLong(), (int) b.get("turn").asLong(),
+                    b.get("error").asString())),
+            codec("request/header", RequestHeader.class,
+                e -> JsonValue.object().set("time", e.time()).set("cwd", e.cwd())
+                    .set("date", e.date()).build(),
+                b -> new RequestHeader(
+                    b.get("time").asLong(), b.get("cwd").asString(), b.get("date").asString())),
             codec("session/end-seed", SessionEndSeedEvent.class,
                 e -> JsonValue.object().set("time", e.time()).build(),
                 b -> new SessionEndSeedEvent(b.get("time").asLong())));
@@ -192,6 +243,7 @@ final class CoreCodecs {
                 .set("provider", model.provider()).set("model", model.model()).build();
             case MessageSource.Tool tool -> JsonValue.object().set("kind", "tool")
                 .set("toolUseId", tool.toolUseId().value()).build();
+            case MessageSource.Compaction ignored -> JsonValue.object().set("kind", "compaction").build();
             default -> throw new IllegalStateException("unknown source: " + source);
         };
     }
@@ -225,6 +277,7 @@ final class CoreCodecs {
             case "model" -> new MessageSource.Model(obj.get("provider").asString(),
                 obj.get("model").asString());
             case "tool" -> new MessageSource.Tool(CallId.of(obj.get("toolUseId").asString()));
+            case "compaction" -> new MessageSource.Compaction();
             default -> throw new IllegalStateException("unknown source kind: " + obj.get("kind"));
         };
     }
