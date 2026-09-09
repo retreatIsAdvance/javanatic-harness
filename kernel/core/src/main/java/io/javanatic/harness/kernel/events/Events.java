@@ -44,7 +44,6 @@ public final class Events {
     /**
      * 返回绑定 scope 的订阅视图（{@code Scope.events()} 的实现后端）：
      * 订阅挂 scope effect 栈，随 scope 回收。
-     *
      * @param scope 订阅绑定的 scope
      * @return 订阅视图
      */
@@ -56,7 +55,6 @@ public final class Events {
      * 返回插件挂载视图（{@code Runtime.mountScope()} 的订阅后端）：
      * 过滤绑 shared（收到整个挂载子树——含 session 层——派发的事件），
      * 注销登记在 owner（插件私有栈，close 即退订）。
-     *
      * @param shared 过滤绑定的共享 scope（root）
      * @param owner  注销登记的插件私有 scope
      * @return 订阅视图
@@ -88,7 +86,6 @@ public final class Events {
 
     /**
      * 并发通知：每 listener 一个虚拟线程，fire-and-forget；异常记日志，不传播。
-     *
      * @param <T> 负载类型
      * @param key NOTIFY key
      * @param origin 派发方 scope（订阅 scope 过滤的依据）
@@ -108,7 +105,6 @@ public final class Events {
     /**
      * 顺序通知：listener 按订阅序在调用方线程执行；任一异常停止派发，
      * 包装为 CompletionException 传播。
-     *
      * @param <T> 负载类型
      * @param key NOTIFY key
      * @param origin 派发方 scope
@@ -128,7 +124,6 @@ public final class Events {
     /**
      * 并发通知并返回全部完成的 future（join barrier：持久化 flush 等待全体落账用）。
      * 单 listener 失败记日志，不使 future 异常完成。
-     *
      * @param <T> 负载类型
      * @param key NOTIFY key
      * @param origin 派发方 scope
@@ -153,7 +148,6 @@ public final class Events {
     /**
      * 中间件链：按订阅序同步执行在调用方（虚拟）线程。listener 不调 next 即短路；
      * next 二次调用抛 IllegalStateException；listener 的受检异常包装为 CompletionException，RuntimeException（语义异常）原样上抛。
-     *
      * @param <T> 链的返回类型
      * @param key WATERFALL key
      * @param origin 派发方 scope
@@ -187,7 +181,6 @@ public final class Events {
 
     /**
      * 查询形态：首个非 null 返回值短路整链；全部返回 null（含 inner 兜底）时为 empty。
-     *
      * @param <T> 查询返回类型
      * @param key WATERFALL key
      * @param origin 派发方 scope

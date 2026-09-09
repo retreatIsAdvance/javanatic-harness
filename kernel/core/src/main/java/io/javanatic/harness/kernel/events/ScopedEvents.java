@@ -12,7 +12,6 @@ public interface ScopedEvents {
 
     /**
      * 本 scope 订阅：收到本 scope 及其后代 scope 派发的事件（向上冒泡）。
-     *
      * @param <T> 负载类型
      * @param key NOTIFY key
      * @param listener 监听器
@@ -22,7 +21,6 @@ public interface ScopedEvents {
 
     /**
      * 全局订阅：忽略 scope 过滤，收到一切派发；仍随本 scope 回收。
-     *
      * @param <T> 负载类型
      * @param key NOTIFY key
      * @param listener 监听器
@@ -32,7 +30,6 @@ public interface ScopedEvents {
 
     /**
      * 本 scope 的 waterfall 订阅。
-     *
      * @param <T> 链的返回类型
      * @param key WATERFALL key
      * @param listener 中间件

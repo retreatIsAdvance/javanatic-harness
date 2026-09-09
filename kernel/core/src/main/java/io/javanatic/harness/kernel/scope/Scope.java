@@ -21,7 +21,6 @@ public interface Scope extends AutoCloseable {
      * 子 scope 注册同 key 覆盖父级（overlay/shadow，preset 组合用它）。
      * 注册即 effect：返回的 Disposable close 即注销；
      * 调用方不 close 时，scope close 按 LIFO 兜底回收。
-     *
      * @param <T> 服务接口类型
      * @param key 服务标识
      * @param impl 服务实现
@@ -32,7 +31,6 @@ public interface Scope extends AutoCloseable {
     /**
      * 沿父链向上查找服务；本 scope 起查。每次访问重查、不缓存——
      * provider scope close 即注销，任何后续 resolve 都查不到（R3 结构性保证）。
-     *
      * @param <T> 服务接口类型
      * @param key 服务标识
      * @return 命中的实现；链上无提供者时为 empty
@@ -41,7 +39,6 @@ public interface Scope extends AutoCloseable {
 
     /**
      * resolve 的 fail-loud 版：沿链无提供者时抛 ServiceNotAvailableException。
-     *
      * @param <T> 服务接口类型
      * @param key 服务标识
      * @return 命中的实现
@@ -51,7 +48,6 @@ public interface Scope extends AutoCloseable {
     /**
      * 注册一个 effect：register() 执行注册副作用并返回回收器，回收器入栈。
      * register 抛异常则注册失败、无回收器入栈（原子性）。
-     *
      * @param effect 注册副作用
      * @return 可回收句柄
      */
@@ -59,7 +55,6 @@ public interface Scope extends AutoCloseable {
 
     /**
      * 纯 teardown 挂载（无注册副作用）。等价于 {@code effect(() -> closeable)}。
-     *
      * @param closeable 回收器
      * @return 可回收句柄
      */
@@ -67,21 +62,27 @@ public interface Scope extends AutoCloseable {
 
     /**
      * 派生子 scope：新的生命周期域 + 服务 overlay 层。父 close 级联子。
-     *
      * @return 子 scope
      */
     Scope child();
 
     /**
+     * scoped 注册层的归属:挂载视图(PluginScope)返回其共享层,普通 scope 返回自身。
+     * per-scope 注册表以此统一「root 挂载落 root、agent 挂载落 agentScope」(06 §3)。
+     * @return 注册归属 scope
+     */
+    default Scope registrationScope() {
+        return this;
+    }
+
+    /**
      * 父 scope；root 返回 null。事件冒泡与 overlay 以父链为据。
-     *
      * @return 父 scope；本 scope 为 root 时为 null
      */
     Scope parent();
 
     /**
      * 绑定本 scope 的事件订阅视图（订阅随 scope 回收）。
-     *
      * @return 订阅视图
      */
     ScopedEvents events();

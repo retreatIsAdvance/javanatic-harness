@@ -27,7 +27,6 @@ public final class PluginLoader {
     /**
      * 发现 module-path / classpath 上全部 Plugin，按 id 索引（保持发现顺序）。
      * 重复 id fail loud。
-     *
      * @return id → Plugin（发现序）
      */
     public Map<String, Plugin> discover() {
@@ -39,7 +38,6 @@ public final class PluginLoader {
     /**
      * 由插件序列建索引（discover 的纯逻辑部分，供测试直接驱动）。
      * 重复 id fail loud。
-     *
      * @param discovered 已发现的插件序列
      * @return id → Plugin（输入序）
      */
@@ -62,7 +60,6 @@ public final class PluginLoader {
      * requires 中出现尚未加载的 id → fail loud（顺序错了）；列表内重复 id → fail loud。
      * apply 抛异常 → 立即 close 该视图（回滚全部副作用，含已 provide 的服务）→ 异常上抛。
      * 加载逐插件原子：不存在半挂载的插件（R3）。
-     *
      * @param runtime 目标运行时（挂载根为其 root scope）
      * @param ordered 加载顺序（boot rows 序或 topoSort 结果）
      */
@@ -93,7 +90,6 @@ public final class PluginLoader {
     /**
      * 按 requires 做 Kahn 拓扑排序。同层按输入序，输入确定则输出确定。
      * 依赖环或引用集合外的 id → fail loud（typo 或装配缺口）。
-     *
      * @param plugins 待排序插件（可来自 discover().values()）
      * @return 拓扑序加载列表
      */

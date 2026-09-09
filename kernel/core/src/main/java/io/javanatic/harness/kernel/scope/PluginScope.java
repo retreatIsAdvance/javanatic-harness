@@ -60,11 +60,15 @@ final class PluginScope implements Scope {
         return own.parent();
     }
 
+    /** 注册归属 = 共享层。 */
+    @Override
+    public Scope registrationScope() {
+        return shared;
+    }
+
     @Override
     public ScopedEvents events() {
-        // 过滤绑共享 root：插件订阅收到整个挂载子树（含未来 session 层）派发的事件；
-        // 注销登记在插件私有栈，close 即退订。若绑 own，插件将收不到自身子树之外的
-        // 派发（如审批门、审计类插件失效）
+        // 过滤绑共享 root:插件订阅收到整个挂载子树派发的事件;注销登记在私有栈,close 即退订
         ScopedEvents view = eventsView;
         if (view == null) {
             synchronized (this) {
