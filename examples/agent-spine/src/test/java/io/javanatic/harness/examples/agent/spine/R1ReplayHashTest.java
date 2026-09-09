@@ -107,7 +107,8 @@ class R1ReplayHashTest {
             // 重组装提示词/schema,与每条 LlmRequestEvent 双哈希比对
             String prompt = prompts.assemble(rebuilt);
             String schemaFingerprint = RequestFingerprints.sha256(
-                RequestFingerprints.toolSchemaFingerprint(rt.root().require(ToolRegistry.KEY).schemas()));
+                RequestFingerprints.toolSchemaFingerprint(
+                    rt.root().require(ToolRegistry.KEY).schemas(rt.root())));
             List<LlmRequestEvent> anchors = loaded.events().stream()
                 .filter(LlmRequestEvent.class::isInstance)
                 .map(LlmRequestEvent.class::cast)
