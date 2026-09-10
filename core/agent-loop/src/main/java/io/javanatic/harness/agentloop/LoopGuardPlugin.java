@@ -5,6 +5,8 @@ import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.event.AssistantMessageEvent;
+import io.javanatic.harness.session.message.TokenUsage;
 
 import java.util.Map;
 import java.util.Objects;
@@ -22,6 +24,11 @@ public final class LoopGuardPlugin implements Plugin {
     public static final long DEFAULT_MAX_STEPS_PER_TURN = 40;
 
     private final LoopGuard explicit;
+
+    /** 测试访问器。 */
+    LoopGuard guardForTest() {
+        return explicit;
+    }
 
     /** 数据组合路径：limits 从行配置解析（maxTurns/maxStepsPerTurn）。 */
     public LoopGuardPlugin() {
@@ -48,7 +55,8 @@ public final class LoopGuardPlugin implements Plugin {
         Map<String, Object> config = scope.require(ConfigService.KEY).configFor(id());
         return new ConfigurableGuard(new LoopGuard.Limits(
             (int) ConfigValues.longValue(config, id(), "maxTurns", DEFAULT_MAX_TURNS),
-            (int) ConfigValues.longValue(config, id(), "maxStepsPerTurn", DEFAULT_MAX_STEPS_PER_TURN)));
+            (int) ConfigValues.longValue(config, id(), "maxStepsPerTurn", DEFAULT_MAX_STEPS_PER_TURN),
+            ConfigValues.longValue(config, id(), "maxBudgetTokens", 0)));
     }
 
     private static final class ConfigurableGuard implements LoopGuard {
@@ -65,6 +73,18 @@ public final class LoopGuardPlugin implements Plugin {
             }
             if (step >= limits.maxStepsPerTurn()) {
                 throw new GuardRejectException("max steps per turn exceeded: " + step + " >= " + limits.maxStepsPerTurn());
+            }
+            if (limits.maxBudgetTokens() > 0) {
+                long spent = session.events().stream()
+                    .map(entry -> entry.event())
+                    .filter(AssistantMessageEvent.class::isInstance)
+                    .map(event -> ((AssistantMessageEvent) event).usage())
+                    .filter(usage -> usage != null)
+                    .mapToLong(TokenUsage::outputTokens).sum();
+                if (spent > limits.maxBudgetTokens()) {
+                    throw new GuardRejectException("token budget exceeded: " + spent + " > "
+                        + limits.maxBudgetTokens() + " (cumulative output tokens)");
+                }
             }
         }
 

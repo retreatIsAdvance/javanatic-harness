@@ -23,12 +23,20 @@ public interface LoopGuard {
     Limits limits();
 
     /** 上限词表（全部非零——07 production 档断言非零）。 */
-    record Limits(int maxTurns, int maxStepsPerTurn) {
+    record Limits(int maxTurns, int maxStepsPerTurn, long maxBudgetTokens) {
 
-        /** @throws IllegalArgumentException 任一上限非正时 */
+        /** 二参便捷工厂(budget 不限,旧调用点零改动)。 */
+        public Limits(int maxTurns, int maxStepsPerTurn) {
+            this(maxTurns, maxStepsPerTurn, 0);
+        }
+
+        /** @throws IllegalArgumentException 计数上限非正或 budget 为负时 */
         public Limits {
             if (maxTurns <= 0 || maxStepsPerTurn <= 0) {
                 throw new IllegalArgumentException("guard limits must be positive: " + maxTurns + "/" + maxStepsPerTurn);
+            }
+            if (maxBudgetTokens < 0) {
+                throw new IllegalArgumentException("maxBudgetTokens must be >= 0: " + maxBudgetTokens);
             }
         }
     }

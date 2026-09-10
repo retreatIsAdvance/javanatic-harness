@@ -39,6 +39,9 @@ public enum Policy {
             if (guard != null && (guard.limits().maxTurns() <= 0 || guard.limits().maxStepsPerTurn() <= 0)) {
                 violations.add("policy=PRODUCTION 但 LoopGuard limits 为零");
             }
+            if (guard != null && guard.limits().maxBudgetTokens() <= 0) {
+                violations.add("policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)");
+            }
             return violations;
         }
     };
