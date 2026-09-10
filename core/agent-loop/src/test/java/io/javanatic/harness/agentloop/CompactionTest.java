@@ -49,6 +49,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** 压缩事务(replay 驱动,keyless):阈值触发/摘要落账/表面收缩/配对完整/R1 不变。 */
 class CompactionTest {
@@ -68,7 +69,10 @@ class CompactionTest {
         Rig(long threshold) {
             rt = new Runtime();
             rt.root().provide(ConfigService.KEY, id -> id.equals("compaction")
-                ? Map.of("maxContextTokens", threshold, "retainTokens", 20) : Map.of());
+                ? threshold < 0
+                    ? Map.of("contextWindow", 10, "retainTokens", 20)
+                    : Map.of("maxContextTokens", threshold, "retainTokens", 20)
+                : Map.of());
             new PluginLoader().loadAll(rt, List.of(
                 new SessionStorePlugin(), new AgentPlugin(),
                 new LoopGuardPlugin(new LoopGuard.Limits(10, 10)),
@@ -133,6 +137,34 @@ class CompactionTest {
                 .isInstanceOf(MessageSource.Compaction.class);
             // R1:压缩后仍有请求发生且窗口覆盖新表面
             assertThat(types.stream().filter("llm/request"::equals).count()).isGreaterThanOrEqualTo(2);
+        }
+    }
+
+    @Test
+    void ratioPathTriggersFromContextWindow() throws Exception {
+        // contextWindow=10 × 默认 0.8 → 阈值 8;报告 10 > 8 触发(比例路径,模型相对)
+        try (Rig rig = new Rig(-1)) {
+            // Rig(-1) 走 contextWindow 分支:见 Rig 构造里的 -1 哨兵改写
+            AgentHandle handle = rig.agents.create(rig.rt.root(),
+                CreateAgentOptions.of(Session.newId("cpt3"), OPTIONS));
+            Agent agent = handle.agent();
+            agent.followup(UserMessage.of("任务", new MessageSource.User()));
+            agent.whenIdle().join();
+            assertThat(agent.session().events().stream()
+                .map(e -> e.event().type())).contains("compaction/start");
+        }
+    }
+
+    @Test
+    void missingCapacityFailsLoudAtApply() {
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(ConfigService.KEY, id -> Map.of());
+            assertThatThrownBy(() -> new PluginLoader().loadAll(
+                    rt, List.of(new LlmPlugin(), new CompactionPlugin())))
+                .hasRootCauseInstanceOf(IllegalStateException.class)
+                .hasRootCauseMessage("compaction: no context capacity configured — "
+                    + "set contextWindow (thresholdRatio applies) or maxContextTokens; "
+                    + "refusing to guess the model's window size");
         }
     }
 

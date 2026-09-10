@@ -33,4 +33,6 @@ rows:
       timeoutSeconds: 60
   - plugin: presets
   - plugin: compaction
+    # 上下文窗口是模型属性,base 不猜数——启用需 overlay 给 contextWindow(或 maxContextTokens)
+    disabled: true
   - plugin: agent-loop

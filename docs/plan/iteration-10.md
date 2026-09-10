@@ -33,4 +33,6 @@
 | e3ed238 | user/message codec 只写 Append——压缩 checkpoint 的 Replace 语义重载即丢(往返测试当场抓) | codec 补 Replace + sourceEventSeqs 持久化;R1 补洞 |
 | 47c76d1 | 估价器漏 ToolResultEvent(返回 0)→ 尾部预算永不满足,配对测试"nothing to compact" | 补 ToolResultEvent 估价(content/2.5 + 消息 5 + 工具块 9) |
 | 47c76d1 | CompactionPlugin 双构造器:config 路径 apply 里 new 第二实例 provide——状态分裂(测试经注册表触发的服务实例与 config 解析实例不同构) | 单构造器 + apply 内解析 config 构造实现并 provide(同 ApprovalAsk 模式) |
+| （it10.1） | DEFAULT_MAX_CONTEXT_TOKENS=60k 绝对默认依据薄弱——64K 模型下 94%(靠溢出恢复兜底)、128K 下 47%(浪费窗口)、V4-1M 下 6%;dsh 源码证实阈值应模型相对(0.8 × contextWindow,容量未知 fail loud),测试绿掩盖了默认值站不住 | 阈值改 `contextWindow × thresholdRatio(0.8)`/绝对覆盖两路径 + 缺容量 apply fail loud;base 行 disabled(base 不猜模型窗口);ConfigValues.doubleValue;比例/覆盖/fail-loud 三测试 |
+
 | 全程 | headless 测试类多次 python 批量补丁后 import 块损坏(裸 import/FQN 混入)——FormatterException 连锁 4 轮 | 逐次修;教训再证:改测试 import 用小步 Edit 而非批量正则 |

@@ -467,7 +467,7 @@ public final class JsonlPersistence implements SessionPersistence {
 - **注册表是服务**:`SessionCodecRegistry`(ServiceKey "session-codecs")而非静态表——注册即 effect、随插件 scope 回收(R3);初稿的静态 register 造型会泄漏。
 - **APPENDED 改 notifyOrdered**:异步派发下两次 append 的落盘任务可能交错,JSONL 行序无法保证;同步顺序派发以 append 路径内联文件写为代价(单进程、逐事件 flush,当前量级可接受;异步双写随持久化后续)。
 - **写侧 fail loud 的路径**:session append 观察者异常按契约 contained(记日志不炸 append)——无 codec 的类型在观察者内只留 ERROR 日志与数据缺口,真正的 fail loud 显形在 `save()` 直调路径。扩展事件插件必须随插件注册自身 codec(装载期组合责任)。
-- **（it10）compaction 词表**:`compaction/start`(日志锁)+ `compaction/summary`(审计:摘要文本 + provider/model/usage——维护调用 R1 可重建 + shadowed 区间)+ `compaction/end`(解锁,error 记失败),全部 log-only ignorable;摘要本体走 `user/message` + `Replace` + `MessageSource.Compaction`——surface 事件类型不扩展(dsh 形状)。切点按 tool 配对边界(非整轮);估价 chars/2.5 + 结构开销(agentscope 校准);触发用末次 inputTokens 实数;溢出恢复在 loop 的 request-error catch(错误串匹配 + 强制压缩 + 同 step 有界重试)。`request/header`(cwd+ISO 日期)轮首落账,提示词组装读最新值追加上下文 section。
+- **（it10）compaction 词表**:`compaction/start`(日志锁)+ `compaction/summary`(审计:摘要文本 + provider/model/usage——维护调用 R1 可重建 + shadowed 区间)+ `compaction/end`(解锁,error 记失败),全部 log-only ignorable;摘要本体走 `user/message` + `Replace` + `MessageSource.Compaction`——surface 事件类型不扩展(dsh 形状)。切点按 tool 配对边界(非整轮);估价 chars/2.5 + 结构开销(agentscope 校准);触发用末次 inputTokens 实数;阈值 = `contextWindow × thresholdRatio(默认 0.8)` 或绝对 `maxContextTokens` 覆盖,容量未知 apply 即 fail loud(不猜窗口大小,base 行默认 disabled);溢出恢复在 loop 的 request-error catch(错误串匹配 + 强制压缩 + 同 step 有界重试)。`request/header`(cwd+ISO 日期)轮首落账,提示词组装读最新值追加上下文 section。
 - **（it10）user/message codec 持久化 Replace 语义**:surfaceOp Replace + sourceEventSeqs 进盘(此前只写 Append)——压缩 checkpoint 重载后投影不丢,R1 补洞。
 
 - **load 重建**:逐行信封,seq == 行号校验(跳号/重复拒绝);未知 type 按信封 ignorable 跳过或拒绝;header 往返含 FORMAT_VERSION。

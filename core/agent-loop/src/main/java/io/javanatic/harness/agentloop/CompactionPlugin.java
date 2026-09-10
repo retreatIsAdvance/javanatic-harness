@@ -41,8 +41,8 @@ import java.util.Map;
  */
 public final class CompactionPlugin implements Plugin, CompactionService {
 
-    /** 数据组合路径的文档化默认。 */
-    public static final long DEFAULT_MAX_CONTEXT_TOKENS = 60_000;
+    /** 数据组合路径的文档化默认:阈值比例模型相对(dsh 对照);保留是摘要侧绝对预算。 */
+    public static final double DEFAULT_THRESHOLD_RATIO = 0.8;
     public static final long DEFAULT_RETAIN_TOKENS = 10_000;
     public static final int DEFAULT_RETRIES = 1;
 
@@ -100,26 +100,26 @@ public final class CompactionPlugin implements Plugin, CompactionService {
         consolidated summary under the same structure.""";
 
     private final LlmService llm;
-    private final long maxContextTokens;
+    private final long thresholdTokens;
     private final long retainTokens;
     private final int retries;
     private final String summarizationProvider;
     private final String summarizationModel;
 
-    /** 数据组合路径:参数从行配置解析(maxContextTokens/retainTokens/retries/summarization*)。 */
+    /** 数据组合路径:参数从行配置解析(contextWindow/thresholdRatio/maxContextTokens/retainTokens)。 */
     public CompactionPlugin() {
         this.llm = null;
-        this.maxContextTokens = -1;
+        this.thresholdTokens = -1;
         this.retainTokens = -1;
         this.retries = -1;
         this.summarizationProvider = null;
         this.summarizationModel = null;
     }
 
-    private CompactionPlugin(LlmService llm, long maxContextTokens, long retainTokens, int retries,
+    private CompactionPlugin(LlmService llm, long thresholdTokens, long retainTokens, int retries,
                              String summarizationProvider, String summarizationModel) {
         this.llm = llm;
-        this.maxContextTokens = maxContextTokens;
+        this.thresholdTokens = thresholdTokens;
         this.retainTokens = retainTokens;
         this.retries = retries;
         this.summarizationProvider = summarizationProvider;
@@ -157,9 +157,23 @@ public final class CompactionPlugin implements Plugin, CompactionService {
     public void apply(Scope scope) {
         LlmService service = scope.require(LlmService.KEY);
         Map<String, Object> config = scope.require(ConfigService.KEY).configFor(id());
+        // 阈值解析(dsh 形状):绝对 maxContextTokens 覆盖 > contextWindow × thresholdRatio;
+        // 皆缺 → fail loud——不知道模型窗口大小时拒绝运行压力策略,绝不猜
+        long override = ConfigValues.longValue(config, id(), "maxContextTokens", 0);
+        long contextWindow = ConfigValues.longValue(config, id(), "contextWindow", 0);
+        long threshold = override > 0 ? override : 0;
+        if (threshold == 0 && contextWindow > 0) {
+            threshold = Math.round(contextWindow * ConfigValues.doubleValue(
+                config, id(), "thresholdRatio", DEFAULT_THRESHOLD_RATIO));
+        }
+        if (threshold <= 0) {
+            throw new IllegalStateException("compaction: no context capacity configured — "
+                + "set contextWindow (thresholdRatio applies) or maxContextTokens; "
+                + "refusing to guess the model's window size");
+        }
         scope.provide(CompactionService.KEY, new CompactionPlugin(
             service,
-            ConfigValues.longValue(config, id(), "maxContextTokens", DEFAULT_MAX_CONTEXT_TOKENS),
+            threshold,
             ConfigValues.longValue(config, id(), "retainTokens", DEFAULT_RETAIN_TOKENS),
             (int) ConfigValues.longValue(config, id(), "retries", DEFAULT_RETRIES),
             ConfigValues.stringValue(config, id(), "summarizationProvider", null),
@@ -167,7 +181,7 @@ public final class CompactionPlugin implements Plugin, CompactionService {
     }
 
     private boolean shouldCompact0(Session session) {
-        return lastInputTokens(session) > maxContextTokens;
+        return lastInputTokens(session) > thresholdTokens;
     }
 
     private CompactionSummary compact(Session session, int turn, LlmCallConfig route,

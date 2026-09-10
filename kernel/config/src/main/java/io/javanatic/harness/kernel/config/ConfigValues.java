@@ -74,6 +74,31 @@ public final class ConfigValues {
     }
 
     /**
+     * @return 可选浮点值；缺失返回 fallback
+     * @throws IllegalStateException 值非数值或非法浮点串时
+     */
+    public static double doubleValue(Map<String, Object> config, String pluginId, String key,
+                                    double fallback) {
+        Object value = Objects.requireNonNull(config, "config").get(key);
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String text) {
+            try {
+                return Double.parseDouble(text.trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalStateException("config '" + key + "' for plugin '" + pluginId
+                    + "' is not a number: " + text, e);
+            }
+        }
+        throw new IllegalStateException("config '" + key + "' for plugin '" + pluginId
+            + "' must be numeric, got: " + value.getClass().getSimpleName());
+    }
+
+    /**
      * @return 布尔值；缺失返回 fallback
      * @throws IllegalStateException 值非布尔/非 true|false 串时
      */
