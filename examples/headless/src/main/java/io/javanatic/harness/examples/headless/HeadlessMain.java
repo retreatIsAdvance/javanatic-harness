@@ -5,10 +5,13 @@ import io.javanatic.harness.agent.AgentHandle;
 import io.javanatic.harness.agent.AgentOptions;
 import io.javanatic.harness.agent.AgentRegistry;
 import io.javanatic.harness.agent.CreateAgentOptions;
+import io.javanatic.harness.agent.ResumeAgentOptions;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.boot.AppBoot;
 import io.javanatic.harness.boot.Policy;
 import io.javanatic.harness.kernel.config.ConfigRowSpec;
+import io.javanatic.harness.session.CreateOptions;
+import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.UserMessage;
@@ -44,7 +47,8 @@ public final class HeadlessMain {
 
     /** 运行时配置（解析自 CLI;默认值集中在此——组合位的显式 resolve 点）。 */
     record RunnerOptions(String task, boolean verify, Policy policy, String provider, String model,
-                         String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile) {
+                         String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile,
+                         String resume) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -82,6 +86,7 @@ public final class HeadlessMain {
         String apiKeyEnv = null;
         String apiKeyLiteral = null;
         String profile = null;
+        String resume = null;
         for (String arg : args) {
             if ("--verify".equals(arg)) {
                 verify = true;
@@ -99,6 +104,8 @@ public final class HeadlessMain {
                 apiKeyLiteral = valueOf(arg);
             } else if (arg.startsWith("--profile=")) {
                 profile = valueOf(arg);
+            } else if (arg.startsWith("--resume=")) {
+                resume = valueOf(arg);
             } else if (arg.startsWith("--")) {
                 throw new IllegalArgumentException("未知参数: " + arg);
             } else if (task == null) {
@@ -112,7 +119,7 @@ public final class HeadlessMain {
             model == null ? RunnerOptions.DEFAULT_MODEL : model,
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
-            apiKeyLiteral, profile);
+            apiKeyLiteral, profile, resume);
     }
 
     private static String valueOf(String flag) {
@@ -167,8 +174,8 @@ public final class HeadlessMain {
                 LOG.log(Level.INFO, "verify 通过");
                 return 0;
             }
-            if (options.task() == null) {
-                LOG.log(Level.ERROR, "缺少任务文本（用法:java -m …io.javanatic.harness.examples.headless \"task\"）");
+            if (options.task() == null && options.resume() == null) {
+                LOG.log(Level.ERROR, "缺少任务文本或 --resume=<id>（用法:java -m …HeadlessMain \"task\" 或 --resume=<sessionId>）");
                 return 2;
             }
             if (apiKey == null) {
@@ -179,11 +186,25 @@ public final class HeadlessMain {
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
             prompts.register(new PromptSection(0, "You are Javanatic Harness (headless). Be terse."));
             AgentRegistry agents = rt.root().require(AgentRegistry.KEY);
-            AgentHandle handle = agents.create(rt.root(),
-                CreateAgentOptions.of(Session.newId("headless-1"),
-                    new AgentOptions(options.provider(), options.model())));
+            AgentHandle handle;
+            if (options.resume() != null) {
+                // durable resume:load → seed 重建 → registry.resume 续轮号
+                SessionPersistence.Loaded loaded =
+                    rt.root().require(SessionPersistence.KEY).load(Session.newId(options.resume()));
+                rt.root().require(SessionStore.KEY).create(rt.root(), Session.newId(options.resume()),
+                    new CreateOptions(loaded.events(), loaded.header()));
+                handle = agents.resume(rt.root(),
+                    new ResumeAgentOptions(
+                        Session.newId(options.resume()), new AgentOptions(options.provider(), options.model())));
+            } else {
+                handle = agents.create(rt.root(),
+                    CreateAgentOptions.of(Session.newId("headless-1"),
+                        new AgentOptions(options.provider(), options.model())));
+            }
             Agent agent = handle.agent();
-            agent.followup(UserMessage.of(options.task(), new MessageSource.User()));
+            if (options.task() != null) {
+                agent.followup(UserMessage.of(options.task(), new MessageSource.User()));
+            }
             agent.whenIdle().join();
             agent.session().events().forEach(entry ->
                 LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));

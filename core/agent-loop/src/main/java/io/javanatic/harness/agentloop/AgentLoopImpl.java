@@ -23,6 +23,7 @@ import io.javanatic.harness.session.Session;
 import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.session.event.AssistantMessageEvent;
 import io.javanatic.harness.session.event.LlmRequestEvent;
+import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.StepEnd;
 import io.javanatic.harness.session.event.StepStart;
@@ -44,6 +45,7 @@ import io.javanatic.harness.tools.ToolRegistry;
 
 import java.lang.System.Logger;
 import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -272,6 +274,10 @@ public final class AgentLoopImpl implements Agent {
             int turn = ++nextTurn;
             overflowRetries = 0;
             session.append(new TurnStart(clock.millis(), turn));
+            // request-context:进程环境快照落账,提示词组装读它(R1:值在事件里)
+            session.append(new RequestHeader(clock.millis(),
+                System.getProperty("user.dir"),
+                clock.instant().atZone(ZoneOffset.UTC).toLocalDate().toString()));
 
             List<UserMessage> claimed = inbox.claim(InboxTarget.NEXT_TURN);
             if (claimed.isEmpty()) {

@@ -182,7 +182,7 @@ class AgentLoopTest {
             agent.whenIdle().join();
 
             assertThat(types(agent.session())).containsExactly(
-                "turn/start", "user/message", "step/start", "llm/request",
+                "turn/start", "request/header", "user/message", "step/start", "llm/request",
                 "assistant/message", "step/end", "turn/end");
             LoggedEvent<? extends SessionEvent> first = agent.session().events().getFirst();
             assertThat(first.event()).isEqualTo(new TurnStart(FIXED_MILLIS, 1));
@@ -201,8 +201,8 @@ class AgentLoopTest {
             agent.whenIdle().join();
 
             assertThat(types(agent.session())).containsExactly(
-                "turn/start", "user/message", "step/start", "llm/request", "assistant/message",
-                "tool/call", "tool/result", "step/end",
+                "turn/start", "request/header", "user/message", "step/start", "llm/request",
+                "assistant/message", "tool/call", "tool/result", "step/end",
                 "step/start", "llm/request", "assistant/message", "step/end", "turn/end");
             // 工具结果投影进模型可见历史(source=Tool 的那条)
             UserMessage toolResult = (UserMessage) agent.session().deriveMessages().stream()
@@ -224,7 +224,8 @@ class AgentLoopTest {
             agent.whenIdle().join();
 
             // 拒绝：turn/start + turn/end(completed)，无 user/message、无 step
-            assertThat(types(agent.session())).containsExactly("turn/start", "turn/end");
+            assertThat(types(agent.session())).containsExactly(
+                "turn/start", "request/header", "turn/end");
             assertThat(reasons(agent.session())).containsExactly(new TurnEndReason.Completed());
         }
     }
