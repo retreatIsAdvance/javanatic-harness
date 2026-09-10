@@ -75,9 +75,11 @@ public final class AgentLoopImpl implements Agent {
     private final AgentOptions options;
     private final Events events;
     private final Inbox inbox = new Inbox();
+    private final CompactionService compaction;
 
     private int nextTurn;
     private AbortController activeAbort;
+    private int overflowRetries;
 
     // driver 槽位（synchronized(this) 保护）
     private AgentStatus status = AgentStatus.IDLE;
@@ -87,7 +89,8 @@ public final class AgentLoopImpl implements Agent {
     // CHECKSTYLE:OFF ParameterNumber —— R4 构造器强制:治理依赖全显式注入(04 §4),拆分即弱化证明
     AgentLoopImpl(Scope agentScope, Session session, LlmService llm, ToolRegistry tools,
                   ToolExecutor executor, SystemPromptService prompts, LoopGuard guard,
-                  AgentRegistry registry, Clock clock, AgentOptions options) {
+                  AgentRegistry registry, Clock clock, AgentOptions options,
+                  CompactionService compaction) {
         this.agentScope = Objects.requireNonNull(agentScope, "agentScope");
         this.session = Objects.requireNonNull(session, "session");
         this.llm = Objects.requireNonNull(llm, "llm");
@@ -98,6 +101,7 @@ public final class AgentLoopImpl implements Agent {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.options = Objects.requireNonNull(options, "options");
+        this.compaction = compaction;
         this.events = agentScope.require(Runtime.KEY).events();
         this.nextTurn = (int) session.events().stream()
             .filter(entry -> entry.event() instanceof TurnStart).count();
@@ -266,6 +270,7 @@ public final class AgentLoopImpl implements Agent {
         AbortSignal signal = abort.signal();
         try {
             int turn = ++nextTurn;
+            overflowRetries = 0;
             session.append(new TurnStart(clock.millis(), turn));
 
             List<UserMessage> claimed = inbox.claim(InboxTarget.NEXT_TURN);
@@ -334,6 +339,10 @@ public final class AgentLoopImpl implements Agent {
         while (true) {
             signal.checkAbort();
             guard.checkBudget(session, turn, step);
+            // 压力压缩:末次 inputTokens 超阈值 → 维护事务盖写前缀(dsh pre-step 语义)
+            if (compaction != null && compaction.shouldCompact(session)) {
+                compaction.compact(session, turn, config0(turn, step, signal), signal);
+            }
             session.append(new StepStart(clock.millis(), turn, step));
 
             String systemPrompt = prompts.assemble(session);
@@ -356,6 +365,12 @@ public final class AgentLoopImpl implements Agent {
             } catch (AbortedException e) {
                 throw e;
             } catch (RuntimeException e) {
+                // 溢出恢复(it10):错误串匹配 + 强制压缩 + 同 step 重试一次(dsh/agentscope 安全网)
+                if (overflowRetries == 0 && compaction != null && isContextOverflow(e)
+                        && compaction.compactNow(session, turn, config0(turn, step, signal), signal) != null) {
+                    overflowRetries++;
+                    continue;
+                }
                 Optional<AgentEvents.RequestErrorDecision> decision = events.firstOf(
                     AgentEvents.REQUEST_ERROR, agentScope, this, List.of(turn, step, e));
                 if (decision.isPresent() && retriesLeft < decision.orElseThrow().maxRetries()) {
@@ -392,6 +407,19 @@ public final class AgentLoopImpl implements Agent {
             }
             step++;
         }
+    }
+
+    /** 溢出错误串识别(厂商变体并集;结构化错误码随 deepseek 词表归一)。 */
+    private static boolean isContextOverflow(Throwable e) {
+        String message = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
+        return message.contains("context_length_exceeded") || message.contains("maximum context")
+            || message.contains("token limit") || message.contains("context length");
+    }
+
+    private LlmCallConfig config0(int turn, int step, AbortSignal signal) {
+        return events.waterfall(AgentEvents.REQUEST, agentScope, this,
+            List.of(turn, step, signal),
+            fallback -> new LlmCallConfig(options.provider(), options.model()));
     }
 
     private UserMessageEvent toUserMessageEvent(UserMessage message) {

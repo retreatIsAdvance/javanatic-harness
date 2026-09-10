@@ -99,7 +99,8 @@ public final class AgentLoopPlugin implements Plugin {
                 }
             }
             AgentLoopImpl agent = new AgentLoopImpl(agentScope, session, llm(), tools(), executor(),
-                prompts(), guard(), registry(), clock(), agentOptions);
+                prompts(), guard(), registry(), clock(), agentOptions,
+                agentScope.resolve(CompactionService.KEY).orElse(null));
             agentScope.require(Runtime.KEY).events()
                 .notify(AgentEvents.CREATED, agentScope, agent, agent);
             // dispose 是显式触发的能力：工厂绝不构造期启动 teardown（创建即 cancel
