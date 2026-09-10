@@ -1,2 +1,3 @@
 io.javanatic.harness.agentloop.LoopGuardPlugin
 io.javanatic.harness.agentloop.AgentLoopPlugin
+io.javanatic.harness.agentloop.CompactionPlugin

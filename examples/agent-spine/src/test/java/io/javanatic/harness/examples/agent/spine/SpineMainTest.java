@@ -25,7 +25,7 @@ class SpineMainTest {
         List<LoggedEvent<? extends SessionEvent>> events = SpineMain.run(workspace);
 
         assertThat(events.stream().map(entry -> entry.event().type()).toList()).containsExactly(
-            "turn/start", "user/message", "step/start", "llm/request", "assistant/message",
+            "turn/start", "request/header", "user/message", "step/start", "llm/request", "assistant/message",
             "tool/call", "tool/result", "step/end",
             "step/start", "llm/request", "assistant/message", "step/end", "turn/end");
 

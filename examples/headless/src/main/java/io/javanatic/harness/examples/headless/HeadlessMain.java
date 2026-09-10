@@ -70,7 +70,7 @@ public final class HeadlessMain {
         RunnerOptions options = parse(args);
         int exit = run(options,
             Files.createTempDirectory("jh-headless"),
-            Files.createTempDirectory("jh-headless-sessions"));
+            Path.of(System.getProperty("user.home"), ".harness", "sessions"));
         if (exit != 0) {
             System.exit(exit);
         }

@@ -32,4 +32,5 @@ rows:
       workspace: ${cwd}
       timeoutSeconds: 60
   - plugin: presets
+  - plugin: compaction
   - plugin: agent-loop

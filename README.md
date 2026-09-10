@@ -85,7 +85,7 @@ bundle/ examples/   base/headless 组合（占位/it7）与可运行示例（age
 | 7 ✅ | `llm.openai-compat` 重构 + fs 根目录 + 审批三模式 + `--verify`/policy + `examples.headless` | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
 | 8 ✅ | AppBoot 组合数据化：kernel/config + bundle/base + CompositionManifest + headless 迁移 | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
 | 9 ✅ | scope/preset：ScopedToolRegistry + setup window + preset 组合 + home profile 发现（最后的 API 破坏性迭代） | [06-scope.md](docs/design/06-scope.md) |
-| 10 🔄 | 长跑能力：compaction 生产者 + budget 档 + --resume + request-context（生产模拟门槛前半） | [03](docs/design/03-session-event-sourcing.md) |
+| 10 ✅ | 长跑能力：compaction 生产者 + budget 档 + --resume + request-context（生产模拟门槛前半） | [03](docs/design/03-session-event-sourcing.md) |
 | 11 | 能干活：todo_write + 计划模式（PlanStart/PlanEnd 落账状态） | — |
 | 12 | 敢让人跑：sandbox（Linux landlock/FFM 设计先行）+ restriction | — |
 | 13 | 发布工程 → **0.1.0**：CI、Maven Central、门面 API、双语 README；生产模拟场景进 CI 常绿 | — |
