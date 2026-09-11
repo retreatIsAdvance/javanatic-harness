@@ -415,7 +415,9 @@ public final class SessionStore {
 // io.javanatic.harness.session.persistence.SessionEventCodec
 /**
  * 一种事件类型的序列化器。核心 13 种的 codec 由 jsonl provider 实现；
- * 扩展事件的 codec 由扩展插件在自己的 apply(Scope) 里注册。
+ * 扩展事件的 codec 经 ServiceLoader 发现（it11 落定：事件模块 module-info
+ * provides + META-INF/services 双注册，持久化 provider 发起 load——
+ * 注册不依赖插件装载行序，未装载事件插件的组合也能回放其日志）。
  * domain record 上零 Jackson 注解——持久化不反向腐蚀 Definition。
  */
 public interface SessionEventCodec<T extends SessionEvent> {
@@ -437,6 +439,8 @@ public final class SessionEventCodecs {
 - codec 重复注册 / type 不匹配：注册时抛。
 - 事件类型无 codec 却到达持久化：**该类型首次 flush 时抛**——序列化能力属于持久化边界，Session.append 不感知 JSON。
 - 加载时未知 type：信封行的 `ignorable` 字段为 true 则跳过（无需解码事件体），否则拒绝重建。
+
+**扩展事件的生产实例（it11）**：`todo/write`（整表快照，log-only）与 `plan/mode`（模式翻转，log-only）均走 `ExtensionEvent` 出口——不动 sealed permits、零核心 switch 改动，各自带 ServiceLoader codec。两者的 `ignorable=false`：todo 静默丢快照丢已落账状态、plan/mode 静默丢提示词依据（毁 R1 重建），未知读取方应拒绝而非跳过。
 
 ### JSONL 布局与行格式
 

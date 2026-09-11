@@ -5,9 +5,11 @@ import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.session.persistence.SessionCodecRegistry;
+import io.javanatic.harness.session.persistence.SessionEventCodec;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 
 import java.nio.file.Path;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 /**
@@ -50,6 +52,12 @@ public final class JsonlPersistencePlugin implements Plugin {
     public void apply(Scope scope) {
         SessionCodecRegistry codecs = new SessionCodecRegistry();
         CoreCodecs.registerAll(codecs, scope);
+        // 扩展事件 codec 经 ServiceLoader 发现(module provides / META-INF/services
+        // 双注册)——注册归持久化层,与事件所属插件的装载无行序依赖;type 冲突
+        // 由注册表 fail loud
+        for (SessionEventCodec<?> codec : ServiceLoader.load(SessionEventCodec.class)) {
+            codecs.register(codec);
+        }
         scope.provide(SessionCodecRegistry.KEY, codecs);
         JsonlPersistence persistence = new JsonlPersistence(root(scope), codecs);
         scope.provide(SessionPersistence.KEY, persistence);

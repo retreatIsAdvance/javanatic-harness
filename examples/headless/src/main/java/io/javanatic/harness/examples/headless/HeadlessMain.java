@@ -184,7 +184,7 @@ public final class HeadlessMain {
                 return 2;
             }
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
-            prompts.register(new PromptSection(0, "You are Javanatic Harness (headless). Be terse."));
+            prompts.register(new PromptSection.Static(0, "You are Javanatic Harness (headless). Be terse."));
             AgentRegistry agents = rt.root().require(AgentRegistry.KEY);
             AgentHandle handle;
             if (options.resume() != null) {

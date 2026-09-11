@@ -10,6 +10,8 @@ module io.javanatic.harness.session.persistence.jsonl {
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.session.persistence;
     requires com.fasterxml.jackson.databind;
+    // 扩展事件 codec 由各事件模块 provides，本后端发起发现（provides/uses 成对）
+    uses io.javanatic.harness.session.persistence.SessionEventCodec;
     provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.session.persistence.jsonl.JsonlPersistencePlugin;
 
     exports io.javanatic.harness.session.persistence.jsonl;

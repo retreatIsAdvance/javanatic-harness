@@ -410,7 +410,7 @@ public interface ToolExecutor {
 
 1. **单一 schema 来源**：agent-loop 组装 LLM 请求的工具列表只从 `ToolRegistry.schemas(scope)` 取，别处无权注入 function-calling schema。
 2. **单一分发点**：模型响应里的 toolCalls 只交 `ToolExecutor.execute`——全库唯一调用点，架构测试断言（10）。
-3. **executor 拥有审计**：`tool/call` 与 `tool/result` 由 executor **无条件落账**。工具实现只返回 `ToolExecutionResult`，它没有写日志的入口——工具在结构上无法"执行了但不留痕"。
+3. **executor 拥有审计对**：`tool/call` 与 `tool/result` 由 executor **无条件落账**——工具碰不到审计对，在结构上无法"执行了但不留痕"（it11 修订）。工具可经 `ToolExecutionContext.session()` 追加**领域事件**（非审计，如 todo/write 快照、plan/mode 翻转）：Session.append 自身的 monitor 全序与 surface 校验是既有防线；跨执行者的日志交错序任意，事件关联靠内容（callId），永不靠相邻性。
 4. **审批与超时是 executor 的固定 stage**：不是工具的自觉（前版 bash 工具内嵌可选审批的写法已废弃）。`ToolExecutorImpl` 构造器强制 `ApprovalService`（R4）。
 
 ### 执行 pipeline

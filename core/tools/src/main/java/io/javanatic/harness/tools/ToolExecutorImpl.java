@@ -24,8 +24,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 五段 pipeline（R2 的落点）：审计落账 tool/call → 批内去重 → pre-execute
  * waterfall（可否决）→ 审批（固定 stage，R4）→ 执行 → post-execute waterfall
- * → 审计落账 tool/result。成功/失败/否决/拒绝全部无条件成对落账——工具实现
- * 无写日志入口，结构上无法「执行了但不留痕」。
+ * → 审计落账 tool/result。成功/失败/否决/拒绝全部无条件成对落账——审计对归
+ * executor，工具在结构上无法「执行了但不留痕」。工具可经
+ * {@link ToolExecutionContext#session()} 追加<b>领域事件</b>（非审计）；
+ * Session.append 的同步与 surface 校验是既有防线。
  */
 final class ToolExecutorImpl implements ToolExecutor {
 
@@ -109,7 +111,8 @@ final class ToolExecutorImpl implements ToolExecutor {
                     ToolExecutionResult.error("Unknown tool: " + call.name()));
             }
             ToolExecutionResult result = tool.tool().execute(
-                ToolArgs.parse(call.arguments(), tool.parameters()), new ToolExecutionContext(signal));
+                ToolArgs.parse(call.arguments(), tool.parameters()),
+                new ToolExecutionContext(signal, session));
             // 5. post-execute：观察/改写结果
             ToolExecutionResult finalResult = events.waterfall(ToolEvents.POST_EXECUTE, origin, this,
                 List.of(call, result), none -> result);

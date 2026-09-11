@@ -84,6 +84,17 @@ public final class Session {
     /**
      * 追加事件：seq 分配、surface 校验、落账、通知，全在锁内完成。
      *
+     * <p><b>并发契约</b>（并行工具执行把每个工具线程都变成写者，此契约为公开承诺）：
+     * <ul>
+     *   <li>任意线程可并发调用；monitor 建立全序，每次 append 原子，seq 连续性
+     *       在锁内保证（不存在重复 seq）</li>
+     *   <li>跨执行者的事件交错序任意（fork 调度决定）——事件关联靠内容
+     *       （callId / seq 引用），<b>永不靠日志相邻性</b>；消费方 fold 不得假设
+     *       同一执行者的事件在日志中相邻</li>
+     *   <li>观察者在锁内同步串行通知——观察者必须快，且不得再 append（重入拒绝）；
+     *       持久化观察者因此天然单写者车道（有意选择：正确性优先于吞吐）</li>
+     * </ul>
+     *
      * @throws IllegalArgumentException surface 元数据非法（replace 范围 / provenance）
      * @throws IllegalStateException 观察者内重入 append
      * @return 落账信封（seq 已分配）

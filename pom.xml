@@ -120,6 +120,16 @@
             </dependency>
             <dependency>
                 <groupId>io.javanatic</groupId>
+                <artifactId>harness-core-todo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.javanatic</groupId>
+                <artifactId>harness-core-plan</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.javanatic</groupId>
                 <artifactId>harness-core-preset</artifactId>
                 <version>${project.version}</version>
             </dependency>

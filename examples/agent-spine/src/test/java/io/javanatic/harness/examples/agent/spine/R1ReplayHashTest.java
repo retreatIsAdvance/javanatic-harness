@@ -77,7 +77,7 @@ class R1ReplayHashTest {
                 new AgentLoopPlugin(Clock.systemUTC())));
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
             String section = "You are the R1 replay verification agent.";
-            prompts.register(new PromptSection(0, section));
+            prompts.register(new PromptSection.Static(0, section));
 
             AgentRegistry agents = rt.root().require(AgentRegistry.KEY);
             AgentHandle handle = agents.create(rt.root(),
@@ -99,7 +99,7 @@ class R1ReplayHashTest {
                 new JsonlPersistencePlugin(sessionsRoot),
                 new AgentLoopPlugin(Clock.systemUTC())));
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
-            prompts.register(new PromptSection(0, "You are the R1 replay verification agent."));
+            prompts.register(new PromptSection.Static(0, "You are the R1 replay verification agent."));
             SessionPersistence persistence = rt.root().require(SessionPersistence.KEY);
             SessionPersistence.Loaded loaded = persistence.load(Session.newId("r1"));
             Session rebuilt = Session.create(Session.newId("r1"), loaded.events(), loaded.header());

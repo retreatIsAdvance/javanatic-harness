@@ -19,9 +19,9 @@ class SystemPromptServiceTest {
     @Test
     void assemblesByPriorityWithStableTieOrder() {
         SystemPromptImpl prompts = new SystemPromptImpl();
-        prompts.register(new PromptSection(10, "tail"));
-        prompts.register(new PromptSection(0, "head"));
-        prompts.register(new PromptSection(10, "tail-second"));
+        prompts.register(new PromptSection.Static(10, "tail"));
+        prompts.register(new PromptSection.Static(0, "head"));
+        prompts.register(new PromptSection.Static(10, "tail-second"));
 
         assertThat(prompts.assemble(SESSION)).isEqualTo("head\n\ntail\n\ntail-second");
     }
@@ -29,8 +29,8 @@ class SystemPromptServiceTest {
     @Test
     void unregisterRemovesSection() {
         SystemPromptImpl prompts = new SystemPromptImpl();
-        Disposable handle = prompts.register(new PromptSection(0, "a"));
-        prompts.register(new PromptSection(1, "b"));
+        Disposable handle = prompts.register(new PromptSection.Static(0, "a"));
+        prompts.register(new PromptSection.Static(1, "b"));
         handle.close();
 
         assertThat(prompts.assemble(SESSION)).isEqualTo("b");

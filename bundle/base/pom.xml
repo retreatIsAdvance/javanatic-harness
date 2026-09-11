@@ -97,5 +97,14 @@
             <groupId>io.javanatic</groupId>
             <artifactId>harness-core-preset</artifactId>
             <scope>test</scope>
-        </dependency></dependencies>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-todo</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-plan</artifactId>
+        </dependency>
+    </dependencies>
 </project>

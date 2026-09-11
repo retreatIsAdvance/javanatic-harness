@@ -3,6 +3,8 @@ package io.javanatic.harness.tools;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -51,6 +53,12 @@ public final class ToolArgs {
             case ValueSchema.Str s -> requireType(node.isTextual(), path, "a string");
             case ValueSchema.Num n -> requireType(node.isNumber(), path, "a number");
             case ValueSchema.Bool b -> requireType(node.isBoolean(), path, "a boolean");
+            case ValueSchema.Arr a -> {
+                requireType(node.isArray(), path, "an array");
+                for (JsonNode item : node) {
+                    validate(item, a.items(), path + "[].");
+                }
+            }
         }
     }
 
@@ -74,5 +82,19 @@ public final class ToolArgs {
     /** 读必填布尔字段。 */
     public boolean readBoolean(String field) {
         return node.get(field).asBoolean();
+    }
+
+    /**
+     * 读必填对象数组字段（parse 已保证各元素存在且类型正确；元素 schema 须为 Object）。
+     *
+     * @return 每元素一个子 reader（readString/readBoolean 等按元素 schema 生效）
+     */
+    public List<ToolArgs> readList(String field) {
+        JsonNode list = node.get(field);
+        List<ToolArgs> items = new ArrayList<>(list.size());
+        for (JsonNode item : list) {
+            items.add(new ToolArgs(item));
+        }
+        return List.copyOf(items);
     }
 }

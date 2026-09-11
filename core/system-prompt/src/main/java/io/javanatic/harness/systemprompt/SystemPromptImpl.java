@@ -25,14 +25,24 @@ final class SystemPromptImpl implements SystemPromptService {
     @Override
     public String assemble(Session session) {
         Objects.requireNonNull(session, "session");
+        List<String> parts = new ArrayList<>();
         String context = contextSection(session);
-        if (sections.isEmpty()) {
-            return context;
+        if (!context.isEmpty()) {
+            parts.add(context);
         }
         List<PromptSection> ordered = new ArrayList<>(sections);
         ordered.sort(Comparator.comparingInt(PromptSection::priority));
-        String body = String.join("\n\n", ordered.stream().map(PromptSection::content).toList());
-        return context.isEmpty() ? body : context + "\n\n" + body;
+        for (PromptSection section : ordered) {
+            // 动态段未激活产出空串（如 plan:policy 未激活）——跳过，不产生空段落
+            String text = switch (section) {
+                case PromptSection.Static s -> s.content();
+                case PromptSection.Dynamic d -> d.content().apply(session);
+            };
+            if (!text.isEmpty()) {
+                parts.add(text);
+            }
+        }
+        return String.join("\n\n", parts);
     }
 
     /**

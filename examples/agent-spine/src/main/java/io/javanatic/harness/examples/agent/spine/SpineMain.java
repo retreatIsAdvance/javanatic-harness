@@ -90,7 +90,7 @@ public final class SpineMain {
                 new FsLocalPlugin(workspace), new FsToolPlugin(),
                 new AgentLoopPlugin(Clock.systemUTC())));
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
-            prompts.register(new PromptSection(0, "You are the JH agent-spine demo agent."));
+            prompts.register(new PromptSection.Static(0, "You are the JH agent-spine demo agent."));
 
             AgentRegistry agents = rt.root().require(AgentRegistry.KEY);
             AgentHandle handle = agents.create(rt.root(),

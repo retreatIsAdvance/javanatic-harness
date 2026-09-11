@@ -4,9 +4,9 @@ package io.javanatic.harness.tools;
 import java.util.Objects;
 
 /**
- * 一个工具：schema、渲染意图与执行函数。执行函数只产出
- * {@link ToolExecutionResult}——落账与审批在 ToolExecutor（R2/R4），
- * 工具在结构上无法「执行了但不留痕」。
+ * 一个工具：schema、渲染意图与执行函数。审计对（tool/call + tool/result）
+ * 归 ToolExecutor 无条件落账（R2/R4），工具在结构上无法「执行了但不留痕」；
+ * 工具可经 {@link ToolExecutionContext#session()} 追加领域事件（非审计）。
  */
 public record ToolDefinition(String name, String description, ValueSchema parameters,
                              RenderIntent render, Tool tool) {

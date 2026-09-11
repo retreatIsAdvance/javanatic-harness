@@ -29,6 +29,20 @@ public final class ConfigValues {
     }
 
     /**
+     * @param config   插件配置
+     * @param pluginId 插件 id（错误信息定位用）
+     * @param key      键
+     * @return 必填布尔值
+     * @throws IllegalStateException 缺失或值非布尔/非 true|false 串时
+     */
+    public static boolean requireBool(Map<String, Object> config, String pluginId, String key) {
+        if (!Objects.requireNonNull(config, "config").containsKey(key)) {
+            throw new IllegalStateException("config missing required '" + key + "' for plugin '" + pluginId + "'");
+        }
+        return boolValue(config, pluginId, key, false);
+    }
+
+    /**
      * @return 可选字符串值；缺失返回 fallback
      * @throws IllegalStateException 值非字符串/非数值时
      */

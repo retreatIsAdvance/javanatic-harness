@@ -17,6 +17,8 @@
         <module>session</module>
         <module>system-prompt</module>
         <module>tools</module>
+        <module>todo</module>
+        <module>plan</module>
         <module>agent</module>
         <module>agent-loop</module>
         <module>preset</module>

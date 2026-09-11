@@ -101,6 +101,11 @@ final class ScopedRegistry implements ToolRegistry {
                 node.put("type", "boolean");
                 node.put("description", b.description());
             }
+            case ValueSchema.Arr a -> {
+                node.put("type", "array");
+                node.set("items", toNode(a.items()));
+                node.put("description", a.description());
+            }
         }
         return node;
     }

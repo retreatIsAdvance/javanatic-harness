@@ -31,6 +31,19 @@ rows:
     config:
       workspace: ${cwd}
       timeoutSeconds: 60
+  - plugin: todo
+    # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
+    config:
+      allowParallelInProgress: false
+  - plugin: plan
+    config:
+      section: |
+        Plan mode is active: research and plan only, do not execute yet. Investigate
+        with read-only tools (fs_read, fs_list; shell for inspection only) and think
+        the task through. When the plan is complete, present it with exit_plan_mode
+        as markdown starting with a # heading; on approval, carry it out step by step.
+        This guidance is advisory in this deployment — side-effect restriction is
+        enforced by the sandbox layer, not by this section.
   - plugin: presets
   - plugin: compaction
     # 上下文窗口是模型属性,base 不猜数——启用需 overlay 给 contextWindow(或 maxContextTokens)

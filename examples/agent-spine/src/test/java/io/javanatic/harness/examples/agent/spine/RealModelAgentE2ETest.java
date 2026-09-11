@@ -63,7 +63,7 @@ class RealModelAgentE2ETest {
                 new ShellToolPlugin(workspace, Duration.ofSeconds(30)),
                 new AgentLoopPlugin(Clock.systemUTC())));
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
-            prompts.register(new PromptSection(0,
+            prompts.register(new PromptSection.Static(0,
                 "You are a test agent. Use the bash tool when asked to touch the filesystem. Be terse."));
 
             AgentRegistry agents = rt.root().require(AgentRegistry.KEY);
