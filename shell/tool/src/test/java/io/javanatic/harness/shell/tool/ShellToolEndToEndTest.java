@@ -1,6 +1,7 @@
 package io.javanatic.harness.shell.tool;
 
 import io.javanatic.harness.kernel.plugin.PluginLoader;
+import io.javanatic.harness.plan.PlanModeEvent;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.session.Session;
@@ -11,6 +12,13 @@ import io.javanatic.harness.session.message.ToolUseBlock;
 import io.javanatic.harness.shell.bash.local.BashLocalOptions;
 import io.javanatic.harness.shell.bash.local.BashLocalPlugin;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
+import io.javanatic.harness.plan.PlanModePlugin;
+import io.javanatic.harness.sandbox.local.SandboxLocalPlugin;
+import io.javanatic.harness.sandbox.policy.SandboxPolicyPlugin;
+import io.javanatic.harness.sandbox.sandbox.SandboxMode;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
+import io.javanatic.harness.systemprompt.SystemPromptPlugin;
+
 import io.javanatic.harness.tools.ToolExecutor;
 import io.javanatic.harness.tools.ToolRegistry;
 import io.javanatic.harness.tools.ToolsPlugin;
@@ -35,7 +43,9 @@ class ShellToolEndToEndTest {
     void bashToolExecutesThroughPipelineAndLeavesAuditTrail() throws Exception {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
+                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
                 new BashLocalPlugin(new BashLocalOptions(64 * 1024)),
                 new ShellToolPlugin(workspace, Duration.ofSeconds(10))));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
@@ -63,7 +73,9 @@ class ShellToolEndToEndTest {
     void nonZeroExitBecomesErrorResult() throws Exception {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
+                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
                 new BashLocalPlugin(new BashLocalOptions(64 * 1024)),
                 new ShellToolPlugin(workspace, Duration.ofSeconds(10))));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
@@ -76,6 +88,34 @@ class ShellToolEndToEndTest {
             assertThat(results.getFirst().event().block().isError()).isTrue();
             assertThat(results.getFirst().event().block().content())
                 .contains("exit: 7").contains("bad");
+        }
+    }
+
+
+    /** plan 模式下 bash 写文件被 Seatbelt 拒——结果带沙箱标记（模型可分辨）。 */
+    @Test
+    @org.junit.jupiter.api.condition.EnabledOnOs(org.junit.jupiter.api.condition.OS.MAC)
+    void planModeBashWriteDeniedWithSandboxMarker() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
+                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
+                new BashLocalPlugin(new BashLocalOptions(64 * 1024)),
+                new ShellToolPlugin(workspace, Duration.ofSeconds(10))));
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+
+            Session session = Session.create(Session.newId("planned"), null, null);
+            session.append(new PlanModeEvent(1, true));
+            List<LoggedEvent<ToolResultEvent>> results = executor.execute(
+                List.of(new ToolUseBlock(CallId.of("w1"), "bash",
+                    "{\"command\":\"echo x > denied.txt\"}")),
+                session, 0, 0, rt.root(), AbortSignal.never());
+
+            assertThat(results.getFirst().event().block().isError()).isTrue();
+            assertThat(results.getFirst().event().block().content())
+                .contains("[sandbox:");
+            assertThat(Files.exists(workspace.resolve("denied.txt"))).isFalse();
         }
     }
 }

@@ -2,6 +2,9 @@ package io.javanatic.harness.preset;
 
 import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
+import io.javanatic.harness.sandbox.sandbox.SandboxMode;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicyService;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.fs.FsService;
@@ -36,6 +39,9 @@ class PresetServiceTest {
     private Runtime presetRuntime() {
         Runtime rt = new Runtime();
         rt.root().provide(ConfigService.KEY, id -> Map.of());
+        // fs-tool 逐调用解析策略——作用域测试用显式透传策略即可
+        rt.root().provide(SandboxPolicyService.KEY,
+            session -> new SandboxPolicy(SandboxMode.DANGER_FULL_ACCESS, root));
         new PluginLoader().loadAll(rt, List.of(new ApprovalAutoPlugin(), new ToolsPlugin()));
         rt.root().provide(AgentPresets.KEY, new PresetService(root));
         return rt;

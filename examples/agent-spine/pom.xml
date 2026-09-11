@@ -85,5 +85,20 @@
             <artifactId>harness-shell-tool</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-plan</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-sandbox-local</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-sandbox-policy</artifactId>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 </project>

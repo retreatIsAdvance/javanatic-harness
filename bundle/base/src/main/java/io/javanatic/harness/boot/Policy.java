@@ -2,6 +2,8 @@ package io.javanatic.harness.boot;
 
 import io.javanatic.harness.agentloop.LoopGuard;
 import io.javanatic.harness.kernel.scope.Scope;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicyService;
+import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 import io.javanatic.harness.tools.ApprovalService;
 
@@ -41,6 +43,17 @@ public enum Policy {
             }
             if (guard != null && guard.limits().maxBudgetTokens() <= 0) {
                 violations.add("policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)");
+            }
+            SandboxPolicyService sandbox = scope.resolve(SandboxPolicyService.KEY).orElse(null);
+            if (sandbox == null) {
+                violations.add("治理缺失：无 SandboxPolicyService（装载 sandbox-policy）");
+            } else {
+                // 档位校验只看部署默认——用无事件分离会话读默认档（plan fold 恒 inactive）
+                Session probe = Session.create(Session.newId("policy-probe"), null, null);
+                if (!sandbox.resolve(probe).confining()) {
+                    violations.add("policy=PRODUCTION 但沙箱为 danger-full-access"
+                        + "（换 read-only / workspace-write）");
+                }
             }
             return violations;
         }

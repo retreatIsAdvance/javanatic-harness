@@ -4,6 +4,7 @@
  */
 module io.javanatic.harness.shell.shell {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.sandbox.sandbox;
     requires io.javanatic.harness.llm.llm;
 
     exports io.javanatic.harness.shell.shell;

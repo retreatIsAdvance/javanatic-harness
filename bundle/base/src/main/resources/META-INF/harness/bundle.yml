@@ -22,6 +22,24 @@ rows:
   - plugin: approval-deny
     disabled: true
   - plugin: tools
+  # plan 行须在 sandbox-policy 之前(其 requires 含 plan);todo 顺序无约束,就近放工具旁
+  - plugin: plan
+    config:
+      section: |
+        Plan mode is active: research and plan only, do not execute yet. Investigate
+        with read-only tools (fs_read, fs_list; shell for inspection only) and think
+        the task through. When the plan is complete, present it with exit_plan_mode
+        as markdown starting with a # heading; on approval, carry it out step by step.
+        File-effect restriction is enforced by the sandbox layer (read-only while
+        planning); this section states the discipline, the sandbox guarantees it.
+  # 沙箱平台链:darwin=seatbelt(linux bwrap/landlock、windows windows-acl 挂 it13 CI)。
+  # 受限档在无后端平台 fail-closed——Linux/Windows 部署在 it13 前需显式 overlay
+  # mode: danger-full-access(显式弃权,非默认)
+  - plugin: sandbox-local
+  - plugin: sandbox-policy
+    config:
+      mode: workspace-write
+      workspace: ${cwd}
   - plugin: fs-local
     config:
       root: ${cwd}
@@ -31,19 +49,10 @@ rows:
     config:
       workspace: ${cwd}
       timeoutSeconds: 60
+  # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
   - plugin: todo
-    # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
     config:
       allowParallelInProgress: false
-  - plugin: plan
-    config:
-      section: |
-        Plan mode is active: research and plan only, do not execute yet. Investigate
-        with read-only tools (fs_read, fs_list; shell for inspection only) and think
-        the task through. When the plan is complete, present it with exit_plan_mode
-        as markdown starting with a # heading; on approval, carry it out step by step.
-        This guidance is advisory in this deployment — side-effect restriction is
-        enforced by the sandbox layer, not by this section.
   - plugin: presets
   - plugin: compaction
     # 上下文窗口是模型属性,base 不猜数——启用需 overlay 给 contextWindow(或 maxContextTokens)

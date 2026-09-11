@@ -290,28 +290,58 @@ final class LocalBashExecutor implements ShellExecutor {
 
 ---
 
-## 6. 完整 Seam：Sandbox（进程沙箱）与 Approval（审批）
+## 6. 完整 Seam：Sandbox（同机进程约束）与 Approval（审批）
 
-### Sandbox Definition（`harness.sandbox.sandbox`）
+### Sandbox Definition（`harness.sandbox.sandbox`，it12 落定——dsh 形状）
+
+**与宿主共享内核与文件系统**；容器/microVM/远程执行是换掉整条执行 seam（如未来
+`shell-docker` Provider），不挂在本服务后面。
 
 ```java
-/** 策略服务（Definition 模块自己声明，不依赖外部）。 */
+/** 文件效果模式词表（网络与进程可见性明示在词表外）。 */
+public enum SandboxMode { READ_ONLY, WORKSPACE_WRITE, DANGER_FULL_ACCESS }
+
+/** 逐调用携带的策略（不固定在 provider——两个消费者同刻可不同策略）。 */
+public record SandboxPolicy(SandboxMode mode, Path workspaceRoot) {}
+
+/** 逐调用解析：部署默认档 + 会话态修正（plan/mode fold 激活且默认档受限 → READ_ONLY）。 */
 public interface SandboxPolicyService {
-    ServiceKey<SandboxPolicyService> KEY = new ServiceKey<>("sandboxPolicy");
-    SandboxPolicy current();
+    ServiceKey<SandboxPolicyService> KEY = new ServiceKey<>("sandbox-policy");
+    SandboxPolicy resolve(Session session);
 }
 
 public interface SandboxProvider {
     ServiceKey<SandboxProvider> KEY = new ServiceKey<>("sandbox");
-    /** Consumer spawn 前调此：拿到包装 argv + 沙箱句柄。 */
-    SandboxedProcess wrap(ProcessArgv argv, SandboxPolicy policy);
+    /** 包装 argv 使其受限执行——调用方以返回值替代自身 spawn；透传档不进（显式弃权）。 */
+    ConfinedArgv confine(List<String> argv, SandboxPolicy policy);  // fail-closed
 }
 
-public record SandboxPolicy(SandboxMode mode, Path workspaceRoot) {}
-public enum SandboxMode { OFF, LANDLOCK, CONTAINER }
+/** 包装后 argv + 本后端强制完备度 + 拒绝方言（EPERM/EROFS 等本后端专属）。 */
+public record ConfinedArgv(List<String> argv, SandboxEnforcement enforcement,
+                           List<String> denialSignatures) {}
 ```
 
-MVP Provider（id `sandbox-local`）：`mode=OFF` 透传，其余 `UnsupportedOperationException`。未来加 `sandbox-landlock` / `sandbox-docker` 不改任何 Consumer。
+**WritableRoots 单一来源**：workspace-write = workspace 根 + 平台临时区（realpath 规范化
+去重——darwin `/tmp` 即 `/private/tmp`；Windows 不加 `/tmp`，盘符相对路径若被创建会
+成为真实授予）。Seatbelt 授予与进程内 fs 围栏（fs-tool）都从这里取——「bash 能写而
+写工具不能」的不对称不可能出现。
+
+Provider（id `sandbox-local`）按**平台链**组形（dsh 对齐：平台→候选链，>1 候选才探针）：
+darwin=[seatbelt]（SBPL `deny file-write*` + /dev/null + 可写根 subpath；功能探针
+`sandbox-exec -p <profile> -- true`）；linux=[bwrap,landlock]、win32=[windows-acl]
+**设计先行、实现挂 it13 CI**（landlock：自限制后 exec、规则跨 execve 继承、allow-list
+只授不拒；windows-acl：WRITE_RESTRICTED 受限令牌 + per-workspace SID 常设授予 +
+per-session 随机临时目录/SID，**enforcement=PARTIAL 及两洞**——Everyone-可写外部对象
+仍可写、NTFS 硬链接别名越界，stderr 签名 + exit 127 fail-closed）。空链平台上受限
+confine 一律 `SandboxUnavailableException`（code SANDBOX_UNAVAILABLE）——**fail-closed，
+静默透传被禁止**。
+
+**消费端接线**：shell——`ShellRequest` 携带非空策略，bash-local 对受限档 wrap argv 再
+spawn；`ShellResult.sandboxDenied` 标记「沙箱拒了文件效果」（stderr 命中本后端方言 +
+非零退出）——模型能分辨拒绝与命令失败。fs——fs-tool 变异工具在 READ_ONLY（含计划
+模式）下直接拒（进程内围栏，模式级；WORKSPACE_WRITE 的路径边界由 fs-local root 与
+sandbox workspace 对齐保证，漂移=交集生效）。容器/microVM/云 Provider 按社区声音
+排期（it12.5 docker 起）。
 
 ### Approval Definition（`harness.interaction.approval`）—— 不是 stub
 

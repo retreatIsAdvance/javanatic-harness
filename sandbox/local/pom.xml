@@ -16,5 +16,10 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-sandbox-sandbox</artifactId>
-        </dependency>    </dependencies>
+        </dependency>        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-shell-bash-local</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

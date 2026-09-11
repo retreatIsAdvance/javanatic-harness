@@ -26,6 +26,12 @@ import io.javanatic.harness.systemprompt.SystemPromptPlugin;
 import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
 import io.javanatic.harness.tools.ToolsPlugin;
+import io.javanatic.harness.plan.PlanModePlugin;
+import io.javanatic.harness.sandbox.local.SandboxLocalPlugin;
+import io.javanatic.harness.sandbox.policy.SandboxPolicyPlugin;
+import io.javanatic.harness.sandbox.sandbox.SandboxMode;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
+
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -59,6 +65,9 @@ class RealModelAgentE2ETest {
                 new DeepSeekPlugin(new DeepSeekOptions(DeepSeekOptions.DEFAULT_BASE_URL,
                     System.getenv("DEEPSEEK_API_KEY"), null, null, 2, null, null)),
                 new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new PlanModePlugin("Plan mode guidance (test)."),
+                new SandboxLocalPlugin(),
+                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
                 new BashLocalPlugin(new BashLocalOptions(64 * 1024)),
                 new ShellToolPlugin(workspace, Duration.ofSeconds(30)),
                 new AgentLoopPlugin(Clock.systemUTC())));

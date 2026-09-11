@@ -16,5 +16,6 @@
     <modules>
         <module>sandbox</module>
         <module>local</module>
+        <module>policy</module>
     </modules>
 </project>

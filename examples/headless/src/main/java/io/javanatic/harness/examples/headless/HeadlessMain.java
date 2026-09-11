@@ -154,6 +154,9 @@ public final class HeadlessMain {
             new ConfigRowSpec.Replace("fs-local", Map.of("root", workspace.toString()), null),
             new ConfigRowSpec.Replace("shell-tool",
                 Map.of("workspace", workspace.toString(), "timeoutSeconds", 60), null),
+            // 沙箱授予面与 fs/shell 围栏钉到同一临时工作区—— Seatbelt 不比围栏宽
+            new ConfigRowSpec.Replace("sandbox-policy",
+                Map.of("mode", "workspace-write", "workspace", workspace.toString()), null),
             new ConfigRowSpec.Replace("persistence-jsonl",
                 Map.of("root", sessions.toString()), null)));
         String apiKey = options.resolvedApiKey();

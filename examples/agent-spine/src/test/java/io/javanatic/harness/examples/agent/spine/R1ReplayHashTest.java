@@ -32,6 +32,12 @@ import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
 import io.javanatic.harness.tools.ToolRegistry;
 import io.javanatic.harness.tools.ToolsPlugin;
+import io.javanatic.harness.plan.PlanModePlugin;
+import io.javanatic.harness.sandbox.local.SandboxLocalPlugin;
+import io.javanatic.harness.sandbox.policy.SandboxPolicyPlugin;
+import io.javanatic.harness.sandbox.sandbox.SandboxMode;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
+
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -71,6 +77,9 @@ class R1ReplayHashTest {
                 new LoopGuardPlugin(new LoopGuard.Limits(10, 10)),
                 new SystemPromptPlugin(), new LlmPlugin(), new ReplayPlugin(scripts),
                 new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new PlanModePlugin("Plan mode guidance (test)."),
+                new SandboxLocalPlugin(),
+                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
                 new FsLocalPlugin(workspace),
                 new FsToolPlugin(),
                 new JsonlPersistencePlugin(sessionsRoot),
@@ -95,6 +104,9 @@ class R1ReplayHashTest {
                 new LoopGuardPlugin(new LoopGuard.Limits(10, 10)),
                 new SystemPromptPlugin(), new LlmPlugin(),
                 new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new PlanModePlugin("Plan mode guidance (test)."),
+                new SandboxLocalPlugin(),
+                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
                 new FsLocalPlugin(workspace), new FsToolPlugin(),
                 new JsonlPersistencePlugin(sessionsRoot),
                 new AgentLoopPlugin(Clock.systemUTC())));

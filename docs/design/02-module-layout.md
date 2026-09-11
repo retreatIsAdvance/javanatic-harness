@@ -69,8 +69,9 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 | 模块 | 角色 | 职责 |
 |---|---|---|
-| `harness-sandbox-sandbox` | Definition | `SandboxPolicyService`（在 Definition 声明，[05 §4](05-capability-seam.md)）|
-| `harness-sandbox-local` | Provider | 本地进程包装（可选 Landlock）|
+| `harness-sandbox-sandbox` | Definition | 模式词表/逐调用 Policy/confine 包装/WritableRoots 单一来源（[05 §6](05-capability-seam.md)，it12 落定）|
+| `harness-sandbox-local` | Provider | 平台链 darwin=[seatbelt]；linux/win32 设计先行挂 it13 CI |
+| `harness-sandbox-policy` | Provider | 逐调用策略解析：部署默认档 + plan/mode fold 压只读 |
 
 #### Session Persistence（会话持久化）
 

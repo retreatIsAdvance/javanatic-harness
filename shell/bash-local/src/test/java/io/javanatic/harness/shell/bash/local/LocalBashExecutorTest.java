@@ -2,6 +2,8 @@ package io.javanatic.harness.shell.bash.local;
 
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
+import io.javanatic.harness.sandbox.sandbox.SandboxMode;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
 import io.javanatic.harness.shell.shell.ShellRequest;
 import io.javanatic.harness.shell.shell.ShellResult;
 
@@ -26,7 +28,11 @@ class LocalBashExecutorTest {
     @TempDir
     Path cwd;
 
-    private final LocalBashExecutor executor = new LocalBashExecutor(new BashLocalOptions(64 * 1024));
+    /** 显式透传策略（本测试文件测执行语义,沙箱行为归 SandboxSeatbeltTest）。 */
+    private static final SandboxPolicy UNCONFINED =
+        new SandboxPolicy(SandboxMode.DANGER_FULL_ACCESS, Path.of("/"));
+
+    private final LocalBashExecutor executor = new LocalBashExecutor(new BashLocalOptions(64 * 1024), null);
 
     /** 测试用可取消信号:checkAbort 与 onCancel 双通道(与 AbortController 语义一致)。 */
     private static final class Cancellable implements AbortSignal {
@@ -52,7 +58,7 @@ class LocalBashExecutorTest {
     }
 
     private ShellRequest request(String command) {
-        return new ShellRequest(command, cwd, Duration.ofSeconds(10), null);
+        return new ShellRequest(command, cwd, Duration.ofSeconds(10), null, UNCONFINED);
     }
 
     @Test
@@ -70,7 +76,7 @@ class LocalBashExecutorTest {
     void timeoutKillsProcessTreeFast() {
         long start = System.nanoTime();
         assertThatThrownBy(() -> executor.execute(
-                new ShellRequest("sleep 30", cwd, Duration.ofMillis(100), null), AbortSignal.never()))
+                new ShellRequest("sleep 30", cwd, Duration.ofMillis(100), null, UNCONFINED), AbortSignal.never()))
             .isInstanceOf(TimeoutException.class);
         assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(5));
     }
@@ -98,7 +104,7 @@ class LocalBashExecutorTest {
 
     @Test
     void oversizedOutputTruncatedToCap() throws Exception {
-        LocalBashExecutor capped = new LocalBashExecutor(new BashLocalOptions(1000));
+        LocalBashExecutor capped = new LocalBashExecutor(new BashLocalOptions(1000), null);
         ShellResult result = capped.execute(
             request("head -c 200000 /dev/zero | tr '\\0' 'a'"), AbortSignal.never());
         assertThat(result.stdout()).hasSize(1000);
@@ -109,7 +115,7 @@ class LocalBashExecutorTest {
     void envIsPassedThrough() throws Exception {
         ShellResult result = executor.execute(
             new ShellRequest("echo $JH_TEST_VAR", cwd, Duration.ofSeconds(10),
-                Map.of("JH_TEST_VAR", "passed")), AbortSignal.never());
+                Map.of("JH_TEST_VAR", "passed"), UNCONFINED), AbortSignal.never());
         assertThat(result.stdout()).isEqualTo("passed\n");
     }
 

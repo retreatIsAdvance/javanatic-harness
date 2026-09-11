@@ -38,6 +38,12 @@ import io.javanatic.harness.systemprompt.SystemPromptPlugin;
 import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
 import io.javanatic.harness.tools.ToolsPlugin;
+import io.javanatic.harness.plan.PlanModePlugin;
+import io.javanatic.harness.sandbox.local.SandboxLocalPlugin;
+import io.javanatic.harness.sandbox.policy.SandboxPolicyPlugin;
+import io.javanatic.harness.sandbox.sandbox.SandboxMode;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
+
 
 import java.lang.System.Logger.Level;
 import java.nio.file.Files;
@@ -87,6 +93,9 @@ public final class SpineMain {
                 new LoopGuardPlugin(new LoopGuard.Limits(10, 10)),
                 new SystemPromptPlugin(), new LlmPlugin(), new ReplayPlugin(scripts),
                 new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new PlanModePlugin("Plan mode is active: research only, then exit_plan_mode."),
+                new SandboxLocalPlugin(),
+                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
                 new FsLocalPlugin(workspace), new FsToolPlugin(),
                 new AgentLoopPlugin(Clock.systemUTC())));
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);

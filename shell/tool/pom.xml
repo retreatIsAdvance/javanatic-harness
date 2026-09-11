@@ -19,6 +19,10 @@
         </dependency>
         <dependency>
             <groupId>io.javanatic</groupId>
+            <artifactId>harness-sandbox-sandbox</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
             <artifactId>harness-kernel-core</artifactId>
         </dependency>
         <dependency>
@@ -33,5 +37,25 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-core-tools</artifactId>
-        </dependency>    </dependencies>
+        </dependency>        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-system-prompt</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-plan</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-sandbox-local</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-sandbox-policy</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

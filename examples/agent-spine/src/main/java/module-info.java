@@ -15,6 +15,10 @@ module io.javanatic.harness.examples.agent.spine {
     requires io.javanatic.harness.fs.fs;
     requires io.javanatic.harness.fs.local;
     requires io.javanatic.harness.fs.tool;
+    requires io.javanatic.harness.core.plan;
+    requires io.javanatic.harness.sandbox.sandbox;
+    requires io.javanatic.harness.sandbox.local;
+    requires io.javanatic.harness.sandbox.policy;
     requires io.javanatic.harness.session.persistence;
     requires io.javanatic.harness.session.persistence.jsonl;
     exports io.javanatic.harness.examples.agent.spine;

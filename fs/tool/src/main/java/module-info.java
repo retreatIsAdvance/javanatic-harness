@@ -7,6 +7,7 @@ module io.javanatic.harness.fs.tool {
     requires io.javanatic.harness.kernel;
     requires io.javanatic.harness.fs.fs;
     requires io.javanatic.harness.core.tools;
+    requires io.javanatic.harness.sandbox.sandbox;
     requires io.javanatic.harness.core.session;
     provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.fs.tool.FsToolPlugin;
 

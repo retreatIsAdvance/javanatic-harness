@@ -6,7 +6,9 @@
 module io.javanatic.harness.bundle.base {
     requires io.javanatic.harness.kernel;
     requires io.javanatic.harness.kernel.config;
+    requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.core.tools;
+    requires io.javanatic.harness.sandbox.sandbox;
     requires io.javanatic.harness.core.agent.loop;
     requires io.javanatic.harness.session.persistence;
     requires org.yaml.snakeyaml;

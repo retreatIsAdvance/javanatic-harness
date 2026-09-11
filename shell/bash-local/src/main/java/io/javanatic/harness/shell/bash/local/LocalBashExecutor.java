@@ -2,6 +2,9 @@ package io.javanatic.harness.shell.bash.local;
 
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
+import io.javanatic.harness.sandbox.sandbox.ConfinedArgv;
+import io.javanatic.harness.sandbox.sandbox.SandboxProvider;
+import io.javanatic.harness.sandbox.sandbox.SandboxUnavailableException;
 import io.javanatic.harness.shell.shell.ShellExecutor;
 import io.javanatic.harness.shell.shell.ShellRequest;
 import io.javanatic.harness.shell.shell.ShellResult;
@@ -11,6 +14,8 @@ import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -34,15 +39,29 @@ final class LocalBashExecutor implements ShellExecutor {
     private static final long DRAIN_JOIN_MS = 5000;
 
     private final BashLocalOptions options;
+    private final SandboxProvider sandbox;
 
-    LocalBashExecutor(BashLocalOptions options) {
+    /** @param sandbox 沙箱 provider（null = 组合未提供——受限请求时 fail-closed 抛出） */
+    LocalBashExecutor(BashLocalOptions options, SandboxProvider sandbox) {
         this.options = options;
+        this.sandbox = sandbox;
     }
 
     @Override
     public ShellResult execute(ShellRequest request, AbortSignal signal) throws Exception {
         Objects.requireNonNull(signal, "signal");
-        ProcessBuilder builder = new ProcessBuilder("bash", "-c", request.command())
+        List<String> argv = new ArrayList<>(List.of("bash", "-c", request.command()));
+        List<String> denialSignatures = List.of();
+        if (request.policy().confining()) {
+            if (sandbox == null) {
+                throw new SandboxUnavailableException(request.policy().mode(),
+                    "no sandbox provider composed (compose sandbox-local before shell-bash-local)");
+            }
+            ConfinedArgv confined = sandbox.confine(argv, request.policy());
+            argv = confined.argv();
+            denialSignatures = confined.denialSignatures();
+        }
+        ProcessBuilder builder = new ProcessBuilder(argv)
             .directory(request.cwd().toFile());
         builder.environment().putAll(request.env());
         Process process = builder.start();
@@ -68,9 +87,22 @@ final class LocalBashExecutor implements ShellExecutor {
             stdout.await();
             stderr.await();
         }
+        boolean denied = process.exitValue() != 0
+            && matchesDialect(stderr.text(), denialSignatures);
         return new ShellResult(process.exitValue(), stdout.text(), stderr.text(),
             Duration.ofNanos(System.nanoTime() - startNanos),
-            stdout.truncated() || stderr.truncated());
+            stdout.truncated() || stderr.truncated(), denied);
+    }
+
+    /** 拒绝方言匹配：stderr 行内大小写不敏感包含任一签名（ConfinedArgv 契约）。 */
+    private static boolean matchesDialect(String stderr, List<String> signatures) {
+        String lowered = stderr.toLowerCase(java.util.Locale.ROOT);
+        for (String signature : signatures) {
+            if (lowered.contains(signature.toLowerCase(java.util.Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 击杀进程树：孙进程先于本体（否则父死孙脱管，descendants 不可达）。幂等。 */

@@ -4,6 +4,8 @@ import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicyService;
 import io.javanatic.harness.shell.shell.ShellExecutor;
 import io.javanatic.harness.shell.shell.ShellRequest;
 import io.javanatic.harness.shell.shell.ShellResult;
@@ -20,9 +22,11 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * shell Consumer（id "shell-tool"，requires "tools" + "shell-bash-local"）：
- * 把 bash 注册为工具。工作目录与超时是组合身份（构造注入），模型只递命令——
- * timeout 不暴露为模型参数（schema 仅 required 词表；模型影响力有界）。
+ * shell Consumer（id "shell-tool"，requires "tools" + "shell-bash-local"
+ * + "sandbox-policy"）：把 bash 注册为工具。工作目录与超时是组合身份（构造注入），
+ * 模型只递命令——timeout 不暴露为模型参数（schema 仅 required 词表；模型影响力
+ * 有界）。文件效果策略逐调用解析（SandboxPolicyService——含计划模式压只读），
+ * 拒绝时结果带沙箱标记（模型能分辨「被沙箱拒」与「命令失败」）。
  * 全部经 ToolExecutor pipeline（审批/落账是 executor 的 stage）。
  */
 public final class ShellToolPlugin implements Plugin {
@@ -77,20 +81,22 @@ public final class ShellToolPlugin implements Plugin {
 
     @Override
     public Set<String> requires() {
-        return Set.of("tools", "shell-bash-local");
+        return Set.of("tools", "shell-bash-local", "sandbox-policy");
     }
 
     @Override
     public void apply(Scope scope) {
         ToolRegistry registry = scope.require(ToolRegistry.KEY);
         ShellExecutor shell = scope.require(ShellExecutor.KEY);
+        SandboxPolicyService policies = scope.require(SandboxPolicyService.KEY);
         ToolDefinition bash = new ToolDefinition("bash", "在工作目录执行 bash 命令",
             new ValueSchema.Object("参数", Map.of("command", COMMAND)),
             RenderIntent.TERMINAL,
             (args, ctx) -> {
+                SandboxPolicy policy = policies.resolve(ctx.session());
                 ShellResult result = shell.execute(
                     new ShellRequest(args.readString("command"),
-                        workspace(scope), timeout(scope), Map.of()),
+                        workspace(scope), timeout(scope), Map.of(), policy),
                     ctx.signal());
                 return result.exitCode() == 0
                     ? ToolExecutionResult.success(format(result))
@@ -103,6 +109,9 @@ public final class ShellToolPlugin implements Plugin {
         StringBuilder sb = new StringBuilder("exit: ").append(result.exitCode());
         if (result.outputTruncated()) {
             sb.append(" (output truncated)");
+        }
+        if (result.sandboxDenied()) {
+            sb.append(" [sandbox: a file effect was denied by the sandbox policy]");
         }
         sb.append("\n\nstdout:\n").append(result.stdout());
         if (!result.stderr().isEmpty()) {

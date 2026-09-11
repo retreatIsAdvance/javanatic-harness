@@ -4,6 +4,7 @@
  */
 module io.javanatic.harness.shell.tool {
     requires io.javanatic.harness.shell.shell;
+    requires io.javanatic.harness.sandbox.sandbox;
     requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.kernel;
     requires io.javanatic.harness.kernel.config;
