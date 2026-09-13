@@ -1,4 +1,4 @@
-# 迭代 12.7 — 平台链落地：Linux 同机约束（bwrap）（状态：进行中）
+# 迭代 12.7 — 平台链落地：Linux 同机约束（bwrap）（状态：已完成）
 
 模块：`sandbox/local`（平台链 + bwrap 后端）、`.github/workflows/ci.yml`（双 job）、文档（05/02/README/bundle 注释）
 
@@ -60,15 +60,15 @@ Ubuntu 24.04 起 AppArmor 默认限制非特权 user namespace，bwrap 在 GH ru
 - [x] **bwrap argv 形状单测平台无关**（darwin 可跑）：`bwrapWrapIsWholeTreeReadOnlyPlusWritableRootsWithBwrapDialect` 以 `containsExactly` 断言整 argv——READ_ONLY 精确形状；WORKSPACE_WRITE 逐根 `--bind` 且计数 == `WritableRoots.of(policy).size()`；方言 `Read-only file system`/`Permission denied`。darwin 全跑过（12 跑 10 过 2 跳，跳的是 LINUX e2e）
 - [x] **fail-closed**：`linuxChainFailsClosedWhenBwrapUnusable`（注伪 `/nonexistent/bwrap` → `bwrap probe failed (binary: ...)`）、`darwinChainFailsClosedWhenSeatbeltUnusable`、`emptyChainFailsClosedNamingPlatformAndPlannedBackend`（win32 文案点名平台与 0.2.0）——darwin 全跑过
 - [x] **平台链结构断言**：`platformChainsAreDarwinSeatbeltLinuxBwrapWin32Empty` 过
-- [ ] **CI ubuntu job：bwrap 真强制 e2e**——本地备妥：ci.yml 前置功能探针硬门（runnable + 真拒写断言 + AppArmor 旋钮重试阶梯，探针不过即红）；**待 push 后 CI 首跑取证**
-- [ ] **CI macos job：seatbelt e2e 常绿**——本地备妥：macos job 全 reactor；**待 push 后 CI 首跑取证**
+- [x] **CI ubuntu job：bwrap 真强制 e2e**——run `34789197722` ubuntu job 绿（1:52）：前置探针硬门实走 AppArmor 阶梯（首探被 userns 限制挡下 → `kernel.apparmor_restrict_unprivileged_userns=0` → 重试过）；`SandboxLocalTest` 12 跑 0 败 3 跳（跳的是 MAC 用例；2 个 LINUX e2e 真跑过）、`ShellToolEndToEndTest` 3 跑 1 跳（2 个 WORKSPACE_WRITE 在真 bwrap 下过）、`DockerShellTest` 11/11（预置修复后首跑）、`BUILD SUCCESS`
+- [x] **CI macos job：seatbelt e2e 常绿**——同 run `34789197722` macos job 绿（52s）：全 reactor `BUILD SUCCESS`；`SandboxLocalTest` 12 跑 0 败 2 跳（跳的是 LINUX 用例；3 个 seatbelt e2e 真跑过）、`ShellToolEndToEndTest` 3/3（含 MAC 标记用例）
 - [x] **文档**：05 §6（linux=[bwrap] 落定 + 方言 + 残余）/ bundle 注释 / README 平台支持面（commit `1806305`）+ 状态段 / 02 模块表 / sandbox-local module-info javadoc
 
 ## 修正（如有）
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
-| fix(ci)（本提交） | it12.5 的 docker e2e 依赖本机镜像 `agent-runner:latest`；CI 从未跑过该模块，该环境依赖也未被管线预置 → ubuntu job 首跑 6/11 用例 fail-loud 报错（插件探针行为正确，缺的是预置） | ubuntu job 增 `Provision docker test image` 步骤：docker.io 的 `ubuntu:24.04` 打同名 tag（同一能力面 bash + setsid）；插件「镜像缺失 fail loud」契约不动 |
+| `9d233d0` | it12.5 的 docker e2e 依赖本机镜像 `agent-runner:latest`；CI 从未跑过该模块，该环境依赖也未被管线预置 → ubuntu job 首跑 6/11 用例 fail-loud 报错（插件探针行为正确，缺的是预置） | ubuntu job 增 `Provision docker test image` 步骤：docker.io 的 `ubuntu:24.04` 打同名 tag（同一能力面 bash + setsid）；插件「镜像缺失 fail loud」契约不动 |
 
 ## 设计偏离（如有）
 

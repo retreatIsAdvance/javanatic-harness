@@ -65,7 +65,7 @@ docs/design/        12 篇设计文档（00-overview … 11-java25-upgrade）+ d
 docs/dsh-reference.md   设计参照系说明（dsh 仓库路径约定）
 kernel/             Cordis 等价物：core（统一 Scope/Events/Plugin）+ brand；config（占位）
 core/               Agent 主干：session/tools/todo/plan/agent/agent-loop/system-prompt/preset（全部已实现）
-sandbox/           同机进程约束：Definition + Seatbelt Provider + 策略解析（darwin 实测；linux/windows 设计先行）
+sandbox/           同机进程约束：Definition + seatbelt/bwrap Provider + 策略解析（darwin/linux 实测；windows 设计先行）
 llm/                seam + replay（keyless 测试地基）+ deepseek（真实 Provider）；openai-compat（it7）
 fs/ shell/          capability 三角色（均已实现：root 限制见 it7；shell 有两个互斥 Provider——本机 bash 与 docker 容器，见 it12.5）
 session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端（R1 闭环）
@@ -91,7 +91,7 @@ bundle/ examples/   base/headless 组合（占位/it7）与可运行示例（age
 | 12 ✅ | 敢让人跑：sandbox（平台链 darwin=seatbelt 实测，linux/windows 设计先行）+ restriction（shell wrap + fs 围栏 + plan 压只读 + PRODUCTION 断言） | [05](docs/design/05-capability-seam.md) |
 | 12.5 ✅ | 环境级隔离：`shell-docker` 第二个 `ShellExecutor` Provider——挂载面即可写面（整个容器根只读），沙箱三档词表在容器后端同义且更强；换 Provider 不动 seam，纯组合选择 | [05](docs/design/05-capability-seam.md) |
 | 12.6 | 硬化（**待排**，视需要插入）：JSONL fsync/撕裂尾、LlmError 分类、LocalFs realpath、`--verify` 在无同机后端平台的预警、`LoopGuard` 滞后注释、headless 会话 id 去硬编码 | — |
-| 12.7 | 平台链落地：Linux 同机约束（bwrap 后端）——darwin=seatbelt / linux=bwrap / win32=空链；CI 双 job 真验（ubuntu 装 bubblewrap、macos 补 seatbelt） | [05](docs/design/05-capability-seam.md) |
+| 12.7 ✅ | 平台链落地：Linux 同机约束（bwrap 后端）——darwin=seatbelt / linux=bwrap / win32=空链；CI 双 job 真验（ubuntu 装 bubblewrap、macos 补 seatbelt） | [05](docs/design/05-capability-seam.md) |
 | 13 | 可运行产物：dist（jlink）+ `--help` / `--workspace=` / `--approval=` | — |
 | 14 | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染 | — |
 | 15 | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
