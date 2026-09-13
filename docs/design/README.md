@@ -105,20 +105,21 @@
 
 ## 实现路线（垂直切片；2026-09 开源目标修订）
 
-已完成的垂直切片（it1 kernel / it2 session / it3 llm seam + replay / it4 tools + fs / it5 agent-loop + 竖切 / it6 shell + deepseek + 持久化 + R1 闭环 / it7 openai-compat + 治理上线 / it7.1 厂商灵活化 / it8 组合数据化 AppBoot + ConfigService + manifest）。R1–R4 测试随切片走，不做收尾补（[10](10-testing.md)）。
+已完成的垂直切片（it1 kernel / it2 session / it3 llm seam + replay / it4 tools + fs / it5 agent-loop + 竖切 / it6 shell + deepseek + 持久化 + R1 闭环 / it7 openai-compat + 治理上线 / it7.1 厂商灵活化 / it8 组合数据化 AppBoot + ConfigService + manifest / it9 scope + preset / it10 长跑能力 compaction + budget + resume / it11 todo_write + 计划模式 / it12 sandbox 同机进程约束 + restriction / it12.5 shell-docker 环境级隔离）。R1–R4 测试随切片走，不做收尾补（[10](10-testing.md)）。
 
 **开源决策（2026-09-08 确认）**：License Apache-2.0；JDK 25 LTS 单版本（不降 21——ScopedValue 终版叙事与差异化优先，采用税在文档中明示）；首发同时面向国际与中文社区。
 
-后续路线按「最后的 API 破坏性迭代 → 发布工程 → 首发 → 社区驱动」排序：
+后续路线按「平台链落地 → 可运行产物 → 交互面 → 生产模拟判据 → 发布工程 → 首发 → 社区驱动」排序（2026-09-13 订正）：
 
 | 迭代 | 内容 | 性质 |
 |---|---|---|
-| it9 | scope/preset：ScopedToolRegistry + setup window + preset 组合 + home profile 发现 | **最后的 API 破坏性迭代**（ToolRegistry/ToolExecutor 签名变更） |
-| it10 | 长跑能力：compaction + budget + --resume + request-context | 生产模拟门槛前半 |
-| it11 | todo_write + 计划模式（落账状态） | 能干活 |
-| it12 | sandbox（Linux landlock/FFM）+ restriction | 敢让人跑 |
-| it13 | 发布工程（CI/Central/门面/双语 README）→ **0.1.0** | **判据：生产模拟场景（PRODUCTION policy + 多步工具任务 + 中途 compaction + 重启 resume + budget 优雅停 + R1 全比对）进 CI 常绿** |
-| it14+ | subagent、skills、web、LSP——按社区 issue 声音排序 | 社区驱动 |
+| it12.6 | 硬化（待排）：JSONL fsync/撕裂尾、LlmError 分类、LocalFs realpath、无同机后端平台的 `--verify` 预警 | 随手插入 |
+| it12.7 | 平台链落地：Linux 同机约束 bwrap 先行（windows-acl + pwsh 入 0.2.0）；CI 双 job 真验 | 敢让人跑（Linux 开箱可用） |
+| it13 | 可运行产物：dist（jlink）+ CLI 完备（`--help`/`--workspace=`/`--approval=`） | 可交付 |
+| it14 | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染 | 可交付 |
+| it15 | 生产模拟场景进 CI（**replay 驱动：keyless、确定性**） | **判据：生产模拟场景（PRODUCTION policy + 多步工具任务 + 中途 compaction + 重启 resume + budget 优雅停 + R1 全比对）进 CI 常绿** |
+| it16 | 发布工程（Central/门面冻结/双语 README）→ **0.1.0** | 首发 |
+| it17+ | subagent、skills、web、LSP、windows-acl + pwsh、Landlock——按社区 issue 声音排序 | 社区驱动 |
 
 ## 许可与引用
 

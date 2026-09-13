@@ -88,10 +88,17 @@ bundle/ examples/   base/headless 组合（占位/it7）与可运行示例（age
 | 9 ✅ | scope/preset：ScopedToolRegistry + setup window + preset 组合 + home profile 发现（最后的 API 破坏性迭代） | [06-scope.md](docs/design/06-scope.md) |
 | 10 ✅ | 长跑能力：compaction 生产者 + budget 档 + --resume + request-context（生产模拟门槛前半） | [03](docs/design/03-session-event-sourcing.md) |
 | 11 ✅ | 能干活：todo_write（整表替换快照）+ 计划模式（plan/mode 纯 fold + exit_plan_mode 直写翻转 + 动态提示段）；扩展事件 codec 走 ServiceLoader | — |
-| 12 ✅ | 敢让人跑：sandbox（平台链 darwin=seatbelt 实测，linux/windows 设计先行挂 CI）+ restriction（shell wrap + fs 围栏 + plan 压只读 + PRODUCTION 断言） | [05](docs/design/05-capability-seam.md) |
+| 12 ✅ | 敢让人跑：sandbox（平台链 darwin=seatbelt 实测，linux/windows 设计先行）+ restriction（shell wrap + fs 围栏 + plan 压只读 + PRODUCTION 断言） | [05](docs/design/05-capability-seam.md) |
 | 12.5 ✅ | 环境级隔离：`shell-docker` 第二个 `ShellExecutor` Provider——挂载面即可写面（整个容器根只读），沙箱三档词表在容器后端同义且更强；换 Provider 不动 seam，纯组合选择 | [05](docs/design/05-capability-seam.md) |
-| 13 | 发布工程 → **0.1.0**：CI、Maven Central、门面 API、双语 README；生产模拟场景进 CI 常绿 | — |
-| 14+ | subagent、skills、web、LSP——按社区声音排序 | — |
+| 12.6 | 硬化（**待排**，视需要插入）：JSONL fsync/撕裂尾、LlmError 分类、LocalFs realpath、`--verify` 在无同机后端平台的预警、`LoopGuard` 滞后注释、headless 会话 id 去硬编码 | — |
+| 12.7 | 平台链落地：Linux 同机约束（bwrap 后端）——darwin=seatbelt / linux=bwrap / win32=空链；CI 双 job 真验（ubuntu 装 bubblewrap、macos 补 seatbelt） | [05](docs/design/05-capability-seam.md) |
+| 13 | 可运行产物：dist（jlink）+ `--help` / `--workspace=` / `--approval=` | — |
+| 14 | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染 | — |
+| 15 | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
+| 16 | 发布工程 → **0.1.0**：Maven Central、门面冻结、双语 README | — |
+| 17+ | subagent、skills、web、LSP、windows-acl + pwsh provider、Landlock 第二候选——按社区声音排序 | — |
+
+**0.1.0 平台支持面**：macOS 与 Linux 开箱可用（含同机沙箱）；**Windows 不在 0.1.0 支持面**——缺同机沙箱后端，且 `shell-bash-local` 假设 bash 存在（pwsh provider 待做），两者随 windows-acl 一并排入 0.2.0。
 
 R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 
