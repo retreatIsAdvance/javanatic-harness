@@ -27,6 +27,16 @@ jobs:
             echo "::error::bwrap did not deny a read-only write — refusing to test on an ineffective sandbox"
             exit 1
           fi
+      # docker Provider e2e（it12.5）需要 daemon（runner 自带）与测试镜像在场。
+      # 测试常量 agent-runner:latest 是本地 docker.io 不可达时的替代拼写；CI 用
+      # docker.io 的 ubuntu:24.04 打同名 tag——同一能力面（bash + setsid）。
+      # 插件「镜像缺失 fail loud」契约不变：这里不预置，测试就会如实报错。
+      - name: Provision docker test image
+        run: |
+          docker pull -q ubuntu:24.04
+          docker tag ubuntu:24.04 agent-runner:latest
+          docker run --rm --entrypoint sh agent-runner:latest \
+            -c 'for c in bash setsid sleep; do command -v "$c" || exit 1; done'
       # validate 阶段内置 spotless:check + checkstyle:check，与本地 pre-push 同口径
       - name: Build and test
         run: mvn -B -ntp package

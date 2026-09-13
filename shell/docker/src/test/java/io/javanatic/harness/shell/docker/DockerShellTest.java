@@ -43,7 +43,8 @@ class DockerShellTest {
      * 本网络 docker.io 确实不可达（{@code docker pull ubuntu:24.04} 报
      * registry-1.docker.io 连接超时）——用本机在场的镜像替代：agent-runner:latest
      * 是 Ubuntu 26.04，含 bash 5.3.9 与 setsid，满足文档对 ubuntu:24.04 的同一
-     * 能力要求；部署默认拼写仍是 ubuntu:24.04。
+     * 能力要求；部署默认拼写仍是 ubuntu:24.04。CI ubuntu job 可达 docker.io，
+     * 用 ubuntu:24.04 打同名 tag 预置本镜像（见 ci.yml）。
      */
     private static final String IMAGE = "agent-runner:latest";
 

@@ -68,6 +68,7 @@ Ubuntu 24.04 起 AppArmor 默认限制非特权 user namespace，bwrap 在 GH ru
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| fix(ci)（本提交） | it12.5 的 docker e2e 依赖本机镜像 `agent-runner:latest`；CI 从未跑过该模块，该环境依赖也未被管线预置 → ubuntu job 首跑 6/11 用例 fail-loud 报错（插件探针行为正确，缺的是预置） | ubuntu job 增 `Provision docker test image` 步骤：docker.io 的 `ubuntu:24.04` 打同名 tag（同一能力面 bash + setsid）；插件「镜像缺失 fail loud」契约不动 |
 
 ## 设计偏离（如有）
 
