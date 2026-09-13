@@ -48,7 +48,7 @@ public final class HeadlessMain {
     /** 运行时配置（解析自 CLI;默认值集中在此——组合位的显式 resolve 点）。 */
     record RunnerOptions(String task, boolean verify, Policy policy, String provider, String model,
                          String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile,
-                         String resume) {
+                         String resume, boolean docker, String image) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -78,6 +78,8 @@ public final class HeadlessMain {
 
     static RunnerOptions parse(String[] args) {
         boolean verify = false;
+        boolean docker = false;
+        String image = null;
         Policy policy = Policy.STANDARD;
         String task = null;
         String provider = null;
@@ -104,6 +106,10 @@ public final class HeadlessMain {
                 apiKeyLiteral = valueOf(arg);
             } else if (arg.startsWith("--profile=")) {
                 profile = valueOf(arg);
+            } else if ("--docker".equals(arg)) {
+                docker = true;
+            } else if (arg.startsWith("--image=")) {
+                image = arg.substring("--image=".length());
             } else if (arg.startsWith("--resume=")) {
                 resume = valueOf(arg);
             } else if (arg.startsWith("--")) {
@@ -119,7 +125,7 @@ public final class HeadlessMain {
             model == null ? RunnerOptions.DEFAULT_MODEL : model,
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
-            apiKeyLiteral, profile, resume);
+            apiKeyLiteral, profile, resume, docker, image);
     }
 
     private static String valueOf(String flag) {
@@ -159,6 +165,13 @@ public final class HeadlessMain {
                 Map.of("mode", "workspace-write", "workspace", workspace.toString()), null),
             new ConfigRowSpec.Replace("persistence-jsonl",
                 Map.of("root", sessions.toString()), null)));
+        if (options.docker()) {
+            // 环境级隔离：禁本机 bash 行(disabled 是表达式串,"true" 求值为裸真操作数 →
+            // resolve 期整行滤除),启容器执行(镜像本机须在场——不自动拉取)
+            overlays.add(new ConfigRowSpec.Replace("shell-bash-local", Map.of(), "true"));
+            overlays.add(new ConfigRowSpec.Replace("shell-docker",
+                Map.of("image", options.image() == null ? "ubuntu:24.04" : options.image()), null));
+        }
         String apiKey = options.resolvedApiKey();
         if (apiKey != null) {
             Map<String, Object> provider = new HashMap<>(Map.of(

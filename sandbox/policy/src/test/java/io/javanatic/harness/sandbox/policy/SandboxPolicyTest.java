@@ -5,7 +5,6 @@ import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.plan.PlanModeEvent;
 import io.javanatic.harness.plan.PlanModePlugin;
-import io.javanatic.harness.sandbox.local.SandboxLocalPlugin;
 import io.javanatic.harness.sandbox.sandbox.SandboxMode;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicyService;
@@ -26,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 策略解析：部署默认档、plan/mode fold 压只读（透传弃权不覆盖）、
- * 受限档无 provider 装载期 fail loud、config 缺失 fail loud。
+ * config 缺失 fail loud（受限档的强制在场归执行器运行期 fail-closed,it12.5 修订）。
  */
 class SandboxPolicyTest {
 
@@ -37,8 +36,7 @@ class SandboxPolicyTest {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
                 new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
-                new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
-                policyPlugin));
+                new PlanModePlugin("Plan mode guidance (test)."), policyPlugin));
             return rt.root().require(SandboxPolicyService.KEY);
         }
     }
@@ -66,20 +64,6 @@ class SandboxPolicyTest {
         session.append(new PlanModeEvent(1, true));
         // 透传档是部署显式弃权——计划模式不覆盖
         assertThat(policies.resolve(session).mode()).isEqualTo(SandboxMode.DANGER_FULL_ACCESS);
-    }
-
-    @Test
-    void confiningModeWithoutProviderFailsLoudAtLoad() {
-        try (Runtime rt = new Runtime()) {
-            // 无 sandbox-local：受限档无 provider
-            assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
-                new PlanModePlugin("Plan mode guidance (test)."),
-                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)))))
-                .hasMessageContaining("Plugin failed and rolled back: sandbox-policy")
-                .cause()
-                .hasMessageContaining("no sandbox provider is composed");
-        }
     }
 
     @Test

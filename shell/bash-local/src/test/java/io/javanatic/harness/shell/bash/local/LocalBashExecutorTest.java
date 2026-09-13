@@ -3,6 +3,7 @@ package io.javanatic.harness.shell.bash.local;
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.sandbox.sandbox.SandboxMode;
+import io.javanatic.harness.sandbox.sandbox.SandboxUnavailableException;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
 import io.javanatic.harness.shell.shell.ShellRequest;
 import io.javanatic.harness.shell.shell.ShellResult;
@@ -146,5 +147,17 @@ class LocalBashExecutorTest {
             Thread.sleep(10);
         }
         return condition.getAsBoolean();
+    }
+
+
+    /** 运行期 fail-closed belt：组合未提供沙箱 provider 时受限请求拒绝执行（it12.5 修订的强制故事）。 */
+    @Test
+    void confiningRequestWithoutProviderFailsClosed() {
+        assertThatThrownBy(() -> executor.execute(
+            new ShellRequest("echo hi", cwd, Duration.ofSeconds(5), null,
+                new SandboxPolicy(SandboxMode.READ_ONLY, cwd)),
+            AbortSignal.never()))
+            .isInstanceOf(SandboxUnavailableException.class)
+            .hasMessageContaining("refusing to run the command unconfined");
     }
 }

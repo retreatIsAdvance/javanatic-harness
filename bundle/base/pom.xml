@@ -115,5 +115,9 @@
             <artifactId>harness-sandbox-policy</artifactId>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-shell-docker</artifactId>
+        </dependency>
     </dependencies>
 </project>

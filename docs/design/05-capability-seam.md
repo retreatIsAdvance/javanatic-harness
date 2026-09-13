@@ -244,17 +244,26 @@ public interface ShellExecutor {
     ShellResult execute(ShellRequest request, AbortSignal signal) throws Exception;
 }
 
-public record ShellRequest(String command, Path cwd, Duration timeout, Map<String, String> env) {
+public record ShellRequest(String command, Path cwd, Duration timeout, Map<String, String> env,
+                           SandboxPolicy policy) {
     public ShellRequest {   // 构造器校验：fail loud at construction（08 §6）
         Objects.requireNonNull(command, "command");
-        if (command.isEmpty()) throw new IllegalArgumentException("command empty");
+        Objects.requireNonNull(cwd, "cwd");
+        Objects.requireNonNull(policy, "policy");   // it12:逐调用携带,无隐藏默认
+        if (command.isEmpty()) throw new IllegalArgumentException("command must be non-empty");
         if (!cwd.isAbsolute()) throw new IllegalArgumentException("cwd must be absolute");
-        timeout = timeout == null ? Duration.ofSeconds(30) : timeout;
+        timeout = timeout == null ? DEFAULT_TIMEOUT : timeout;   // 30s,唯一默认点
         env = env == null ? Map.of() : Map.copyOf(env);
     }
 }
 
-public record ShellResult(int exitCode, String stdout, String stderr, Duration duration) {}
+/**
+ * outputTruncated/sandboxDenied 是 it12 加的叙述位:模型据此分辨「输出被截断」
+ * 与「被沙箱拒」和「命令自己失败」——denied 由 provider 判定(exit≠0 且 stderr
+ * 命中**本后端**方言签名),消费方不跨后端求并集。
+ */
+public record ShellResult(int exitCode, String stdout, String stderr, Duration duration,
+                          boolean outputTruncated, boolean sandboxDenied) {}
 ```
 
 ### Provider（`harness.shell.bash-local`，plugin id `shell-bash-local`）
@@ -274,18 +283,65 @@ final class LocalBashExecutor implements ShellExecutor {
 }
 ```
 
+### Provider（`harness.shell.docker`，plugin id `shell-docker`，it12.5）
+
+**seam 不动的第二个 Provider**：同一 `ShellExecutor` 契约、同一 `ShellRequest/ShellResult`，
+隔离强度从「同机进程约束」升到「环境级」——换的是实现，消费方（`shell-tool`）与
+Definition 一字不改，选择完全落在组合数据上（base 里 `disabled: true`，
+headless `--docker` overlay 禁 bash-local 行、启本行）。
+
+```java
+final class DockerShellExecutor implements ShellExecutor {
+    // 承重决策(it12.5 七风险点,详见 plan/iteration-12.5.md):
+    // 1. 挂载面即可写面——三档词表的容器同义实现,且比同机约束更强:
+    //    READ_ONLY        → --read-only + ws :ro
+    //    WORKSPACE_WRITE  → --read-only + ws :rw + --tmpfs /tmp
+    //    DANGER_FULL_ACCESS → 不挂 --read-only(容器 OS 隔离仍保留)
+    //    可写 = 显式挂载的那一个目录,整个容器根文件系统恒只读。
+    // 2. 容器键 = (规范化 workspace, mode)——不同策略绝不共用容器(挂载面不同);
+    //    容器名 jh-shell-<uuid> 永不按名复用(防跨组合串台);同键并发共享 = 预期语义。
+    // 3. 击杀链路:docker exec 的 CLI 进程死 ≠ 容器内进程死。命令经 setsid --wait
+    //    成为会话组长(pid 即 pgid)并把 pid 落盘 → 超时/取消对**进程组**发 TERM 再
+    //    KILL(杀整树),CLI destroyForcibly 兜底。--wait 不可省:fork 模式下 setsid
+    //    父进程立即 exit 0,会把失败命令吞成成功。
+    // 4. 模型命令经环境变量 JH_COMMAND 传输——内容永不进 wrapper 文本,零转义面。
+    // 5. 路径一律 toRealPath() 规范化后再挂载与 chdir:darwin 上 /var 是
+    //    /private/var 的符号链接,容器内没有宿主的链接,两处拼写必须一致。
+    // 6. apply 期双探针 fail loud:docker version(daemon 可达) + docker image inspect
+    //    (镜像在场,不自动拉取——首调不被网络拖住)。行启用即执行意图。
+    // 7. R3:容器生命周期挂 scope,onClose 即 rm -f 本执行器创建的全部容器。
+    ShellResult execute(ShellRequest req, AbortSignal signal) throws Exception { /* ... */ }
+}
+```
+
+`--entrypoint sleep` 是必需的而非修饰：镜像自带的 `ENTRYPOINT` 会劫持保活进程
+（实测 `agent-runner:latest` 的 ENTRYPOINT 是 `java -jar /app/agent-runner.jar`）。
+
+**已知残余（诚实记录，不假装已解）**：
+- **网络策略不在词表内**——容器默认有网络出口。与 dsh 同款缺口，挂账。
+- **无资源限额**（`--cpus`/`--memory`），挂账。
+- **denial 标记以 `exit≠0` 为门**：模型若把越界写成 `echo x > /etc/y; echo $?`，
+  wrapper 退出码被自己的最后一条语句抹平成 0，标记随之丢失（EROFS 仍在 stderr 里，
+  模型读得到，但结构化的 `sandboxDenied` 位没了）。这是 bash-local 同款的 seam 属性，
+  不是 docker 特有；修正归 seam 层（分类器产出 typed code），不属本切片。
+- JVM 崩溃可留孤儿容器：`jh-shell-` 前缀可 grep 清理。
+
 ### Consumer（`harness.shell.tool`，plugin id `shell-tool`）
 
 工具 execute 里只有**显式 resolve**（默认值集中一处，08 §7）+ 委托 provider：
 
 ```java
 .execute((args, exec) -> {
-    ShellRequest sr = resolve(args, exec.cwd());   // timeout 默认 30s 在 resolve 里
+    ShellRequest sr = resolve(args, exec.cwd());   // timeout 默认 30s + policy 显式 resolve 在此
     ShellResult r = shell.execute(sr, exec.signal());
-    return ToolExecutionResult.success(
-        "exit: " + r.exitCode() + "\n" + r.stdout(), r.exitCode() != 0);
+    return ToolExecutionResult.success(format(r), r.exitCode() != 0);
 })
 .render(RenderIntent.terminal())
+
+// format():叙述位在此渲染成模型可读文本——两个 Provider 共用同一处,
+// 所以 it12.5 加 docker Provider 时消费方一字未改。
+//   "exit: 1 [sandbox: a file effect was denied by the sandbox policy]"
+//   + "(output truncated)" + "\n\nstdout:\n…" + "\nstderr:\n…"
 ```
 
 ---
@@ -294,8 +350,15 @@ final class LocalBashExecutor implements ShellExecutor {
 
 ### Sandbox Definition（`harness.sandbox.sandbox`，it12 落定——dsh 形状）
 
-**与宿主共享内核与文件系统**；容器/microVM/远程执行是换掉整条执行 seam（如未来
-`shell-docker` Provider），不挂在本服务后面。
+**与宿主共享内核与文件系统**；容器/microVM/远程执行是换掉整条执行 seam，不挂在本服务
+后面——这条判断在 it12.5 被验证：`shell-docker`（[§5](#5-完整-seamshell命令执行)）作为
+第二个 `ShellExecutor` Provider 落地，`SandboxProvider` 一字未改。
+
+后果值得记住：docker Provider **直接消费 `SandboxPolicy`，从不调用 `confine`**。
+`confine` 的契约是「返回的 argv 受限执行」，而在容器后端强制点是容器边界（挂载面）
+而非 argv——把恒等 argv 塞回 `ConfinedArgv` 就是对着接口撒谎。这也是 it12.5 撤销
+「恒等 SandboxProvider」提案、改为撤掉 sandbox-policy 装载期 provider 在场校验的原因
+（见 [plan/iteration-12.5.md](../plan/iteration-12.5.md) 风险点 3 与 iteration-12 修正表）。
 
 ```java
 /** 文件效果模式词表（网络与进程可见性明示在词表外）。 */

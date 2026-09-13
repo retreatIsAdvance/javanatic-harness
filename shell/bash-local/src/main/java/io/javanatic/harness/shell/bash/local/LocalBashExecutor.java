@@ -94,12 +94,15 @@ final class LocalBashExecutor implements ShellExecutor {
             stdout.truncated() || stderr.truncated(), denied);
     }
 
-    /** 拒绝方言匹配：stderr 行内大小写不敏感包含任一签名（ConfinedArgv 契约）。 */
+    /** 拒绝方言匹配：stderr <b>逐行</b>大小写不敏感包含任一签名（dsh「within each
+     * stderr line」契约——整流 contains 会把无关长行里的偶现串误标）。 */
     private static boolean matchesDialect(String stderr, List<String> signatures) {
-        String lowered = stderr.toLowerCase(java.util.Locale.ROOT);
-        for (String signature : signatures) {
-            if (lowered.contains(signature.toLowerCase(java.util.Locale.ROOT))) {
-                return true;
+        for (String line : stderr.split("\\R", -1)) {
+            String lowered = line.toLowerCase(java.util.Locale.ROOT);
+            for (String signature : signatures) {
+                if (lowered.contains(signature.toLowerCase(java.util.Locale.ROOT))) {
+                    return true;
+                }
             }
         }
         return false;

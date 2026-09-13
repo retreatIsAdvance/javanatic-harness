@@ -8,7 +8,6 @@ import io.javanatic.harness.plan.PlanModeService;
 import io.javanatic.harness.sandbox.sandbox.SandboxMode;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicyService;
-import io.javanatic.harness.sandbox.sandbox.SandboxProvider;
 
 import java.nio.file.Path;
 import java.util.Set;
@@ -46,10 +45,10 @@ public final class SandboxPolicyPlugin implements Plugin {
     @Override
     public void apply(Scope scope) {
         SandboxPolicy policy = explicit != null ? explicit : fromConfig(scope);
-        if (policy.confining() && scope.resolve(SandboxProvider.KEY).isEmpty()) {
-            throw new IllegalStateException("sandbox-policy: mode '" + policy.mode().wire()
-                + "' is confining but no sandbox provider is composed (compose a provider row first)");
-        }
+        // 不做「受限档需 SandboxProvider 在场」的装载期校验（it12.5 修订,对齐 dsh
+        // 运行期 fail-closed）：docker 等执行器自身消费策略（挂载面即强制）,不装
+        // 同机 provider 是合法组合；bash-local 的逐调用 fail-closed belt 兜底,
+        // PRODUCTION 档位探针(≠DANGER)不变
         scope.provide(SandboxPolicyService.KEY, session ->
             policy.confining() && PlanModeService.foldActive(session.events())
                 ? new SandboxPolicy(SandboxMode.READ_ONLY, policy.workspaceRoot())

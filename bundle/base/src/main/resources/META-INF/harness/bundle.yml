@@ -45,6 +45,10 @@ rows:
       root: ${cwd}
   - plugin: fs-tool
   - plugin: shell-bash-local
+  # 环境级隔离(备选 ShellExecutor,与 shell-bash-local 互斥;同 scope 双启用由 kernel fail loud)
+  # 启用需显式选择:headless --docker/--image= 或 profile overlay;镜像须本机在场(不自动拉取)
+  - plugin: shell-docker
+    disabled: true
   - plugin: shell-tool
     config:
       workspace: ${cwd}

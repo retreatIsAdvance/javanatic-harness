@@ -61,8 +61,9 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 | 模块 | 角色 | 职责 |
 |---|---|---|
-| `harness-shell-shell` | Definition | `ShellService` 接口（request/spec 分离）|
-| `harness-shell-bash-local` | Provider | 本地 bash 实现（插件 id `bash-local`）|
+| `harness-shell-shell` | Definition | `ShellExecutor` 接口（request/result 分离，逐调用携带 `SandboxPolicy`）|
+| `harness-shell-bash-local` | Provider | 本地 bash 实现（插件 id `shell-bash-local`）；受限档经 `SandboxProvider.confine` 包装 argv |
+| `harness-shell-docker` | Provider | docker 容器实现（插件 id `shell-docker`，it12.5）——环境级隔离，**挂载面即可写面**（容器根恒只读）；与 bash-local 互斥，换 Provider 不动 seam |
 | `harness-shell-tool` | Consumer | `bash` 工具 |
 
 #### Sandbox（沙箱）
@@ -136,6 +137,7 @@ flowchart TD
     subgraph shell[Shell]
         shelldef[harness-shell-shell]
         bash[harness-shell-bash-local]
+        docker[harness-shell-docker]
         shelltool[harness-shell-tool]
     end
 
@@ -174,6 +176,7 @@ flowchart TD
     fsdef --> fslocal
     fsdef --> fstool
     shelldef --> bash
+    shelldef --> docker
     shelldef --> shelltool
     persistdef --> jsonl
 
@@ -182,6 +185,7 @@ flowchart TD
     fslocal --> base
     fstool --> base
     bash --> base
+    docker --> base
     shelltool --> base
     jsonl --> base
     approval --> base

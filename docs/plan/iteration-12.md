@@ -33,3 +33,4 @@
 | (实施中) | BashLocalPlugin 显式构造器路径在构造期固化 executor,漏 resolve SandboxProvider → 显式组合下受限请求误报"no sandbox provider" | 重构为 apply 时统一装订(选项解析 + provider 解析各一处,两路径等价) |
 | (实施中) | headless overlay 只钉 fs-local/shell-tool 的 workspace,漏 sandbox-policy → Seatbelt 授予面(examples/headless)比围栏(临时工作区)宽 | overlay 增 sandbox-policy 行,三处钉到同一临时工作区;真跑复验越界 bash 写被拒 |
 | (真跑复验) | 首次真跑"demo.txt 消失"疑云 | 非缺陷:headless 本就跑在 `createTempDirectory("jh-headless")` 临时工作区,文件落在临时区;模型的绝对路径被 fs-local root 政策正确拒绝——双围栏行为均正确 |
+| (it12.5 契约修订) | sandbox-policy 的装载期校验「受限档必须有 `SandboxProvider` 在场,否则 fail loud」把 `confine` 当成唯一强制点。环境级隔离(docker 容器)的强制点是**容器边界(挂载面)**,它刻意不实现 `SandboxProvider`——该校验会误拒合法组合 | it12.5 **撤销该装载期校验**,与 dsh 对齐(dsh 本就是运行期 fail-closed)。**本文件验收项「受限档无 provider → 装载期 fail loud」随之作废**;强制故事改为:bash-local 的逐调用 fail-closed belt(it12 已实现+已测,保留不动)+ docker Provider 直接消费 `SandboxPolicy`。PRODUCTION 探针(档位≠DANGER)不受影响。详见 [iteration-12.5.md](iteration-12.5.md) 风险点 3 |
