@@ -98,7 +98,7 @@ bundle/ examples/   base/headless 组合（占位/it7）与可运行示例（age
 | 16 | 发布工程 → **0.1.0**：Maven Central、门面冻结、双语 README | — |
 | 17+ | subagent、skills、web、LSP、windows-acl + pwsh provider、Landlock 第二候选——按社区声音排序 | — |
 
-**0.1.0 平台支持面**：macOS 与 Linux 开箱可用（含同机沙箱）；**Windows 不在 0.1.0 支持面**——缺同机沙箱后端，且 `shell-bash-local` 假设 bash 存在（pwsh provider 待做），两者随 windows-acl 一并排入 0.2.0。
+**0.1.0 平台支持面**：macOS 与 Linux 可用（含同机沙箱）。macOS 自带 seatbelt、开箱即用；Linux 走 bwrap——**需主机安装 bubblewrap**，就绪后开箱可用；无 userns 权限的主机受限档 fail-closed（Landlock 兜底入 0.2.0）。**Windows 不在 0.1.0 支持面**——缺同机沙箱后端，且 `shell-bash-local` 假设 bash 存在（pwsh provider 待做），两者随 windows-acl 一并排入 0.2.0。
 
 R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 

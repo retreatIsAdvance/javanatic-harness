@@ -114,7 +114,7 @@
 | 迭代 | 内容 | 性质 |
 |---|---|---|
 | it12.6 | 硬化（待排）：JSONL fsync/撕裂尾、LlmError 分类、LocalFs realpath、无同机后端平台的 `--verify` 预警 | 随手插入 |
-| it12.7 | 平台链落地：Linux 同机约束 bwrap 先行（windows-acl + pwsh 入 0.2.0）；CI 双 job 真验 | 敢让人跑（Linux 开箱可用） |
+| it12.7 | 平台链落地：Linux 同机约束 bwrap 先行（windows-acl + pwsh 入 0.2.0）；CI 双 job 真验 | 敢让人跑（Linux：bwrap 就绪即开箱可用） |
 | it13 | 可运行产物：dist（jlink）+ CLI 完备（`--help`/`--workspace=`/`--approval=`） | 可交付 |
 | it14 | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染 | 可交付 |
 | it15 | 生产模拟场景进 CI（**replay 驱动：keyless、确定性**） | **判据：生产模拟场景（PRODUCTION policy + 多步工具任务 + 中途 compaction + 重启 resume + budget 优雅停 + R1 全比对）进 CI 常绿** |
