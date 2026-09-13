@@ -31,6 +31,23 @@
   - CI 新增 `apt-get install bubblewrap`——一个新的 CI 环境依赖，非 Maven 依赖
   - CI 新增 macos job（公开仓 macos runner 免费；CI 耗时约翻倍）
 
+## 设计增量（ADDED / MODIFIED / REMOVED）
+
+- ADDED：`sandbox-local` 平台链的 linux 档 `[bwrap]`（外部二进制 + argv 包装，与 seatbelt 同构）；`bwrapBinary` 构造器注伪 seam
+- MODIFIED：`PLATFORM_CHAINS.linux` 空链 → `[bwrap]`（05 §6）；受限档拒绝方言新增 bwrap 族（`Read-only file system` / `Permission denied`）；`bundle.yml` 注释与 README 平台支持面（显式 overlay 弃权 → bwrap 就绪即开箱可用）
+- REMOVED：无（win32 空链语义保留）
+
+## 锚点（开工前填写：本次将改动的既有代码位置）
+
+| 锚点（文件:符号） | 预期改动 | 完成 |
+|---|---|---|
+| `sandbox/local` · `SandboxLocalPlugin.java`：`SeatbeltBackend`、`!DARWIN` 分支（:73）、`profile()`/`sbplString()` | 拆平台链结构；候选按平台分发；bwrap argv 构造抽平台无关纯函数 | |
+| `sandbox/local` · `SandboxLocalTest.java`：3 个 `@EnabledOnOs(OS.MAC)` 真强制测试 | 形状断言改平台无关；真强制 e2e 挂 `OS.LINUX` 由 CI 验 | |
+| `sandbox/sandbox` · `ConfinedArgv` / `SandboxEnforcement` / `WritableRoots` | 只读参照，不动契约（动则触发设计同步规则②） | |
+| `.github/workflows/ci.yml`：单 ubuntu job | 双 job：ubuntu 装 bubblewrap + 新增 macos | |
+| `bundle/base` · `bundle.yml` 的 `sandbox-policy` 注释 | Linux 说法更新 | |
+| `docs/design/05-capability-seam.md` §6 | 平台链 / 方言 / 残余同步 | |
+
 ## 风险与缓解（本迭代最大不确定性：CI 上 bwrap 能否跑）
 
 Ubuntu 24.04 起 AppArmor 默认限制非特权 user namespace，bwrap 在 GH runner 上可能起不来。
@@ -47,8 +64,14 @@ Ubuntu 24.04 起 AppArmor 默认限制非特权 user namespace，bwrap 在 GH ru
 - [ ] **CI macos job：seatbelt e2e 常绿**（把开发机验证搬进 CI）
 - [ ] **文档**：05 §6 / bundle 注释 / README 路线表 + 状态段 / 02（若有变）
 
-## 验收后修正（如有）
+## 修正（如有）
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
 | | | |
+
+## 设计偏离（如有）
+
+| 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
+|---|---|---|---|
+| | | | |
