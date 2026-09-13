@@ -10,6 +10,35 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+      # 前置硬门：bwrap 必须能跑且必须真拒写。探针通过后，单测里的
+      # assumeTrue(bwrapUsable()) 在 CI 不可达——跳过即静默绿，这里先挡掉。
+      # 失败时按 it12.7 风险阶梯调 AppArmor 旋钮重试；仍失败则红（不静默吞）。
+      - name: "Pre-flight sandbox probe (bwrap: runnable and denying)"
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bubblewrap
+          probe() { bwrap --ro-bind / / --dev /dev --die-with-parent -- true; }
+          if ! probe; then
+            echo "::warning::bwrap probe failed — disabling AppArmor unprivileged-userns restriction and retrying"
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          fi
+          probe
+          if bwrap --ro-bind / / --dev /dev --die-with-parent -- bash -c 'echo x > /tmp/bwrap-ci-probe.txt' 2>/dev/null; then
+            echo "::error::bwrap did not deny a read-only write — refusing to test on an ineffective sandbox"
+            exit 1
+          fi
       # validate 阶段内置 spotless:check + checkstyle:check，与本地 pre-push 同口径
+      - name: Build and test
+        run: mvn -B -ntp package
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      # seatbelt 真强制 e2e（SandboxLocalTest / ShellToolEndToEndTest 的 MAC 用例与全 reactor 同跑）
       - name: Build and test
         run: mvn -B -ntp package

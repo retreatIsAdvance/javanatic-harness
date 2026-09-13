@@ -32,8 +32,9 @@ rows:
         as markdown starting with a # heading; on approval, carry it out step by step.
         File-effect restriction is enforced by the sandbox layer (read-only while
         planning); this section states the discipline, the sandbox guarantees it.
-  # 沙箱平台链:darwin=seatbelt(linux bwrap/landlock、windows windows-acl 挂 it13 CI)。
-  # 受限档在无后端平台 fail-closed——Linux/Windows 部署在 it13 前需显式 overlay
+  # 沙箱平台链:darwin=seatbelt、linux=bwrap(it12.7;需主机装 bubblewrap,非特权
+  # userns 被禁的主机受限档 fail-closed)、win32=空链(windows-acl 入 0.2.0)。
+  # macOS/Linux 开箱可用;Windows 部署在 0.2.0 前需显式 overlay
   # mode: danger-full-access(显式弃权,非默认)
   - plugin: sandbox-local
   - plugin: sandbox-policy

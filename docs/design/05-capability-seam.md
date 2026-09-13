@@ -389,15 +389,25 @@ public record ConfinedArgv(List<String> argv, SandboxEnforcement enforcement,
 成为真实授予）。Seatbelt 授予与进程内 fs 围栏（fs-tool）都从这里取——「bash 能写而
 写工具不能」的不对称不可能出现。
 
-Provider（id `sandbox-local`）按**平台链**组形（dsh 对齐：平台→候选链，>1 候选才探针）：
+Provider（id `sandbox-local`）按**平台链**组形（dsh 对齐：平台→候选链；单候选只探
+可用性，>1 候选才探针仲裁）：
 darwin=[seatbelt]（SBPL `deny file-write*` + /dev/null + 可写根 subpath；功能探针
-`sandbox-exec -p <profile> -- true`）；linux=[bwrap,landlock]、win32=[windows-acl]
-**设计先行、实现挂 it13 CI**（landlock：自限制后 exec、规则跨 execve 继承、allow-list
-只授不拒；windows-acl：WRITE_RESTRICTED 受限令牌 + per-workspace SID 常设授予 +
-per-session 随机临时目录/SID，**enforcement=PARTIAL 及两洞**——Everyone-可写外部对象
-仍可写、NTFS 硬链接别名越界，stderr 签名 + exit 127 fail-closed）。空链平台上受限
-confine 一律 `SandboxUnavailableException`（code SANDBOX_UNAVAILABLE）——**fail-closed，
-静默透传被禁止**。
+`sandbox-exec -p <profile> -- true`）；linux=[bwrap]（it12.7 落定——`--ro-bind / /` 整根
+只读 + `--dev /dev` + `--die-with-parent`，workspace-write 追加可写根 `--bind`；拒绝
+方言 `Read-only file system`/`Permission denied`；功能探针 `bwrap --ro-bind / / --dev
+/dev --die-with-parent -- true`。需主机装 bubblewrap，非特权 userns 受限的主机
+fail-closed——landlock 第二候选入 0.2.0：自限制后 exec、规则跨 execve 继承、allow-list
+只授不拒）；win32=[]（windows-acl 入 0.2.0：WRITE_RESTRICTED 受限令牌 +
+per-workspace SID 常设授予 + per-session 随机临时目录/SID，**enforcement=PARTIAL 及
+两洞**——Everyone-可写外部对象仍可写、NTFS 硬链接别名越界，stderr 签名 + exit 127
+fail-closed）。空链平台上受限 confine 一律 `SandboxUnavailableException`（code
+SANDBOX_UNAVAILABLE）——**fail-closed，静默透传被禁止**。
+
+**已知残余（诚实记录）**：读可见性与网络不在约束面（词表外，与 seatbelt 对齐）——
+bwrap 链不加 `--unshare-pid`/`--unshare-net`，`--ro-bind / /` 下宿主文件系统整体
+读可见、/proc 为宿主视图；非特权 userns 被内核策略禁用（如 AppArmor 收紧的
+Ubuntu 24.04 默认态）的主机受限档 fail-closed；denial 标记以 `exit≠0` 为门
+（§5 docker 同款 seam 属性，修正归 seam 层）。
 
 **消费端接线**：shell——`ShellRequest` 携带非空策略，bash-local 对受限档 wrap argv 再
 spawn；`ShellResult.sandboxDenied` 标记「沙箱拒了文件效果」（stderr 命中本后端方言 +

@@ -41,12 +41,12 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| `sandbox/local` · `SandboxLocalPlugin.java`：`SeatbeltBackend`、`!DARWIN` 分支（:73）、`profile()`/`sbplString()` | 拆平台链结构；候选按平台分发；bwrap argv 构造抽平台无关纯函数 | |
-| `sandbox/local` · `SandboxLocalTest.java`：3 个 `@EnabledOnOs(OS.MAC)` 真强制测试 | 形状断言改平台无关；真强制 e2e 挂 `OS.LINUX` 由 CI 验 | |
-| `sandbox/sandbox` · `ConfinedArgv` / `SandboxEnforcement` / `WritableRoots` | 只读参照，不动契约（动则触发设计同步规则②） | |
-| `.github/workflows/ci.yml`：单 ubuntu job | 双 job：ubuntu 装 bubblewrap + 新增 macos | |
-| `bundle/base` · `bundle.yml` 的 `sandbox-policy` 注释 | Linux 说法更新 | |
-| `docs/design/05-capability-seam.md` §6 | 平台链 / 方言 / 残余同步 | |
+| `sandbox/local` · `SandboxLocalPlugin.java`：`SeatbeltBackend`、`!DARWIN` 分支（:73）、`profile()`/`sbplString()` | 拆平台链结构；候选按平台分发；bwrap argv 构造抽平台无关纯函数 | ✓ |
+| `sandbox/local` · `SandboxLocalTest.java`：3 个 `@EnabledOnOs(OS.MAC)` 真强制测试 | 形状断言改平台无关；真强制 e2e 挂 `OS.LINUX` 由 CI 验 | ✓ |
+| `sandbox/sandbox` · `ConfinedArgv` / `SandboxEnforcement` / `WritableRoots` | 只读参照，不动契约（动则触发设计同步规则②） | ✓（未动） |
+| `.github/workflows/ci.yml`：单 ubuntu job | 双 job：ubuntu 装 bubblewrap + 新增 macos | ✓ |
+| `bundle/base` · `bundle.yml` 的 `sandbox-policy` 注释 | Linux 说法更新 | ✓ |
+| `docs/design/05-capability-seam.md` §6 | 平台链 / 方言 / 残余同步 | ✓ |
 
 ## 风险与缓解（本迭代最大不确定性：CI 上 bwrap 能否跑）
 
@@ -56,22 +56,22 @@ Ubuntu 24.04 起 AppArmor 默认限制非特权 user namespace，bwrap 在 GH ru
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] **全 reactor `mvn -B -ntp package` 绿**（本机 darwin），测试数按逐类行口径记账（见 it12.5 口径说明）
-- [ ] **bwrap argv 形状单测平台无关**（darwin 可跑）：READ_ONLY / WORKSPACE_WRITE 两种策略的 argv 断言（`--ro-bind / /`、各可写根 `--bind`、`--dev`、`--die-with-parent`）+ 方言清单
-- [ ] **fail-closed**：bwrap 二进制缺失/不可用 → `SandboxUnavailableException`（注伪路径，darwin 可跑）；win32 空链同语义
-- [ ] **平台链结构断言**：三平台各自候选集；空链报错文案点名平台与缺失后端
-- [ ] **CI ubuntu job：bwrap 真强制 e2e**——READ_ONLY 写拒（EROFS + `sandboxDenied`）、WORKSPACE_WRITE 区内写通且宿主可见、区外写拒
-- [ ] **CI macos job：seatbelt e2e 常绿**（把开发机验证搬进 CI）
-- [ ] **文档**：05 §6 / bundle 注释 / README 路线表 + 状态段 / 02（若有变）
+- [x] **全 reactor `mvn -B -ntp package` 绿**（本机 darwin）：`BUILD SUCCESS`（2026-09-13，1:54）；逐类记账 57 类 296 跑 0 败 0 错 4 跳（4 跳 = DeepSeek/real-model E2E 无 key 2 + SandboxLocalTest 的 LINUX 用例在 darwin 自跳 2）
+- [x] **bwrap argv 形状单测平台无关**（darwin 可跑）：`bwrapWrapIsWholeTreeReadOnlyPlusWritableRootsWithBwrapDialect` 以 `containsExactly` 断言整 argv——READ_ONLY 精确形状；WORKSPACE_WRITE 逐根 `--bind` 且计数 == `WritableRoots.of(policy).size()`；方言 `Read-only file system`/`Permission denied`。darwin 全跑过（12 跑 10 过 2 跳，跳的是 LINUX e2e）
+- [x] **fail-closed**：`linuxChainFailsClosedWhenBwrapUnusable`（注伪 `/nonexistent/bwrap` → `bwrap probe failed (binary: ...)`）、`darwinChainFailsClosedWhenSeatbeltUnusable`、`emptyChainFailsClosedNamingPlatformAndPlannedBackend`（win32 文案点名平台与 0.2.0）——darwin 全跑过
+- [x] **平台链结构断言**：`platformChainsAreDarwinSeatbeltLinuxBwrapWin32Empty` 过
+- [ ] **CI ubuntu job：bwrap 真强制 e2e**——本地备妥：ci.yml 前置功能探针硬门（runnable + 真拒写断言 + AppArmor 旋钮重试阶梯，探针不过即红）；**待 push 后 CI 首跑取证**
+- [ ] **CI macos job：seatbelt e2e 常绿**——本地备妥：macos job 全 reactor；**待 push 后 CI 首跑取证**
+- [x] **文档**：05 §6（linux=[bwrap] 落定 + 方言 + 残余）/ bundle 注释 / README 平台支持面（commit `1806305`）+ 状态段 / 02 模块表 / sandbox-local module-info javadoc
 
 ## 修正（如有）
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
-| | | |
 
 ## 设计偏离（如有）
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
-| | | | |
+| 四确认·内容 2：`--unshare-user`（非特权 userns） | 未加该 flag；非 setuid bwrap 隐式建立 userns | dsh 生产 argv（`sandbox/sandbox-local/src/profiles.ts`）不含它；其 CI 需放行 `kernel.apparmor_restrict_unprivileged_userns` 恰证明 userns 已被隐式建立——显式 flag 对约束面是空操作，且与证据形态保持最小差 | 迭代内已同步（05 §6 未列该 flag；单测按实现断言） |
+| 四确认·内容 2：`--chdir <cwd>` | 未加；cwd 由调用方 `ProcessBuilder.directory(request.cwd())` 让子进程继承（与无沙箱路径一致） | `confine(argv, policy)` 契约不收 cwd，`policy` 只有 workspaceRoot；dsh 无此 flag；验收 argv 清单不含 | 迭代内已同步（05 §6 未列） |
