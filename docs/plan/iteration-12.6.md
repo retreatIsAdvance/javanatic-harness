@@ -45,7 +45,7 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| `session/persistence-jsonl` · `JsonlPersistence`：`SessionWriter.flushBarrier/writeEnvelope`、`load` | force barrier + 撕裂尾截断 + 注入测试 | |
+| `session/persistence-jsonl` · `JsonlPersistence`：`SessionWriter.flushBarrier/writeEnvelope`、`load` | force barrier + 撕裂尾截断 + 注入测试 | ✓ |
 | `llm/llm` · 新 `LlmCallException`（+`Kind`）；`llm/openai-compat` · `OpenAiCompatAdapter.sendWithRetry/pump` | typed 映射；重试判定读 Kind | |
 | `fs/local` · `LocalFs`：构造器、`resolve` | realpath 归一 + 深祖先校验 + symlink 测试 | |
 | `sandbox/sandbox` · `SandboxProvider`；`sandbox/local` · `ChainedBackend`；`bundle/base` · `AppBoot.boot` verify 分支 | backendStatus 查询 + stderr 预警（exit 码不变） | |
@@ -56,7 +56,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| S1 持久化耐久语义 | `JsonlPersistence`（force/截断——it15 依赖的承载类） | 待开工 |
+| S1 持久化耐久语义 | `JsonlPersistence`（force/截断——it15 依赖的承载类） | 已放行（edc8ef4） |
 | S2 错误与查询面契约 | `LlmCallException`（新 seam 类型）+ `SandboxProvider.backendStatus()`（跨模块） | 待开工 |
 | S3 围栏真路径 | `LocalFs`（安全边界——symlink 语义与 TOCTOU 面） | 待开工 |
 
