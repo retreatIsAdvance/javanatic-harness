@@ -41,6 +41,17 @@ class HeadlessResumeTest {
         assertThat(log).contains("session/end-seed");
     }
 
+    @Test
+    void separateRunsGetSeparateSessions() throws Exception {
+        HeadlessMain.RunnerOptions options = HeadlessMain.parse(new String[] {
+            "任务", "--provider=vendor-a", "--base-url=" + fakeServerUrl(), "--api-key=fake"});
+        assertThat(HeadlessMain.run(options, workspace, sessions)).isZero();
+        assertThat(HeadlessMain.run(options, workspace, sessions)).isZero();
+        try (var dirs = Files.list(sessions)) {
+            assertThat(dirs.filter(Files::isDirectory).count()).isEqualTo(2);
+        }
+    }
+
     private String findSessionId() throws Exception {
         try (var dirs = Files.list(sessions)) {
             return dirs.filter(Files::isDirectory).findFirst().orElseThrow().getFileName().toString();

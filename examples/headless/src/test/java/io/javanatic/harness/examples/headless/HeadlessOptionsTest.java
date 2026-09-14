@@ -63,6 +63,48 @@ class HeadlessOptionsTest {
     }
 
     @Test
+    void helpFlagParsesAndUsageListsContract() {
+        assertThat(HeadlessMain.parse(new String[] {"--help"}).help()).isTrue();
+        assertThat(HeadlessMain.parse(new String[] {"-h"}).help()).isTrue();
+        assertThat(HeadlessMain.USAGE).contains(
+            "--workspace=", "--approval=auto|ask|deny", "--docker", "--resume=",
+            "--profile=", "--policy=", "--verify");
+    }
+
+    @Test
+    void workspaceFlagRequiresExistingDirectory() {
+        assertThat(HeadlessMain.parse(new String[] {"t", "--workspace=" + workspace}).workspace())
+            .isEqualTo(workspace.toAbsolutePath().normalize());
+        assertThatThrownBy(() -> HeadlessMain.parse(
+            new String[] {"t", "--workspace=" + workspace.resolve("missing")}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--workspace");
+    }
+
+    @Test
+    void approvalFlagValidatesVocabulary() {
+        assertThat(HeadlessMain.parse(new String[] {"t", "--approval=ask"}).approval()).isEqualTo("ask");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--approval=wat"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("auto|ask|deny");
+    }
+
+    @Test
+    void imageFlagRequiresDocker() {
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--image=ubuntu:24.04"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--docker");
+    }
+
+    @Test
+    void runSessionIdsAreTimestampedAndUnique() {
+        String first = HeadlessMain.newRunSessionId();
+        String second = HeadlessMain.newRunSessionId();
+        assertThat(first).matches("headless-\\d+-[0-9a-f]{1,4}");
+        assertThat(second).isNotEqualTo(first);
+    }
+
+    @Test
     void verifyStillRunsWithoutKey() throws Exception {
         HeadlessMain.RunnerOptions options = HeadlessMain.parse(new String[] {"--verify"});
         assertThat(HeadlessMain.run(options, workspace, sessions)).isZero();

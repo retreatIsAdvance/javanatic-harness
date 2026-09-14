@@ -29,6 +29,14 @@ class HeadlessVerifyTest {
     }
 
     @Test
+    void verifyAcceptsHumanGateAndDenyAll() throws Exception {
+        assertThat(HeadlessMain.run(
+            HeadlessMain.parse(new String[] {"--verify", "--approval=ask"}), workspace, sessions)).isZero();
+        assertThat(HeadlessMain.run(
+            HeadlessMain.parse(new String[] {"--verify", "--approval=deny"}), workspace, sessions)).isZero();
+    }
+
+    @Test
     void missingTaskWithKeyAbsentFailsLoud() throws Exception {
         assertThat(HeadlessMain.run(HeadlessMain.parse(new String[] {"t"}), workspace, sessions)).isEqualTo(2);
     }
