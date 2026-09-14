@@ -1,4 +1,4 @@
-# 迭代 12.6 — 硬化：耐久 / 错误分类 / 围栏真路径 / 平台预警（状态：进行中）
+# 迭代 12.6 — 硬化：耐久 / 错误分类 / 围栏真路径 / 平台预警（状态：已完成）
 
 模块：`session/persistence-jsonl`（fsync + 撕裂尾）、`llm/llm` + `llm/openai-compat`（LlmError 分类）、`fs/local`（realpath 围栏）、`sandbox/sandbox` + `sandbox/local` + `bundle/base`（`--verify` 预警）、`core/agent-loop`（LoopGuard 注释订正）、文档（02 漂移订正；契约面变更同步 05）
 
@@ -82,7 +82,8 @@
 - [x] 注释 + 02 订正 diff 在案（05 随契约同步）
   - `fc978aa`：LoopGuard 两处注释 + 02 四组订正；**审计清单外同旨订正一并落**（§3 依赖图补节点/边、§4 两处 module-info 示例改实况、§7 opens 规则改写、§5 目录树）——见提交信息
   - 05 契约同步在 `41f07a8`（§3 typed 失败措辞 / §6 查询面 + 预警契约）
-- [ ] 双 job CI 绿（push 后取证 run id）
+- [x] 双 job CI 绿（push 后取证 run id）
+  - run **34828226102**（headSha `a2e6d47`）：**build**（ubuntu，1m38s）与 **macos**（1m09s）双 job success；两 job 的 `Build and test` 与 `Smoke jlink image` 步骤均 success；ubuntu 侧 `Pre-flight sandbox probe (bwrap)` 与 docker 测试镜像步骤亦 success——本机 darwin 跳过的 2 个 bwrap 转测在 CI 真跑
 
 ## 修正（如有）
 
