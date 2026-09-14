@@ -46,9 +46,9 @@
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
 | `session/persistence-jsonl` · `JsonlPersistence`：`SessionWriter.flushBarrier/writeEnvelope`、`load` | force barrier + 撕裂尾截断 + 注入测试 | ✓ |
-| `llm/llm` · 新 `LlmCallException`（+`Kind`）；`llm/openai-compat` · `OpenAiCompatAdapter.sendWithRetry/pump` | typed 映射；重试判定读 Kind | |
+| `llm/llm` · 新 `LlmCallException`（+`Kind`）；`llm/openai-compat` · `OpenAiCompatAdapter.sendWithRetry/pump` | typed 映射；重试判定读 Kind | ✓ |
 | `fs/local` · `LocalFs`：构造器、`resolve` | realpath 归一 + 深祖先校验 + symlink 测试 | |
-| `sandbox/sandbox` · `SandboxProvider`；`sandbox/local` · `ChainedBackend`；`bundle/base` · `AppBoot.boot` verify 分支 | backendStatus 查询 + stderr 预警（exit 码不变） | |
+| `sandbox/sandbox` · `SandboxProvider`；`sandbox/local` · `ChainedBackend`；`bundle/base` · `AppBoot.boot` verify 分支 | backendStatus 查询 + stderr 预警（exit 码不变） | ✓ |
 | `core/agent-loop` · `LoopGuard.java` / `LoopGuardPlugin.java` 注释 | 两处订正 | |
 | `docs/design/02-module-layout.md` §3/§5 | 四组漂移订正 | |
 
@@ -57,7 +57,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | S1 持久化耐久语义 | `JsonlPersistence`（force/截断——it15 依赖的承载类） | 已放行（edc8ef4） |
-| S2 错误与查询面契约 | `LlmCallException`（新 seam 类型）+ `SandboxProvider.backendStatus()`（跨模块） | 待开工 |
+| S2 错误与查询面契约 | `LlmCallException`（新 seam 类型）+ `SandboxProvider.backendStatus()`（跨模块） | 已放行（41f07a8） |
 | S3 围栏真路径 | `LocalFs`（安全边界——symlink 语义与 TOCTOU 面） | 待开工 |
 
 ## 验收（证据 = 实际执行的命令与结果）
@@ -79,3 +79,4 @@
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
+| `Kind` 词表（`PROTOCOL`＝wire 解析） | 其余 4xx（如 400）亦归 `PROTOCOL` | 六档穷尽、语义就近；保守方向（不可重试而非误重试） | 迭代内已同步（05 §3 已明示「其余 4xx」） |
