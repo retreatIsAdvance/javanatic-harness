@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.javanatic</groupId>
+        <artifactId>harness-dist-aggregator</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>harness-dist-jh</artifactId>
+    <!-- 无源码的编排模块:jar packaging 仅为满足 moditect「工程 artifact 存在」的前提
+         (pom packaging 下该前提直接 NPE);空 jar 不参与镜像。 -->
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <!-- 唯一入口模块:其传递闭包 = 全 reactor 运行时模块 + jackson/snakeyaml -->
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-examples-headless</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 1) jlink module-path 暂存:入口闭包 jar 拷到 target/modules/ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>stage-runtime-jars</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>copy-dependencies</goal></goals>
+                        <configuration>
+                            <includeScope>runtime</includeScope>
+                            <outputDirectory>${project.build.directory}/modules</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 2) jlink 运行时镜像 → target/jlink-image/(bin/jh 唯一入口)。两处非直觉配置,均 it13 实证:
+                 a) 不走 bindServices:不装 jmods 的 JDK(JEP 493 linkable runtime,本机 Temurin 25
+                    即此形态)拒绝该模式;插件发现改为显式列根,须覆盖 bundle.yml 引用的全部
+                    provider 模块,缺失由镜像内 verify 冒烟 fail loud(CI 双 job 兜底)。
+                 b) launcher 的 module 取 module/mainClass:moditect 1.2.2 拼接 name=module 而
+                    忽略 mainClass,且本模块描述符不带 ModuleMainClass,jlink 要求显式主类。 -->
+            <plugin>
+                <groupId>org.moditect</groupId>
+                <artifactId>moditect-maven-plugin</artifactId>
+                <version>1.2.2.Final</version>
+                <executions>
+                    <execution>
+                        <id>create-jh-runtime-image</id>
+                        <phase>package</phase>
+                        <goals><goal>create-runtime-image</goal></goals>
+                        <configuration>
+                            <modulePath>
+                                <path>${project.build.directory}/modules</path>
+                            </modulePath>
+                            <modules>
+                                <module>io.javanatic.harness.examples.headless</module>
+                                <module>io.javanatic.harness.core.plan</module>
+                                <module>io.javanatic.harness.core.todo</module>
+                                <module>io.javanatic.harness.core.preset</module>
+                                <module>io.javanatic.harness.sandbox.local</module>
+                                <module>io.javanatic.harness.sandbox.policy</module>
+                                <module>io.javanatic.harness.shell.docker</module>
+                            </modules>
+                            <outputDirectory>${project.build.directory}/jlink-image</outputDirectory>
+                            <!-- NONE:不带 jars/ 依赖拷贝;null 会令 moditect copyJars NPE -->
+                            <jarInclusionPolicy>NONE</jarInclusionPolicy>
+                            <stripDebug>true</stripDebug>
+                            <noHeaderFiles>true</noHeaderFiles>
+                            <noManPages>true</noManPages>
+                            <launcher>
+                                <name>jh</name>
+                                <module>io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain</module>
+                            </launcher>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

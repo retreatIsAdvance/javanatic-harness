@@ -40,6 +40,11 @@ jobs:
       # validate 阶段内置 spotless:check + checkstyle:check，与本地 pre-push 同口径
       - name: Build and test
         run: mvn -B -ntp package
+      # dist 镜像冒烟（it13）：jlink 产物直接可跑——help 纯 CLI、verify 全组合 boot
+      - name: Smoke jlink image
+        run: |
+          ./dist/jh/target/jlink-image/bin/jh --help
+          ./dist/jh/target/jlink-image/bin/jh --verify
   macos:
     runs-on: macos-latest
     steps:
@@ -52,3 +57,8 @@ jobs:
       # seatbelt 真强制 e2e（SandboxLocalTest / ShellToolEndToEndTest 的 MAC 用例与全 reactor 同跑）
       - name: Build and test
         run: mvn -B -ntp package
+      # dist 镜像冒烟（it13）：jlink 产物直接可跑——help 纯 CLI、verify 全组合 boot
+      - name: Smoke jlink image
+        run: |
+          ./dist/jh/target/jlink-image/bin/jh --help
+          ./dist/jh/target/jlink-image/bin/jh --verify

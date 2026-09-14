@@ -36,6 +36,7 @@
         <module>interaction</module>
         <module>bundle</module>
         <module>examples</module>
+        <module>dist</module>
     </modules>
 
     <dependencyManagement>
