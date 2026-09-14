@@ -12,7 +12,7 @@ public interface LoopGuard {
     /**
      * 预算检查：turn 开始时以 step=0 查轮数上限，每步以当前 step 查步数上限。
      *
-     * @param session 被驱动的会话（未来 budget 档读 usage 累计）
+     * @param session 被驱动的会话（budget 档读其事件流累计 output token）
      * @param turn    当前轮号（1 起）
      * @param step    当前步号（0 起）
      * @throws GuardRejectException 超出任一上限

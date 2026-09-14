@@ -15,7 +15,7 @@ import java.util.Objects;
  * 提供计数上限版 LoopGuard（id "loop-guard"）。两条装配路径等价：
  * 显式构造器（程序化组合）或无参 + ConfigService 行配置（数据组合，07 §4）——
  * config 只携带组合层给出的值，未给的用插件侧文档化默认（50/40）。
- * budget 档（token 计量）随 deepseek 切片。
+ * budget 档（token 计量）：maxBudgetTokens 非零时按事件流累计 output token 判超限（0=不限）。
  */
 public final class LoopGuardPlugin implements Plugin {
 

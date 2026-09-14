@@ -36,6 +36,9 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-core-tools` | `kernel`, `session`, `llm.llm` | `ToolRegistry`（注册 + schemas）与 `ToolExecutor`（R2 单一分发 pipeline）**同模块分接口**；`ApprovalService` Definition + auto 内置 provider；**首个 Jackson 边界**（ToolArgs 校验模型 tool JSON，08 §6）（[05 §8](05-capability-seam.md)）| `core/tools` |
 | `harness-core-agent` | `kernel`, `session` | `Agent` 接口、`AgentRegistry`（ScopedValue initiator）、`AgentHandle` | `core/agent` |
 | `harness-core-agent-loop` | `agent`, `tools`, `system-prompt`, `llm` | `AgentLoopImpl` 驱动（Turn/Step 状态机）| `core/agent-loop` |
+| `harness-core-todo` | `kernel`, `kernel.config`, `session`, `tools`, `session.persistence` | `todo_write` 工具 + `todo/write` 扩展事件：整表快照落账、回放末值胜；codec 经 ServiceLoader 双注册 | `tool-todo` |
+| `harness-core-plan` | `kernel`, `kernel.config`, `session`, `tools`, `system-prompt`, `session.persistence` | 计划模式：`plan/mode` 扩展事件 fold（末值胜）+ `plan:policy` 提示段 + `exit_plan_mode` 工具 | `plan-mode` |
+| `harness-core-preset` | `kernel`, `kernel.config`, `tools`, `llm.llm` | per-session agent 能力集：`preset.yml` 行在 setup window 内挂载到 agent scope（[06 §6](06-scope.md)）；SnakeYAML 第四边界 | — |
 | `harness-core` | 上述全部 | 聚合（packaging=pom 的 reactor 聚合，无 JPMS re-export）| `core` |
 
 ### Capability 层（可替换 seam）
@@ -47,7 +50,8 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | 角色 | 职责 |
 |---|---|---|
 | `harness-llm-llm` | Definition | `LlmService`（`Stream<StreamChunk> stream(...)` 阻塞式）、`StreamChunk` 类型。`Message`/`ContentBlock` 在 `core/session`（消息是被日志的事实；dsh 靠 TS type-only import 从 llm 借用，Java 的 `requires` 是真实模块边，依赖方向要求消息模型在被日志的一侧）|
-| `harness-llm-deepseek` | Provider | DeepSeek HTTP 适配器（插件 id `llm-deepseek`）|
+| `harness-llm-openai-compat` | Provider | 通用 OpenAI 兼容适配器（插件 id `llm-openai-compat`）：传输韧性（重试/退避/空闲看门狗/有界队列背压）+ wire 构造/防御性 SSE 解码；厂商差异收敛为 `VendorProfile`（[05](05-capability-seam.md)）|
+| `harness-llm-deepseek` | Provider | DeepSeek 薄壳：`DeepSeekOptions` + 默认画像（id `llm-deepseek`，程序化组合用）；wire 与传输韧性在 `llm/openai-compat` |
 | `harness-llm-replay` | Provider | 回放适配器（插件 id `llm-replay`，keyless 测试依赖它）|
 
 #### FS（文件系统）
@@ -80,7 +84,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | 角色 | 职责 |
 |---|---|---|
 | `harness-session-persistence` | Definition | `SessionStore` SPI + **`SessionEventCodec`**（序列化归 seam；domain record 零 Jackson 注解，[03 §6](03-session-event-sourcing.md)）|
-| `harness-session-persistence-jsonl` | Provider | JSONL 后端（插件 id `persistence-jsonl`）；Jackson 依赖只在此模块与 llm-deepseek |
+| `harness-session-persistence-jsonl` | Provider | JSONL 后端（插件 id `persistence-jsonl`）；Jackson 边界之一（另有 core-tools、llm/openai-compat）|
 
 > MVP 只做 JSONL，不做 SQLite。接口预留。
 
@@ -127,10 +131,14 @@ flowchart TD
         tools[harness-core-tools<br/>Registry+Executor]
         agent[harness-core-agent]
         agentloop[harness-core-agent-loop]
+        todo[harness-core-todo]
+        plan[harness-core-plan]
+        preset[harness-core-preset]
     end
 
     subgraph llm[LLM]
         llmdef[harness-llm-llm]
+        compat[harness-llm-openai-compat]
         deepseek[harness-llm-deepseek]
         replay[harness-llm-replay]
     end
@@ -185,8 +193,14 @@ flowchart TD
     kcore --> approval
     session --> persistdef
     kconfig --> tools
+    tools --> todo
+    tools --> plan
+    sysprompt --> plan
+    tools --> preset
 
+    llmdef --> compat
     llmdef --> deepseek
+    compat --> deepseek
     llmdef --> replay
     fsdef --> fslocal
     fsdef --> fstool
@@ -195,6 +209,7 @@ flowchart TD
     shelldef --> shelltool
     persistdef --> jsonl
 
+    compat --> base
     deepseek --> base
     replay --> base
     fslocal --> base
@@ -205,6 +220,9 @@ flowchart TD
     jsonl --> base
     approval --> base
     agentloop --> base
+    todo --> base
+    plan --> base
+    preset --> base
 
     base --> headless
 
@@ -212,7 +230,7 @@ flowchart TD
     headlessex --> distjh
 ```
 
-Jackson 只出现在 `llm-deepseek` 与 `persistence-jsonl` 两个模块（JSON 边界归 seam）；`core-session` 及全部 domain 模块零 Jackson。
+Jackson 只出现在 `core-tools`、`llm/openai-compat` 与 `persistence-jsonl` 三个边界模块（model/tool JSON、wire JSON、codec JSON）；`core-session` 及全部 domain 模块零 Jackson。
 
 ## 4. module-info.java 示例
 
@@ -242,35 +260,36 @@ module io.javanatic.harness.core.session {
 }
 ```
 
-### session.persistence-jsonl（Jackson 只在此 + llm-deepseek）
+### session.persistence-jsonl（Jackson 边界之一：JSONL codec）
 
 ```java
 module io.javanatic.harness.session.persistence.jsonl {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
+    requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.session.persistence;   // SessionEventCodec SPI
     requires com.fasterxml.jackson.databind;
-
-    opens io.javanatic.harness.session.persistence.jsonl.codec to
-        com.fasterxml.jackson.databind;
+    // 扩展事件 codec 由各事件模块 provides，本后端发起发现（provides/uses 成对）
+    uses io.javanatic.harness.session.persistence.SessionEventCodec;
 
     provides io.javanatic.harness.kernel.plugin.Plugin
         with io.javanatic.harness.session.persistence.jsonl.JsonlPersistencePlugin;
+
+    exports io.javanatic.harness.session.persistence.jsonl;
 }
 ```
 
-### llm.deepseek（Provider）
+### llm.deepseek（Provider，薄壳）
 
 ```java
 module io.javanatic.harness.llm.deepseek {
     requires io.javanatic.harness.kernel;
-    requires io.javanatic.harness.kernel.config;      // ConfigService
     requires io.javanatic.harness.llm.llm;
-    requires java.net.http;                          // HttpClient
-    requires com.fasterxml.jackson.databind;
+    requires io.javanatic.harness.llm.openai.compat;   // wire/韧性在通用适配器
+    requires jdk.httpserver;                           // 测试：经 seam 的假服务端冒烟
 
-    provides io.javanatic.harness.kernel.plugin.Plugin
-        with io.javanatic.harness.llm.deepseek.DeepSeekPlugin;
+    exports io.javanatic.harness.llm.deepseek;
 }
 ```
 
@@ -330,10 +349,14 @@ harness/
 │   ├── system-prompt/pom.xml
 │   ├── tools/pom.xml                ← ToolRegistry + ToolExecutor
 │   ├── agent/pom.xml
-│   └── agent-loop/pom.xml
+│   ├── agent-loop/pom.xml
+│   ├── todo/pom.xml                 ← todo_write 工具 + todo/write 事件
+│   ├── plan/pom.xml                 ← 计划模式（plan/mode + exit_plan_mode）
+│   └── preset/pom.xml               ← per-session 能力集（setup window 挂载）
 ├── llm/
 │   ├── pom.xml                      ← 聚合
 │   ├── llm/pom.xml
+│   ├── openai-compat/pom.xml        ← 通用 OpenAI 兼容适配器（wire/韧性/VendorProfile）
 │   ├── deepseek/pom.xml
 │   └── replay/pom.xml
 ├── fs/
@@ -774,7 +797,7 @@ java -jar examples/headless/target/jh.jar --profile headless --verify   # R4 治
 
 2. **每个叶子模块一个 `module-info.java`**。聚合只有 packaging=pom 的 reactor 聚合，**没有 JPMS re-export 模块**，不允许 `requires transitive` 跨界传染依赖。
 
-3. **`opens` 仅给 JSON 边界**（persistence-jsonl 的 codec、llm-deepseek 的 HTTP 反序列化）和测试框架。domain 模块（core.session 等）零 `opens`、零 Jackson 注解。
+3. **`opens` 仅限 JSON 边界与测试框架**（当前无模块需要 `opens`——codec/适配器手写互译、Jackson 走树模型，domain record 零注解）；domain 模块（core.session 等）零 `opens`、零 Jackson 注解。
 
 4. **Capability seam 三模块纪律**：Definition 模块 `exports` 接口；Provider 模块 `provides Plugin`；Consumer 模块 `requires` Definition。三者绝不循环。
 
