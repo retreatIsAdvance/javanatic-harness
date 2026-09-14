@@ -36,9 +36,9 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-core-tools` | `kernel`, `session`, `llm.llm` | `ToolRegistry`（注册 + schemas）与 `ToolExecutor`（R2 单一分发 pipeline）**同模块分接口**；`ApprovalService` Definition + auto 内置 provider；**首个 Jackson 边界**（ToolArgs 校验模型 tool JSON，08 §6）（[05 §8](05-capability-seam.md)）| `core/tools` |
 | `harness-core-agent` | `kernel`, `session` | `Agent` 接口、`AgentRegistry`（ScopedValue initiator）、`AgentHandle` | `core/agent` |
 | `harness-core-agent-loop` | `agent`, `tools`, `system-prompt`, `llm` | `AgentLoopImpl` 驱动（Turn/Step 状态机）| `core/agent-loop` |
-| `harness-core-todo` | `kernel`, `kernel.config`, `session`, `tools`, `session.persistence` | `todo_write` 工具 + `todo/write` 扩展事件：整表快照落账、回放末值胜；codec 经 ServiceLoader 双注册 | `tool-todo` |
-| `harness-core-plan` | `kernel`, `kernel.config`, `session`, `tools`, `system-prompt`, `session.persistence` | 计划模式：`plan/mode` 扩展事件 fold（末值胜）+ `plan:policy` 提示段 + `exit_plan_mode` 工具 | `plan-mode` |
-| `harness-core-preset` | `kernel`, `kernel.config`, `tools`, `llm.llm` | per-session agent 能力集：`preset.yml` 行在 setup window 内挂载到 agent scope（[06 §6](06-scope.md)）；SnakeYAML 第四边界 | — |
+| `harness-core-todo` | `kernel`, `kernel.config`, `session`, `tools`, `session.persistence` | `todo_write` 工具 + `todo/write` 扩展事件：整表快照落账、回放末值胜；codec 经 ServiceLoader 双注册 | `todo/tool-todo` |
+| `harness-core-plan` | `kernel`, `kernel.config`, `session`, `tools`, `system-prompt`, `session.persistence` | 计划模式：`plan/mode` 扩展事件 fold（末值胜）+ `plan:policy` 提示段 + `exit_plan_mode` 工具 | `plan/plan-mode` |
+| `harness-core-preset` | `kernel`, `kernel.config`, `tools`, `llm.llm` | per-session agent 能力集：`preset.yml` 行在 setup window 内挂载到 agent scope（[06 §6](06-scope.md)）；SnakeYAML 第四边界 | `preset/agent-presets` |
 | `harness-core` | 上述全部 | 聚合（packaging=pom 的 reactor 聚合，无 JPMS re-export）| `core` |
 
 ### Capability 层（可替换 seam）
@@ -768,6 +768,9 @@ java -jar examples/headless/target/jh.jar --profile headless --verify   # R4 治
 | `core/tools` | `core.tools`（Registry + Executor 分接口）| ✅ |
 | `core/agent` | `core.agent` | ✅ |
 | `core/agent-loop` | `core.agent-loop` | ✅ |
+| `todo/tool-todo` | `core.todo`（整表快照落账、回放末值胜）| ✅ |
+| `plan/plan-mode` | `core.plan`（fold 末值胜 + `plan:policy` 段）| ✅（步级扩展点挂账）|
+| `preset/agent-presets` | `core.preset`（[06](06-scope.md)；per-session `preset.yml` 挂 agent scope）| ✅ |
 | `core/scope` | `core` 域内 `ScopedLayers`（[06](06-scope.md)；可见性归 kernel Scope）| ✅ 简化 |
 | `llm/llm` | `llm.llm` | ✅ |
 | `llm/llm-deepseek` | `llm.deepseek` | ✅ |
