@@ -97,7 +97,7 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 | 11 ✅ | 能干活：todo_write（整表替换快照）+ 计划模式（plan/mode 纯 fold + exit_plan_mode 直写翻转 + 动态提示段）；扩展事件 codec 走 ServiceLoader | — |
 | 12 ✅ | 敢让人跑：sandbox（平台链 darwin=seatbelt 实测，linux/windows 设计先行）+ restriction（shell wrap + fs 围栏 + plan 压只读 + PRODUCTION 断言） | [05](docs/design/05-capability-seam.md) |
 | 12.5 ✅ | 环境级隔离：`shell-docker` 第二个 `ShellExecutor` Provider——挂载面即可写面（整个容器根只读），沙箱三档词表在容器后端同义且更强；换 Provider 不动 seam，纯组合选择 | [05](docs/design/05-capability-seam.md) |
-| 12.6 | 硬化（**待排**，视需要插入）：JSONL fsync/撕裂尾、LlmError 分类、LocalFs realpath、`--verify` 在无同机后端平台的预警、`LoopGuard` 滞后注释、headless 会话 id 去硬编码 | — |
+| 12.6 | 硬化（**待排**，视需要插入）：JSONL fsync/撕裂尾、LlmError 分类、LocalFs realpath、`--verify` 在无同机后端平台的预警、`LoopGuard` 滞后注释 | — |
 | 12.7 ✅ | 平台链落地：Linux 同机约束（bwrap 后端）——darwin=seatbelt / linux=bwrap / win32=空链；CI 双 job 真验（ubuntu 装 bubblewrap、macos 补 seatbelt） | [05](docs/design/05-capability-seam.md) |
 | 13 | 可运行产物：dist（jlink）+ CLI 完备（`--help` / `--workspace=` / `--approval=`；运行 id + CI 冒烟）| — |
 | 14 | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染 | — |

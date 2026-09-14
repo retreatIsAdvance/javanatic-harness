@@ -62,14 +62,14 @@
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] `mvn -B -q package` 全 reactor 绿（含 dist）且 `dist/jh/target/jlink-image/bin/jh` 存在
-- [ ] `jh --help` exit 0（stdout 含全部 flag）；未知参数 exit 2 且指向 --help；`--workspace=` 指向不存在目录 exit 2
-- [ ] `jh --verify` exit 0（无 key）；`jh --verify --approval=deny` exit 0；`--approval=bogus` exit 2
-- [ ] `jh --workspace=<真实目录>` 跑一条写入任务：文件落该目录、沙箱拒绝目录外写（证据：运行输出）
-- [ ] 真跑（本机 DEEPSEEK_API_KEY）：`jh "任务"` 完成、两次运行各得独立会话（不混账）+ 按打印 id `--resume` 续跑（seq 续接）
-- [ ] `--docker` 经镜像形态仍可跑（本机 docker 在）
+- [x] **全 reactor `mvn -B -q package` 绿（含 dist）**：`BUILD SUCCESS`（2026-09-14，1:52；45 reactor 项目、304 测试 0 败）；`dist/jh/target/jlink-image/bin/jh` 存在——本迭代以下全部真跑均经该镜像 launcher 执行
+- [x] **`jh --help` exit 0；未知参数/坏 workspace exit 2**：help stdout 列全 14 flag（--help/--verify/--policy/--provider/--model/--base-url/--api-key-env/--api-key/--profile/--workspace/--approval/--docker/--image/--resume）；`--bogus` → exit 2、stderr「未知参数: --bogus（用法见 --help）」；`--workspace=/nonexistent-xyz` → exit 2（须已存在目录，fail loud）
+- [x] **`--verify` 三态（无 key）**：`jh --verify` → exit 0（「verify 通过」）；`jh --verify --approval=deny` → exit 0；`--approval=bogus` → exit 2
+- [x] **`--workspace=` 写入任务 + 目录外拒绝**（session `headless-1789352569967-9fb5`，exit 0）：`/tmp/jh-accept-ws/hello.txt` 落盘（18B「it13-workspace-ok」）；目录外 `fs_write` → tool/result isError「IllegalArgumentException: path escapes workspace root: …」；目录外 bash 写 → 「exit: 1 [sandbox: a file effect was denied by the sandbox policy] … Operation not permitted」；两处目录外文件均不存在
+- [x] **真跑（本机 DEEPSEEK_API_KEY）运行 id + resume**：两次运行独立 id（`headless-1789352667970-4ee4` / `headless-1789352671961-6c9b`，均 exit 0、各落各目录）；`--resume=<sid1>` exit 0（「resume session=…」）→ sid1 日志 17 事件 seq 0..16：首跑 turn 1 = seq 0..7，`session/end-seed` seq 8，续跑 turn 2 = seq 9..16——seq 续接不重置；sid2 日志仅 8 事件（不混账）
+- [x] **`--docker` 经镜像形态可跑**（session `headless-1789352811859-d51f`，exit 0）：tool/result「exit: 0 … Linux 6.4.16-linuxkit aarch64 / PRETTY_NAME=\"Ubuntu 26.04 LTS\"」——macOS 宿主经镜像 launcher 走容器后端执行
 - [ ] 双 job CI 绿 + 冒烟步骤过（push 后取证 run id）
-- [ ] 文档同步：02/07/README/AGENTS 更新在案；挂账两处订正完成
+- [x] **文档同步**：02（Distribution 层 + 结构树 + 根 pom modules）/ 07（§7 草图订正 + §9 重写）/ README（运行段 + 结构树 + 计数）/ AGENTS（跑一个 task + Commands）更新在案；it12.5 挂账两处订正完成（commit `5b99024`）
 
 ## 修正（如有）
 
