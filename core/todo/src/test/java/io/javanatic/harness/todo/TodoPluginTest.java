@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -136,8 +137,10 @@ class TodoPluginTest {
 
     /**
      * 并发契约（Session.append Javadoc）：同批并行工具的日志交错序任意——
-     * 慢工具的 tool/call 与 tool/result 被快工具的三条事件隔开，配对仍靠
-     * callId 成立；相邻性不是契约，钉进执行门禁。
+     * 慢工具的 tool/call 与 tool/result 之间隔着快工具的事件，配对仍靠
+     * callId 成立；相邻性不是契约，钉进执行门禁。交错做成因果（慢工具等
+     * 快工具的结果落账再返回），不赌调度时窗——CI 单核 runner 上固定 sleep
+     * 曾因调度饥饿偶发红（it12.6 收尾 CI 实录）。
      */
     @Test
     void parallelBatchInterleavesAndPairsByCallIdNotAdjacency() {
@@ -150,7 +153,7 @@ class TodoPluginTest {
                 new ValueSchema.Object("参数",
                     Map.of("text", new ValueSchema.Str("文本"))),
                 (args, context) -> {
-                    Thread.sleep(150);
+                    awaitResult(context.session(), "fast", Duration.ofSeconds(10));
                     return ToolExecutionResult.success(args.readString("text"));
                 }));
 
@@ -163,7 +166,7 @@ class TodoPluginTest {
             List<LoggedEvent<?>> log = session.events();
             int callSlow = indexOfCall(log, "slow_echo");
             int resultSlow = indexOfResult(log, "slow");
-            // 交错确凿：slow 的审计对之间至少隔了 fast 的三条事件
+            // 交错确凿：slow 的审计对之间至少隔着 fast 的一条事件
             assertThat(resultSlow - callSlow).isGreaterThan(1);
             assertThat(log.stream().map(LoggedEvent::type))
                 .containsExactlyInAnyOrder("tool/call", "tool/call", "todo/write",
@@ -172,6 +175,28 @@ class TodoPluginTest {
             ToolResultEvent slowResult = (ToolResultEvent) log.get(resultSlow).event();
             assertThat(slowResult.block()).isEqualTo(new ToolResultBlock(CallId.of("slow"), "later", false));
         }
+    }
+
+    /** 阻塞至该 callId 的 tool/result 落账；AssertionError 不走 executor 的 Exception 网，超时必炸。 */
+    private static void awaitResult(Session session, String callId, Duration timeout) {
+        long deadline = System.nanoTime() + timeout.toNanos();
+        while (System.nanoTime() < deadline) {
+            boolean present = session.events().stream()
+                .map(LoggedEvent::event)
+                .filter(ToolResultEvent.class::isInstance)
+                .map(ToolResultEvent.class::cast)
+                .anyMatch(event -> event.block().toolUseId().value().equals(callId));
+            if (present) {
+                return;
+            }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("interrupted while awaiting tool/result " + callId, e);
+            }
+        }
+        throw new AssertionError("tool/result for " + callId + " not appended within " + timeout);
     }
 
     @Test
