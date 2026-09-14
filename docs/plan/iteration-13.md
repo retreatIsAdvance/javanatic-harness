@@ -1,4 +1,4 @@
-# 迭代 13 — 可运行产物：dist（jlink）+ CLI 完备（状态：进行中）
+# 迭代 13 — 可运行产物：dist（jlink）+ CLI 完备（状态：已完成）
 
 模块：`dist`（新增聚合 + `dist/jh` jlink 编排）、`examples/headless`（CLI 完备 + 会话 id）、`.github/workflows/ci.yml`（镜像冒烟）、文档（02/07/README/AGENTS）
 
@@ -68,7 +68,7 @@
 - [x] **`--workspace=` 写入任务 + 目录外拒绝**（session `headless-1789352569967-9fb5`，exit 0）：`/tmp/jh-accept-ws/hello.txt` 落盘（18B「it13-workspace-ok」）；目录外 `fs_write` → tool/result isError「IllegalArgumentException: path escapes workspace root: …」；目录外 bash 写 → 「exit: 1 [sandbox: a file effect was denied by the sandbox policy] … Operation not permitted」；两处目录外文件均不存在
 - [x] **真跑（本机 DEEPSEEK_API_KEY）运行 id + resume**：两次运行独立 id（`headless-1789352667970-4ee4` / `headless-1789352671961-6c9b`，均 exit 0、各落各目录）；`--resume=<sid1>` exit 0（「resume session=…」）→ sid1 日志 17 事件 seq 0..16：首跑 turn 1 = seq 0..7，`session/end-seed` seq 8，续跑 turn 2 = seq 9..16——seq 续接不重置；sid2 日志仅 8 事件（不混账）
 - [x] **`--docker` 经镜像形态可跑**（session `headless-1789352811859-d51f`，exit 0）：tool/result「exit: 0 … Linux 6.4.16-linuxkit aarch64 / PRETTY_NAME=\"Ubuntu 26.04 LTS\"」——macOS 宿主经镜像 launcher 走容器后端执行
-- [ ] 双 job CI 绿 + 冒烟步骤过（push 后取证 run id）
+- [x] **双 job CI 绿 + 冒烟步骤过**：run `34800126383`（headSha `be3047a`）——`build`（ubuntu，1m56s）与 `macos`（1m13s）双 job success；两 job 的 `Smoke jlink image` 步骤均跑 `bin/jh --help`（全 flag 用法输出）+ `bin/jh --verify`（「INFO: verify 通过」）过（`bash -e` 语义，退出码即判据）
 - [x] **文档同步**：02（Distribution 层 + 结构树 + 根 pom modules）/ 07（§7 草图订正 + §9 重写）/ README（运行段 + 结构树 + 计数）/ AGENTS（跑一个 task + Commands）更新在案；it12.5 挂账两处订正完成（commit `5b99024`）
 
 ## 修正（如有）
