@@ -223,17 +223,19 @@ bundles:
 public final class HeadlessMain {
 
     public static void main(String[] args) throws Exception {
-        Options opts = parseArgs(args);   // [--profile X] [--dump-config] [--verify] [--patch f.yml] "<task>"
+        Options opts = parseArgs(args);   // [--profile X] [--workspace=<dir>] [--approval=auto|ask|deny] [--verify] [--resume=<id>] "<task>"
 
         try (Runtime runtime = AppBoot.boot(opts)) {
-            if (runtime == null) return;  // dump-config / verify-only 已处理完退出
+            if (opts.verify()) return;    // verify-only：组合 + 断言后按 0/1 退出
 
             Scope root = runtime.root();
             AgentRegistry agents = root.require(AgentRegistry.KEY);
 
-            SessionId sid = SessionId.of("headless-" + System.currentTimeMillis());
+            // 每次运行独立会话 id（headless-<时间戳>-<短随机>），运行时打印；--resume 按打印 id 续跑
+            String sessionId = opts.resume().orElse(newRunSessionId());
+            System.getLogger("jh").log(Level.INFO, "session={0}", sessionId);
             AgentHandle handle = agents.create(root, CreateAgentOptions.builder()
-                .sessionId(sid)
+                .sessionId(SessionId.of(sessionId))
                 .agentOptions(AgentOptions.builder()
                     .provider("deepseek")
                     .model(opts.model().orElse("deepseek-chat"))
@@ -258,10 +260,13 @@ public final class HeadlessMain {
 ```
 
 ```sh
-java -jar headless.jar --profile headless --dump-config          # 组合结果
-java -jar headless.jar --profile headless --verify               # 治理断言（无 key 可跑）
-DEEPSEEK_API_KEY=sk-... java -jar headless.jar --profile headless "List files"
+jh --help                                   # 全部 flag 与示例（exit 0）
+jh --verify                                 # 组合 + 治理断言（无 key 可跑）
+DEEPSEEK_API_KEY=sk-... jh "List files" --workspace=<已存在目录>
+jh --resume=<上次打印的 session=…> "继续"    # 会话按打印 id 续跑（seq 续接）
 ```
+
+`jh` = `dist/jh` jlink 运行时镜像的 launcher（it13，见 [02 §Distribution 层](02-module-layout.md)）：解出即用，无需手拼 module-path。
 
 ## 8. dump-config 输出示例
 
@@ -283,19 +288,29 @@ Effective plugin rows:
 # Any row above can be replaced by a patch of your own.
 ```
 
-## 9. 自定义示例：换 sandbox provider
+## 9. 自定义示例：换 shell provider / 改沙箱档
 
 ```yaml
-# ~/.harness/profiles/headless/patch.yml
+# ~/.harness/profiles/headless/patch.yml —— 环境级隔离：本机 bash → docker 容器
+# （与 CLI `--docker [--image=…]` 的 overlay 等价，it12.5/it13）
 rows:
   - plugin: shell-bash-local
-    replace: true
+    disabled: true                    # 同一 seam 只留一个 ShellExecutor
+  - plugin: shell-docker
     config:
-      sandboxMode: landlock
-      workspaceRoot: ${cwd}
+      image: ubuntu:24.04             # 挂载面即可写面：容器根恒只读
 ```
 
-注意：替换的是**配置**（同一插件 id 的 config 覆盖），不需要换类名。真正换 provider 时，patch 引用另一个已发现的 plugin id（如 `shell-bash-sandbox`），jar 经 profile `plugins` 或 `--module-path` 进入发现面——但**只有被行引用才挂载**（§5 双向校验）。
+```yaml
+# 改沙箱档：sandbox 配置在 sandbox-policy 行，不在 shell provider 行
+rows:
+  - plugin: sandbox-policy
+    config:
+      mode: danger-full-access        # 三档词表：read-only / workspace-write / danger-full-access
+      workspace: ${cwd}               # 授予面：与 fs 围栏 / shell workspace 同一目录
+```
+
+注意：patch 锚点是 **plugin id**，不带标记即替换整行（新行接管启用态与 config），不需要换类名。换 provider 是行引用另一个已发现的 plugin id（jar 经 profile `plugins` 或 `--module-path` 进入发现面）——但**只有被行引用才挂载**（§5 双向校验）。Shell provider 管「在哪执行」，沙箱档管「能写哪」——分属两个 seam 的两行配置各归各行，不叠在 shell provider 的 config 里。
 
 ## 10. 与 dsh 对齐
 

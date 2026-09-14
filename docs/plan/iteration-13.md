@@ -46,19 +46,19 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| `examples/headless/…/HeadlessMain.java:parse/RunnerOptions/main/run` | help/workspace/approval/id/出口码 | |
-| `pom.xml:<modules>` | 加 `dist` | |
-| `.github/workflows/ci.yml` | 加镜像冒烟步骤 | |
-| `docs/design/02-module-layout.md` | Distribution 节 | |
-| `docs/design/07-profile-bundle.md:§9/§7` | 示例订正 + 运行 id 设计稿核对 | |
-| `README.md`（结构/路线/运行段）、`AGENTS.md`（跑一个 task/Commands） | 同步 | |
+| `examples/headless/…/HeadlessMain.java:parse/RunnerOptions/main/run` | help/workspace/approval/id/出口码 | ✓ |
+| `pom.xml:<modules>` | 加 `dist` | ✓ |
+| `.github/workflows/ci.yml` | 加镜像冒烟步骤 | ✓ |
+| `docs/design/02-module-layout.md` | Distribution 节 | ✓ |
+| `docs/design/07-profile-bundle.md:§9/§7` | 示例订正 + 运行 id 设计稿核对 | ✓ |
+| `README.md`（结构/路线/运行段）、`AGENTS.md`（跑一个 task/Commands） | 同步 | ✓ |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行，全机械迭代写「无」）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| S1 CLI 面 | `HeadlessMain`（parse / RunnerOptions / help / workspace / approval / 运行 id / 出口码）+ 聚焦测试 | 待停 |
-| S2 dist + launcher | `dist/` 两 POM、根 pom、moditect 参数、ci.yml 冒烟 | 待停 |
+| S1 CLI 面 | `HeadlessMain`（parse / RunnerOptions / help / workspace / approval / 运行 id / 出口码）+ 聚焦测试 | 已放行（`8d3159f`）|
+| S2 dist + launcher | `dist/` 两 POM、根 pom、moditect 参数、ci.yml 冒烟 | 已放行（`3254d93`）|
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -80,3 +80,10 @@
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
+| 四确认 1：`dist/jh` 为「pom packaging，无运行时代码」 | `packaging=jar`（产空 jar，不进镜像） | moditect 1.2.2 `CreateRuntimeImageMojo` 前置校验先解引用 `primaryProjectArtifact.getFile()`，pom packaging 该值为 null → NPE（以插件源码核验） | 迭代内已同步（POM 注释写明 jar 是插件入口前提） |
+| 四确认 1：`bindServices=true`（ServiceLoader 插件面在镜像内可达） | 不设 `bindServices`；显式列 7 个 jlink 根（headless + core.plan/todo/preset + sandbox.local/policy + shell.docker） | 本机 temurin-25 无 jmods（JEP 493），jlink 对无打包模块的 JDK 拒 `--bind-services`；插件可达性由「根模块在场」决定，与 bind 无关 | 迭代内已同步（POM 注释；根清单漂移由镜像内 `--verify` 兜底——bundle.yml 行引用的插件 id 缺根即 boot 失败） |
+| 未提及（jlink 实验发现）：镜像内 `--verify` 抛 `ClassNotFoundException: java.beans.IntrospectionException` | `bundle/base` 显式 `requires java.desktop` | snakeyaml 描述符对 java.desktop 仅 `requires static`，默认 `Yaml()` 构造走 java.beans 内省，镜像未解析 java.desktop 即崩；需求属 snakeyaml 的边界模块 | 迭代内已同步（由 bundle.base 承担，不在 dist POM 里补模块清单） |
+| 未提及：launcher 的 `<mainClass>` 被忽略、JDK 无法给模块写主类 | `<module>` 取值 `…examples.headless/…HeadlessMain` | moditect 1.2.2 `Launcher` 只拼 `name=module`；javac 无 `--main-class`（ModuleMainClass 写不进）；`module/mainClass` 是 jlink launcher 唯一可行语法 | 迭代内已同步（POM 注释） |
+| 未提及：`jarInclusionPolicy` 默认 null → `copyJars` NPE | 显式 `NONE` | moditect 1.2.2 对 null 策略无守卫，枚举只有 NONE/APP/APP_WITH_DEPENDENCIES | 迭代内已同步（副作用：镜像残留空 `jars/` 目录，无害） |
+| 未提及：镜像体积与模块面 | 未压缩 90M；`bin/` 含 `java/jh/jwebserver/keytool`（`jdk.httpserver` 因 headless 测试面 `requires` 进镜像） | 先要正确可跑；压缩与模块收窄是优化，非本迭代验收面 | 挂账（`<compression>` 开关 + jdk.httpserver 收窄候选，随后续硬化或发布切片） |
+| 07 §7 草图：`java -jar headless.jar --dump-config` 等旗标 | CLI 实装旗标集为 `--help/--workspace=/--approval=/--verify/--resume=` 等；无 `--dump-config`（`AppBoot.dump` 助手存在，CLI 未暴露） | 草图自 it7 起为设计态；本迭代 CLI 完备的范围按四确认（help/workspace/approval）落定 | 迭代内已同步（§7 草图与命令块订正为实装集） |

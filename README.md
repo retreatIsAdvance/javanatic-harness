@@ -44,33 +44,40 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS
 ## 构建与验证
 
 ```sh
-mvn -B package              # 全量编译打包（38 个 reactor 项目，169+ 测试；e2e 无 key 自跳过）
+mvn -B package              # 全量编译打包（45 个 reactor 项目，304 项测试；e2e 无 key 自跳过）
 mvn -B -pl :harness-kernel-core -am package   # 单模块及其依赖
 ```
 
-跑一个 keyless 竖切示例（replay 模型 + fs 工具 + 完整落账）：
+`mvn -B package` 顺带产出 jlink 运行时镜像（it13）：解出即用，无需手拼 module-path。
 
 ```sh
-mvn -B -q -pl examples/agent-spine -am package
-java --module-path <各模块 target/classes 与 jackson jar> \
-     -m io.javanatic.harness.examples.agent.spine/io.javanatic.harness.examples.agent.spine.SpineMain
+dist/jh/target/jlink-image/bin/jh --help     # 全部 flag 与示例（exit 0）
+dist/jh/target/jlink-image/bin/jh --verify   # 组合 + 治理断言（无 key，exit 0/1）
+
+DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
+# 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 续跑同一会话
+# 任意 OpenAI 兼容厂商：
+#   … bin/jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
+# 容器级隔离（须本机 docker 与镜像在场，不自动拉取）：
+#   … bin/jh "任务" --docker --image=ubuntu:24.04
 ```
 
-真实模型驱动（需 `DEEPSEEK_API_KEY`）：见 `examples/agent-spine` 的 `RealModelAgentE2ETest`；it7 落地 `examples/headless` 后提供 `java … "task"` 命令行入口。
+keyless 竖切（replay 模型 + fs 工具 + 完整落账）见 `examples/agent-spine`；真实模型 e2e 见其 `RealModelAgentE2ETest`。
 
 ## 仓库结构
 
 ```
 docs/design/        12 篇设计文档（00-overview … 11-java25-upgrade）+ docs/plan/ 逐迭代验收
 docs/dsh-reference.md   设计参照系说明（dsh 仓库路径约定）
-kernel/             Cordis 等价物：core（统一 Scope/Events/Plugin）+ brand；config（占位）
+kernel/             Cordis 等价物：core（统一 Scope/Events/Plugin）+ brand + config（YAML + ConfigService）
 core/               Agent 主干：session/tools/todo/plan/agent/agent-loop/system-prompt/preset（全部已实现）
-sandbox/           同机进程约束：Definition + seatbelt/bwrap Provider + 策略解析（darwin/linux 实测；windows 设计先行）
-llm/                seam + replay（keyless 测试地基）+ deepseek（真实 Provider）；openai-compat（it7）
-fs/ shell/          capability 三角色（均已实现：root 限制见 it7；shell 有两个互斥 Provider——本机 bash 与 docker 容器，见 it12.5）
+sandbox/            同机进程约束：Definition + seatbelt/bwrap Provider + 策略解析（darwin/linux 实测；windows 设计先行）
+llm/                seam + replay（keyless 测试地基）+ openai-compat（通用适配器）+ deepseek（真实 Provider）
+fs/ shell/          capability 三角色（均已实现；shell 有两个互斥 Provider——本机 bash 与 docker 容器，见 it12.5）
 session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端（R1 闭环）
-sandbox/ interaction/   沙箱（占位，挂账）与审批（it7：三模式）
-bundle/ examples/   base/headless 组合（占位/it7）与可运行示例（agent-spine 已实现）
+interaction/        审批三模式（auto/ask/deny，it7）；commands 占位
+dist/               jlink 运行时镜像编排：产出 bin/jh（解出即用，无需手拼 module-path，it13）
+bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可运行示例（agent-spine / headless）
 ```
 
 ## 实现路线（垂直切片）
@@ -92,7 +99,7 @@ bundle/ examples/   base/headless 组合（占位/it7）与可运行示例（age
 | 12.5 ✅ | 环境级隔离：`shell-docker` 第二个 `ShellExecutor` Provider——挂载面即可写面（整个容器根只读），沙箱三档词表在容器后端同义且更强；换 Provider 不动 seam，纯组合选择 | [05](docs/design/05-capability-seam.md) |
 | 12.6 | 硬化（**待排**，视需要插入）：JSONL fsync/撕裂尾、LlmError 分类、LocalFs realpath、`--verify` 在无同机后端平台的预警、`LoopGuard` 滞后注释、headless 会话 id 去硬编码 | — |
 | 12.7 ✅ | 平台链落地：Linux 同机约束（bwrap 后端）——darwin=seatbelt / linux=bwrap / win32=空链；CI 双 job 真验（ubuntu 装 bubblewrap、macos 补 seatbelt） | [05](docs/design/05-capability-seam.md) |
-| 13 | 可运行产物：dist（jlink）+ `--help` / `--workspace=` / `--approval=` | — |
+| 13 | 可运行产物：dist（jlink）+ CLI 完备（`--help` / `--workspace=` / `--approval=`；运行 id + CI 冒烟）| — |
 | 14 | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染 | — |
 | 15 | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
 | 16 | 发布工程 → **0.1.0**：Maven Central、门面冻结、双语 README | — |

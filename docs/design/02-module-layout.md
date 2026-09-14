@@ -9,6 +9,7 @@
 | Capability | `io.javanatic.harness.<cap>[.<pkg>]` | `io.javanatic.harness.fs`, `io.javanatic.harness.fs.local` |
 | Bundle | `io.javanatic.harness.bundle.<name>` | `io.javanatic.harness.bundle.base` |
 | Examples | `io.javanatic.harness.examples.<name>` | `io.javanatic.harness.examples.headless` |
+| Distribution | 无 JPMS 模块（jlink 编排 POM）| `harness-dist-jh` |
 
 JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模块名一致，import 即模块名前缀）。Maven coordinates 用 `io.javanatic:harness-<group>-<pkg>:<version>`，artifactId 全程小写连字符（如 `harness-kernel-core`）。
 
@@ -102,7 +103,13 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | 职责 |
 |---|---|
 | `harness-examples-agent-spine` | 最小 agent 主干 demo（6 包 loop 跑通）|
-| `harness-examples-headless` | `java -jar … "task"` 命令行 runner（`--verify` 也在此，R4）|
+| `harness-examples-headless` | `jh` 命令行 runner（CLI 完备：`--help`/`--workspace=`/`--approval=`…，`--verify` 也在此，R4）；经 `dist/jh` 打成 jlink 运行时镜像 |
+
+### Distribution 层（运行产物，it13）
+
+| 模块 | 职责 |
+|---|---|
+| `harness-dist-jh` | jlink 运行时镜像编排：聚合 `harness-examples-headless` 及其模块图，产出 `dist/jh/target/jlink-image/bin/jh`（解出即用，无手拼 module-path）。无运行时代码、无 JPMS 模块；`packaging=jar` 仅为满足 moditect 插件对主产物的入口前提（空 jar 不进镜像）。插件面由显式 jlink 根清单覆盖（无 jmods 的 JDK 拒 `--bind-services`；缺根漂移由镜像内 `--verify` 兜底）|
 
 ## 3. 依赖图
 
@@ -155,6 +162,14 @@ flowchart TD
         headless[harness-bundle-headless]
     end
 
+    subgraph examples[Examples]
+        headlessex[harness-examples-headless]
+    end
+
+    subgraph dist[Distribution]
+        distjh[harness-dist-jh<br/>jlink 运行时镜像]
+    end
+
     kcore --> session
     session --> agent
     session --> sysprompt
@@ -192,6 +207,9 @@ flowchart TD
     agentloop --> base
 
     base --> headless
+
+    base --> headlessex
+    headlessex --> distjh
 ```
 
 Jackson 只出现在 `llm-deepseek` 与 `persistence-jsonl` 两个模块（JSON 边界归 seam）；`core-session` 及全部 domain 模块零 Jackson。
@@ -337,10 +355,13 @@ harness/
 │   ├── pom.xml
 │   ├── base/pom.xml
 │   └── headless/pom.xml
-└── examples/
-    ├── pom.xml
-    ├── agent-spine/pom.xml
-    └── headless/pom.xml
+├── examples/
+│   ├── pom.xml
+│   ├── agent-spine/pom.xml
+│   └── headless/pom.xml
+└── dist/
+    ├── pom.xml                      ← 聚合
+    └── jh/pom.xml                   ← jlink 运行时镜像编排（无代码；产出 target/jlink-image/bin/jh）
 ```
 
 ### 父 POM（根 `harness/pom.xml`）
@@ -385,6 +406,7 @@ harness/
         <module>interaction</module>
         <module>bundle</module>
         <module>examples</module>
+        <module>dist</module>
     </modules>
 
     <dependencyManagement>
