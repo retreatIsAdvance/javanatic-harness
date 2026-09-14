@@ -47,7 +47,7 @@
 |---|---|---|
 | `session/persistence-jsonl` · `JsonlPersistence`：`SessionWriter.flushBarrier/writeEnvelope`、`load` | force barrier + 撕裂尾截断 + 注入测试 | ✓ |
 | `llm/llm` · 新 `LlmCallException`（+`Kind`）；`llm/openai-compat` · `OpenAiCompatAdapter.sendWithRetry/pump` | typed 映射；重试判定读 Kind | ✓ |
-| `fs/local` · `LocalFs`：构造器、`resolve` | realpath 归一 + 深祖先校验 + symlink 测试 | |
+| `fs/local` · `LocalFs`：构造器、`resolve` | realpath 归一 + 深祖先校验 + symlink 测试 | ✓ |
 | `sandbox/sandbox` · `SandboxProvider`；`sandbox/local` · `ChainedBackend`；`bundle/base` · `AppBoot.boot` verify 分支 | backendStatus 查询 + stderr 预警（exit 码不变） | ✓ |
 | `core/agent-loop` · `LoopGuard.java` / `LoopGuardPlugin.java` 注释 | 两处订正 | |
 | `docs/design/02-module-layout.md` §3/§5 | 四组漂移订正 | |
@@ -58,7 +58,7 @@
 |---|---|---|
 | S1 持久化耐久语义 | `JsonlPersistence`（force/截断——it15 依赖的承载类） | 已放行（edc8ef4） |
 | S2 错误与查询面契约 | `LlmCallException`（新 seam 类型）+ `SandboxProvider.backendStatus()`（跨模块） | 已放行（41f07a8） |
-| S3 围栏真路径 | `LocalFs`（安全边界——symlink 语义与 TOCTOU 面） | 待开工 |
+| S3 围栏真路径 | `LocalFs`（安全边界——symlink 语义与 TOCTOU 面） | 已放行（9953b5e） |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -80,3 +80,6 @@
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
 | `Kind` 词表（`PROTOCOL`＝wire 解析） | 其余 4xx（如 400）亦归 `PROTOCOL` | 六档穷尽、语义就近；保守方向（不可重试而非误重试） | 迭代内已同步（05 §3 已明示「其余 4xx」） |
+| 设计增量 3「最深已存在祖先取 realpath」（未写跟随策略） | 上溯用 `NOFOLLOW_LINKS`：悬空符号链接在真实化处 fail loud（NoSuchFileException） | naive 跟随存在活逃逸——`write` 会沿悬空链在区外创建目标；保守方向（拒而非穿透） | 迭代内已同步（javadoc + `danglingSymlink…` 转测钉住） |
+| `delete` 语义（设计未写明） | 走 canonical 路径：删「目标」而非「链接本身」；指向区外的链接被拒且链接保留 | 判定与操作同路径，验证后不再解析用户可控链接组件（TOCTOU 面收窄优先于内核 rm 语义保真） | 已放行（S3 停点包披露，放行时无异议） |
+| root 构造契约（原为词法基准，未提存在性） | 构造期须已存在：缺失 → IAE「root must exist (realpath normalization failed)」，无惰性创建 | realpath 语义的必然要求；与 CLI `--workspace` 既有契约（须已存在目录）一致 | 迭代内已同步（javadoc + `missingRoot…` 转测） |
