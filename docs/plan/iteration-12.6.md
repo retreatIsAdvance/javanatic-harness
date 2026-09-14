@@ -49,8 +49,8 @@
 | `llm/llm` · 新 `LlmCallException`（+`Kind`）；`llm/openai-compat` · `OpenAiCompatAdapter.sendWithRetry/pump` | typed 映射；重试判定读 Kind | ✓ |
 | `fs/local` · `LocalFs`：构造器、`resolve` | realpath 归一 + 深祖先校验 + symlink 测试 | ✓ |
 | `sandbox/sandbox` · `SandboxProvider`；`sandbox/local` · `ChainedBackend`；`bundle/base` · `AppBoot.boot` verify 分支 | backendStatus 查询 + stderr 预警（exit 码不变） | ✓ |
-| `core/agent-loop` · `LoopGuard.java` / `LoopGuardPlugin.java` 注释 | 两处订正 | |
-| `docs/design/02-module-layout.md` §3/§5 | 四组漂移订正 | |
+| `core/agent-loop` · `LoopGuard.java` / `LoopGuardPlugin.java` 注释 | 两处订正 | ✓ |
+| `docs/design/02-module-layout.md` §3/§5 | 四组漂移订正 | ✓ |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行）
 
@@ -62,12 +62,26 @@
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] 全 reactor `mvn -B package` 绿（新增测试记账）
-- [ ] JSONL：注入半行尾 → `load` 成功且文件截到最后完整行；内部行破损 → fail loud；`flushBarrier` 为 force 实现且 dispose 挂点触发（接线测试）；本机 kill -9 真跑 → `--resume` 成功
-- [ ] LlmError：假服务端 401/429/500/断流 → typed `Kind` 断言；真跑失效 key → AUTH 文案（可选）
-- [ ] realpath：symlink 指外拒 / 指内放 / `/tmp`↔`/private/tmp` 归一转测
-- [ ] `--verify` 预警：注伪平台链 / 探针失败 → stderr 预警且 exit 0；darwin 真机无预警
-- [ ] 注释 + 02 订正 diff 在案（05 随契约同步）
+- [x] 全 reactor `mvn -B package` 绿（新增测试记账）
+  - 收尾复跑（最终树，`fc978aa` 后）：`mvn -B -q package` **EXIT=0**；日志只见测试自造异常的 stderr 漏出，无 FAILURE
+  - surefire 汇总 **324 tests / 0 failures / 0 errors / 4 skipped**——4 skipped 为环境门控（2 个无 key 真模型 E2E + darwin 上 2 个 bwrap/linux 转测），非退化
+  - 新增测试记账：本迭代 **+30 个 @Test**（jsonl +5 / fs-local +6 / openai-compat +7 / AppBoot +6 / sandbox-local +4 / llm-llm +2）
+  - fresh 复跑 `dist/jh/target/jlink-image/bin/jh --verify` → EXIT=0「verify 通过」
+- [x] JSONL：注入半行尾 → `load` 成功且文件截到最后完整行；内部行破损 → fail loud；`flushBarrier` 为 force 实现且 dispose 挂点触发（接线测试）；本机 kill -9 真跑 → `--resume` 成功
+  - 注入 22B 半行尾 → `load` 成功、截到最后完整行、WARNING 落日志；内部行破损 → fail loud（转测）；`flushBarrier` = `FileChannel.force(true)`，dispose 经 `AgentLoopPlugin → SessionStore.flush` 接线（接线测试）
+  - 本机 kill -9 真跑 → `--resume` EXIT=0、seq 0..16 连续（细节记于 `edc8ef4`）
+- [x] LlmError：假服务端 401/429/500/断流 → typed `Kind` 断言；真跑失效 key → AUTH 文案
+  - 假服务端矩阵全绿：401/403→`AUTH`、429→`RATE_LIMIT`、5xx→`SERVER`、其余 4xx→`PROTOCOL`、连接拒→`NETWORK`、空闲看门狗→`TIMEOUT`、坏 SSE/未知 finish→`PROTOCOL`（adapter 18 绿）
+  - 真跑失效 key → `LlmCallException: deepseek http 401`、无重试（记于 `41f07a8`）
+- [x] realpath：symlink 指外拒 / 指内放 / `/tmp`↔`/private/tmp` 归一转测
+  - `LocalFsTest` 14/14：指外读写拒 + `delete` 拒且链接保留、悬空链写 fail loud 且区外目标不被创建、指内放行、root 别名归一后经别名访问放行、缺失 root 构造期 IAE、darwin `/tmp` 探针经 `LocalFs(/tmp)` 读通（未跳过）
+  - `mvn -B -pl fs/local,fs/tool,core/preset,bundle/base -am test` EXIT=0（记于 `9953b5e`）
+- [x] `--verify` 预警：注伪平台链 / 探针失败 → stderr 预警且 exit 0；darwin 真机无预警
+  - `AppBootTest` 14 绿：伪 provider 三态文本 + 伪平台链 stderr 捕获（真组合上）；`--verify` 在 confining policy × NoBackend/ProbeFailed 时 WARNING，exit 码不变
+  - darwin 真机（最终树）`jh --verify` EXIT=0 且无预警（记于 `41f07a8` + 本次收尾复跑）
+- [x] 注释 + 02 订正 diff 在案（05 随契约同步）
+  - `fc978aa`：LoopGuard 两处注释 + 02 四组订正；**审计清单外同旨订正一并落**（§3 依赖图补节点/边、§4 两处 module-info 示例改实况、§7 opens 规则改写、§5 目录树）——见提交信息
+  - 05 契约同步在 `41f07a8`（§3 typed 失败措辞 / §6 查询面 + 预警契约）
 - [ ] 双 job CI 绿（push 后取证 run id）
 
 ## 修正（如有）
