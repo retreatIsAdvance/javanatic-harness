@@ -209,4 +209,121 @@ class JsonlPersistenceTest {
                 .hasMessageContaining("no codec registered");
         }
     }
+
+    @Test
+    void tornTailPartialLineTruncatedOnLoad() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+            live.append(new TurnEnd(2, 1, new TurnEndReason.Completed()));
+            SessionPersistence persistence = rt.root().require(SessionPersistence.KEY);
+
+            // 模拟半行写入被杀:末尾追加无换行终止的残片
+            Path log = root.resolve("s1/log.jsonl");
+            Files.writeString(log, "{\"seq\":2,\"type\":\"turn/st", StandardOpenOption.APPEND);
+
+            SessionPersistence.Loaded loaded = persistence.load(live.id());
+            assertThat(loaded.events()).hasSize(2);
+            String healed = Files.readString(log);
+            assertThat(healed).doesNotContain("{\"seq\":2").endsWith("\n");
+            assertThat(Files.readAllLines(log)).hasSize(2);
+        }
+    }
+
+    @Test
+    void completeTailMissingNewlineHealedOnLoad() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+            live.append(new TurnEnd(2, 1, new TurnEndReason.Completed()));
+            live.append(new TurnStart(3, 1));
+            SessionPersistence persistence = rt.root().require(SessionPersistence.KEY);
+
+            // 完整信封但缺换行终止(写入截断于 '\n' 前):补换行即完整
+            Path log = root.resolve("s1/log.jsonl");
+            List<String> lines = Files.readAllLines(log);
+            assertThat(lines).hasSize(3);
+            Files.writeString(log, String.join("\n", lines));
+
+            SessionPersistence.Loaded loaded = persistence.load(live.id());
+            assertThat(loaded.events()).hasSize(3);
+            assertThat(Files.readAllLines(log)).hasSize(3);
+            assertThat(Files.readString(log)).endsWith("\n");
+        }
+    }
+
+    @Test
+    void interiorCorruptionStaysFailLoud() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+            live.append(new TurnEnd(2, 1, new TurnEndReason.Completed()));
+            SessionPersistence persistence = rt.root().require(SessionPersistence.KEY);
+
+            // 中部行破损(换行终止完好):修复不插手,load fail loud
+            Path log = root.resolve("s1/log.jsonl");
+            List<String> lines = Files.readAllLines(log);
+            lines.set(0, "{broken");
+            Files.writeString(log, String.join("\n", lines) + "\n");
+            assertThatThrownBy(() -> persistence.load(live.id()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not valid JSON");
+        }
+    }
+
+    @Test
+    void repairThenResumeContinuesFromLastCompleteLine() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+            live.append(new TurnEnd(2, 1, new TurnEndReason.Completed()));
+            // 杀于半行:第三行残片无换行终止
+            Files.writeString(root.resolve("s1/log.jsonl"), "{\"seq\":2,\"type\":\"tu",
+                StandardOpenOption.APPEND);
+        }
+        // 第二进程(resume 协议):load 修复 → 重建会话 → 续写新事件
+        try (Runtime rt2 = new Runtime()) {
+            new PluginLoader().loadAll(rt2, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            SessionPersistence persistence = rt2.root().require(SessionPersistence.KEY);
+            SessionPersistence.Loaded loaded = persistence.load(Session.newId("s1"));
+            assertThat(loaded.events()).hasSize(2);
+            Session resumed = rt2.root().require(SessionStore.KEY).create(rt2.root(), Session.newId("s1"),
+                new CreateOptions(loaded.events(), loaded.header()));
+            resumed.append(new TurnStart(3, 1));
+
+            SessionPersistence.Loaded after = persistence.load(Session.newId("s1"));
+            // 盘上事件数 == 内存会话事件数(含 create 的 seed 收尾事件)
+            assertThat(after.events()).hasSize(resumed.events().size());
+            assertThat(Files.readAllLines(root.resolve("s1/log.jsonl"))).hasSize(resumed.events().size());
+        }
+    }
+
+    @Test
+    void flushBarrierSafeWithoutLogAndAfterEvents() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            SessionStore store = rt.root().require(SessionStore.KEY);
+
+            // 零事件(无 log 文件)flush:不炸;已有事件 flush:不炸且日志完好
+            store.flush(rt.root(), live);
+            live.append(new TurnStart(1, 1));
+            store.flush(rt.root(), live);
+            live.append(new TurnEnd(2, 1, new TurnEndReason.Completed()));
+
+            SessionPersistence.Loaded loaded = rt.root().require(SessionPersistence.KEY).load(live.id());
+            assertThat(loaded.events()).hasSize(2);
+            assertThat(Files.readAllLines(root.resolve("s1/log.jsonl"))).hasSize(2);
+        }
+    }
 }

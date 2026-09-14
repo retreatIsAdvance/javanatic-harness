@@ -16,6 +16,7 @@ import io.javanatic.harness.session.persistence.SessionEventCodec;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,9 +33,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code {"seq":N,"type":"...","ignorable":b,"data":{...}}}。写侧无 codec 的
  * 类型 fail loud;读侧未知 type 按 ignorable 跳过或拒绝。单进程追加
  * (多进程锁挂账 persistence 后续)。写入是同步逐事件的——SessionStore 的
- * APPENDED 派发为 notifyOrdered 保序。
+ * APPENDED 派发为 notifyOrdered 保序。耐久:flush barrier = fsync
+ * ({@code FileChannel.force});load/续写打开时修复撕裂尾(末行无换行终止:
+ * 可解析则补换行,否则截到最后完整行——丢失至多半行),内部行破损仍 fail loud。
  */
 public final class JsonlPersistence implements SessionPersistence {
+
+    private static final System.Logger LOG = System.getLogger(JsonlPersistence.class.getName());
 
     private final Path root;
     private final SessionCodecRegistry codecs;
@@ -81,6 +86,7 @@ public final class JsonlPersistence implements SessionPersistence {
         if (!Files.isRegularFile(headerFile)) {
             throw new NoSuchElementException("session not on disk: " + id.value());
         }
+        repairTornTail(dir.resolve("log.jsonl"));
         SessionHeader header = HeaderCodec.read(JacksonBridge.read(Files.readString(headerFile)));
         List<SessionEvent> events = new ArrayList<>();
         for (String line : Files.readAllLines(dir.resolve("log.jsonl"))) {
@@ -120,11 +126,60 @@ public final class JsonlPersistence implements SessionPersistence {
         return codec.read((JsonValue.Obj) data);
     }
 
+    /**
+     * 撕裂尾修复:进程被杀于半行写入时,文件末尾留下无换行终止的残片。
+     * 末行可解析(完整信封仅缺 '\n')则补换行;不可解析则截断到最后一条
+     * 完整行(至多丢失半行)。仅在末行无换行终止时动作——内部行破损仍由
+     * load 的解析/seq 校验 fail loud。
+     *
+     * @param log 会话日志路径(可不存在——尚无事件落盘的会话)
+     */
+    private static void repairTornTail(Path log) throws IOException {
+        if (!Files.isRegularFile(log)) {
+            return;
+        }
+        byte[] bytes = Files.readAllBytes(log);
+        if (bytes.length == 0 || bytes[bytes.length - 1] == '\n') {
+            return;
+        }
+        int lastNewline = -1;
+        for (int i = bytes.length - 1; i >= 0; i--) {
+            if (bytes[i] == '\n') {
+                lastNewline = i;
+                break;
+            }
+        }
+        String fragment = new String(bytes, lastNewline + 1, bytes.length - lastNewline - 1,
+            StandardCharsets.UTF_8);
+        if (parsesAsObject(fragment)) {
+            Files.writeString(log, "\n", StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+            LOG.log(System.Logger.Level.WARNING,
+                "torn tail in {0}: complete line missing newline, healed", log);
+            return;
+        }
+        try (FileChannel channel = FileChannel.open(log, StandardOpenOption.WRITE)) {
+            channel.truncate(lastNewline + 1);
+            channel.force(true);
+        }
+        LOG.log(System.Logger.Level.WARNING,
+            "torn tail in {0}: partial line of {1} bytes truncated",
+            log, bytes.length - lastNewline - 1);
+    }
+
+    private static boolean parsesAsObject(String fragment) {
+        try {
+            JacksonBridge.read(fragment);
+            return true;
+        } catch (IllegalStateException notAnObject) {
+            return false;
+        }
+    }
+
     private SessionWriter writer(Session session) {
         return writers.computeIfAbsent(session.id(), id -> new SessionWriter(root.resolve(id.value()), codecs));
     }
 
-    /** 单会话写入器:逐行追加;断点续写(文件行数即已写 seq+1)。 */
+    /** 单会话写入器:逐行追加;断点续写(文件行数即已写 seq+1;续写前先修复撕裂尾)。 */
     private static final class SessionWriter {
         private final Path dir;
         private final SessionCodecRegistry codecs;
@@ -144,6 +199,7 @@ public final class JsonlPersistence implements SessionPersistence {
 
         synchronized void rewrite(Session session) throws IOException {
             Path log = dir.resolve("log.jsonl");
+            repairTornTail(log);
             writtenLines = Files.isRegularFile(log) ? Files.lines(log).count() : 0;
             for (LoggedEvent<? extends SessionEvent> entry : session.events()) {
                 if (entry.seq() >= writtenLines) {
@@ -159,8 +215,15 @@ public final class JsonlPersistence implements SessionPersistence {
             writeEnvelope(entry);
         }
 
-        void flushBarrier() {
-            // 同步逐事件写,无缓冲积压——barrier 挂点保留给异步后端
+        /** 落盘 barrier:fsync 已有日志(无文件=尚无事件,无可 force)。 */
+        void flushBarrier() throws IOException {
+            Path log = dir.resolve("log.jsonl");
+            if (!Files.isRegularFile(log)) {
+                return;
+            }
+            try (FileChannel channel = FileChannel.open(log, StandardOpenOption.WRITE)) {
+                channel.force(true);
+            }
         }
 
         private void writeEnvelope(LoggedEvent<?> entry) throws IOException {
