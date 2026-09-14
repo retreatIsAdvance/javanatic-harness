@@ -4,6 +4,7 @@ import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.llm.AbortSignal;
+import io.javanatic.harness.sandbox.sandbox.BackendStatus;
 import io.javanatic.harness.sandbox.sandbox.ConfinedArgv;
 import io.javanatic.harness.sandbox.sandbox.SandboxEnforcement;
 import io.javanatic.harness.sandbox.sandbox.SandboxMode;
@@ -187,6 +188,46 @@ class SandboxLocalTest {
             new SandboxPolicy(SandboxMode.DANGER_FULL_ACCESS, workspace)))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("explicit bypass");
+    }
+
+    // ---- backendStatus 查询面（与 confine 同一份探针结论） ----
+
+    @Test
+    void win32ChainReportsNoBackendNamingPlatform() {
+        SandboxProvider provider = provider(
+            new SandboxLocalPlugin("win32", "/usr/bin/sandbox-exec", "bwrap"));
+        assertThat(provider.backendStatus())
+            .isEqualTo(new BackendStatus.NoBackend("win32"));
+    }
+
+    @Test
+    void linuxChainReportsProbeFailedNamingBackendBinary() {
+        SandboxProvider provider = provider(
+            new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec", "/nonexistent/bwrap"));
+        assertThat(provider.backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.ProbeFailed.class, failed -> {
+                assertThat(failed.platform()).isEqualTo("linux");
+                assertThat(failed.detail())
+                    .contains("bwrap probe failed (binary: /nonexistent/bwrap)");
+            });
+    }
+
+    @Test
+    void darwinChainReportsProbeFailedWhenSeatbeltUnusable() {
+        SandboxProvider provider = provider(
+            new SandboxLocalPlugin("darwin", "/nonexistent/sandbox-exec", "bwrap"));
+        assertThat(provider.backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.ProbeFailed.class, failed -> {
+                assertThat(failed.platform()).isEqualTo("darwin");
+                assertThat(failed.detail()).contains("/nonexistent/sandbox-exec");
+            });
+    }
+
+    @Test
+    @EnabledOnOs(OS.MAC)
+    void realSeatbeltReportsReady() {
+        assertThat(provider(new SandboxLocalPlugin()).backendStatus())
+            .isEqualTo(new BackendStatus.Ready("seatbelt"));
     }
 
     // ---- 真强制 e2e：darwin/seatbelt（本机） ----

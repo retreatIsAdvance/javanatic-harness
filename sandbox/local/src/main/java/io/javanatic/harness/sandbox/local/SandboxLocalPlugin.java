@@ -2,6 +2,7 @@ package io.javanatic.harness.sandbox.local;
 
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
+import io.javanatic.harness.sandbox.sandbox.BackendStatus;
 import io.javanatic.harness.sandbox.sandbox.ConfinedArgv;
 import io.javanatic.harness.sandbox.sandbox.SandboxEnforcement;
 import io.javanatic.harness.sandbox.sandbox.SandboxMode;
@@ -288,11 +289,32 @@ public final class SandboxLocalPlugin implements Plugin {
                 throw noBackend(platform, policy.mode());
             }
             StringBuilder failures = new StringBuilder();
+            Backend backend = firstUsable(chain, failures);
+            if (backend == null) {
+                throw new SandboxUnavailableException(policy.mode(), failures.toString());
+            }
+            return backend.confine(argv, policy);
+        }
+
+        @Override
+        public BackendStatus backendStatus() {
+            List<String> chain = chainFor(platform);
+            if (chain.isEmpty()) {
+                return new BackendStatus.NoBackend(platform);
+            }
+            StringBuilder failures = new StringBuilder();
+            Backend backend = firstUsable(chain, failures);
+            return backend != null ? new BackendStatus.Ready(backend.id())
+                : new BackendStatus.ProbeFailed(platform, failures.toString());
+        }
+
+        /** 首个探针可用候选；无则把逐候选失败明细写进 failures 并返回 null。 */
+        private Backend firstUsable(List<String> chain, StringBuilder failures) {
             for (String id : chain) {
                 Backend candidate = Objects.requireNonNull(backends.get(id),
                     "no backend implementation for chain id \"" + id + "\"");
                 if (candidate.usable()) {
-                    return candidate.confine(argv, policy);
+                    return candidate;
                 }
                 if (!failures.isEmpty()) {
                     failures.append("; ");
@@ -300,7 +322,7 @@ public final class SandboxLocalPlugin implements Plugin {
                 failures.append(candidate.id()).append(" probe failed (binary: ")
                     .append(candidate.binary()).append(')');
             }
-            throw new SandboxUnavailableException(policy.mode(), failures.toString());
+            return null;
         }
     }
 }

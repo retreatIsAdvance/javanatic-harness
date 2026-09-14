@@ -189,6 +189,18 @@ final class DeepSeekAdapter implements LlmAdapter {
 - **JDK HttpClient 事实**(实证):响应流被远端关闭时阻塞 read 返回 -1;被本地 close() 时阻塞 read 抛 `IOException: closed`——空闲看门狗据此掐断挂死连接。`Thread.sleep` 只有毫秒重载,传纳秒会静默睡走数十小时(实测踩坑)。
 - **传输韧性**:429/5xx/IOException 有界重试(指数退避+抖动,尊重 Retry-After 秒值);凭据脱敏(DeepSeekOptions 覆写 toString);配置经构造器注入(ConfigService/CredentialsService 随组合切片接手来源)。
 
+### 实现落定（it12.6）
+
+- **typed 失败**：`LlmCallException`（`llm/llm`，seam 类型）+ `Kind` 词表——`AUTH`(401/403) /
+  `RATE_LIMIT`(429) / `SERVER`(5xx) / `NETWORK`(连接/读 IO) / `TIMEOUT`(空闲看门狗) /
+  `PROTOCOL`(wire 解析：畸形 SSE、未知 finish_reason、流尾无 finish、其余 4xx)。适配器把
+  HTTP/IO/解析失败映射为 typed 抛出，**重试判定读 `Kind.retryable()`**（RATE_LIMIT/SERVER/
+  NETWORK 可重试；AUTH/TIMEOUT/PROTOCOL 不可）——可重试性不再散落为数值判断。消费方
+  （it14 交互面）按 kind 渲染可行动失败（AUTH 引查 key、RATE_LIMIT 稍后重试），不解析
+  消息文本。消息保留厂商细节（如 `deepseek http 401`）供人读。
+- **流尾无 finish**：此前由 `ChunkAssembly.fold` 以裸 IAE 兜底的 wire 违规，改为 adapter
+  在流尾直抛 `PROTOCOL`——分类发生在知道 wire 事实的层。
+
 ### Consumer（agent-loop 内部）
 
 agent-loop 通过 `scope.require(LlmService.KEY)` 拿到 LLM，try-with-resources 消费阻塞流，边收边落账（04 §7）。**agent-loop 不 import 任何 Provider**。
@@ -377,11 +389,21 @@ public interface SandboxProvider {
     ServiceKey<SandboxProvider> KEY = new ServiceKey<>("sandbox");
     /** 包装 argv 使其受限执行——调用方以返回值替代自身 spawn；透传档不进（显式弃权）。 */
     ConfinedArgv confine(List<String> argv, SandboxPolicy policy);  // fail-closed
+    /** 后端可用性查询（it12.6）——verify 预警消费；探针与 confine 共用首探缓存。 */
+    BackendStatus backendStatus();
 }
 
 /** 包装后 argv + 本后端强制完备度 + 拒绝方言（EPERM/EROFS 等本后端专属）。 */
 public record ConfinedArgv(List<String> argv, SandboxEnforcement enforcement,
                            List<String> denialSignatures) {}
+
+/** 后端可用性三态（it12.6）：Ready / NoBackend（平台链空，点名平台）/
+ *  ProbeFailed（链上候选探针全败，点名明细）。 */
+public sealed interface BackendStatus {
+    record Ready(String backend) implements BackendStatus {}
+    record NoBackend(String platform) implements BackendStatus {}
+    record ProbeFailed(String platform, String detail) implements BackendStatus {}
+}
 ```
 
 **WritableRoots 单一来源**：workspace-write = workspace 根 + 平台临时区（realpath 规范化
@@ -402,6 +424,13 @@ per-workspace SID 常设授予 + per-session 随机临时目录/SID，**enforcem
 两洞**——Everyone-可写外部对象仍可写、NTFS 硬链接别名越界，stderr 签名 + exit 127
 fail-closed）。空链平台上受限 confine 一律 `SandboxUnavailableException`（code
 SANDBOX_UNAVAILABLE）——**fail-closed，静默透传被禁止**。
+
+**查询面与 verify 预警（it12.6）**：`backendStatus()` 把「首调用才炸」提前成组合期
+可见事实——`--verify`（`AppBoot`，已依赖本模块）在组合含受限档时读它（probe session
+解析策略；无策略行或无同机 provider 的 docker 组合不预警——执行器自身消费策略），
+`NoBackend`/`ProbeFailed` → stderr WARNING 点名平台、后果（首次受限调用 fail-closed）
+与出路（显式 `danger-full-access` overlay 弃权 / 装 bubblewrap / windows-acl 入
+0.2.0）；**exit 码不变**（预警非违规——PRODUCTION 违规仍 exit 1）。
 
 **已知残余（诚实记录）**：读可见性与网络不在约束面（词表外，与 seatbelt 对齐）——
 bwrap 链不加 `--unshare-pid`/`--unshare-net`，`--ro-bind / /` 下宿主文件系统整体

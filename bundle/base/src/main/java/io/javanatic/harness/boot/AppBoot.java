@@ -8,6 +8,11 @@ import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
+import io.javanatic.harness.sandbox.sandbox.BackendStatus;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
+import io.javanatic.harness.sandbox.sandbox.SandboxPolicyService;
+import io.javanatic.harness.sandbox.sandbox.SandboxProvider;
+import io.javanatic.harness.session.Session;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -16,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 组合装配入口（07 §5）：profile bundles → profile rows → CLI overlay 三层叠加
@@ -24,6 +30,8 @@ import java.util.Map;
  * --dump-config 与 --verify 是纯组合期操作（verify 无 key 可跑）。
  */
 public final class AppBoot {
+
+    private static final System.Logger LOG = System.getLogger(AppBoot.class.getName());
 
     private AppBoot() {
     }
@@ -175,8 +183,45 @@ public final class AppBoot {
             if (!violations.isEmpty()) {
                 throw new VerifyFailedException(violations);
             }
+            sandboxWarning(root).ifPresent(warning -> LOG.log(System.Logger.Level.WARNING, warning));
         }
         return runtime;
+    }
+
+    /**
+     * --verify 的沙箱预警（观测面，非违规——exit 码不变）：组合含受限档且本宿主
+     * 受限执行会在首调用 fail-closed 时，点名平台、后果与出路。无策略行或无同机
+     * provider（docker 等执行器自身消费策略）不预警。
+     *
+     * @param root 装配完成的 root scope
+     * @return 预警文本；无需预警时 empty
+     */
+    static Optional<String> sandboxWarning(Scope root) {
+        Optional<SandboxPolicyService> policies = root.resolve(SandboxPolicyService.KEY);
+        Optional<SandboxProvider> providers = root.resolve(SandboxProvider.KEY);
+        if (policies.isEmpty() || providers.isEmpty()) {
+            return Optional.empty();
+        }
+        Session probe = Session.create(Session.newId("verify-sandbox-probe"), null, null);
+        SandboxPolicy policy = policies.get().resolve(probe);
+        if (!policy.mode().confining()) {
+            return Optional.empty();
+        }
+        String mode = policy.mode().wire();
+        return switch (providers.get().backendStatus()) {
+            case BackendStatus.Ready ignored -> Optional.empty();
+            case BackendStatus.NoBackend noBackend -> Optional.of(
+                "sandbox warning: confining policy \"" + mode + "\" is configured but platform \""
+                + noBackend.platform() + "\" has no same-host sandbox backend yet; the first"
+                + " confined shell call will fail closed. Options: overlay mode:"
+                + " danger-full-access (explicit bypass), or wait for windows-acl (0.2.0).");
+            case BackendStatus.ProbeFailed failed -> Optional.of(
+                "sandbox warning: confining policy \"" + mode + "\" is configured but no sandbox"
+                + " backend is usable on platform \"" + failed.platform() + "\" ("
+                + failed.detail() + "); the first confined shell call will fail closed."
+                + " Options: install bubblewrap, or overlay mode: danger-full-access"
+                + " (explicit bypass).");
+        };
     }
 
     /** 双向显式:行引用必须存在;发现的插件必须被引用(disabled 行也算引用)。 */

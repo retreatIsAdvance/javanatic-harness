@@ -4,6 +4,7 @@ import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.llm.LlmAdapter;
 import io.javanatic.harness.llm.LlmCallConfig;
+import io.javanatic.harness.llm.LlmCallException;
 import io.javanatic.harness.llm.LlmRequest;
 import io.javanatic.harness.llm.StreamChunk;
 
@@ -23,7 +24,6 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
@@ -74,12 +74,17 @@ public final class OpenAiCompatAdapter implements LlmAdapter {
             pump(response.body(), signal, queue);
         } catch (AbortedException e) {
             offer(queue, new End());
+        } catch (IllegalStateException e) {
+            // wire 解析失败（畸形 SSE/未知 finish_reason 等）是 seam 词表的 PROTOCOL,
+            // 不是内部不变量破损——types 化后经 ChunkIterator 原样surface
+            offer(queue, new Failed(new LlmCallException(LlmCallException.Kind.PROTOCOL,
+                e.getMessage(), e)));
         } catch (Exception e) {
             offer(queue, new Failed(e));
         }
     }
 
-    /** 传输重试:429/5xx/IOException;退避 = base*2^(n-1)+抖动,封顶 backoffMax。 */
+    /** 传输重试:Kind 可重试者(429/5xx/IOException);退避 = base*2^(n-1)+抖动,封顶 backoffMax。 */
     private HttpResponse<InputStream> sendWithRetry(LlmCallConfig config, LlmRequest request,
                                                     AbortSignal signal) throws Exception {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
@@ -94,7 +99,7 @@ public final class OpenAiCompatAdapter implements LlmAdapter {
             builder.header(header.getKey(), header.getValue());
         }
         HttpRequest httpRequest = builder.build();
-        Exception last = null;
+        LlmCallException last = null;
         for (int attempt = 1; attempt <= options.maxAttempts(); attempt++) {
             signal.checkAbort();
             try {
@@ -103,21 +108,28 @@ public final class OpenAiCompatAdapter implements LlmAdapter {
                 if (response.statusCode() == 200) {
                     return response;
                 }
-                last = new IllegalStateException("deepseek http " + response.statusCode());
-                if (!retryable(response.statusCode())) {
+                last = httpFailure(response.statusCode());
+                if (!last.kind().retryable()) {
                     throw last;
                 }
                 sleep(backoff(attempt, response.headers().firstValue("Retry-After").orElse(null)));
             } catch (IOException e) {
-                last = e;
+                last = new LlmCallException(LlmCallException.Kind.NETWORK,
+                    "deepseek transport failed: " + e.getMessage(), e);
                 sleep(backoff(attempt, null));
             }
         }
-        throw last == null ? new IllegalStateException("unreachable") : last;
+        throw last == null ? new LlmCallException(LlmCallException.Kind.PROTOCOL, "unreachable") : last;
     }
 
-    private static boolean retryable(int status) {
-        return status == 429 || status >= 500;
+    /** HTTP 状态 → Kind 词表（401/403 AUTH、429 RATE_LIMIT、5xx SERVER,其余 PROTOCOL）。 */
+    private static LlmCallException httpFailure(int status) {
+        LlmCallException.Kind kind = switch (status) {
+            case 401, 403 -> LlmCallException.Kind.AUTH;
+            case 429 -> LlmCallException.Kind.RATE_LIMIT;
+            default -> status >= 500 ? LlmCallException.Kind.SERVER : LlmCallException.Kind.PROTOCOL;
+        };
+        return new LlmCallException(kind, "deepseek http " + status);
     }
 
     /** 指数退避 + 抖动;Retry-After(秒)优先。 */
@@ -167,15 +179,21 @@ public final class OpenAiCompatAdapter implements LlmAdapter {
             if (line.size() > 0) {
                 heldFinish = dispatchLine(line.toByteArray(), decoder, queue, heldFinish);
             }
-            if (heldFinish != null) {
-                offer(queue, heldFinish);
+            if (heldFinish == null) {
+                // 流正常 EOF 而无 finish_reason:wire 违反 seam 契约(Finish 恒为最后一块),
+                // types 化为 PROTOCOL(此前由 ChunkAssembly.fold 以裸 IAE 兜底)
+                throw new LlmCallException(LlmCallException.Kind.PROTOCOL,
+                    "deepseek stream ended without finish_reason");
             }
+            offer(queue, heldFinish);
             offer(queue, new End());
         } catch (IOException e) {
             if (cut.get()) {
-                throw new TimeoutException("deepseek stream idle over " + options.idleTimeout());
+                throw new LlmCallException(LlmCallException.Kind.TIMEOUT,
+                    "deepseek stream idle over " + options.idleTimeout());
             }
-            throw e;
+            throw new LlmCallException(LlmCallException.Kind.NETWORK,
+                "deepseek stream read failed: " + e.getMessage(), e);
         } finally {
             watchdog.interrupt();
         }

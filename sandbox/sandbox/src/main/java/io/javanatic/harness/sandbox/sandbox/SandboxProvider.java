@@ -27,4 +27,12 @@ public interface SandboxProvider {
      *                                     禁止静默透传）
      */
     ConfinedArgv confine(List<String> argv, SandboxPolicy policy);
+
+    /**
+     * 查询本宿主同机后端的可用性（verify/preflight 预警用；不抛异常，
+     * 不可用即状态）。探针与 {@link #confine} 共用同一份首探缓存。
+     *
+     * @return 后端可用 / 平台无后端 / 候选探针失败
+     */
+    BackendStatus backendStatus();
 }

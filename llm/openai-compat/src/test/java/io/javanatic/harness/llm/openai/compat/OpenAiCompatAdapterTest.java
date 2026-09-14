@@ -5,6 +5,7 @@ import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.llm.ChunkAssembly;
 import io.javanatic.harness.llm.FinishReason;
 import io.javanatic.harness.llm.LlmCallConfig;
+import io.javanatic.harness.llm.LlmCallException;
 import io.javanatic.harness.llm.LlmRequest;
 import io.javanatic.harness.llm.StreamChunk;
 import io.javanatic.harness.llm.ToolSchema;
@@ -197,23 +198,108 @@ class OpenAiCompatAdapterTest {
             scripts.add(new ResponseScript(500, null, List.of(), 0));
         }
         assertThatThrownBy(() -> consume(adapter()))
-            .hasMessageContaining("500");
+            .isInstanceOfSatisfying(LlmCallException.class, e -> {
+                assertThat(e.kind()).isEqualTo(LlmCallException.Kind.SERVER);
+                assertThat(e).hasMessageContaining("500");
+            });
         assertThat(hits.get()).isEqualTo(3);
     }
 
     @Test
-    void nonRetryable401FailsWithoutRetry() {
+    void rateLimitExhaustsWithRateLimitKind() {
+        for (int i = 0; i < 3; i++) {
+            scripts.add(new ResponseScript(429, "0", List.of(), 0));
+        }
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class,
+                e -> assertThat(e.kind()).isEqualTo(LlmCallException.Kind.RATE_LIMIT));
+        assertThat(hits.get()).isEqualTo(3);
+    }
+
+    @Test
+    void nonRetryable401FailsWithoutRetryAsAuth() {
         scripts.add(new ResponseScript(401, null, List.of(), 0));
-        assertThatThrownBy(() -> consume(adapter())).hasMessageContaining("401");
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class, e -> {
+                assertThat(e.kind()).isEqualTo(LlmCallException.Kind.AUTH);
+                assertThat(e).hasMessageContaining("401");
+            });
         assertThat(hits.get()).isEqualTo(1);
     }
 
     @Test
-    void idleWatchdogCutsStalledStream() {
+    void forbidden403MapsToAuthWithoutRetry() {
+        scripts.add(new ResponseScript(403, null, List.of(), 0));
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class,
+                e -> assertThat(e.kind()).isEqualTo(LlmCallException.Kind.AUTH));
+        assertThat(hits.get()).isEqualTo(1);
+    }
+
+    @Test
+    void other4xxMapsToProtocolWithoutRetry() {
+        scripts.add(new ResponseScript(400, null, List.of(), 0));
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class, e -> {
+                assertThat(e.kind()).isEqualTo(LlmCallException.Kind.PROTOCOL);
+                assertThat(e).hasMessageContaining("400");
+            });
+        assertThat(hits.get()).isEqualTo(1);
+    }
+
+    @Test
+    void connectionFailureMapsToNetwork() throws Exception {
+        int deadPort;
+        try (java.net.ServerSocket socket = new java.net.ServerSocket(0)) {
+            deadPort = socket.getLocalPort();
+        }
+        OpenAiCompatAdapter adapter = new OpenAiCompatAdapter(
+            VendorProfile.of("http://localhost:" + deadPort), transport());
+        assertThatThrownBy(() -> consume(adapter))
+            .isInstanceOfSatisfying(LlmCallException.class,
+                e -> assertThat(e.kind()).isEqualTo(LlmCallException.Kind.NETWORK));
+    }
+
+    @Test
+    void malformedSseFailsAsProtocol() {
+        scripts.add(new ResponseScript(200, null, List.of("not-json"), 0));
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class, e -> {
+                assertThat(e.kind()).isEqualTo(LlmCallException.Kind.PROTOCOL);
+                assertThat(e).hasMessageContaining("malformed SSE event");
+            });
+    }
+
+    @Test
+    void unknownFinishReasonFailsAsProtocol() {
+        scripts.add(new ResponseScript(200, null,
+            List.of("{\"choices\":[{\"delta\":{},\"finish_reason\":\"weird\"}]}"), 0));
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class, e -> {
+                assertThat(e.kind()).isEqualTo(LlmCallException.Kind.PROTOCOL);
+                assertThat(e).hasMessageContaining("unknown finish_reason");
+            });
+    }
+
+    @Test
+    void streamEndWithoutFinishFailsAsProtocol() {
+        scripts.add(new ResponseScript(200, null,
+            List.of("{\"choices\":[{\"delta\":{\"content\":\"a\"}}]}"), 0));
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class, e -> {
+                assertThat(e.kind()).isEqualTo(LlmCallException.Kind.PROTOCOL);
+                assertThat(e).hasMessageContaining("without finish_reason");
+            });
+    }
+
+    @Test
+    void idleWatchdogCutsStalledStreamAsTimeout() {
         scripts.add(new ResponseScript(200, null,
             List.of("{\"choices\":[{\"delta\":{\"content\":\"a\"}}]}"), 5000));
         long start = System.nanoTime();
-        assertThatThrownBy(() -> consume(stalledAdapter(300))).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> consume(stalledAdapter(300)))
+            .isInstanceOfSatisfying(LlmCallException.class,
+                e -> assertThat(e.kind()).isEqualTo(LlmCallException.Kind.TIMEOUT));
         assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(3));
     }
 
