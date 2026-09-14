@@ -89,6 +89,7 @@
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| `434c017` | 收尾 CI（run `34828762493`，macos）红：`TodoPluginTest` 并发交错测试用固定 `sleep(150)` 赌调度时窗，饥饿的 runner 上快工具批次落账晚于窗口——it11 既有测试，非 12.6 改动所致 | 交错改**因果**：slow 工具阻塞至 fast 的 `tool/result` 落账再返回（有界 10s，超时 `AssertionError` 逃出 executor 的 Exception 网，fail loud）；饱和循环（14 负载于 10 核）复验绿；红 run 即时 `gh run rerun --failed` 已绿 |
 
 ## 设计偏离（如有）
 
