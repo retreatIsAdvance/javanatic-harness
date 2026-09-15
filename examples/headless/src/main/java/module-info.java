@@ -23,6 +23,7 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.session.persistence;
     requires io.javanatic.harness.session.persistence.jsonl;
     requires io.javanatic.harness.interaction.approval;
+    requires io.javanatic.harness.interaction.commands;
     requires io.javanatic.harness.bundle.base;
     requires org.yaml.snakeyaml;
     requires jdk.httpserver; // 测试:本地假服务端 e2e

@@ -7,34 +7,50 @@ import io.javanatic.harness.agent.AgentRegistry;
 import io.javanatic.harness.agent.CreateAgentOptions;
 import io.javanatic.harness.agent.ResumeAgentOptions;
 import io.javanatic.harness.agentloop.AssistantChunkEvent;
+import io.javanatic.harness.kernel.scope.Disposable;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.boot.AppBoot;
 import io.javanatic.harness.boot.Policy;
+import io.javanatic.harness.interaction.commands.Command;
+import io.javanatic.harness.interaction.commands.CommandInvocation;
+import io.javanatic.harness.interaction.commands.CommandRegistry;
+import io.javanatic.harness.interaction.commands.CommandResult;
 import io.javanatic.harness.kernel.config.ConfigRowSpec;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionEvents;
+import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 import io.javanatic.harness.systemprompt.PromptSection;
 import io.javanatic.harness.systemprompt.SystemPromptService;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.lang.System.Logger.Level;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 一次性命令行 runner。完整用法见 {@link #USAGE}（`--help` 打印到 stdout，exit 0）：
- * 默认 deepseek（需 DEEPSEEK_API_KEY）；`--verify` 无 key 可跑治理断言；
- * `--workspace=` 显式工作区（fs 围栏 / shell workspace / 沙箱授予面同钉一处）；
- * `--approval=` 切审批 Provider；`--docker/--image=` 容器级隔离。
- * 组合为数据（it8 bundle/ConfigService）：CLI 只把参数翻译成组合行 overlay。
+ * 命令行 runner：带任务文本一次性执行，裸 `jh`（无任务、非 --verify）进入 REPL
+ * 交互循环；`--resume` 无任务时在既有会话上进 REPL。完整用法见 {@link #USAGE}
+ * （`--help` 打印到 stdout，exit 0）：默认 deepseek（需 DEEPSEEK_API_KEY）；
+ * `--verify` 无 key 可跑治理断言；`--workspace=` 显式工作区（fs 围栏 / shell
+ * workspace / 沙箱授予面同钉一处）；`--approval=` 切审批 Provider；
+ * `--docker/--image=` 容器级隔离。组合为数据（it8 bundle/ConfigService）：
+ * CLI 只把参数翻译成组合行 overlay。
  */
 public final class HeadlessMain {
 
@@ -45,11 +61,13 @@ public final class HeadlessMain {
 
     /** `--help` 文本。 */
     static final String USAGE = """
-        Javanatic Harness headless runner —— 一次性执行任务
+        Javanatic Harness headless runner —— 一次性任务与交互模式(REPL)
 
         用法:
           jh "任务文本" [flags]                 执行任务(需 API key)
-          jh --resume=<sessionId> "任务文本"    恢复既有会话续跑
+          jh [flags]                            进入交互模式(需 API key;/help 命令, /exit 或
+                                                EOF 退出;进行中的轮以 aborted 落账,可 --resume 续)
+          jh --resume=<sessionId> [flags]       在既有会话上进入交互模式(带任务文本则一次性续跑)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1)
           jh --help                            显示本说明
 
@@ -71,6 +89,9 @@ public final class HeadlessMain {
           --api-key-env=<变量名>     从环境变量取 key(缺省 DEEPSEEK_API_KEY)
           --api-key=<字面量>         直接给 key(优先于环境变量;注意泄露风险)
           --profile=<文件|名字>      组合 profile;名字解析 ~/.harness/profiles/<名>/profile.yml
+
+        REPL 说明:非 / 行作为消息发送(各成其 turn,与模型运行并行排队);/ 行走命令面
+        (未知命令只提示、不送模型);--approval=ask 的裁决行走同一输入通道(不另起 stdin 读者)。
 
         示例:
           jh "把 README 的快速开始改准"
@@ -242,6 +263,13 @@ public final class HeadlessMain {
     }
 
     static int run(RunnerOptions options, Path workspace, Path sessions) throws Exception {
+        return run(options, workspace, sessions,
+            new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)), System.out);
+    }
+
+    /** @param in REPL 行源（测试注入；一次性路径不读） @param out 屏幕（渲染器与 REPL 面板共写） */
+    static int run(RunnerOptions options, Path workspace, Path sessions, BufferedReader in, PrintStream out)
+            throws Exception {
         Path profile = resolveProfile(options.profile());
         AppBoot.BootOptions boot = new AppBoot.BootOptions(profile, buildOverlays(options, workspace, sessions),
             options.verify(), options.policy());
@@ -249,10 +277,6 @@ public final class HeadlessMain {
             if (options.verify()) {
                 LOG.log(Level.INFO, "verify 通过");
                 return 0;
-            }
-            if (options.task() == null && options.resume() == null) {
-                LOG.log(Level.ERROR, "缺少任务文本或 --resume=<id>（用法见 --help）");
-                return 2;
             }
             String apiKey = options.resolvedApiKey();
             if (apiKey == null) {
@@ -281,15 +305,17 @@ public final class HeadlessMain {
                         new AgentOptions(options.provider(), options.model())));
             }
             Agent agent = handle.agent();
-            if (options.task() != null) {
+            if (options.task() == null) {
+                runRepl(rt, agent, in, out); // 裸 jh / --resume 无任务:交互循环
+            } else {
                 agent.followup(UserMessage.of(options.task(), new MessageSource.User()));
+                agent.whenIdle().join();
+                // chunk 是流式事实（S3 渲染面消费），不进 one-shot 事件清单——it13 输出形态不动
+                agent.session().events().stream()
+                    .filter(entry -> !(entry.event() instanceof AssistantChunkEvent))
+                    .forEach(entry ->
+                        LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
             }
-            agent.whenIdle().join();
-            // chunk 是流式事实（S3 渲染面消费），不进 one-shot 事件清单——it13 输出形态不动
-            agent.session().events().stream()
-                .filter(entry -> !(entry.event() instanceof AssistantChunkEvent))
-                .forEach(entry ->
-                    LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
             handle.disposeAndAwait();
             rt.root().require(SessionPersistence.KEY).save(agent.session());
             return 0;
@@ -297,6 +323,93 @@ public final class HeadlessMain {
             e.violations().forEach(v -> LOG.log(Level.ERROR, "违规: {0}", v));
             return 1;
         }
+    }
+
+    /** REPL:注册内置命令 + 渲染订阅接线 + 行循环;返回后走 run 的既有 dispose/save 尾。 */
+    private static void runRepl(Runtime rt, Agent agent, BufferedReader in, PrintStream out) throws IOException {
+        CommandRegistry registry = rt.root().require(CommandRegistry.KEY);
+        registry.register(new Command("help", "显示命令一览", invocation ->
+            new CommandResult.Text(commandsText(registry))));
+        registry.register(new Command("exit", "结束交互(EOF 等效)", invocation ->
+            new CommandResult.Quit()));
+        ReplApprovalInput approvalIn = new ReplApprovalInput();
+        InputStream originalIn = System.in;
+        try (StreamRenderer renderer = new StreamRenderer(out)) {
+            Disposable subscription = rt.root().events().onGlobal(SessionEvents.APPENDED,
+                (carrier, entry) -> {
+                    if (carrier == agent.session()) {
+                        renderer.onEvent(((LoggedEvent<?>) entry).event());
+                    }
+                });
+            // 真 stdin 唯一读者 = 行循环;审批问句经 System.in 代理流读裁决行(补充 6)
+            System.setIn(approvalIn);
+            renderer.println("jh 交互模式 —— 输入消息回车提交;/help 命令;/exit 或 Ctrl-D 退出");
+            try {
+                replLoop(agent, registry, renderer, approvalIn, in);
+            } finally {
+                System.setIn(originalIn);
+                approvalIn.close();
+                subscription.close();
+            }
+        }
+    }
+
+    /**
+     * 行循环:裁决行转交(补充 6) → 空行跳过 → `/` 行走命令面(未知命令只提示,
+     * 不送模型) → 非 `/` 行 followup(各成其 turn,与模型运行并行排队)。
+     * EOF ≡ /exit:进行中的轮由 dispose 链以 aborted 落账,可 --resume 续。
+     */
+    static void replLoop(Agent agent, CommandRegistry registry, StreamRenderer renderer,
+                         ReplApprovalInput approvalIn, BufferedReader in) throws IOException {
+        while (true) {
+            String line = in.readLine();
+            if (line == null) {
+                return;
+            }
+            if (approvalIn.forward(line)) {
+                continue;
+            }
+            if (line.isBlank()) {
+                continue;
+            }
+            if (!line.startsWith("/")) {
+                agent.followup(UserMessage.of(line, new MessageSource.User()));
+                continue;
+            }
+            Optional<CommandInvocation> parsed = CommandRegistry.parseCommand(line);
+            if (parsed.isEmpty()) {
+                renderer.println("未知命令: " + line.strip() + "（/help 查看可用命令）");
+                continue;
+            }
+            CommandInvocation invocation = parsed.get();
+            if (registry.find(invocation.name()).isEmpty()) {
+                renderer.println("未知命令: /" + invocation.name() + "（/help 查看可用命令）");
+                continue;
+            }
+            CommandResult result;
+            try {
+                result = registry.execute(invocation, agent.session());
+            } catch (RuntimeException e) {
+                // registry 已落 command/done(ok=false);这里只补屏幕提示
+                renderer.println("命令失败: /" + invocation.name() + " — " + e.getMessage());
+                continue;
+            }
+            if (result instanceof CommandResult.Quit) {
+                return;
+            }
+            if (result instanceof CommandResult.Text text) {
+                renderer.println(text.content());
+            }
+        }
+    }
+
+    /** /help 文本:执行时读注册表(注册晚于 /help 也能列出;名升序,list 已保证)。 */
+    static String commandsText(CommandRegistry registry) {
+        StringBuilder text = new StringBuilder("命令:");
+        for (Command command : registry.list()) {
+            text.append("\n  /").append(command.name()).append(" — ").append(command.summary());
+        }
+        return text.toString();
     }
 
     /** CLI 参数 → 组合行 overlay（run 与验收测试共用;审批三 Provider 的互斥收口在此）。 */
