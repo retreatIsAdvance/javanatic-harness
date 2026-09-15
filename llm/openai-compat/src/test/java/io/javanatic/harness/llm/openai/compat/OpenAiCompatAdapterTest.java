@@ -23,6 +23,10 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -48,10 +52,28 @@ class OpenAiCompatAdapterTest {
                                   long stallAfterLinesMillis) {}
 
     @BeforeEach
-    void start() throws IOException {
+    void start() throws Exception {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext("/chat/completions", this::handle);
         server.start();
+        warmUp();
+    }
+
+    /**
+     * 冷启动预热:部分平台(本机 macOS 实测)首个请求可耗近 1s(首个 SYN 重传),
+     * 撞用例 400ms 的请求超时——预热走真实路径,再清计数与请求记录,断言无感。
+     */
+    private void warmUp() throws Exception {
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            client.send(HttpRequest.newBuilder()
+                    .uri(URI.create(base() + "/chat/completions"))
+                    .timeout(Duration.ofSeconds(5))
+                    .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                    .build(),
+                HttpResponse.BodyHandlers.discarding());
+        }
+        hits.set(0);
+        requests.clear();
     }
 
     @AfterEach
