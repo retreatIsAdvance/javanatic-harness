@@ -16,5 +16,20 @@
         <dependency>
             <groupId>io.javanatic</groupId>
             <artifactId>harness-kernel-core</artifactId>
-        </dependency>    </dependencies>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-core-session</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-session-persistence</artifactId>
+        </dependency>
+        <!-- ServiceLoader codec 发现 + jsonl 往返（classpath 模式走 META-INF/services） -->
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-session-persistence-jsonl</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

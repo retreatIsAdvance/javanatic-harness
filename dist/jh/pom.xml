@@ -66,6 +66,7 @@
                                 <module>io.javanatic.harness.core.plan</module>
                                 <module>io.javanatic.harness.core.todo</module>
                                 <module>io.javanatic.harness.core.preset</module>
+                                <module>io.javanatic.harness.interaction.commands</module>
                                 <module>io.javanatic.harness.sandbox.local</module>
                                 <module>io.javanatic.harness.sandbox.policy</module>
                                 <module>io.javanatic.harness.shell.docker</module>
