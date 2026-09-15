@@ -92,8 +92,10 @@ class FsToolEndToEndTest {
             assertThat(results.get(0).event().block().content())
                 .contains("denied by sandbox").contains("read-only");
             assertThat(results.get(1).event().block().isError()).isFalse();
+            // 同批并行：交错序任意（配对靠 callId，相邻性非契约——it12.6 结论；
+            // 固定「call,call,result,result」形状在 CI 上偶发红）
             assertThat(session.events().stream().map(LoggedEvent::type))
-                .containsExactly("plan/mode", "tool/call", "tool/call",
+                .containsExactlyInAnyOrder("plan/mode", "tool/call", "tool/call",
                     "tool/result", "tool/result");
         }
     }
