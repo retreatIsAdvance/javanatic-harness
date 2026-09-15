@@ -34,7 +34,7 @@ package io.javanatic.harness.session.event;
 /**
  * Session 日志的一个不可变事件。
  *
- * sealed：核心事件编译期穷尽；permits 含 13 个核心 record + 1 个 ExtensionEvent。
+ * sealed：核心事件编译期穷尽；permits 含 14 个核心 record + 1 个 ExtensionEvent。
  * switch(SessionEvent) 配合 ExtensionEvent 分支处理扩展。
  *
  * 注意：seq 不在此（在 LoggedEvent 信封上）；time 在此——
@@ -42,10 +42,10 @@ package io.javanatic.harness.session.event;
  */
 public sealed interface SessionEvent permits
     TurnStart, TurnEnd, StepStart, StepEnd,
-    UserMessageEvent, AssistantChunkEvent, AssistantMessageEvent,
-    LlmRequestEvent, ToolCallEvent, ToolResultEvent,
-    TodoWriteEvent, RequestHeaderEvent, SessionEndSeedEvent,
-    ExtensionEvent {
+    UserMessageEvent, AssistantMessageEvent, LlmRequestEvent,
+    ToolCallEvent, ToolResultEvent,
+    CompactionStart, CompactionSummary, CompactionEnd, RequestHeader,
+    SessionEndSeedEvent, ExtensionEvent {
 
     /** Unix epoch 毫秒。 */
     long time();
@@ -62,7 +62,7 @@ public sealed interface SessionEvent permits
 }
 ```
 
-**核心事件**（13 个 record；均无 seq）：
+**核心事件**（14 个 record；均无 seq）：
 
 ```java
 public record TurnStart(long time, int turn) implements SessionEvent {
@@ -87,11 +87,8 @@ public record UserMessageEvent(
     @Override public String type() { return "user/message"; }
 }
 
-/** 流式 chunk 的 log-only 记录（遥测/调试用；投影不读它）。 */
-public record AssistantChunkEvent(long time, int turn, int step, StreamChunk chunk)
-    implements SessionEvent {
-    @Override public String type() { return "assistant/chunk"; }
-}
+// assistant/chunk（流式事实，log-only、投影不读）与 todo/write 不在核心记录里——
+// 两者都是扩展事件（家分别在 core/agent-loop、core/todo），机制见下「插件扩展出口」。
 
 public record AssistantMessageEvent(
     long time, int turn, int step,
@@ -128,9 +125,7 @@ public record ToolCallEvent(
 
 public record ToolResultEvent(
     long time, int turn, int step,
-    ToolResultMessage message,
-    @Nullable ToolError error,
-    @Nullable JsonValue meta,      // 工具私有展示数据
+    ToolResultBlock block,         // 模型可见结果（错误即数据，isError 在 block 上）
     boolean concludesTurn,         // 该结果是否终结本 turn（ask_user 类工具为 true）
     SurfaceOp surfaceOp,
     List<Long> sourceEventSeqs
@@ -138,12 +133,9 @@ public record ToolResultEvent(
     @Override public String type() { return "tool/result"; }
 }
 
-public record TodoWriteEvent(long time, List<TodoItem> todos) implements SessionEvent {
-    @Override public String type() { return "todo/write"; }
-}
-public record RequestHeaderEvent(long time, EpochHeader header, RequestHeaderReason reason)
-    implements SessionEvent {
+public record RequestHeader(long time, String cwd, String date) implements SessionEvent {
     @Override public String type() { return "request/header"; }
+    @Override public boolean ignorable() { return true; }  // 遥测性：旧读取方可跳过
 }
 public record SessionEndSeedEvent(long time) implements SessionEvent {
     @Override public String type() { return "session/end-seed"; }
@@ -167,7 +159,9 @@ public non-sealed interface ExtensionEvent extends SessionEvent {
 }
 ```
 
-**TurnEndReason 是开放接口**（对应 dsh 的 merge-extensible TurnEndReasonMap）：核心变体 Completed/Aborted/Error 嵌套其中，agent-loop 等切片追加自己的变体，消费方 switch 用文档化默认分支。**SurfaceEvent 是独立标记接口**（不继承 SessionEvent——sealed permits 之外的事件侧出口）：事件同时实现两者才携带 surface 元数据；扩展事件走 `ExtensionEvent + SurfaceEvent` 组合。
+**TurnEndReason 是开放接口**（对应 dsh 的 merge-extensible TurnEndReasonMap）：核心变体 Completed/Aborted/Error 嵌套其中，agent-loop 等切片追加自己的变体，消费方 switch 用文档化默认分支。`Error(message, kind)` 携 `FailureKind` 失败分类（`AUTH/RATE_LIMIT/SERVER/NETWORK/TIMEOUT/PROTOCOL/OVERFLOW/UNKNOWN`）——词汇家在 core/session，llm 的 `LlmCallException.Kind` 由 agent-loop 做穷尽 switch 映射（`llm requires session`，核心类型反向引用成依赖环）；消费方按 kind 渲染可行动文案，不解析消息文本。**SurfaceEvent 是独立标记接口**（不继承 SessionEvent——sealed permits 之外的事件侧出口）：事件同时实现两者才携带 surface 元数据；扩展事件走 `ExtensionEvent + SurfaceEvent` 组合。
+
+**`assistant/chunk` 的机制结论（it14）**：chunk 是扩展事件（家 `core/agent-loop`）+ ServiceLoader codec，**不进** sealed permits——`StreamChunk` 属 `llm` 且 `llm requires session`，核心 permits 引用它成依赖环（JPMS 编译期即拒）；在 session 另造 chunk 词表则同一 wire 事实两个家（违「一个事实只有一个家」）。log-only、投影不读（装配仍走 assistant/message），`ignorable=true`（信息性——未知读取方跳过不改变重建语义）。
 
 **与 dsh 事件清单的差异**：dsh 另有 `request/context`（provider/model/contextWindow 路由元数据，不参与重建）——JH 事件集暂缺，随 llm 切片补进；JH 的 `LlmRequestEvent`（哈希 + 窗口）是 dsh 没有的 R1 显式化（dsh 在 request/header 存 system/tools **原文**，JH 存指纹靠重组装验证——日志更轻，代码演进漂移会被回放暴露）。
 
@@ -414,7 +408,7 @@ public final class SessionStore {
 ```java
 // io.javanatic.harness.session.persistence.SessionEventCodec
 /**
- * 一种事件类型的序列化器。核心 13 种的 codec 由 jsonl provider 实现；
+ * 一种事件类型的序列化器。核心 14 种的 codec 由 jsonl provider 实现；
  * 扩展事件的 codec 经 ServiceLoader 发现（it11 落定：事件模块 module-info
  * provides + META-INF/services 双注册，持久化 provider 发起 load——
  * 注册不依赖插件装载行序，未装载事件插件的组合也能回放其日志）。
@@ -441,6 +435,8 @@ public final class SessionEventCodecs {
 - 加载时未知 type：信封行的 `ignorable` 字段为 true 则跳过（无需解码事件体），否则拒绝重建。
 
 **扩展事件的生产实例（it11）**：`todo/write`（整表快照，log-only）与 `plan/mode`（模式翻转，log-only）均走 `ExtensionEvent` 出口——不动 sealed permits、零核心 switch 改动，各自带 ServiceLoader codec。两者的 `ignorable=false`：todo 静默丢快照丢已落账状态、plan/mode 静默丢提示词依据（毁 R1 重建），未知读取方应拒绝而非跳过。
+
+**（it14）第三个生产实例 `assistant/chunk`**：流式事实（逐 chunk 落账，渲染/TTFT 消费），`ignorable=true`（投影不读，装配仍走 assistant/message）。机制结论与归属（家 `core/agent-loop`，不进核心 permits 的依赖环理由）见 §1。
 
 ### JSONL 布局与行格式
 
@@ -473,6 +469,7 @@ public final class JsonlPersistence implements SessionPersistence {
 - **写侧 fail loud 的路径**:session append 观察者异常按契约 contained(记日志不炸 append)——无 codec 的类型在观察者内只留 ERROR 日志与数据缺口,真正的 fail loud 显形在 `save()` 直调路径。扩展事件插件必须随插件注册自身 codec(装载期组合责任)。
 - **（it10）compaction 词表**:`compaction/start`(日志锁)+ `compaction/summary`(审计:摘要文本 + provider/model/usage——维护调用 R1 可重建 + shadowed 区间)+ `compaction/end`(解锁,error 记失败),全部 log-only ignorable;摘要本体走 `user/message` + `Replace` + `MessageSource.Compaction`——surface 事件类型不扩展(dsh 形状)。切点按 tool 配对边界(非整轮);估价 chars/2.5 + 结构开销(agentscope 校准);触发用末次 inputTokens 实数;阈值 = `contextWindow × thresholdRatio(默认 0.8)` 或绝对 `maxContextTokens` 覆盖,容量未知 apply 即 fail loud(不猜窗口大小,base 行默认 disabled);溢出恢复在 loop 的 request-error catch(错误串匹配 + 强制压缩 + 同 step 有界重试)。`request/header`(cwd+ISO 日期)轮首落账,提示词组装读最新值追加上下文 section。
 - **（it10）user/message codec 持久化 Replace 语义**:surfaceOp Replace + sourceEventSeqs 进盘(此前只写 Append)——压缩 checkpoint 重载后投影不丢,R1 补洞。
+- **（it14）chunk 落账与 Error kind**:`assistant/chunk` 边消费边落(折叠装配语义不变,渲染/TTFT 消费);`turn/end` 的 `Error` 增 `kind` 编解码——**旧日志缺 kind → 回放缺省 `UNKNOWN`**(message 保留、渲染回退 message-only,durable resume 不断)。
 
 - **load 重建**:逐行信封,seq == 行号校验(跳号/重复拒绝);未知 type 按信封 ignorable 跳过或拒绝;header 往返含 FORMAT_VERSION。
 

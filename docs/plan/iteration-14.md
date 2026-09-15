@@ -1,4 +1,4 @@
-# 迭代 14 — 交互面：REPL + 流式渲染（状态：草稿）
+# 迭代 14 — 交互面：REPL + 流式渲染（状态：已完成——CI 待 push 放行后复验）
 
 模块：`interaction/commands`（stub → 落地）、`examples/headless`（REPL + 流式渲染器）、`core/session`（`TurnEndReason.Error` 增失败分类）、`core/agent-loop`（`assistant/chunk` 落账 + 溢出判定读 Kind）、`llm/llm` + `llm/openai-compat`（`Kind.OVERFLOW` 与厂商分类）、`session/persistence-jsonl`（codec）、`bundle/base`（commands 行）
 
@@ -55,47 +55,48 @@
 3. **OVERFLOW 并入 S2**：`Kind.OVERFLOW` 本迭代落（适配器厂商信号分类 + `isContextOverflow` 改读 Kind，it10 字符串匹配退役）。不并入即为该判定的第三次挂账——故跨模块效应一并进 S2 停点。
 4. **`assistant/chunk` 机制 pin**：结论 = **ExtensionEvent + ServiceLoader codec（家：core/agent-loop）**，非 sealed permits。依据：`StreamChunk` 属 llm（02 §归属修正），`llm requires session`——core/session 的 sealed 记录承载不了 `StreamChunk` 载荷（成环）；在 session 另造 chunk 词表则同一 wire 事实两个家（违「一个事实只有一个家」）。agent-loop 同时可见 llm + session 且是 chunk 生产者；codec 走既有 `SessionEventCodec` SPI（todo/plan 两先例）。03 现行 permits 清单本就落后于实况（TodoWriteEvent 实装在 todo 模块、Compaction\*/RequestHeader 已落地）——同步窗口在本迭代。
 5. **chunk 风暴量测试**（各一行断言，不造大 fixture）：① 每 chunk 往返 jsonl（落账后 replay 同序同量）；② APPENDED 观察者按序收全；③ compaction `estimateTokens` 对 chunk 事件 = 0（估价器只认 surface 三类）。
-6. **REPL 审批合流**：REPL 模式下 stdin 只有一个读者——`--approval=ask` 的裁决行由 REPL 行通道转交 pending 审批请求（渲染器呈现问句），不引入第二个 stdin 读者（双读 = 行窃取竞态，与 fail loud 相悖）。
+6. **REPL 审批合流**：REPL 模式下 stdin 只有一个读者——`--approval=ask` 的裁决行由 REPL 行通道转交 pending 审批请求（问句由既有 ApprovalPrompt 打 stderr，不改 prompt 形状），不引入第二个 stdin 读者（双读 = 行窃取竞态，与 fail loud 相悖）。
 
 ## 锚点（开工前填写：本次将改动的既有代码位置）
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| `interaction/commands/…/module-info.java` + 骨架类 | 契约落地：requires session/persistence、provides Plugin + codec、删标记类 | ☐ |
-| `interaction/commands/…/*`（新） | `CommandRegistry` / `parseCommand` / 事件对 / codec | ☐ |
-| `bundle/base/src/main/resources/META-INF/harness/bundle.yml` | 增 `- plugin: commands` 行 | ☐ |
-| `core/session/…/TurnEndReason.java` | `Error` 增 kind 组件 + 词表 enum | ☐ |
-| `session/persistence-jsonl/…/CoreCodecs.java` | Error kind 编解码 + 旧日志缺省 UNKNOWN | ☐ |
-| `llm/llm/…/LlmCallException.java` | `Kind.OVERFLOW` + `retryable()` 表 | ☐ |
-| `llm/openai-compat/…/OpenAiCompatAdapter.java` | 非 200 读错误体；400 + 溢出信号 → OVERFLOW | ☐ |
-| `core/agent-loop/…/AgentLoopImpl.java:runStepLoop` | 逐 chunk 落 `assistant/chunk` | ☐ |
-| `core/agent-loop/…/AgentLoopImpl.java:isContextOverflow` | 文本匹配 → 读 Kind；turn 收敛映射 session 词表 | ☐ |
-| `core/agent-loop/…/module-info.java` | requires session.persistence + provides codec | ☐ |
-| `core/agent-loop/…/CompactionPlugin.java:estimateTokens` | chunk 事件 = 0 测试钉住 | ☐ |
-| `examples/headless/…/HeadlessMain.java:run/parse/USAGE` | 裸 `jh` → REPL；渲染器接线 | ☐ |
-| `examples/headless/…/module-info.java` | requires interaction.commands | ☐ |
-| `docs/design/03-session-event-sourcing.md:§1` | permits/事件清单与实况同步 + chunk 机制结论 | ☐ |
-| `docs/design/05-capability-seam.md:§3/§9` | typed 渲染承诺落地、Commands 行实装 | ☐ |
-| `docs/design/02-module-layout.md:Interaction 节` + `README.md` + `AGENTS.md` | 状态与运行段同步 | ☐ |
+| `interaction/commands/…/module-info.java` + 骨架类 | 契约落地：requires session/persistence、provides Plugin + codec、删标记类 | ☑ |
+| `interaction/commands/…/*`（新） | `CommandRegistry` / `parseCommand` / 事件对 / codec | ☑ |
+| `bundle/base/src/main/resources/META-INF/harness/bundle.yml` | 增 `- plugin: commands` 行 | ☑ |
+| `core/session/…/TurnEndReason.java` | `Error` 增 kind 组件 + 词表 enum | ☑ |
+| `session/persistence-jsonl/…/CoreCodecs.java` | Error kind 编解码 + 旧日志缺省 UNKNOWN | ☑ |
+| `llm/llm/…/LlmCallException.java` | `Kind.OVERFLOW` + `retryable()` 表 | ☑ |
+| `llm/openai-compat/…/OpenAiCompatAdapter.java` | 非 200 读错误体；400 + 溢出信号 → OVERFLOW | ☑ |
+| `core/agent-loop/…/AgentLoopImpl.java:runStepLoop` | 逐 chunk 落 `assistant/chunk` | ☑ |
+| `core/agent-loop/…/AgentLoopImpl.java:isContextOverflow` | 文本匹配 → 读 Kind；turn 收敛映射 session 词表 | ☑ |
+| `core/agent-loop/…/module-info.java` | requires session.persistence + provides codec | ☑ |
+| `core/agent-loop/…/CompactionPlugin.java:estimateTokens` | chunk 事件 = 0 测试钉住 | ☑ |
+| `examples/headless/…/HeadlessMain.java:run/parse/USAGE` | 裸 `jh` → REPL；渲染器接线 | ☑ |
+| `examples/headless/…/module-info.java` | requires interaction.commands | ☑ |
+| `docs/design/03-session-event-sourcing.md:§1` | permits/事件清单与实况同步 + chunk 机制结论 | ☑ |
+| `docs/design/05-capability-seam.md:§3/§9` | typed 渲染承诺落地、Commands 行实装 | ☑ |
+| `docs/design/02-module-layout.md:Interaction 节` + `README.md` + `AGENTS.md` | 状态与运行段同步 | ☑ |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行，全机械迭代写「无」）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| S1 commands 落地 | `interaction/commands` 全量契约（registry/parse/事件对/codec）+ bundle 行 + 聚焦测试 | 未到 |
-| S2 事件 schema 跨模块（chunk + Error kind + OVERFLOW） | `TurnEndReason` / `CoreCodecs` / `LlmCallException` / `OpenAiCompatAdapter` / `AgentLoopImpl`（含 `isContextOverflow`）/ compaction 估价 + 聚焦测试 | 未到 |
-| S3 REPL + 渲染器 | `HeadlessMain`（REPL 分支/渲染接线/用法）+ 聚焦测试（stdin 注入） | 未到 |
+| S1 commands 落地 | `interaction/commands` 全量契约（registry/parse/事件对/codec）+ bundle 行 + 聚焦测试 | 已放行（提交 7d2a027）|
+| S2 事件 schema 跨模块（chunk + Error kind + OVERFLOW） | `TurnEndReason` / `CoreCodecs` / `LlmCallException` / `OpenAiCompatAdapter` / `AgentLoopImpl`（含 `isContextOverflow`）/ compaction 估价 + 聚焦测试 | 已放行（提交 ac9445b）|
+| S3 REPL + 渲染器 | `HeadlessMain`（REPL 分支/渲染接线/用法）+ 聚焦测试（stdin 注入） | 已放行（用户「继续下一步」）；提交待显式放行 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] S1 聚焦测试绿：commands 注册（重复 fail loud / 回收）/ 解析（`/` 行与非 `/` 行、名语法、rawInput 原文）/ 事件对（run 先于 done、异常也落 done）——`mvn -B -q -pl interaction/commands -am test`
-- [ ] S2 聚焦测试绿：`turn/end` Error kind 往返 + **旧日志缺 kind → UNKNOWN** 回放；chunk 风暴三则（jsonl 往返 / 观察者按序 / 估价 = 0）；OVERFLOW 分类（假服务端 400 溢出体）；溢出恢复路径改读 Kind 后 it10 既有用例仍绿
-- [ ] S3 聚焦测试绿：REPL 分流（注入 stdin 空流，避 surefire 挂起流坑）/ `/help` `/exit` / 渲染器入队-出队顺序 / typed 失败渲染文案
-- [ ] 全反应堆 `mvn -B -q package` 绿（跨模块 schema + 组合改动）
-- [ ] 真跑（镜像 launcher）：裸 `bin/jh` REPL——多轮 followup 流式渲染可见、`/help`、`/exit`、EOF、`--resume=<id>` 续既有会话；`--approval=ask` 在 REPL 下走行通道审批
-- [ ] 真跑：typed 失败渲染——坏 key → AUTH 文案（注意：坏 key 真跑 exit 码仍 0，判据看渲染文本与日志，不只看退出码）
-- [ ] 回归：one-shot `jh "任务"` 输出形态不变、`--verify` 无 key exit 0（it13 契约）
-- [ ] CI 双 job 绿（push 需用户放行；与积压 3 提交 434c017/e8ee1e4/d0eab5e 同批）
+- [x] **S1 聚焦测试绿**：`mvn -B -q -pl interaction/commands -am test` 绿（提交 7d2a027）；全量复验 `interaction/commands` surefire 11 tests / 0 败 0 错（注册重复 fail loud + 回收、`/` 行解析与非 `/` 行拒绝、rawInput 原文、run 先于 done、异常也落 done）
+- [x] **S2 聚焦测试绿**：提交 ac9445b；全量复验 `core/session` 34 / `session/persistence-jsonl` 13 / `llm/llm` 13 / `llm/openai-compat` 22 / `core/agent-loop` 39 tests 全 0 败 0 错——`turn/end` Error kind 往返 + **旧日志缺 kind → UNKNOWN** 回放；chunk 风暴三则（jsonl 往返同序同量 / APPENDED 观察者按序收全 / `estimateTokens` = 0）；OVERFLOW 分类（假服务端 400 溢出体）；溢出恢复路径改读 Kind 后 it10 既有用例仍绿
+- [x] **S3 聚焦测试绿**：`mvn -B -q -pl examples/headless -am test` 12 tests 全绿（`HeadlessReplTest` 4 / `StreamRendererTest` 6 / `ReplApprovalWiringTest` 2，2026-09-15 11:00）——REPL 分流（stdin 注入空流，避 surefire 挂起流坑）/ `/help` `/exit` / 未知 `/` 命令不送模型 / 渲染器入队-出队顺序（含面板行断流式行）/ typed 失败文案 / 审批行通道转交（转发批准 + close 拒）
+- [x] **全反应堆 `mvn -B -q package` 绿**：exit 0（2026-09-15，约 13min）；64 个 suite / **357 tests / 0 败 0 错 / 4 跳过**；jlink 镜像重建（`dist/jh/target/jlink-image/bin/jh`）
+- [x] **真跑（镜像 launcher）：裸 `bin/jh` REPL**（session `headless-1789443746458-75bb`，exit 0）：多轮 followup 中文流式渲染逐块可见；`/help` 列命令面；`/exit` 与 EOF 均干净退出；`--resume=<id>` 无任务进 REPL 续既有会话（stderr「resume session=…」、续跑模型响应在案）
+- [x] **真跑：`--approval=ask` 在 REPL 下走行通道审批**（session `headless-1789443830726-fdc7`）：问句打 stderr（既有 ApprovalPrompt 未改，见设计偏离）；「y」经 REPL 行通道转交 → `fs_read` 真执行（「← hello from it14 e2e」）；「n」→ `← error: denied: denied by human gate: fs_read`；裁决行不入模型历史（日志 user/message 计数不含裁决行）
+- [x] **真跑：typed 失败渲染**：坏 key → `turn 失败: 认证失败：检查 API key（--api-key= 或 --api-key-env=）（LlmCallException: deepseek http 401）`——按 `FailureKind` 出可行动文案、厂商细节仅附注；坏 key 真跑 exit 码仍 0，判据看渲染文本与日志（符合预期）
+- [x] **回归：one-shot `jh "任务"` 输出形态不变、`--verify` 无 key exit 0**：one-shot stdout 为空、stderr 事件清单 `0: turn/start … 10: turn/end` seq 连续形态不变且**无 `assistant/chunk` 行**（渲染订阅只在 REPL 挂）；`--verify` 无 key exit 0
+- [ ] **CI 双 job 绿（push 需用户放行）**：待 push 放行后推送积压提交（434c017 / e8ee1e4 / d0eab5e / dc82b30 / 7a19fd0 / 7d2a027 / ac9445b + 本轮 S3 与文档）并复验
 
 ## 修正（如有）
 
@@ -106,3 +107,4 @@
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
+| it14 补充 6「渲染器呈现问句」 | 审批问句仍由既有 `ApprovalPrompt.stdin()` 直接打 stderr（prompt 未改）；渲染器只承接 REPL 面板与流式输出（stdout） | 不动既有 prompt 形状（改动面最小）；stderr 与 stdout 各自单写者，无合流必要 | 迭代内已同步（补充 6 措辞已订正为「问句由既有 ApprovalPrompt 打 stderr」）|

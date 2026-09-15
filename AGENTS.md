@@ -18,7 +18,7 @@ Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 
 
 ## 现状
 
-- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 三模块（bash 真执行）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval）；`examples/headless`（CLI runner：--verify/policy/--workspace=/--approval=，经 AppBoot 数据化组合；dist/jh 打成 jlink 镜像，`bin/jh` 直接运行）；kernel/config + bundle/base（ConfigService/AppBoot/YAML 三层/CompositionManifest）；core/preset（per-session 能力集）；scoped 工具注册表 + setup window（06 落地）；compaction 生产者 + budget 档 + durable resume + request-context（长跑能力）；core/todo + core/plan（todo_write 整表快照 + 计划模式；ExtensionEvent + ServiceLoader codec 两实例）；sandbox 三模块（同机进程约束：darwin=seatbelt / linux=bwrap 均已实测落地，fail-closed + plan 压只读；windows 后端入 0.2.0）。
+- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 三模块（bash 真执行）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval）+ 命令面（interaction/commands：registry/slash 解析/事件对，it14）；`examples/headless`（CLI runner：--verify/policy/--workspace=/--approval=，经 AppBoot 数据化组合；裸 `jh` 进 REPL——命令面 + 流式渲染 + typed 失败渲染（按 `FailureKind`），it14；dist/jh 打成 jlink 镜像，`bin/jh` 直接运行）；kernel/config + bundle/base（ConfigService/AppBoot/YAML 三层/CompositionManifest）；core/preset（per-session 能力集）；scoped 工具注册表 + setup window（06 落地）；compaction 生产者 + budget 档 + durable resume + request-context（长跑能力）；core/todo + core/plan（todo_write 整表快照 + 计划模式；ExtensionEvent + ServiceLoader codec 三实例——含 it14 的 assistant/chunk）；sandbox 三模块（同机进程约束：darwin=seatbelt / linux=bwrap 均已实测落地，fail-closed + plan 压只读；windows 后端入 0.2.0）。
 - **占位**：其余叶子模块只有 `module-info.java` + 标记类——依赖图从第一天起由 JPMS 编译器强制，不是待办清单，而是模块契约。
 - **Pre-release**：无外部消费者。正确地基 > 兼容包袱：可自由重命名/重排包并同步全部引用，不写兼容垫片。
 
@@ -30,7 +30,7 @@ core/        session（事件溯源）、system-prompt（组装注册表）、to
 llm/         llm（seam）、openai-compat（通用适配器）、deepseek（真实 provider）、replay（录制回放，keyless 测试依赖）
 fs/ shell/   capability 三角色：seam / provider / tool consumer（均已实现；shell 有本机 bash 与 docker 两个互斥 provider）
 session/     persistence seam + jsonl 后端（R1 闭环）
-sandbox/ interaction/   沙箱（seatbelt/bwrap 平台链 + 策略解析）与审批（三模式）
+sandbox/ interaction/   沙箱（seatbelt/bwrap 平台链 + 策略解析）与审批（三模式）+ 命令面（it14）
 dist/        jh：jlink 运行时镜像编排（无代码；产出 target/jlink-image/bin/jh）
 bundle/ examples/       base 组合（AppBoot 数据化装配）；agent-spine 与 headless（CLI runner）
 docs/        design/ 12 篇设计文档 + dsh-reference.md；plan/ 逐迭代验收清单（[README](docs/plan/README.md)）
@@ -58,8 +58,12 @@ mvn -B -q -pl dist/jh -am package                 # 或全量 mvn -B package
 dist/jh/target/jlink-image/bin/jh --help          # 全部 flag 与示例（exit 0）
 dist/jh/target/jlink-image/bin/jh --verify        # 组合 + 治理断言（无 key，exit 0/1）
 
+dist/jh/target/jlink-image/bin/jh                 # 裸启动进 REPL（it14）：非 / 行成轮送模型并流式渲染；
+                                                  # /help 列命令、/exit（或 EOF/Ctrl-D）退出；进行中轮以 aborted 落账
+
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
 # 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 按打印 id 续跑
+# --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
 # 任意 OpenAI 兼容厂商:
 #   … bin/jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 \
 #                --model=kimi-k2 --provider=kimi

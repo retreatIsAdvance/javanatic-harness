@@ -193,11 +193,16 @@ final class DeepSeekAdapter implements LlmAdapter {
 
 - **typed 失败**：`LlmCallException`（`llm/llm`，seam 类型）+ `Kind` 词表——`AUTH`(401/403) /
   `RATE_LIMIT`(429) / `SERVER`(5xx) / `NETWORK`(连接/读 IO) / `TIMEOUT`(空闲看门狗) /
-  `PROTOCOL`(wire 解析：畸形 SSE、未知 finish_reason、流尾无 finish、其余 4xx)。适配器把
+  `PROTOCOL`(wire 解析：畸形 SSE、未知 finish_reason、流尾无 finish、其余 4xx) /
+  `OVERFLOW`(it14：400 + 溢出厂商信号，由适配器分类；`retryable()=false`——溢出由压缩恢复、
+  非传输重试可愈)。适配器把
   HTTP/IO/解析失败映射为 typed 抛出，**重试判定读 `Kind.retryable()`**（RATE_LIMIT/SERVER/
-  NETWORK 可重试；AUTH/TIMEOUT/PROTOCOL 不可）——可重试性不再散落为数值判断。消费方
-  （it14 交互面）按 kind 渲染可行动失败（AUTH 引查 key、RATE_LIMIT 稍后重试），不解析
-  消息文本。消息保留厂商细节（如 `deepseek http 401`）供人读。
+  NETWORK 可重试；AUTH/TIMEOUT/PROTOCOL/OVERFLOW 不可）——可重试性不再散落为数值判断。
+  消费方按 kind 渲染可行动失败（AUTH 引查 key、RATE_LIMIT 稍后重试），不解析
+  消息文本——**it14 落地**：REPL 渲染器按 `TurnEndReason.Error.kind`（`FailureKind`）出文案；
+  kind 由 agent-loop 对 llm `Kind` 做穷尽 switch 映射（词表家在 core/session，避免
+  llm↔session 依赖环）；溢出恢复判定同步改读 `Kind.OVERFLOW`（it10 消息文本匹配退役）。
+  消息保留厂商细节（如 `deepseek http 401`）供人读，仅作附注不参与判定。
 - **流尾无 finish**：此前由 `ChunkAssembly.fold` 以裸 IAE 兜底的 wire 违规，改为 adapter
   在流尾直抛 `PROTOCOL`——分类发生在知道 wire 事实的层。
 
@@ -661,7 +666,7 @@ public record ToolDefinition(
 | Sandbox | `sandbox.sandbox` | `local`（OFF 透传）| bash/terminal/fs | ✅ stub |
 | Session Persistence | `session.persistence` | `jsonl` | persistence 插件 | ✅ |
 | Approval | `interaction.approval` | `auto` / `ask` / `deny` | ToolExecutor 固定 stage | ✅ **真实** |
-| Commands | `interaction.commands` | — | headless | ✅ stub |
+| Commands | `interaction.commands` | （registry 内建） | headless REPL | ✅ |
 | Subagent / Web / LSP / Terminal / Compaction | 各 Definition | —（留接口）| — | 🔌 接口 |
 
 留接口的 seam：Definition 模块完整定义接口和 `ServiceKey`，但不提供 Provider；组合时不挂载即可，未来加 Provider 不改任何 Consumer。

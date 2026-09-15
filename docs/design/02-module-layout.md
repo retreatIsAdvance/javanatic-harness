@@ -93,7 +93,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | 角色 | 职责 |
 |---|---|---|
 | `harness-interaction-approval` | Definition + 默认 Provider | `ApprovalService`（`Mode.AUTO/HUMAN_GATE/DENY_ALL`）+ 三个默认实现插件 `approval-auto`/`approval-ask`/`approval-deny`（**真实非 stub**，[05 §6](05-capability-seam.md)；实现演进独立时再拆模块）|
-| `harness-interaction-commands` | Definition | `CommandRegistry`（slash 命令）|
+| `harness-interaction-commands` | Definition | `CommandRegistry`（slash 命令；register 即 effect、重复名 fail loud）+ `parseCommand` + `command/run`/`command/done` 事件对（it14 实装，[05 §9](05-capability-seam.md)）|
 
 ### Bundle 层（组合发行）
 
@@ -107,7 +107,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | 职责 |
 |---|---|
 | `harness-examples-agent-spine` | 最小 agent 主干 demo（6 包 loop 跑通）|
-| `harness-examples-headless` | `jh` 命令行 runner（CLI 完备：`--help`/`--workspace=`/`--approval=`…，`--verify` 也在此，R4）；经 `dist/jh` 打成 jlink 运行时镜像 |
+| `harness-examples-headless` | `jh` 命令行 runner（CLI 完备：`--help`/`--workspace=`/`--approval=`…，`--verify` 也在此，R4；裸 `jh` 进 REPL——斜杠命令面 + 流式渲染，it14）；经 `dist/jh` 打成 jlink 运行时镜像 |
 
 ### Distribution 层（运行产物，it13）
 
@@ -298,24 +298,20 @@ module io.javanatic.harness.llm.deepseek {
 ```java
 module io.javanatic.harness.bundle.base {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.core.tools;
-    requires io.javanatic.harness.core.agent;
+    requires io.javanatic.harness.sandbox.sandbox;
     requires io.javanatic.harness.core.agent.loop;
-    requires io.javanatic.harness.llm.deepseek;
-    requires io.javanatic.harness.llm.replay;
-    requires io.javanatic.harness.fs.local;
-    requires io.javanatic.harness.fs.tool;
-    requires io.javanatic.harness.shell.bash.local;
-    requires io.javanatic.harness.shell.tool;
-    requires io.javanatic.harness.session.persistence.jsonl;
-    requires io.javanatic.harness.interaction.approval;
+    requires io.javanatic.harness.session.persistence;
+    requires org.yaml.snakeyaml;
 
-    // bundle 不 export API，只提供 Plugin
-    provides io.javanatic.harness.kernel.plugin.Plugin
-        with io.javanatic.harness.bundle.base.BaseBundlePlugin;
+    // bundle 不 export API 之外的东西；AppBoot 入口导出
+    exports io.javanatic.harness.boot;
 }
 ```
+
+插件面（llm/fs/shell/todo/plan/approval/commands 等）经 bundle.yml 行 + ServiceLoader 发现装配，bundle 模块本身不 `requires` 各 Provider。
 
 ## 5. Maven 构建结构
 
@@ -782,6 +778,7 @@ java -jar examples/headless/target/jh.jar --profile headless --verify   # R4 治
 | `sandbox/sandbox` + `sandbox/sandbox-local` | `sandbox.sandbox` + `sandbox.local` | ✅（简化）|
 | `session/session-persistence` + `-jsonl` | `session.persistence`（+codec SPI）+ `persistence-jsonl` | ✅（JSONL only）|
 | `interaction/approval` | `interaction.approval` | ✅ **真实三模式**（非 stub）|
+| `interaction/commands` | `interaction.commands` | ✅（it14 实装；dsh `@deepseek-ai/dsh-commands` 形状）|
 | `bundle/base` | `bundle.base` | ✅ |
 | `bundle/headless` | `bundle.headless` | ✅ |
 | `core/agent-default-model` | （合并进 agent-loop）| ✅ 简化 |

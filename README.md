@@ -2,7 +2,7 @@
 
 基于 JVM 的插件化 Agent Harness —— **Java 25 LTS / JPMS / Maven**。把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 Java 体系：**思想照搬，形状不照搬**。
 
-> **状态**：kernel、core 全主干（session/tools/todo/plan/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7-13 与 12.6 硬化回填（openai-compat、治理上线、AppBoot 组合数据化、scope/preset、长跑能力 compaction/budget/resume、todo_write + 计划模式、sandbox 同机进程约束（darwin/linux）、shell-docker 环境级隔离、可运行产物 dist/jlink + CLI 完备、JSONL 耐久 / typed LLM 失败 / fs realpath 围栏 / 平台预警）已完成——组合是数据、R1 三规则齐备、真实任务经 CLI 跑通；其余叶子模块为 `module-info.java` + 标记类——依赖图从第一天起由编译器强制执行。
+> **状态**：kernel、core 全主干（session/tools/todo/plan/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7-14 与 12.6 硬化回填（openai-compat、治理上线、AppBoot 组合数据化、scope/preset、长跑能力 compaction/budget/resume、todo_write + 计划模式、sandbox 同机进程约束（darwin/linux）、shell-docker 环境级隔离、可运行产物 dist/jlink + CLI 完备、JSONL 耐久 / typed LLM 失败 / fs realpath 围栏 / 平台预警、REPL 交互面（命令面 + 流式渲染 + typed 失败渲染））已完成——组合是数据、R1 三规则齐备、真实任务经 CLI 跑通；其余叶子模块为 `module-info.java` + 标记类——依赖图从第一天起由编译器强制执行。
 >
 > 命名：JPMS 根名 / 包名 `io.javanatic.harness.*`，Maven `io.javanatic:harness-*`。
 
@@ -44,7 +44,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS
 ## 构建与验证
 
 ```sh
-mvn -B package              # 全量编译打包（45 个 reactor 项目，304 项测试；e2e 无 key 自跳过）
+mvn -B package              # 全量编译打包（45 个 reactor 项目，357 项测试；e2e 无 key 自跳过）
 mvn -B -pl :harness-kernel-core -am package   # 单模块及其依赖
 ```
 
@@ -54,8 +54,12 @@ mvn -B -pl :harness-kernel-core -am package   # 单模块及其依赖
 dist/jh/target/jlink-image/bin/jh --help     # 全部 flag 与示例（exit 0）
 dist/jh/target/jlink-image/bin/jh --verify   # 组合 + 治理断言（无 key，exit 0/1）
 
+dist/jh/target/jlink-image/bin/jh            # 裸启动进 REPL（it14）：非 / 行成轮送模型并流式渲染，
+                                             # /help 列命令、/exit（或 EOF/Ctrl-D）退出；进行中轮以 aborted 落账
+
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
 # 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 续跑同一会话
+# --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
 # 任意 OpenAI 兼容厂商：
 #   … bin/jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
 # 容器级隔离（须本机 docker 与镜像在场，不自动拉取）：
@@ -75,7 +79,7 @@ sandbox/            同机进程约束：Definition + seatbelt/bwrap Provider + 
 llm/                seam + replay（keyless 测试地基）+ openai-compat（通用适配器）+ deepseek（真实 Provider）
 fs/ shell/          capability 三角色（均已实现；shell 有两个互斥 Provider——本机 bash 与 docker 容器，见 it12.5）
 session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端（R1 闭环）
-interaction/        审批三模式（auto/ask/deny，it7）；commands 占位
+interaction/        审批三模式（auto/ask/deny，it7）+ 命令面（registry/slash 解析/事件对，it14）
 dist/               jlink 运行时镜像编排：产出 bin/jh（解出即用，无需手拼 module-path，it13）
 bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可运行示例（agent-spine / headless）
 ```
@@ -100,7 +104,7 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 | 12.6 ✅ | 硬化回填（13 后插入）：JSONL 耐久（fsync 屏障 + 撕裂尾修复）、typed LLM 失败（`LlmCallException` + `Kind` 词表）、LocalFs realpath 围栏（symlink 出界封死）、`--verify` 平台预警；LoopGuard 注释 + 02 漂移订正 | [03](docs/design/03-session-event-sourcing.md) / [05](docs/design/05-capability-seam.md) |
 | 12.7 ✅ | 平台链落地：Linux 同机约束（bwrap 后端）——darwin=seatbelt / linux=bwrap / win32=空链；CI 双 job 真验（ubuntu 装 bubblewrap、macos 补 seatbelt） | [05](docs/design/05-capability-seam.md) |
 | 13 ✅ | 可运行产物：dist（jlink）+ CLI 完备（`--help` / `--workspace=` / `--approval=`；运行 id + CI 冒烟）| — |
-| 14 | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染 | — |
+| 14 ✅ | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染（chunk 落账 + typed 失败渲染按 `FailureKind`）| — |
 | 15 | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
 | 16 | 发布工程 → **0.1.0**：Maven Central、门面冻结、双语 README | — |
 | 17+ | subagent、skills、web、LSP、windows-acl + pwsh provider、Landlock 第二候选——按社区声音排序 | — |
