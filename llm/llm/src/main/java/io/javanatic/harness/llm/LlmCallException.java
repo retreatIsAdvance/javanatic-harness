@@ -27,13 +27,16 @@ public final class LlmCallException extends RuntimeException {
         TIMEOUT,
 
         /** wire 解析失败（畸形 SSE、未知 finish_reason、请求被拒收等）——重试无意义。 */
-        PROTOCOL;
+        PROTOCOL,
+
+        /** 输入超窗（400 + 厂商溢出信号）——由上层压缩恢复，传输重试无意义。 */
+        OVERFLOW;
 
         /** 传输层重试是否有意义（适配器重试判定的唯一依据）。 */
         public boolean retryable() {
             return switch (this) {
                 case RATE_LIMIT, SERVER, NETWORK -> true;
-                case AUTH, TIMEOUT, PROTOCOL -> false;
+                case AUTH, TIMEOUT, PROTOCOL, OVERFLOW -> false;
             };
         }
     }

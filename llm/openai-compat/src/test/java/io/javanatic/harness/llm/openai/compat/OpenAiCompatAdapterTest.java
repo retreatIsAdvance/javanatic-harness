@@ -48,8 +48,14 @@ class OpenAiCompatAdapterTest {
     private final List<ResponseScript> scripts = new CopyOnWriteArrayList<>();
     private final AtomicInteger hits = new AtomicInteger();
 
+    /** 非 200 时 rawBody 非空则原样写体(错误体分类);否则按 SSE 行写。 */
     private record ResponseScript(int status, String retryAfter, List<String> sseLines,
-                                  long stallAfterLinesMillis) {}
+                                  long stallAfterLinesMillis, String rawBody) {
+        ResponseScript(int status, String retryAfter, List<String> sseLines,
+                       long stallAfterLinesMillis) {
+            this(status, retryAfter, sseLines, stallAfterLinesMillis, null);
+        }
+    }
 
     @BeforeEach
     void start() throws Exception {
@@ -92,6 +98,11 @@ class OpenAiCompatAdapterTest {
         }
         exchange.sendResponseHeaders(script.status(), 0);
         try (OutputStream out = exchange.getResponseBody()) {
+            if (script.rawBody() != null) {
+                out.write(script.rawBody().getBytes(StandardCharsets.UTF_8));
+                out.flush();
+                return;
+            }
             for (String line : script.sseLines()) {
                 out.write(("data: " + line + "\n\n").getBytes(StandardCharsets.UTF_8));
                 out.flush();
@@ -265,6 +276,31 @@ class OpenAiCompatAdapterTest {
             .isInstanceOfSatisfying(LlmCallException.class, e -> {
                 assertThat(e.kind()).isEqualTo(LlmCallException.Kind.PROTOCOL);
                 assertThat(e).hasMessageContaining("400");
+            });
+        assertThat(hits.get()).isEqualTo(1);
+    }
+
+    @Test
+    void overflow400BodyMapsToOverflowWithoutRetry() {
+        scripts.add(new ResponseScript(400, null, List.of(), 0,
+            "{\"error\":{\"message\":\"This model's maximum context length is 8192 tokens. "
+                + "However, you requested 12000 tokens.\",\"code\":\"context_length_exceeded\"}}"));
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class, e -> {
+                assertThat(e.kind()).isEqualTo(LlmCallException.Kind.OVERFLOW);
+                assertThat(e).hasMessageContaining("400");
+            });
+        assertThat(hits.get()).isEqualTo(1);
+    }
+
+    @Test
+    void other400BodyStaysProtocol() {
+        scripts.add(new ResponseScript(400, null, List.of(), 0,
+            "{\"error\":{\"message\":\"invalid_request_error: bad temperature\"}}"));
+        assertThatThrownBy(() -> consume(adapter()))
+            .isInstanceOfSatisfying(LlmCallException.class, e -> {
+                assertThat(e.kind()).isEqualTo(LlmCallException.Kind.PROTOCOL);
+                assertThat(e).hasMessageContaining("bad temperature");
             });
         assertThat(hits.get()).isEqualTo(1);
     }

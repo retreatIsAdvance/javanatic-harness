@@ -12,6 +12,7 @@ import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.llm.FinishReason;
 import io.javanatic.harness.llm.LlmCallConfig;
+import io.javanatic.harness.llm.LlmCallException;
 import io.javanatic.harness.llm.LlmPlugin;
 import io.javanatic.harness.llm.LlmService;
 import io.javanatic.harness.llm.StreamChunk;
@@ -21,6 +22,8 @@ import io.javanatic.harness.session.event.AssistantMessageEvent;
 import io.javanatic.harness.session.event.CompactionSummary;
 import io.javanatic.harness.session.event.SurfaceOp;
 import io.javanatic.harness.session.event.ToolResultEvent;
+import io.javanatic.harness.session.event.TurnEnd;
+import io.javanatic.harness.session.event.TurnEndReason;
 import io.javanatic.harness.session.event.TurnStart;
 import io.javanatic.harness.session.event.UserMessageEvent;
 import io.javanatic.harness.session.message.AssistantMessage;
@@ -178,6 +181,55 @@ class CompactionTest {
             agent.whenIdle().join();
             assertThat(agent.session().events().stream()
                 .map(e -> e.event().type())).doesNotContain("compaction/start");
+        }
+    }
+
+    @Test
+    void overflowKindTriggersForcedCompactionAndRetry() throws Exception {
+        // 阈值抬到 10 万:压力路径不触发,唯一变量是溢出恢复(it14 改读 Kind 分类)
+        try (Rig rig = new Rig(100_000)) {
+            AtomicInteger calls = new AtomicInteger();
+            rig.rt.root().require(LlmService.KEY).registerAdapter("overflow",
+                (config, request, signal) -> {
+                    int call = calls.incrementAndGet();
+                    if (call == 1) {
+                        return Stream.of(
+                            new StreamChunk.Delta("查"),
+                            new StreamChunk.DeltaToolUse(CallId.of("c1"), "echo", "{}"),
+                            new StreamChunk.Finish(FinishReason.TOOL_USE));
+                    }
+                    if (call == 2) {
+                        // 适配器已把 400+溢出信号分类成 Kind.OVERFLOW;传输层不重试
+                        throw new LlmCallException(LlmCallException.Kind.OVERFLOW,
+                            "deepseek http 400: context overflow");
+                    }
+                    if (call == 3) {
+                        return Stream.of(
+                            new StreamChunk.Delta("## Primary Request and Intent\n- 任务"),
+                            new StreamChunk.Finish(FinishReason.STOP));
+                    }
+                    return Stream.of(
+                        new StreamChunk.Delta("终答"),
+                        new StreamChunk.Finish(FinishReason.STOP));
+                });
+
+            AgentHandle handle = rig.agents.create(rig.rt.root(),
+                CreateAgentOptions.of(Session.newId("ovf"), new AgentOptions("overflow", "m")));
+            Agent agent = handle.agent();
+            agent.followup(UserMessage.of("任务", new MessageSource.User()));
+            agent.whenIdle().join();
+
+            // 1 工具轮 + 1 溢出(不重试) + 1 摘要 + 1 恢复终答
+            assertThat(calls.get()).isEqualTo(4);
+            List<String> types = agent.session().events().stream()
+                .map(e -> e.event().type()).toList();
+            assertThat(types).containsSubsequence("compaction/start", "user/message",
+                "compaction/summary", "compaction/end");
+            assertThat(agent.session().events().stream()
+                .map(e -> e.event())
+                .filter(TurnEnd.class::isInstance)
+                .map(e -> ((TurnEnd) e).reason()))
+                .containsExactly(new TurnEndReason.Completed());
         }
     }
 

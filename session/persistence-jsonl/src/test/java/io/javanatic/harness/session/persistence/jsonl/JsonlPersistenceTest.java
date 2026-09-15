@@ -11,6 +11,7 @@ import io.javanatic.harness.session.event.CompactionEnd;
 import io.javanatic.harness.session.event.CompactionStart;
 import io.javanatic.harness.session.event.CompactionSummary;
 import io.javanatic.harness.session.event.ExtensionEvent;
+import io.javanatic.harness.session.event.FailureKind;
 import io.javanatic.harness.session.event.LlmRequestEvent;
 import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.SessionEvent;
@@ -162,6 +163,49 @@ class JsonlPersistenceTest {
             assertThatThrownBy(() -> persistence.load(live.id()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("seq broken");
+        }
+    }
+
+    @Test
+    void errorReasonFailureKindRoundTripsThroughDisk() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+            live.append(new TurnEnd(2, 1,
+                new TurnEndReason.Error("boom", FailureKind.RATE_LIMIT)));
+
+            // 盘上拼写钉住(lowercase-hyphen 即格式)
+            assertThat(Files.readString(root.resolve("s1/log.jsonl")))
+                .contains("\"failureKind\":\"rate-limit\"");
+            SessionPersistence.Loaded loaded =
+                rt.root().require(SessionPersistence.KEY).load(live.id());
+            assertThat(loaded.events()).containsExactly(
+                new TurnStart(1, 1),
+                new TurnEnd(2, 1, new TurnEndReason.Error("boom", FailureKind.RATE_LIMIT)));
+        }
+    }
+
+    @Test
+    void oldLogMissingFailureKindReadsAsUnknown() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            liveSession(rt);
+            // 升级前写入的日志:reason 无 failureKind 字段
+            Files.writeString(root.resolve("s1/log.jsonl"),
+                "{\"seq\":0,\"type\":\"turn/start\",\"ignorable\":false,"
+                    + "\"data\":{\"time\":1,\"turn\":1}}\n"
+                    + "{\"seq\":1,\"type\":\"turn/end\",\"ignorable\":false,"
+                    + "\"data\":{\"time\":2,\"turn\":1,"
+                    + "\"reason\":{\"kind\":\"error\",\"message\":\"boom\"}}}\n");
+
+            SessionPersistence.Loaded loaded =
+                rt.root().require(SessionPersistence.KEY).load(Session.newId("s1"));
+            assertThat(loaded.events()).containsExactly(
+                new TurnStart(1, 1),
+                new TurnEnd(2, 1, new TurnEndReason.Error("boom", FailureKind.UNKNOWN)));
         }
     }
 

@@ -15,6 +15,7 @@ class LlmCallExceptionTest {
         assertThat(LlmCallException.Kind.AUTH.retryable()).isFalse();
         assertThat(LlmCallException.Kind.TIMEOUT.retryable()).isFalse();
         assertThat(LlmCallException.Kind.PROTOCOL.retryable()).isFalse();
+        assertThat(LlmCallException.Kind.OVERFLOW.retryable()).isFalse();
     }
 
     @Test

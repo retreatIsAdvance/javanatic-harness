@@ -7,6 +7,7 @@ import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.CompactionEnd;
 import io.javanatic.harness.session.event.CompactionStart;
 import io.javanatic.harness.session.event.CompactionSummary;
+import io.javanatic.harness.session.event.FailureKind;
 import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.StepEnd;
 import io.javanatic.harness.session.event.SurfaceOp;
@@ -36,6 +37,7 @@ import io.javanatic.harness.kernel.scope.Scope;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -209,7 +211,8 @@ final class CoreCodecs {
             case TurnEndReason.Aborted aborted -> JsonValue.object().set("kind", "aborted")
                 .set("cause", aborted.cause()).build();
             case TurnEndReason.Error error -> JsonValue.object().set("kind", "error")
-                .set("message", error.message()).build();
+                .set("message", error.message())
+                .set("failureKind", wire(error.kind())).build();
             default -> throw new IllegalStateException("unknown reason: " + reason);
         };
     }
@@ -221,9 +224,28 @@ final class CoreCodecs {
         return switch (obj.get("kind").asString()) {
             case "completed" -> new TurnEndReason.Completed();
             case "aborted" -> new TurnEndReason.Aborted(obj.get("cause").asString());
-            case "error" -> new TurnEndReason.Error(obj.get("message").asString());
+            // 旧日志(升级前写入)缺 failureKind → UNKNOWN:message 保留、渲染回退
+            case "error" -> new TurnEndReason.Error(obj.get("message").asString(),
+                failureKind(obj.get("failureKind").asString()));
             default -> throw new IllegalStateException("unknown reason kind: " + obj.get("kind"));
         };
+    }
+
+    /** 失败分类的盘上拼写(lowercase-hyphen;跨版本即格式)。 */
+    private static String wire(FailureKind kind) {
+        return kind.name().toLowerCase(Locale.ROOT).replace('_', '-');
+    }
+
+    /** @param wire 缺失/未知拼写 → UNKNOWN(旧日志兼容与跨版本前读) */
+    private static FailureKind failureKind(String wire) {
+        if (wire == null) {
+            return FailureKind.UNKNOWN;
+        }
+        try {
+            return FailureKind.valueOf(wire.toUpperCase(Locale.ROOT).replace('-', '_'));
+        } catch (IllegalArgumentException unknown) {
+            return FailureKind.UNKNOWN;
+        }
     }
 
     private static JsonValue message(Message message) {

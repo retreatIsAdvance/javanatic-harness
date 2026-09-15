@@ -6,6 +6,7 @@ import io.javanatic.harness.agent.AgentOptions;
 import io.javanatic.harness.agent.AgentRegistry;
 import io.javanatic.harness.agent.CreateAgentOptions;
 import io.javanatic.harness.agent.ResumeAgentOptions;
+import io.javanatic.harness.agentloop.AssistantChunkEvent;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.boot.AppBoot;
 import io.javanatic.harness.boot.Policy;
@@ -284,8 +285,11 @@ public final class HeadlessMain {
                 agent.followup(UserMessage.of(options.task(), new MessageSource.User()));
             }
             agent.whenIdle().join();
-            agent.session().events().forEach(entry ->
-                LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
+            // chunk 是流式事实（S3 渲染面消费），不进 one-shot 事件清单——it13 输出形态不动
+            agent.session().events().stream()
+                .filter(entry -> !(entry.event() instanceof AssistantChunkEvent))
+                .forEach(entry ->
+                    LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
             handle.disposeAndAwait();
             rt.root().require(SessionPersistence.KEY).save(agent.session());
             return 0;

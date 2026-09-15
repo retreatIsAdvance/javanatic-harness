@@ -18,6 +18,8 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
@@ -39,6 +41,13 @@ public final class OpenAiCompatAdapter implements LlmAdapter {
 
     private static final int QUEUE_CAPACITY = 64;
     private static final long POLL_SLICE_MS = 100;
+
+    /** 错误体读取上限(分类与诊断摘录足够;防对端超长响应拖住重试路径)。 */
+    private static final int ERROR_BODY_CAP = 512;
+
+    /** 溢出厂商信号并集(it10 字符串匹配的原词表,分类上移到知 wire 事实的层)。 */
+    private static final List<String> OVERFLOW_MARKERS = List.of(
+        "context_length_exceeded", "maximum context", "token limit", "context length");
 
     private record End() {}
     private record Failed(Throwable cause) {}
@@ -108,7 +117,7 @@ public final class OpenAiCompatAdapter implements LlmAdapter {
                 if (response.statusCode() == 200) {
                     return response;
                 }
-                last = httpFailure(response.statusCode());
+                last = httpFailure(response.statusCode(), response.body());
                 if (!last.kind().retryable()) {
                     throw last;
                 }
@@ -122,14 +131,38 @@ public final class OpenAiCompatAdapter implements LlmAdapter {
         throw last == null ? new LlmCallException(LlmCallException.Kind.PROTOCOL, "unreachable") : last;
     }
 
-    /** HTTP 状态 → Kind 词表（401/403 AUTH、429 RATE_LIMIT、5xx SERVER,其余 PROTOCOL）。 */
-    private static LlmCallException httpFailure(int status) {
+    /**
+     * HTTP 状态 → Kind 词表（401/403 AUTH、429 RATE_LIMIT、5xx SERVER,
+     * 400 + 溢出厂商信号 OVERFLOW,其余 PROTOCOL）。溢出分类读错误体——
+     * 厂商细节（如 "maximum context length"）停在适配器层,上层只读 kind。
+     */
+    private static LlmCallException httpFailure(int status, InputStream body) {
+        String excerpt = status == 400 ? errorExcerpt(body) : "";
+        if (status == 400 && isOverflowSignal(excerpt)) {
+            return new LlmCallException(LlmCallException.Kind.OVERFLOW,
+                "deepseek http 400: context overflow");
+        }
         LlmCallException.Kind kind = switch (status) {
             case 401, 403 -> LlmCallException.Kind.AUTH;
             case 429 -> LlmCallException.Kind.RATE_LIMIT;
             default -> status >= 500 ? LlmCallException.Kind.SERVER : LlmCallException.Kind.PROTOCOL;
         };
-        return new LlmCallException(kind, "deepseek http " + status);
+        return new LlmCallException(kind, "deepseek http " + status
+            + (excerpt.isBlank() ? "" : ": " + excerpt));
+    }
+
+    /** 有界读错误体(读失败按无体处理——分类退化为状态码,不吞掉重试路径)。 */
+    private static String errorExcerpt(InputStream body) {
+        try (body) {
+            return new String(body.readNBytes(ERROR_BODY_CAP), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return "";
+        }
+    }
+
+    private static boolean isOverflowSignal(String excerpt) {
+        String lower = excerpt.toLowerCase(Locale.ROOT);
+        return OVERFLOW_MARKERS.stream().anyMatch(lower::contains);
     }
 
     /** 指数退避 + 抖动;Retry-After(秒)优先。 */

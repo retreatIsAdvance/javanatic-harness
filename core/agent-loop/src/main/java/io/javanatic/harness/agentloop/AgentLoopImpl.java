@@ -15,6 +15,7 @@ import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.llm.ChunkAssembly;
 import io.javanatic.harness.llm.LlmCallConfig;
+import io.javanatic.harness.llm.LlmCallException;
 import io.javanatic.harness.llm.LlmRequest;
 import io.javanatic.harness.llm.LlmService;
 import io.javanatic.harness.llm.StreamChunk;
@@ -22,6 +23,7 @@ import io.javanatic.harness.llm.ToolSchema;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.session.event.AssistantMessageEvent;
+import io.javanatic.harness.session.event.FailureKind;
 import io.javanatic.harness.session.event.LlmRequestEvent;
 import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.LoggedEvent;
@@ -311,11 +313,12 @@ public final class AgentLoopImpl implements Agent {
                 reason = new TurnEndReason.Aborted(
                     abort.isAborted() ? AbortController.describe(abort.cause()) : e.getMessage());
             } catch (GuardRejectException e) {
-                reason = new TurnEndReason.Error(e.getMessage());
+                reason = new TurnEndReason.Error(e.getMessage(), FailureKind.UNKNOWN);
             } catch (RuntimeException e) {
                 // 意外失败收敛为 Error 关轮（turn 隔离）；驱动继续排空后续 work
                 LOG.log(Logger.Level.ERROR, "turn " + turn + " failed", e);
-                reason = new TurnEndReason.Error(e.getClass().getSimpleName() + ": " + e.getMessage());
+                reason = new TurnEndReason.Error(e.getClass().getSimpleName() + ": " + e.getMessage(),
+                    failureKind(e));
             }
             session.append(new TurnEnd(clock.millis(), turn, reason));
         } finally {
@@ -367,11 +370,18 @@ public final class AgentLoopImpl implements Agent {
             try (Stream<StreamChunk> chunks = llm.stream(config, new LlmRequest(
                 systemPrompt.isEmpty() ? null : systemPrompt,
                 session.deriveMessages(), schemas, Map.of()), signal)) {
-                assembled = ChunkAssembly.fold(chunks.toList());
+                // 边消费边落 assistant/chunk（流式事实；装配失败也不抹已到分块）
+                List<StreamChunk> collected = new ArrayList<>();
+                int currentStep = step;
+                chunks.forEach(chunk -> {
+                    session.append(new AssistantChunkEvent(clock.millis(), turn, currentStep, chunk));
+                    collected.add(chunk);
+                });
+                assembled = ChunkAssembly.fold(collected);
             } catch (AbortedException e) {
                 throw e;
             } catch (RuntimeException e) {
-                // 溢出恢复(it10):错误串匹配 + 强制压缩 + 同 step 重试一次(dsh/agentscope 安全网)
+                // 溢出恢复(it10):Kind 分类 + 强制压缩 + 同 step 重试一次(dsh/agentscope 安全网)
                 if (overflowRetries == 0 && compaction != null && isContextOverflow(e)
                         && compaction.compactNow(session, turn, config0(turn, step, signal), signal) != null) {
                     overflowRetries++;
@@ -415,11 +425,25 @@ public final class AgentLoopImpl implements Agent {
         }
     }
 
-    /** 溢出错误串识别(厂商变体并集;结构化错误码随 deepseek 词表归一)。 */
+    /** 溢出判定(it14):读 llm 词表的 OVERFLOW 分类——厂商细节停在适配器层。 */
     private static boolean isContextOverflow(Throwable e) {
-        String message = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
-        return message.contains("context_length_exceeded") || message.contains("maximum context")
-            || message.contains("token limit") || message.contains("context length");
+        return e instanceof LlmCallException llm && llm.kind() == LlmCallException.Kind.OVERFLOW;
+    }
+
+    /** llm Kind → session 词表的穷尽映射（llm 词表加变体,此处编译期强制更新）。 */
+    private static FailureKind failureKind(Throwable e) {
+        if (!(e instanceof LlmCallException llm)) {
+            return FailureKind.UNKNOWN;
+        }
+        return switch (llm.kind()) {
+            case AUTH -> FailureKind.AUTH;
+            case RATE_LIMIT -> FailureKind.RATE_LIMIT;
+            case SERVER -> FailureKind.SERVER;
+            case NETWORK -> FailureKind.NETWORK;
+            case TIMEOUT -> FailureKind.TIMEOUT;
+            case PROTOCOL -> FailureKind.PROTOCOL;
+            case OVERFLOW -> FailureKind.OVERFLOW;
+        };
     }
 
     private LlmCallConfig config0(int turn, int step, AbortSignal signal) {

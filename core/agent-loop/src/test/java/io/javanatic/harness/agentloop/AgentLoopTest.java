@@ -13,6 +13,7 @@ import io.javanatic.harness.agent.ResumeAgentOptions;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.llm.FinishReason;
+import io.javanatic.harness.llm.LlmCallException;
 import io.javanatic.harness.llm.LlmPlugin;
 import io.javanatic.harness.llm.LlmService;
 import io.javanatic.harness.llm.StreamChunk;
@@ -20,6 +21,8 @@ import io.javanatic.harness.llm.replay.ReplayPlugin;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.session.SessionStorePlugin;
+import io.javanatic.harness.session.SessionEvents;
+import io.javanatic.harness.session.event.FailureKind;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.StepStart;
@@ -46,6 +49,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -183,6 +187,7 @@ class AgentLoopTest {
 
             assertThat(types(agent.session())).containsExactly(
                 "turn/start", "request/header", "user/message", "step/start", "llm/request",
+                "assistant/chunk", "assistant/chunk",
                 "assistant/message", "step/end", "turn/end");
             LoggedEvent<? extends SessionEvent> first = agent.session().events().getFirst();
             assertThat(first.event()).isEqualTo(new TurnStart(FIXED_MILLIS, 1));
@@ -202,8 +207,10 @@ class AgentLoopTest {
 
             assertThat(types(agent.session())).containsExactly(
                 "turn/start", "request/header", "user/message", "step/start", "llm/request",
+                "assistant/chunk", "assistant/chunk", "assistant/chunk",
                 "assistant/message", "tool/call", "tool/result", "step/end",
-                "step/start", "llm/request", "assistant/message", "step/end", "turn/end");
+                "step/start", "llm/request", "assistant/chunk", "assistant/chunk",
+                "assistant/message", "step/end", "turn/end");
             // 工具结果投影进模型可见历史(source=Tool 的那条)
             UserMessage toolResult = (UserMessage) agent.session().deriveMessages().stream()
                 .filter(message -> message.source() instanceof MessageSource.Tool)
@@ -371,9 +378,65 @@ class AgentLoopTest {
             agent.whenIdle().join();
 
             assertThat(calls.get()).isEqualTo(1);
-            assertThat(reasons(agent.session()).getFirst())
-                .isInstanceOf(TurnEndReason.Error.class);
-            assertThat(reasons(agent.session()).getFirst().toString()).contains("boom");
+            // 非 llm 失败 → UNKNOWN（词表映射的缺省分支）
+            assertThat(reasons(agent.session())).containsExactly(
+                new TurnEndReason.Error("IllegalStateException: boom", FailureKind.UNKNOWN));
+        }
+    }
+
+    @Test
+    void llmFailureKindMapsToTurnEndReason() {
+        try (Rig rig = new Rig(List.of())) {
+            LlmService llm = rig.rt.root().require(LlmService.KEY);
+            llm.registerAdapter("flaky", (config, request, signal) -> {
+                throw new LlmCallException(LlmCallException.Kind.RATE_LIMIT, "deepseek http 429");
+            });
+
+            Agent agent = rig.agent("a13", new AgentOptions("flaky", "m")).agent();
+            agent.followup(text("go"));
+            agent.whenIdle().join();
+
+            // llm 词表 → session 词表的映射在 turn 收敛点穷尽完成
+            assertThat(reasons(agent.session())).containsExactly(
+                new TurnEndReason.Error("LlmCallException: deepseek http 429",
+                    FailureKind.RATE_LIMIT));
+        }
+    }
+
+    @Test
+    void chunkEventsCarryTurnStepAndPayloadInOrder() {
+        try (Rig rig = new Rig(List.of(say("你好!")))) {
+            Agent agent = rig.agent("a14").agent();
+            agent.followup(text("hi"));
+            agent.whenIdle().join();
+
+            List<AssistantChunkEvent> chunks = agent.session().events().stream()
+                .map(LoggedEvent::event)
+                .filter(AssistantChunkEvent.class::isInstance)
+                .map(AssistantChunkEvent.class::cast)
+                .toList();
+            // 逐块留痕的原始载荷（不装配、不合并）
+            assertThat(chunks).containsExactly(
+                new AssistantChunkEvent(FIXED_MILLIS, 1, 0, new StreamChunk.Delta("你好!")),
+                new AssistantChunkEvent(FIXED_MILLIS, 1, 0,
+                    new StreamChunk.Finish(FinishReason.STOP)));
+        }
+    }
+
+    @Test
+    void appendedObserverReceivesChunksInOrder() {
+        try (Rig rig = new Rig(List.of(say("one")))) {
+            List<String> observed = new ArrayList<>();
+            rig.rt.root().events().onGlobal(SessionEvents.APPENDED, (carrier, entry) ->
+                observed.add(((LoggedEvent<?>) entry).event().type()));
+            Agent agent = rig.agent("a15").agent();
+            agent.followup(text("hi"));
+            agent.whenIdle().join();
+
+            // APPENDED 保序派发：chunk 风暴逐条按序到观察者（渲染面据此增量上屏）
+            int request = observed.indexOf("llm/request");
+            assertThat(observed.subList(request, request + 4)).containsExactly(
+                "llm/request", "assistant/chunk", "assistant/chunk", "assistant/message");
         }
     }
 
