@@ -53,7 +53,9 @@ mvn -B package                                 # 全量绿（与 CI 同口径，
 mvn -B -P release -Dgpg.skip=true package      # release 剖面干跑：sources/javadoc/元数据齐全
 ```
 
-**注意**：`-Dgpg.skip=true` 下没有 `.asc` 是预期——干跑「无 .asc」**不得**当作签名达标证据（硬门槛见 §4.3）。
+**注意**：`-Dgpg.skip=true` 下没有 `.asc` 是预期——干跑「无 `.asc`」**不得**当作签名达标证据（硬门槛见 §4.3）。
+
+**另注**：Central 硬校验项——每个发布 POM 须**自带** `<name>` 元素（不继承；新增模块时勿漏）。it16 首发实撞：39 个发布包上传后被校验全数拒绝（`Project name is missing`），补 `<name>` 后重传通过。
 
 ## 3. 发布序列（0.1.0）
 
