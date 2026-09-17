@@ -9,6 +9,7 @@ import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.LoggedEvent;
+import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.ToolCallEvent;
 import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.message.CallId;
@@ -31,6 +32,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -137,10 +139,13 @@ class TodoPluginTest {
 
     /**
      * 并发契约（Session.append Javadoc）：同批并行工具的日志交错序任意——
-     * 慢工具的 tool/call 与 tool/result 之间隔着快工具的事件，配对仍靠
-     * callId 成立；相邻性不是契约，钉进执行门禁。交错做成因果（慢工具等
-     * 快工具的结果落账再返回），不赌调度时窗——CI 单核 runner 上固定 sleep
-     * 曾因调度饥饿偶发红（it12.6 收尾 CI 实录）。
+     * 慢工具的 tool/call 与 tool/result 之间隔着别的事件，配对仍靠 callId
+     * 成立；相邻性不是契约，钉进执行门禁。交错因果双向闭合，不赌调度时窗：
+     * 慢工具等快工具结果落账再返回，门控工具等慢工具 tool/call 落账再返回，
+     * 慢工具再等门控结果——slow.call &lt; gate.result &lt; slow.result 恒成立。
+     * 单向因果曾留窗口：慢 worker 起步晚于快工具全序列时 awaitResult 立即
+     * 返回、审计对成相邻（it15 收尾全量两连红实录）。任一串行执行序必令某次
+     * 等待超时，门禁红。
      */
     @Test
     void parallelBatchInterleavesAndPairsByCallIdNotAdjacency() {
@@ -154,49 +159,70 @@ class TodoPluginTest {
                     Map.of("text", new ValueSchema.Str("文本"))),
                 (args, context) -> {
                     awaitResult(context.session(), "fast", Duration.ofSeconds(10));
+                    awaitResult(context.session(), "gate", Duration.ofSeconds(10));
+                    return ToolExecutionResult.success(args.readString("text"));
+                }));
+            registry.register(rt.root(), ToolDefinition.of("gate_echo", "门控工具",
+                new ValueSchema.Object("参数",
+                    Map.of("text", new ValueSchema.Str("文本"))),
+                (args, context) -> {
+                    awaitCall(context.session(), "slow", Duration.ofSeconds(10));
                     return ToolExecutionResult.success(args.readString("text"));
                 }));
 
             Session session = Session.create(Session.newId("mix"), null, null);
             executor.execute(List.of(
                 new ToolUseBlock(CallId.of("slow"), "slow_echo", "{\"text\":\"later\"}"),
-                new ToolUseBlock(CallId.of("fast"), "todo_write", ONE_TODO)),
+                new ToolUseBlock(CallId.of("fast"), "todo_write", ONE_TODO),
+                new ToolUseBlock(CallId.of("gate"), "gate_echo", "{\"text\":\"gate\"}")),
                 session, 0, 0, rt.root(), AbortSignal.never());
 
             List<LoggedEvent<?>> log = session.events();
             int callSlow = indexOfCall(log, "slow_echo");
             int resultSlow = indexOfResult(log, "slow");
-            // 交错确凿：slow 的审计对之间至少隔着 fast 的一条事件
+            // 交错确凿：slow.call < gate.result < slow.result 恒成立（门控等 slow 的
+            // call 落账才返回、slow 又等门控的 result），审计对之间必隔事件
             assertThat(resultSlow - callSlow).isGreaterThan(1);
             assertThat(log.stream().map(LoggedEvent::type))
-                .containsExactlyInAnyOrder("tool/call", "tool/call", "todo/write",
-                    "tool/result", "tool/result");
+                .containsExactlyInAnyOrder("tool/call", "tool/call", "tool/call", "todo/write",
+                    "tool/result", "tool/result", "tool/result");
             // 配对靠内容：slow 的 result 以 callId 定位，内容正确
             ToolResultEvent slowResult = (ToolResultEvent) log.get(resultSlow).event();
             assertThat(slowResult.block()).isEqualTo(new ToolResultBlock(CallId.of("slow"), "later", false));
         }
     }
 
-    /** 阻塞至该 callId 的 tool/result 落账；AssertionError 不走 executor 的 Exception 网，超时必炸。 */
+    /** 阻塞至该 callId 的 tool/call 落账；语义同 {@link #awaitResult}。 */
+    private static void awaitCall(Session session, String callId, Duration timeout) {
+        await(session, timeout, "tool/call " + callId, event -> event instanceof ToolCallEvent call
+            && call.callId().value().equals(callId));
+    }
+
+    /** 阻塞至该 callId 的 tool/result 落账。 */
     private static void awaitResult(Session session, String callId, Duration timeout) {
+        await(session, timeout, "tool/result " + callId, event -> event instanceof ToolResultEvent result
+            && result.block().toolUseId().value().equals(callId));
+    }
+
+    /**
+     * 轮询直至断言成立。AssertionError 不走 executor 的 Exception 网，
+     * 超时必炸——串行执行或门控失效都在此现形。
+     */
+    private static void await(Session session, Duration timeout, String what,
+                              Predicate<SessionEvent> match) {
         long deadline = System.nanoTime() + timeout.toNanos();
         while (System.nanoTime() < deadline) {
-            boolean present = session.events().stream()
-                .map(LoggedEvent::event)
-                .filter(ToolResultEvent.class::isInstance)
-                .map(ToolResultEvent.class::cast)
-                .anyMatch(event -> event.block().toolUseId().value().equals(callId));
-            if (present) {
+            if (session.events().stream().map(LoggedEvent::event).anyMatch(match)) {
                 return;
             }
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new AssertionError("interrupted while awaiting tool/result " + callId, e);
+                throw new AssertionError("interrupted while awaiting " + what, e);
             }
         }
-        throw new AssertionError("tool/result for " + callId + " not appended within " + timeout);
+        throw new AssertionError(what + " not appended within " + timeout);
     }
 
     @Test
