@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.javanatic</groupId>
+    <groupId>io.github.retreatIsAdvance</groupId>
     <artifactId>harness-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -12,6 +12,28 @@
     <name>Javanatic Harness</name>
     <description>Plugin-based agent harness on the JVM — Java 25 / JPMS / Maven.
         Architecture: docs/design/ (design docs index: docs/design/README.md).</description>
+    <url>https://github.com/retreatIsAdvance/javanatic-harness</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>retreatIsAdvance</id>
+            <name>retreatIsAdvance</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/retreatIsAdvance/javanatic-harness.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/retreatIsAdvance/javanatic-harness.git</developerConnection>
+        <url>https://github.com/retreatIsAdvance/javanatic-harness</url>
+    </scm>
 
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
@@ -80,167 +102,167 @@
             </dependency>
             <!-- 内部模块：版本唯一声明处 -->
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-kernel-brand</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-kernel-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-kernel-config</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-session</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-system-prompt</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-tools</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-agent</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-agent-loop</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-todo</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-plan</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-preset</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-llm-llm</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-llm-deepseek</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-llm-openai-compat</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-llm-replay</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-fs-fs</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-fs-local</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-fs-tool</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-shell-shell</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-shell-bash-local</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-shell-tool</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-shell-docker</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-session-persistence</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-session-persistence-jsonl</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-sandbox-sandbox</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-sandbox-local</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-sandbox-policy</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-interaction-approval</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-interaction-commands</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-bundle-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-bundle-headless</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-examples-agent-spine</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-examples-headless</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -272,6 +294,28 @@
                 <plugin>
                     <artifactId>maven-checkstyle-plugin</artifactId>
                     <version>3.6.0</version>
+                </plugin>
+                <!-- 发布链四插件（配置在 release profile，版本唯一声明处在此）：
+                     gpg 签名 / sources jar / javadoc jar / Central Portal 上传 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>3.2.8</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.12.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>0.11.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -317,6 +361,75 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- 发布剖面（docs/release.md）：mvn -P release deploy。
+             本地无签名验证跑法：-P release -Dgpg.skip=true package（工件完整性不签名）。
+             上传目标为 Central Portal（central.sonatype.com），凭据取 settings.xml 的
+             server id `central`（用户令牌，用户侧持有）；autoPublish=false——上传为草稿，
+             门户人工审核后 Publish（公开不可逆，留人闸）。
+             examples/dist 子树不进发布面：插件不读 maven.deploy.skip（0.11.0 实核），
+             bundle 层面按 artifactId 过滤（excludeArtifacts）。 -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals><goal>jar-no-fork</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <!-- 中文 Javadoc + JPMS 降噪：文档质量靠写作纪律，不靠 doclint -->
+                            <doclint>none</doclint>
+                            <quiet>true</quiet>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals><goal>jar</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals><goal>sign</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>false</autoPublish>
+                            <excludeArtifacts>
+                                <excludeArtifact>harness-examples-aggregator</excludeArtifact>
+                                <excludeArtifact>harness-examples-agent-spine</excludeArtifact>
+                                <excludeArtifact>harness-examples-headless</excludeArtifact>
+                                <excludeArtifact>harness-dist-aggregator</excludeArtifact>
+                                <excludeArtifact>harness-dist-jh</excludeArtifact>
+                            </excludeArtifacts>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <dependencies>
         <dependency>

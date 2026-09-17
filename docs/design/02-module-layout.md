@@ -11,7 +11,7 @@
 | Examples | `io.javanatic.harness.examples.<name>` | `io.javanatic.harness.examples.headless` |
 | Distribution | 无 JPMS 模块（jlink 编排 POM）| `harness-dist-jh` |
 
-JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模块名一致，import 即模块名前缀）。Maven coordinates 用 `io.javanatic:harness-<group>-<pkg>:<version>`，artifactId 全程小写连字符（如 `harness-kernel-core`）。
+JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模块名一致，import 即模块名前缀）。Maven coordinates 用 `io.github.retreatIsAdvance:harness-<group>-<pkg>:<version>`，artifactId 全程小写连字符（如 `harness-kernel-core`）。**groupId 与包名不同源属有意为之**：groupId 是中央仓命名空间（GitHub 身份 `io.github.retreatIsAdvance`，随注册主体可变），包名 / JPMS 名是编译期身份（改名成本高，不动）。
 
 ## 2. 完整模块清单
 
@@ -394,7 +394,7 @@ harness/
                              https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.javanatic</groupId>
+    <groupId>io.github.retreatIsAdvance</groupId>
     <artifactId>harness-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -468,47 +468,47 @@ harness/
 
             <!-- 内部模块：在此集中声明 GAV，子模块引用时不写 version -->
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-kernel-brand</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-kernel-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-kernel-config</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-session</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-tools</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-core-agent</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-llm-llm</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-fs-fs</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.javanatic</groupId>
+                <groupId>io.github.retreatIsAdvance</groupId>
                 <artifactId>harness-shell-shell</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -587,7 +587,7 @@ harness/
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.javanatic</groupId>
+        <groupId>io.github.retreatIsAdvance</groupId>
         <artifactId>harness-parent</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <!-- parent 的 relativePath 默认指向上一级 -->
@@ -617,7 +617,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.javanatic</groupId>
+        <groupId>io.github.retreatIsAdvance</groupId>
         <artifactId>harness-kernel-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -631,7 +631,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
 ```xml
 <project>
     <parent>
-        <groupId>io.javanatic</groupId>
+        <groupId>io.github.retreatIsAdvance</groupId>
         <artifactId>harness-llm-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -641,15 +641,15 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
     <dependencies>
         <!-- 只依赖 Definition，不依赖其他 Provider -->
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-llm-llm</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-kernel-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-kernel-config</artifactId>
         </dependency>
     </dependencies>
@@ -661,7 +661,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
 ```xml
 <project>
     <parent>
-        <groupId>io.javanatic</groupId>
+        <groupId>io.github.retreatIsAdvance</groupId>
         <artifactId>harness-fs-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -671,11 +671,11 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
     <dependencies>
         <!-- ✅ 只依赖 Definition + 工具注册表 -->
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-fs-fs</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-core-tools</artifactId>
         </dependency>
         <!-- ❌ 注意：不依赖 harness-fs-local（Provider）！
@@ -691,7 +691,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
 ```xml
 <project>
     <parent>
-        <groupId>io.javanatic</groupId>
+        <groupId>io.github.retreatIsAdvance</groupId>
         <artifactId>harness-examples-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -700,7 +700,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
 
     <dependencies>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-bundle-base</artifactId>
         </dependency>
     </dependencies>

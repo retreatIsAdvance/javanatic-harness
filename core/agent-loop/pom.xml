@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.javanatic</groupId>
+        <groupId>io.github.retreatIsAdvance</groupId>
         <artifactId>harness-core-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -14,49 +14,49 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-core-agent</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-core-tools</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-core-system-prompt</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-llm-llm</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-kernel-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-kernel-config</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-kernel-brand</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-core-session</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-session-persistence</artifactId>
         </dependency>
         <!-- ServiceLoader codec 发现 + jsonl 往返（classpath 模式走 META-INF/services） -->
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-session-persistence-jsonl</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-llm-replay</artifactId>
             <scope>test</scope>
         </dependency>

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.javanatic</groupId>
+        <groupId>io.github.retreatIsAdvance</groupId>
         <artifactId>harness-shell-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -14,46 +14,46 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-shell-shell</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-sandbox-sandbox</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-kernel-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-kernel-config</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-shell-bash-local</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-core-tools</artifactId>
         </dependency>        <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-core-system-prompt</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-core-plan</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-sandbox-local</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.javanatic</groupId>
+            <groupId>io.github.retreatIsAdvance</groupId>
             <artifactId>harness-sandbox-policy</artifactId>
             <scope>test</scope>
         </dependency>

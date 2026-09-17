@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 JVM 的插件化 Agent Harness：**思想照搬，形状不照搬**。Java 25 LTS / JPMS / Maven 多模块，groupId `io.javanatic`。
+Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 JVM 的插件化 Agent Harness：**思想照搬，形状不照搬**。Java 25 LTS / JPMS / Maven 多模块，Maven groupId `io.github.retreatIsAdvance`（中央仓命名空间 = GitHub 身份；与包名不同源属有意为之）。
 
 改 `kernel/` 前必读 [docs/design/01-kernel.md](docs/design/01-kernel.md)；全部设计的导航与 R1–R4 总表在 [docs/design/README.md](docs/design/README.md)。
 
