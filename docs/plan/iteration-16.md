@@ -86,7 +86,7 @@
 - [x] S2 稳定面文档：`12-api-stability.md` 导出面 32 模块 36 包与 `module-info` 扫描 diff IDENTICAL（36/36）；bundle.yml 24 行实核（12 可配 + 12 无配）；CLI 面与 `jh --help` 逐 flag 比对一致；4 文件链接核查 0 缺失
 - [x] S3 归档：tar.gz/zip 解压可用——双格式独立解压后 `bin/jh --help`/`--verify` 均 exit 0（"verify 通过"）；`gzip -t`/`unzip -t` 无错；126 项；权限实核（bin//lib/ 0755，含 jspawnhelper；其余 0644）。镜像体积 86M → 53M（zip-6 + jdk.httpserver 出链；模块 41 → 40，`bin/jwebserver` 消失）；全量 `package` SUCCESS（45 模块，1:21）
 - [x] 终局前坐标小写校正复审：全量 `mvn -B install` exit 0；65 套件 / 362 用例 / 0 败 0 错 4 跳（与 S1 基线一致）；46 POM camelCase 残留 = 0（sed 297 处 = 46 POM + 9 当前态文档）
-- [x] 发布前 README 复审（终局前）：双语三处同步（状态段 7-15 + 生产模拟场景项 / 路线表 15 ✅ / ZH 统一「R1–R4 治理不变式就位」）+ 新增「Get it / 获取」段；归档命名与 `dist/jh` profile 实配核一致（`javanatic-harness-<版本>-<平台>`，如 `macos-aarch64`）；计数复核 45 模块 / 362 用例不变；it15 计划头状态订正「已完成——CI 待 push 放行后复验」；追击一处过时文案：状态段删除「剩余叶模块为 module-info + 标记类」句（现实：唯 `bundle/headless` 仍为骨架，不外宣；module-info 头注释 5 处同类措辞见裁决）
+- [x] 发布前 README 复审（终局前）：双语三处同步（状态段 7-15 + 生产模拟场景项 / 路线表 15 ✅ / ZH 统一「R1–R4 治理不变式就位」）+ 新增「Get it / 获取」段；归档命名与 `dist/jh` profile 实配核一致（`javanatic-harness-<版本>-<平台>`，如 `macos-aarch64`）；计数复核 45 模块 / 362 用例不变；it15 计划头状态订正「已完成——CI 待 push 放行后复验」；追击过时文案：状态段删除「剩余叶模块为 module-info + 标记类」句；module-info 头注释 5 处同类措辞一并订正（shell/tool、shell/shell、shell/bash-local、kernel/brand、examples/agent-spine，纯注释；会进 javadoc 制品，javadoc jar 实核；唯 `bundle/headless` 仍为骨架、保留）
 - [ ] 终局发布执行（用户放行 + 用户侧凭据）：Portal deployment 草稿审核 Publish 回执 + tag `v0.1.0` + GitHub Release
 - [ ] **签名硬门槛（用户拍板附加）**：真 key 签名后复查 bundle 内 `.asc` 齐全——干跑的「无 .asc」仅是 `gpg.skip` 预期，不得当作达标证据
 - [ ] 推送收口：积压 + tag push 后 CI 双 job 绿（it14 #29 / it15 #25 挂账行一并勾）

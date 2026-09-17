@@ -1,6 +1,7 @@
 /**
- * harness-shell-bash-local — skeleton module; JPMS dependency graph enforced from day one
- * (design: docs/design/02-module-layout.md).
+ * harness-shell-bash-local — local bash provider (plugin id "shell-bash-local"):
+ * bounded direct run with process-tree kill, output cap and timeout; restricted
+ * policies wrap argv via SandboxProvider.confine (fail-closed without a provider).
  */
 module io.javanatic.harness.shell.bash.local {
     requires io.javanatic.harness.shell.shell;

@@ -1,6 +1,6 @@
 /**
- * harness-examples-agent-spine — skeleton module; JPMS dependency graph enforced from day one
- * (design: docs/design/02-module-layout.md).
+ * harness-examples-agent-spine — keyless vertical-slice example: replay model +
+ * fs tools + full journaling; the R1 replay-hash closed loop is exercised here.
  */
 module io.javanatic.harness.examples.agent.spine {
     requires io.javanatic.harness.kernel;

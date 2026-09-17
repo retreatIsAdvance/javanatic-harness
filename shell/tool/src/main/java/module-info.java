@@ -1,6 +1,7 @@
 /**
- * harness-shell-tool — skeleton module; JPMS dependency graph enforced from day one
- * (design: docs/design/02-module-layout.md).
+ * harness-shell-tool — shell Consumer: registers the shell tool behind the R2
+ * executor pipeline (plugin id "shell-tool"). Tools never approve; approval is
+ * the executor's fixed stage (05 §4).
  */
 module io.javanatic.harness.shell.tool {
     requires io.javanatic.harness.shell.shell;

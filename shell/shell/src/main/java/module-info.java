@@ -1,6 +1,7 @@
 /**
- * harness-shell-shell — skeleton module; JPMS dependency graph enforced from day one
- * (design: docs/design/02-module-layout.md).
+ * harness-shell-shell — shell capability seam: ShellExecutor and the
+ * ShellRequest/ShellResult wire types; providers swap without touching the
+ * seam (05).
  */
 module io.javanatic.harness.shell.shell {
     requires io.javanatic.harness.kernel;
