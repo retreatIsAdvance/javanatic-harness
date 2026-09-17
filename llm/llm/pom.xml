@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-llm-llm</artifactId>
+    <name>harness-llm-llm</name>
 
     <dependencies>
         <dependency>

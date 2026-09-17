@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-shell-aggregator</artifactId>
+    <name>harness-shell-aggregator</name>
     <packaging>pom</packaging>
 
     <modules>

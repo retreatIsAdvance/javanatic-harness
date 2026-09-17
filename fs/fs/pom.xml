@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-fs-fs</artifactId>
+    <name>harness-fs-fs</name>
 
     <dependencies>
         <dependency>

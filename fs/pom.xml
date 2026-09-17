@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-fs-aggregator</artifactId>
+    <name>harness-fs-aggregator</name>
     <packaging>pom</packaging>
 
     <modules>

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-core-preset</artifactId>
+    <name>harness-core-preset</name>
 
     <dependencies>
         <dependency>

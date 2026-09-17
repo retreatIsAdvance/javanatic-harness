@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-examples-agent-spine</artifactId>
+    <name>harness-examples-agent-spine</name>
 
     <dependencies>
         <dependency>

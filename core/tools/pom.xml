@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-core-tools</artifactId>
+    <name>harness-core-tools</name>
 
     <dependencies>
         <dependency>

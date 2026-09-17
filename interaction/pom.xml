@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-interaction-aggregator</artifactId>
+    <name>harness-interaction-aggregator</name>
     <packaging>pom</packaging>
 
     <modules>

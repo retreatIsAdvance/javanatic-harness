@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-shell-bash-local</artifactId>
+    <name>harness-shell-bash-local</name>
 
     <dependencies>
         <dependency>

@@ -11,4 +11,5 @@
     </parent>
 
     <artifactId>harness-kernel-core</artifactId>
+    <name>harness-kernel-core</name>
 </project>

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-core-todo</artifactId>
+    <name>harness-core-todo</name>
 
     <dependencies>
         <dependency>

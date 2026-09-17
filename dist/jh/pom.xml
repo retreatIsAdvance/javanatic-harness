@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-dist-jh</artifactId>
+    <name>harness-dist-jh</name>
     <!-- 无源码的编排模块:jar packaging 仅为满足 moditect「工程 artifact 存在」的前提
          (pom packaging 下该前提直接 NPE);空 jar 不参与镜像。 -->
     <packaging>jar</packaging>

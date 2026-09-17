@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-core-aggregator</artifactId>
+    <name>harness-core-aggregator</name>
     <packaging>pom</packaging>
 
     <modules>

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-sandbox-aggregator</artifactId>
+    <name>harness-sandbox-aggregator</name>
     <packaging>pom</packaging>
 
     <modules>

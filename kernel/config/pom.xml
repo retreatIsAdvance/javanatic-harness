@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-kernel-config</artifactId>
+    <name>harness-kernel-config</name>
 
     <dependencies>
         <dependency>

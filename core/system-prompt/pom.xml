@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-core-system-prompt</artifactId>
+    <name>harness-core-system-prompt</name>
 
     <dependencies>
         <dependency>

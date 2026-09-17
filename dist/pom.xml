@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-dist-aggregator</artifactId>
+    <name>harness-dist-aggregator</name>
     <packaging>pom</packaging>
 
     <!-- 发行编排子树不进发布面（同 examples：excludeArtifacts 为实闸，此属性兜标准 deploy 路径） -->

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-examples-headless</artifactId>
+    <name>harness-examples-headless</name>
 
     <dependencies>
         <dependency>

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-shell-shell</artifactId>
+    <name>harness-shell-shell</name>
 
     <dependencies>
         <dependency>

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-shell-docker</artifactId>
+    <name>harness-shell-docker</name>
 
     <dependencies>
         <dependency>

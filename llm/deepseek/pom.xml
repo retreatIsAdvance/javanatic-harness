@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-llm-deepseek</artifactId>
+    <name>harness-llm-deepseek</name>
 
     <dependencies>
         <dependency>

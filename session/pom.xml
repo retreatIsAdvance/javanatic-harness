@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-session-aggregator</artifactId>
+    <name>harness-session-aggregator</name>
     <packaging>pom</packaging>
 
     <modules>

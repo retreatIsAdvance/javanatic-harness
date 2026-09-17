@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-kernel-brand</artifactId>
+    <name>harness-kernel-brand</name>
 
     <dependencies>
     </dependencies>

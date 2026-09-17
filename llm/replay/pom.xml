@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-llm-replay</artifactId>
+    <name>harness-llm-replay</name>
 
     <dependencies>
         <dependency>

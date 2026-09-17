@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-examples-aggregator</artifactId>
+    <name>harness-examples-aggregator</name>
     <packaging>pom</packaging>
 
     <!-- 演示子树不进发布面（Central 上传侧由根 POM release profile 的

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-interaction-approval</artifactId>
+    <name>harness-interaction-approval</name>
 
     <dependencies>
         <dependency>

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-bundle-base</artifactId>
+    <name>harness-bundle-base</name>
 
     <dependencies>
         <dependency>

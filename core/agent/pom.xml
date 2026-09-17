@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-core-agent</artifactId>
+    <name>harness-core-agent</name>
 
     <dependencies>
         <dependency>

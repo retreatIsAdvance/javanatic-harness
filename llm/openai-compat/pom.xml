@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-llm-openai-compat</artifactId>
+    <name>harness-llm-openai-compat</name>
 
     <dependencies>
         <dependency>

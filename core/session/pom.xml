@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-core-session</artifactId>
+    <name>harness-core-session</name>
 
     <dependencies>
         <dependency>

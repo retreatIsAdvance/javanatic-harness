@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-sandbox-policy</artifactId>
+    <name>harness-sandbox-policy</name>
 
     <dependencies>
         <dependency>

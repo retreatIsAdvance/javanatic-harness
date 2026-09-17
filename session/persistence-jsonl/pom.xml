@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>harness-session-persistence-jsonl</artifactId>
+    <name>harness-session-persistence-jsonl</name>
 
     <dependencies>
         <dependency>
