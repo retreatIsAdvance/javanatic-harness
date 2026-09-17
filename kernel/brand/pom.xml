@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.github.retreatIsAdvance</groupId>
+        <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-kernel-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>

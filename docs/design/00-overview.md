@@ -112,7 +112,7 @@ Kotlin 的 `sealed class` + `when` 确实更优雅，coroutines 的结构化并�
   (Scope/Events/Plugin —— Cordis 等价物，统一内核)
 ```
 
-模块命名约定：JPMS 根名统一 `io.javanatic.harness.*`（无缩写）；Maven coordinates `io.github.retreatIsAdvance:harness-<group>-<pkg>`（groupId = 中央仓命名空间 · GitHub 身份；与包名不同源属有意为之），artifactId 全程小写连字符（如 `harness-kernel-core`）。
+模块命名约定：JPMS 根名统一 `io.javanatic.harness.*`（无缩写）；Maven coordinates `io.github.retreatisadvance:harness-<group>-<pkg>`（groupId = 中央仓命名空间 · GitHub 身份；与包名不同源属有意为之），artifactId 全程小写连字符（如 `harness-kernel-core`）。
 
 详细模块清单见 [02-module-layout.md](02-module-layout.md)。
 

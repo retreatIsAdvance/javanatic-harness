@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.github.retreatIsAdvance</groupId>
+        <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-examples-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -14,84 +14,84 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-session</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-tools</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-agent</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-agent-loop</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-system-prompt</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-llm-llm</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-llm-openai-compat</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-fs-fs</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-fs-local</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-fs-tool</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-shell-shell</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-shell-bash-local</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-shell-tool</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-session-persistence</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-session-persistence-jsonl</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-interaction-approval</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-kernel-config</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-bundle-base</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-preset</artifactId>
         </dependency>
         <!-- 生产模拟场景(it15):boot 后注入 replay 驱动,keyless 确定性;模块无 provides,不污染双向校验 -->
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-llm-replay</artifactId>
             <scope>test</scope>
         </dependency>

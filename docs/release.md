@@ -8,7 +8,7 @@
 
 - **坐标 40 个**：根 POM 1 + 聚合器 9（pom-only）+ 叶 30（jar + sources + javadoc 四件套面）
 - **排除 5 个**：`harness-examples-*`（3）、`harness-dist-*`（2）——release profile `excludeArtifacts` 为实闸（`maven.deploy.skip` 仅兜标准 deploy 路径）
-- groupId `io.github.retreatIsAdvance`（Central 命名空间 = GitHub 身份）；Java 侧包名/JPMS 名 `io.javanatic.harness.*` 不随发（不同源属有意为之，见 [02](design/02-module-layout.md)）
+- groupId `io.github.retreatisadvance`（Central 命名空间 = GitHub 身份）；Java 侧包名/JPMS 名 `io.javanatic.harness.*` 不随发（不同源属有意为之，见 [02](design/02-module-layout.md)）
 - 上传目标 Central Portal；`autoPublish=false`——**上传即草稿，人工审核后 Publish 才公开（不可逆）**
 
 ## 1. 一次性前置（用户执行）
@@ -26,7 +26,7 @@ gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>   # 公钥上传（Cen
 ### 1.2 Central Portal 账号与命名空间
 
 1. <https://central.sonatype.com> → Sign in with GitHub
-2. Namespaces：系统按 GitHub 用户名自动创建 `io.github.retreatIsAdvance` 并验证（无需临时仓）
+2. Namespaces：系统按 GitHub 用户名自动创建 `io.github.retreatisadvance` 并验证（无需临时仓）
 3. 若 Portal 回显拼写不同（如全小写）：全仓 46 个 POM 同步校正一次即可（发布前零成本）
 4. Account → Generate User Token：得到 token 用户名/密码对
 

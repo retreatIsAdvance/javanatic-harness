@@ -25,7 +25,7 @@ name: prod
 description: Production composition
 policy: production          # 治理档位（见 §6；缺省 standard）
 bundles:
-  - io.github.retreatIsAdvance:harness-bundle-base:0.1.0
+  - io.github.retreatisadvance:harness-bundle-base:0.1.0
 plugins: []                 # out-of-tree 插件（classpath/module-path 追加）
 ```
 
@@ -213,7 +213,7 @@ exit 0
 name: headless
 description: One-shot runner, no server
 bundles:
-  - io.github.retreatIsAdvance:harness-bundle-base:0.1.0
+  - io.github.retreatisadvance:harness-bundle-base:0.1.0
 ```
 
 ### Headless Runner 入口

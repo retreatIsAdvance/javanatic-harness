@@ -6,7 +6,7 @@ Plugin-based agent harness on the JVM — **Java 25 LTS / JPMS / Maven**. Ports 
 
 > **Status**: the kernel, the full core trunk (session/tools/todo/plan/agent/agent-loop/system-prompt), the capability trio (llm + fs + shell), the real llm/deepseek provider, and JSONL persistence (R1 closed loop) are implemented and tested — **a real model can already drive the full vertical slice** (model tool_use → real tool execution → journaled events → R1 hash verifiable). Iterations 7–14 and the 12.6 hardening backfill (openai-compat, governance, data-driven AppBoot composition, scope/preset, long-run capability with compaction/budget/resume, todo_write + plan mode, sandbox on-host process confinement (darwin/linux), shell-docker environment-level isolation, runnable dist/jlink artifact + complete CLI, JSONL durability / typed LLM failures / fs realpath fence / platform warnings, REPL interaction surface (command registry + streaming render + typed failure rendering)) are done — composition is data, the R1–R4 invariants are in place, and real tasks run through the CLI; the remaining leaf modules are `module-info.java` + marker classes — the dependency graph is compiler-enforced from day one.
 >
-> Naming: JPMS root name / packages `io.javanatic.harness.*`; Maven coordinates `io.github.retreatIsAdvance:harness-*` (groupId = Central namespace, intentionally different from the package names).
+> Naming: JPMS root name / packages `io.javanatic.harness.*`; Maven coordinates `io.github.retreatisadvance:harness-*` (groupId = Central namespace, intentionally different from the package names).
 
 ## Design cornerstones (five pillars + four invariants)
 

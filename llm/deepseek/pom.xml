@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.github.retreatIsAdvance</groupId>
+        <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-llm-aggregator</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
@@ -14,23 +14,23 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-llm-llm</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-kernel-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-kernel-brand</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-session</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.github.retreatIsAdvance</groupId>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-llm-openai-compat</artifactId>
         </dependency></dependencies>
 </project>

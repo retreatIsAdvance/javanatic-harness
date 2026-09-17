@@ -10,7 +10,7 @@
 | 破坏性变更 | 只随次版本（0.2.0）发布；release notes 声明变更与迁移路径 |
 | 非稳定面 | 实现类、kernel 内部机制、`examples/*` / `dist/*` 的内部行为不承诺——pre-release 立场：无兼容垫片，重命名/重排随破坏性版本走 |
 
-坐标口径：Maven `io.github.retreatIsAdvance:harness-*`（中央仓命名空间 = GitHub 身份）；包名 / JPMS 名 `io.javanatic.harness.*` 是编译期身份——**不同源属有意为之**（[00](00-overview.md)）。
+坐标口径：Maven `io.github.retreatisadvance:harness-*`（中央仓命名空间 = GitHub 身份）；包名 / JPMS 名 `io.javanatic.harness.*` 是编译期身份——**不同源属有意为之**（[00](00-overview.md)）。
 
 ## 2. 包级 API（JPMS 导出面）
 
