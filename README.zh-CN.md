@@ -4,7 +4,7 @@
 
 基于 JVM 的插件化 Agent Harness —— **Java 25 LTS / JPMS / Maven**。把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 Java 体系：**思想照搬，形状不照搬**。
 
-> **状态**：kernel、core 全主干（session/tools/todo/plan/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7-15 与 12.6 硬化回填（openai-compat、治理上线、AppBoot 组合数据化、scope/preset、长跑能力 compaction/budget/resume、todo_write + 计划模式、sandbox 同机进程约束（darwin/linux）、shell-docker 环境级隔离、可运行产物 dist/jlink + CLI 完备、JSONL 耐久 / typed LLM 失败 / fs realpath 围栏 / 平台预警、REPL 交互面（命令面 + 流式渲染 + typed 失败渲染）、生产模拟场景（replay 驱动、keyless、确定性——多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对））已完成——组合是数据、R1–R4 治理不变式就位、真实任务经 CLI 跑通；其余叶子模块为 `module-info.java` + 标记类——依赖图从第一天起由编译器强制执行。
+> **状态**：kernel、core 全主干（session/tools/todo/plan/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7-15 与 12.6 硬化回填（openai-compat、治理上线、AppBoot 组合数据化、scope/preset、长跑能力 compaction/budget/resume、todo_write + 计划模式、sandbox 同机进程约束（darwin/linux）、shell-docker 环境级隔离、可运行产物 dist/jlink + CLI 完备、JSONL 耐久 / typed LLM 失败 / fs realpath 围栏 / 平台预警、REPL 交互面（命令面 + 流式渲染 + typed 失败渲染）、生产模拟场景（replay 驱动、keyless、确定性——多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对））已完成——组合是数据、R1–R4 治理不变式就位、真实任务经 CLI 跑通；依赖图从第一天起由编译器强制执行。
 >
 > 命名：JPMS 根名 / 包名 `io.javanatic.harness.*`；Maven `io.github.retreatisadvance:harness-*`（groupId = 中央仓命名空间，与包名不同源属有意为之）。
 
