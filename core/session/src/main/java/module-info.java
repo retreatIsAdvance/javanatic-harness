@@ -12,4 +12,6 @@ module io.javanatic.harness.core.session {
     exports io.javanatic.harness.session;
     exports io.javanatic.harness.session.event;
     exports io.javanatic.harness.session.message;
+    // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性
+    opens io.javanatic.harness.session;
 }

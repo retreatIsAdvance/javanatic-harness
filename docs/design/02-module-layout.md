@@ -256,7 +256,8 @@ module io.javanatic.harness.core.session {
     exports io.javanatic.harness.core.session;
     exports io.javanatic.harness.core.session.event;
     exports io.javanatic.harness.core.session.surface;
-    // 无 opens：domain record 零注解，无反射序列化
+    // 测试与主类同包，JUnit 反射实例化需要运行时开放；domain record 仍零注解、无反射序列化
+    opens io.javanatic.harness.session;
 }
 ```
 
@@ -540,12 +541,8 @@ harness/
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
-                    <configuration>
-                        <!-- JPMS 下测试也走 module-path；opens 测试包按需在此声明 -->
-                        <argLine>
-                            --add-opens io.javanatic.harness.core.session/io.javanatic.harness.core.session=ALL-UNNAMED
-                        </argLine>
-                    </configuration>
+                    <!-- JPMS 下测试也走 module-path；JUnit 反射实例化同包测试类所需的 opens
+                         由各模块 module-info 自行声明（§4），无需 surefire argLine -->
                 </plugin>
 
                 <!-- 覆盖率（可选）-->
@@ -797,7 +794,7 @@ java -jar examples/headless/target/jh.jar --profile headless --verify   # R4 治
 
 2. **每个叶子模块一个 `module-info.java`**。聚合只有 packaging=pom 的 reactor 聚合，**没有 JPMS re-export 模块**，不允许 `requires transitive` 跨界传染依赖。
 
-3. **`opens` 仅限 JSON 边界与测试框架**（当前无模块需要 `opens`——codec/适配器手写互译、Jackson 走树模型，domain record 零注解）；domain 模块（core.session 等）零 `opens`、零 Jackson 注解。
+3. **`opens` 仅限测试框架运行时反射**（各叶子模块 `opens` 自身主包——测试与主类同包，JUnit 在 JPMS 下反射实例化测试类需要运行时开放；只放开运行时反射，不改编译期可见性）；JSON 边界仍走手写互译 / Jackson 树模型，domain record（core.session 等）零注解、无反射序列化。
 
 4. **Capability seam 三模块纪律**：Definition 模块 `exports` 接口；Provider 模块 `provides Plugin`；Consumer 模块 `requires` Definition。三者绝不循环。
 

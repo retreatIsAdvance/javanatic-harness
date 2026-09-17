@@ -8,4 +8,6 @@ module io.javanatic.harness.core.system.prompt {
     provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.systemprompt.SystemPromptPlugin;
 
     exports io.javanatic.harness.systemprompt;
+    // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性
+    opens io.javanatic.harness.systemprompt;
 }

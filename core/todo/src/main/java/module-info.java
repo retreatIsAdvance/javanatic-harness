@@ -14,4 +14,6 @@ module io.javanatic.harness.core.todo {
     provides io.javanatic.harness.session.persistence.SessionEventCodec with io.javanatic.harness.todo.TodoWriteCodec;
 
     exports io.javanatic.harness.todo;
+    // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性
+    opens io.javanatic.harness.todo;
 }

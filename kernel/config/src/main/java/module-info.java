@@ -6,4 +6,6 @@ module io.javanatic.harness.kernel.config {
     requires io.javanatic.harness.kernel;
 
     exports io.javanatic.harness.kernel.config;
+    // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性
+    opens io.javanatic.harness.kernel.config;
 }

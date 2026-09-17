@@ -9,4 +9,6 @@ module io.javanatic.harness.llm.deepseek {
     requires jdk.httpserver; // 测试:经 seam 的假服务端冒烟
 
     exports io.javanatic.harness.llm.deepseek;
+    // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性
+    opens io.javanatic.harness.llm.deepseek;
 }

@@ -17,4 +17,6 @@ module io.javanatic.harness.core.agent.loop {
     provides io.javanatic.harness.session.persistence.SessionEventCodec with io.javanatic.harness.agentloop.AssistantChunkCodec;
 
     exports io.javanatic.harness.agentloop;
+    // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性
+    opens io.javanatic.harness.agentloop;
 }
