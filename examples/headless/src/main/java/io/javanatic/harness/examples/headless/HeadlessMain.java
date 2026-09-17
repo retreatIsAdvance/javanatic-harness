@@ -81,6 +81,9 @@ public final class HeadlessMain {
                                      零限额组合,违规逐项报告(exit 1)
           --approval=auto|ask|deny   审批 Provider 三选一(缺省 auto);ask 走 stdin 人闸,
                                      非交互环境(EOF)按拒绝
+          --budget=<tokens>          累计 output token 预算上限(正整数;缺省不限)。
+                                     PRODUCTION 档要求非零——与 --approval=ask|deny
+                                     同用,生产组合才可达
           --docker [--image=<镜像>]  容器级隔离执行(镜像须本机在场,不自动拉取)
           --resume=<sessionId>       恢复既有会话(load → seed → 续轮号)
           --provider=<名>            厂商名(缺省 deepseek)
@@ -95,7 +98,7 @@ public final class HeadlessMain {
 
         示例:
           jh "把 README 的快速开始改准"
-          jh --verify --policy=PRODUCTION --approval=ask
+          jh --verify --policy=PRODUCTION --approval=ask --budget=100000
           jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
           jh "任务" --docker --image=ubuntu:24.04
         """;
@@ -107,7 +110,7 @@ public final class HeadlessMain {
     record RunnerOptions(String task, boolean verify, Policy policy, String provider, String model,
                          String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile,
                          String resume, boolean docker, String image, Path workspace, String approval,
-                         boolean help) {
+                         long budget, boolean help) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -170,6 +173,7 @@ public final class HeadlessMain {
         String resume = null;
         Path workspace = null;
         String approval = null;
+        long budget = 0;
         for (String arg : args) {
             if ("--help".equals(arg) || "-h".equals(arg)) {
                 help = true;
@@ -197,6 +201,8 @@ public final class HeadlessMain {
                     throw new IllegalArgumentException(
                         "--approval 只支持 " + String.join("|", APPROVAL_MODES) + ",收到: " + approval);
                 }
+            } else if (arg.startsWith("--budget=")) {
+                budget = positiveLong(valueOf(arg));
             } else if ("--docker".equals(arg)) {
                 docker = true;
             } else if (arg.startsWith("--image=")) {
@@ -219,7 +225,7 @@ public final class HeadlessMain {
             model == null ? RunnerOptions.DEFAULT_MODEL : model,
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
-            apiKeyLiteral, profile, resume, docker, image, workspace, approval, help);
+            apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help);
     }
 
     private static String valueOf(String flag) {
@@ -228,6 +234,20 @@ public final class HeadlessMain {
             throw new IllegalArgumentException("参数缺值: " + flag);
         }
         return value;
+    }
+
+    /** --budget 契约:正整数(缺省 0 = 不限,与 loop-guard.maxBudgetTokens 语义一致)。 */
+    private static long positiveLong(String value) {
+        long parsed;
+        try {
+            parsed = Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("--budget 必须是正整数,收到: " + value, e);
+        }
+        if (parsed <= 0) {
+            throw new IllegalArgumentException("--budget 必须是正整数,收到: " + value);
+        }
+        return parsed;
     }
 
     /** --workspace 契约:必须是已存在目录(fail loud,不用"顺手创建"兜住手误)。 */
@@ -437,6 +457,11 @@ public final class HeadlessMain {
                 overlays.add(new ConfigRowSpec.Replace("approval-" + mode, Map.of(),
                     mode.equals(options.approval()) ? null : "true"));
             }
+        }
+        if (options.budget() > 0) {
+            // PRODUCTION 档可达条件之一:预算上限进 loop-guard 行
+            overlays.add(new ConfigRowSpec.Replace("loop-guard",
+                Map.of("maxBudgetTokens", options.budget()), null));
         }
         String apiKey = options.resolvedApiKey();
         if (apiKey != null) {

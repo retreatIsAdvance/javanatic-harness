@@ -67,7 +67,7 @@ class HeadlessOptionsTest {
         assertThat(HeadlessMain.parse(new String[] {"--help"}).help()).isTrue();
         assertThat(HeadlessMain.parse(new String[] {"-h"}).help()).isTrue();
         assertThat(HeadlessMain.USAGE).contains(
-            "--workspace=", "--approval=auto|ask|deny", "--docker", "--resume=",
+            "--workspace=", "--approval=auto|ask|deny", "--budget=", "--docker", "--resume=",
             "--profile=", "--policy=", "--verify");
     }
 
@@ -87,6 +87,25 @@ class HeadlessOptionsTest {
         assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--approval=wat"}))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("auto|ask|deny");
+    }
+
+    @Test
+    void budgetFlagParsesPositiveAndDefaultsToUnlimited() {
+        assertThat(HeadlessMain.parse(new String[] {"t", "--budget=50000"}).budget()).isEqualTo(50000L);
+        assertThat(HeadlessMain.parse(new String[] {"t"}).budget()).isZero();
+    }
+
+    @Test
+    void budgetFlagRejectsNonPositiveAndMalformed() {
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--budget=0"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--budget");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--budget=-5"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--budget");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--budget=wat"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--budget");
     }
 
     @Test
