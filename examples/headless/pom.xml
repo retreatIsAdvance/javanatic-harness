@@ -89,5 +89,11 @@
             <groupId>io.javanatic</groupId>
             <artifactId>harness-core-preset</artifactId>
         </dependency>
+        <!-- 生产模拟场景(it15):boot 后注入 replay 驱动,keyless 确定性;模块无 provides,不污染双向校验 -->
+        <dependency>
+            <groupId>io.javanatic</groupId>
+            <artifactId>harness-llm-replay</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
