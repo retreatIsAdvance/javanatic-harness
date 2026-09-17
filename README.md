@@ -4,7 +4,7 @@
 
 Plugin-based agent harness on the JVM — **Java 25 LTS / JPMS / Maven**. Ports the engineering ideas of [DeepSeek Harness (dsh)](docs/dsh-reference.md) to the Java ecosystem: **ideas carry over, shapes do not**.
 
-> **Status**: the kernel, the full core trunk (session/tools/todo/plan/agent/agent-loop/system-prompt), the capability trio (llm + fs + shell), the real llm/deepseek provider, and JSONL persistence (R1 closed loop) are implemented and tested — **a real model can already drive the full vertical slice** (model tool_use → real tool execution → journaled events → R1 hash verifiable). Iterations 7–14 and the 12.6 hardening backfill (openai-compat, governance, data-driven AppBoot composition, scope/preset, long-run capability with compaction/budget/resume, todo_write + plan mode, sandbox on-host process confinement (darwin/linux), shell-docker environment-level isolation, runnable dist/jlink artifact + complete CLI, JSONL durability / typed LLM failures / fs realpath fence / platform warnings, REPL interaction surface (command registry + streaming render + typed failure rendering)) are done — composition is data, the R1–R4 invariants are in place, and real tasks run through the CLI; the remaining leaf modules are `module-info.java` + marker classes — the dependency graph is compiler-enforced from day one.
+> **Status**: the kernel, the full core trunk (session/tools/todo/plan/agent/agent-loop/system-prompt), the capability trio (llm + fs + shell), the real llm/deepseek provider, and JSONL persistence (R1 closed loop) are implemented and tested — **a real model can already drive the full vertical slice** (model tool_use → real tool execution → journaled events → R1 hash verifiable). Iterations 7–15 and the 12.6 hardening backfill (openai-compat, governance, data-driven AppBoot composition, scope/preset, long-run capability with compaction/budget/resume, todo_write + plan mode, sandbox on-host process confinement (darwin/linux), shell-docker environment-level isolation, runnable dist/jlink artifact + complete CLI, JSONL durability / typed LLM failures / fs realpath fence / platform warnings, REPL interaction surface (command registry + streaming render + typed failure rendering), production-simulation suite (replay-driven, keyless, deterministic — multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison)) are done — composition is data, the R1–R4 invariants are in place, and real tasks run through the CLI; the remaining leaf modules are `module-info.java` + marker classes — the dependency graph is compiler-enforced from day one.
 >
 > Naming: JPMS root name / packages `io.javanatic.harness.*`; Maven coordinates `io.github.retreatisadvance:harness-*` (groupId = Central namespace, intentionally different from the package names).
 
@@ -26,6 +26,20 @@ Four governance invariants run through the whole design:
 | R4 | Governance completeness | A production configuration can prove permissions, audit, and stop conditions are mounted | Constructor enforcement (landed) + `--verify` / policy profiles (it7) |
 
 Full design docs: [docs/design/README.md](docs/design/README.md) (13 docs, with a navigation index and the R1–R4 master table). Design docs are written in Chinese (language policy: Chinese body + English titles).
+
+## Get it
+
+**Maven Central** — `io.github.retreatisadvance:harness-*` (0.1.0):
+
+```xml
+<dependency>
+  <groupId>io.github.retreatisadvance</groupId>
+  <artifactId>harness-kernel-core</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
+
+Prebuilt archives are attached to the [v0.1.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0): `javanatic-harness-0.1.0-<platform>.tar.gz` / `.zip` (runtime baked in — unpack and run `bin/jh`). To build from source instead, see below.
 
 ## Requirements
 
@@ -112,7 +126,7 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 | 12.7 ✅ | Platform chain landed: Linux on-host confinement (bwrap backend) — darwin=seatbelt / linux=bwrap / win32=empty chain; CI dual-job real verification (ubuntu installs bubblewrap, macos adds seatbelt) | [05](docs/design/05-capability-seam.md) |
 | 13 ✅ | Runnable artifact: dist (jlink) + complete CLI (`--help` / `--workspace=` / `--approval=`; run ids + CI smoke) | — |
 | 14 ✅ | Interaction surface: REPL (landed in `interaction/commands`) + streaming render (chunk journaling + typed failure rendering by `FailureKind`) | — |
-| 15 | Production simulation in CI: replay-driven (keyless, deterministic) + PRODUCTION policy + multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison | [03](docs/design/03-session-event-sourcing.md) |
+| 15 ✅ | Production simulation in CI: replay-driven (keyless, deterministic) + PRODUCTION policy + multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison | [03](docs/design/03-session-event-sourcing.md) |
 | 16 | Release engineering → **0.1.0**: Maven Central, facade freeze, bilingual README | — |
 | 17+ | subagent, skills, web, LSP, windows-acl + pwsh provider, Landlock (second candidate) — ordered by community voice | — |
 

@@ -1,4 +1,4 @@
-# 迭代 15 — 生产模拟场景进 CI（replay 驱动：keyless、确定性）（状态：进行中）
+# 迭代 15 — 生产模拟场景进 CI（replay 驱动：keyless、确定性）（状态：已完成——CI 待 push 放行后复验）
 
 模块：`examples/headless`（main：`--budget=`；test：生产场景）、`examples/agent-spine`（test：R1ReplayHashTest 升级）、docs；`bundle/base` 零改动（AppBoot/Policy 复用）
 

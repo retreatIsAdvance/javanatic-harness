@@ -86,6 +86,7 @@
 - [x] S2 稳定面文档：`12-api-stability.md` 导出面 32 模块 36 包与 `module-info` 扫描 diff IDENTICAL（36/36）；bundle.yml 24 行实核（12 可配 + 12 无配）；CLI 面与 `jh --help` 逐 flag 比对一致；4 文件链接核查 0 缺失
 - [x] S3 归档：tar.gz/zip 解压可用——双格式独立解压后 `bin/jh --help`/`--verify` 均 exit 0（"verify 通过"）；`gzip -t`/`unzip -t` 无错；126 项；权限实核（bin//lib/ 0755，含 jspawnhelper；其余 0644）。镜像体积 86M → 53M（zip-6 + jdk.httpserver 出链；模块 41 → 40，`bin/jwebserver` 消失）；全量 `package` SUCCESS（45 模块，1:21）
 - [x] 终局前坐标小写校正复审：全量 `mvn -B install` exit 0；65 套件 / 362 用例 / 0 败 0 错 4 跳（与 S1 基线一致）；46 POM camelCase 残留 = 0（sed 297 处 = 46 POM + 9 当前态文档）
+- [x] 发布前 README 复审（终局前）：双语三处同步（状态段 7-15 + 生产模拟场景项 / 路线表 15 ✅ / ZH 统一「R1–R4 治理不变式就位」）+ 新增「Get it / 获取」段；归档命名与 `dist/jh` profile 实配核一致（`javanatic-harness-<版本>-<平台>`，如 `macos-aarch64`）；计数复核 45 模块 / 362 用例不变；it15 计划头状态订正「已完成——CI 待 push 放行后复验」
 - [ ] 终局发布执行（用户放行 + 用户侧凭据）：Portal deployment 草稿审核 Publish 回执 + tag `v0.1.0` + GitHub Release
 - [ ] **签名硬门槛（用户拍板附加）**：真 key 签名后复查 bundle 内 `.asc` 齐全——干跑的「无 .asc」仅是 `gpg.skip` 预期，不得当作达标证据
 - [ ] 推送收口：积压 + tag push 后 CI 双 job 绿（it14 #29 / it15 #25 挂账行一并勾）
@@ -99,6 +100,7 @@
 | S2 | `docs/design/README.md` 索引滞后 3 处：快速导航无 12 行；技术栈「27 个叶子模块 / 38 个 reactor 项目」为旧口径；MVP 清单 Commands 仍标 stub（it14 已落地） | 补 12 行导航；口径改「33 个叶模块 / 45 个 reactor 模块」；Commands 行改「命令面 registry/slash 解析，it14」 |
 | S3 | 归档初版两处构建缺陷：① 平台 profile 在 macOS 双命中（plexus-utils 3.3.1 `isFamily` mac 与 unix 同真，探针实核）→ 归档名错标 `linux-aarch64`；② `conf/security/policy/...` 深路径超 ustar 100 字符 → tar 长名告警 | ① linux 档加 `<name>Linux</name>` 收窄保证互斥（pom 注释记实测依据）；② `tarLongFileMode=posix`（pax 扩展头），告警消除、双格式解压复验 |
 | 终局前 | Portal 登录实回显：命名空间为全小写 `io.github.retreatisadvance`（S1 改名后全仓为 camelCase `retreatIsAdvance`；GitHub 用户名大小写不敏感，Portal 侧小写规范化） | groupId / 坐标全仓二次 sed 校正为小写：46 POM + 9 个当前态文档共 297 处（含 02 片段、release.md、README×2、AGENTS、00/07/12）；GitHub URL / developers 身份随行小写（功能等价）；全量 `install` 复审绿（见验收） |
+| 终局前 | README 发布前复审滞后：状态段止于 it14（it15 未覆盖）；路线表 15 未勾（it15 全部停点已放行、功能性判据已收口）；中文从本「R1 三规则齐备」与英文主本「R1–R4 invariants」表述不同源 | 双语同步：状态段 7-15 + 生产模拟场景项；路线表 15 ✅；ZH 统一「R1–R4 治理不变式就位」；新增「Get it / 获取」段（Central 坐标 0.1.0 + kernel-core 依赖片段 + v0.1.0 归档指引）；it15 计划头状态订正（见验收） |
 
 ## 设计偏离（如有）
 
