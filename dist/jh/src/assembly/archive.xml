@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- jlink 镜像归档件:顶层目录 = ${jh.archive.name}(带平台标记),解压即得可运行的
+     javanatic-harness-<version>-<平台>/ 目录。bin/ 与 lib/ 保执行位——lib/jspawnhelper
+     由 posix_spawn 直接 exec,丢 x 位会在首个子进程处炸。 -->
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3 https://maven.apache.org/xsd/assembly-1.1.3.xsd">
+    <id>archive</id>
+    <formats>
+        <format>tar.gz</format>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>${jh.archive.name}</baseDirectory>
+    <fileSets>
+        <fileSet>
+            <directory>${project.build.directory}/jlink-image/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <fileMode>0755</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/jlink-image/lib</directory>
+            <outputDirectory>lib</outputDirectory>
+            <fileMode>0755</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/jlink-image</directory>
+            <outputDirectory>/</outputDirectory>
+            <excludes>
+                <exclude>bin/**</exclude>
+                <exclude>lib/**</exclude>
+                <exclude>jars</exclude>
+                <exclude>jars/**</exclude>
+            </excludes>
+            <fileMode>0644</fileMode>
+        </fileSet>
+    </fileSets>
+</assembly>

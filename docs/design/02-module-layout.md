@@ -109,11 +109,11 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-examples-agent-spine` | 最小 agent 主干 demo（6 包 loop 跑通）|
 | `harness-examples-headless` | `jh` 命令行 runner（CLI 完备：`--help`/`--workspace=`/`--approval=`…，`--verify` 也在此，R4；裸 `jh` 进 REPL——斜杠命令面 + 流式渲染，it14）；经 `dist/jh` 打成 jlink 运行时镜像 |
 
-### Distribution 层（运行产物，it13）
+### Distribution 层（运行产物，it13；归档 it16）
 
 | 模块 | 职责 |
 |---|---|
-| `harness-dist-jh` | jlink 运行时镜像编排：聚合 `harness-examples-headless` 及其模块图，产出 `dist/jh/target/jlink-image/bin/jh`（解出即用，无手拼 module-path）。无运行时代码、无 JPMS 模块；`packaging=jar` 仅为满足 moditect 插件对主产物的入口前提（空 jar 不进镜像）。插件面由显式 jlink 根清单覆盖（无 jmods 的 JDK 拒 `--bind-services`；缺根漂移由镜像内 `--verify` 兜底）|
+| `harness-dist-jh` | jlink 运行时镜像编排：聚合 `harness-examples-headless` 及其模块图，产出 `dist/jh/target/jlink-image/bin/jh`（解出即用，无手拼 module-path）；同相位以 assembly 归档为 `javanatic-harness-<版本>-<平台>.tar.gz/.zip`（平台标记按 os family profile 注入，zip-6 压缩）。无运行时代码、无 JPMS 模块；`packaging=jar` 仅为满足 moditect 插件对主产物的入口前提（空 jar 不进镜像）。插件面由显式 jlink 根清单覆盖（无 jmods 的 JDK 拒 `--bind-services`；缺根漂移由镜像内 `--verify` 兜底）|
 
 ## 3. 依赖图
 
@@ -381,7 +381,7 @@ harness/
 │   └── headless/pom.xml
 └── dist/
     ├── pom.xml                      ← 聚合
-    └── jh/pom.xml                   ← jlink 运行时镜像编排（无代码；产出 target/jlink-image/bin/jh）
+    └── jh/pom.xml                   ← jlink 运行时镜像编排（无代码；产出 target/jlink-image/bin/jh 与 tar.gz/zip 归档）
 ```
 
 ### 父 POM（根 `harness/pom.xml`）

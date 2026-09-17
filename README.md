@@ -50,7 +50,7 @@ mvn -B package              # full build (45 reactor modules, 362 tests; environ
 mvn -B -pl :harness-kernel-core -am package   # one module plus its dependencies
 ```
 
-`mvn -B package` also produces the jlink runtime image (it13): unpack and run, no hand-built module path.
+`mvn -B package` also produces the jlink runtime image (it13) plus `javanatic-harness-<version>-<platform>.tar.gz` / `.zip` archives (it16) under `dist/jh/target/`: unpack and run, no hand-built module path.
 
 ```sh
 dist/jh/target/jlink-image/bin/jh --help     # all flags and examples (exit 0)

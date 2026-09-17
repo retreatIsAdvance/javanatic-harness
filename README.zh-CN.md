@@ -50,7 +50,7 @@ mvn -B package              # 全量编译打包（45 个 reactor 模块，362 �
 mvn -B -pl :harness-kernel-core -am package   # 单模块及其依赖
 ```
 
-`mvn -B package` 顺带产出 jlink 运行时镜像（it13）：解出即用，无需手拼 module-path。
+`mvn -B package` 顺带产出 jlink 运行时镜像（it13）与 `javanatic-harness-<版本>-<平台>.tar.gz` / `.zip` 归档（it16，位于 `dist/jh/target/`）：解压即用，无需手拼 module-path。
 
 ```sh
 dist/jh/target/jlink-image/bin/jh --help     # 全部 flag 与示例（exit 0）

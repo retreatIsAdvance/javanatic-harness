@@ -62,9 +62,10 @@
 | `docs/design/00-overview.md:115`、`README.md:7`、`AGENTS.md:3` | 坐标口径同步 | ✅ |
 | `README.md`（整体）+ `README.zh-CN.md`（新） | 英文主 + 中文从 + 互链 + 计数 | ✅ 英文主 129 行 / 中文从 124 行；互链双向；计数 45/362 四处一致 |
 | `docs/design/12-api-stability.md`（新） | 稳定面清单 + 0.x 语义 | ✅ 117 行；导出面 32 模块 36 包与 module-info 扫描 diff IDENTICAL；配置键 12+12 实核 |
-| `dist/jh/pom.xml`：moditect `<compression>` + 归档 | 压缩 + tar.gz/zip | ☐（S3） |
-| `docs/release.md`（新） | GPG / Portal / 发布命令序列 | ☐（S3） |
-| `docs/design/README.md:108-117` | 路线表 it16 | ☐（S3） |
+| `dist/jh/pom.xml`：moditect `<compression>` + 归档 | 压缩 + tar.gz/zip | ✅ `zip-6`（86M → 53M）；assembly 3.7.1 产 tar.gz/zip，平台 profile ×3，`tarLongFileMode=posix` |
+| `docs/release.md`（新） | GPG / Portal / 发布命令序列 | ✅ 8 节：前置（GPG/命名空间/settings.xml）/ 预检 / 序列 / 校验点（含签名硬门槛）/ tag+Release / bump / 回滚边界 / 归档说明 |
+| `docs/design/README.md:108-117` | 路线表 it16 | ✅ it16 行补归档 + release.md 链接 +「发布执行为用户侧动作」 |
+| `AGENTS.md`（发布节）+ `README.md`/`README.zh-CN.md`（构建节）+ `02-module-layout.md`（dist 行/树） | 发布命令 + 归档产物描述 | ✅ AGENTS 新增「发布（0.1.0，执行侧=用户）」；README×2 各 1 行；02 两处 |
 | `.github/workflows/ci.yml` | 不动（发布 workflow 不做） | — |
 
 ## 审查停点（到点 agent 停下出 packet 等放行）
@@ -73,7 +74,7 @@
 |---|---|---|
 | S1 发布工装 + 坐标改名 | 46 POM + 根 POM 元数据/release profile + 排除面 + 文档 4 处 | ✅ 2026-09-17 用户放行 |
 | S2 双语 README + 门面冻结文档 | `README.md` / `README.zh-CN.md` / `docs/design/12-api-stability.md` | ✅ 2026-09-17 用户放行 |
-| S3 归档 + 压缩 + 发布文档 | `dist/jh` + `docs/release.md` + 路线表 | ☐ |
+| S3 归档 + 压缩 + 发布文档 | `dist/jh` + `docs/release.md` + 路线表 | ✅ 2026-09-17 用户放行 |
 | 终局：发布执行（用户动作；Central 公开不可逆） | 版本翻转 + `mvn -P release deploy` + Portal Publish + tag + GitHub Release | ☐ |
 
 ## 验收（证据 = 实际执行的命令与结果）
@@ -83,7 +84,7 @@
 - [x] S1 签名链路（隔离测试密钥）：一次性 GNUPGHOME 真签名 6 件 `.asc` → jar/sources/pom 三件 `gpg --verify` = 完好的签名；干跑 deploy（/tmp 0.1.0 副本 + 假凭据 + `-Dgpg.skip=true`）→ bundle zip 650 项 = 130 主件 × (1+4 校验和)；40 坐标（1 根 + 9 聚合器 + 30 叶）；排除项零泄漏；唯一红点 = 上传 401（预期）
 - [x] S2 双语 README：英文主本（129 行）用户审阅放行 + 中文从本（124 行）完整 + 双向互链 + 计数订正（45 模块 / 362 用例，四处一致）
 - [x] S2 稳定面文档：`12-api-stability.md` 导出面 32 模块 36 包与 `module-info` 扫描 diff IDENTICAL（36/36）；bundle.yml 24 行实核（12 可配 + 12 无配）；CLI 面与 `jh --help` 逐 flag 比对一致；4 文件链接核查 0 缺失
-- [ ] S3 归档：tar.gz/zip 解压可用（`bin/jh --verify` exit 0）；镜像压缩前后体积记录
+- [x] S3 归档：tar.gz/zip 解压可用——双格式独立解压后 `bin/jh --help`/`--verify` 均 exit 0（"verify 通过"）；`gzip -t`/`unzip -t` 无错；126 项；权限实核（bin//lib/ 0755，含 jspawnhelper；其余 0644）。镜像体积 86M → 53M（zip-6 + jdk.httpserver 出链；模块 41 → 40，`bin/jwebserver` 消失）；全量 `package` SUCCESS（45 模块，1:21）
 - [ ] 终局发布执行（用户放行 + 用户侧凭据）：Portal deployment 草稿审核 Publish 回执 + tag `v0.1.0` + GitHub Release
 - [ ] **签名硬门槛（用户拍板附加）**：真 key 签名后复查 bundle 内 `.asc` 齐全——干跑的「无 .asc」仅是 `gpg.skip` 预期，不得当作达标证据
 - [ ] 推送收口：积压 + tag push 后 CI 双 job 绿（it14 #29 / it15 #25 挂账行一并勾）
@@ -95,6 +96,7 @@
 |---|---|---|
 | S1 | reactor 计数误记：46 个 POM 文件 ≠ 46 项目；审查包一度写 44（漏计 examples 聚合器与 dist/jh 口径） | 订正为 45 个 reactor 模块（根 1 + 聚合器 11 + 叶 33）；发布面 40 + 排除 5 = 45 自洽；计划文本与 S2 README 计数均按此 |
 | S2 | `docs/design/README.md` 索引滞后 3 处：快速导航无 12 行；技术栈「27 个叶子模块 / 38 个 reactor 项目」为旧口径；MVP 清单 Commands 仍标 stub（it14 已落地） | 补 12 行导航；口径改「33 个叶模块 / 45 个 reactor 模块」；Commands 行改「命令面 registry/slash 解析，it14」 |
+| S3 | 归档初版两处构建缺陷：① 平台 profile 在 macOS 双命中（plexus-utils 3.3.1 `isFamily` mac 与 unix 同真，探针实核）→ 归档名错标 `linux-aarch64`；② `conf/security/policy/...` 深路径超 ustar 100 字符 → tar 长名告警 | ① linux 档加 `<name>Linux</name>` 收窄保证互斥（pom 注释记实测依据）；② `tarLongFileMode=posix`（pax 扩展头），告警消除、双格式解压复验 |
 
 ## 设计偏离（如有）
 
@@ -104,3 +106,6 @@
 | `docs/design/07-profile-bundle.md:28,216` 示例 bundles 写 GAV 形式 | `AppBoot.compose` 按 **name** 解析（`bundle.yml` 的 `name`；未知名 fail loud） | 07:204 自注「GAV 钉扎随发布切片」；钉扎属运行时行为变更，被四确认「不做」排除 | 用户裁决①：维持 07 原样（GAV 形式 + 注记存活）；钉扎推迟超一个发布周期（0.2.0 未落地）则重访；坐标拼写本次已同步 |
 | 落盘钉 #5「doclint 放宽在 S1 落地时定」 | `doclint=none` + `quiet`（release profile） | 中文 Javadoc + JPMS 降噪；文档质量靠写作纪律 | 用户裁决接受；javadoc 质量门禁（doclint 子集 / 独立检查）可选挂账，未列本迭代 |
 | （观察·非偏离）`bundle/headless/` 骨架 | it8（c1270ad）有意摘除 modules 后留 marker 类 + stale target + 根 dependencyManagement 幻影 GAV；it16 仅机械改名 | 非 it16 引入 | 用户裁决知悉不动；清理 / 注册留后续迭代 |
+| 四确认「不做」列「新增运行时依赖」 | S3 新增 **build 插件** maven-assembly-plugin 3.7.1（版本内联，与 dependency/moditect 同惯例） | 归档工装 = 四确认 §5 明示范围（"产 tar.gz/zip"）；约束面为运行时依赖，未触碰 | 用户放行（packet §5-S3 裁决①）；归档为 dist 本地产物，不进 Central 面 |
+| （观察·非偏离）四确认 §5「jdk.httpserver 收窄评估（若需动测试工程结构则挂账）」 | 评估结论：**无需动测试结构**——三个模块仅测试引用，`requires static` 一步闭环（镜像 41 → 40 模块） | 静态 requires = 编译期必需/运行期可选，jlink 不再随链 | 迭代内落地并实核（假服务端测试 20/1/1 全绿）；无挂账 |
+| （观察·非偏离）平台 profile 含 `archive-windows` 档 | Windows 不在 0.1.0 支持面 | 保留仅为归档名 fail-loud 兜底（三分之外暴露未解析占位符） | 用户放行（packet §5-S3 裁决③） |

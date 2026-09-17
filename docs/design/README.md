@@ -114,7 +114,7 @@
 
 | 迭代 | 内容 | 性质 |
 |---|---|---|
-| it16 | 发布工程（Central/门面冻结/双语 README）→ **0.1.0** | 首发 |
+| it16 | 发布工程（Central 工装/门面冻结/双语 README/归档 + 发布文档 [release.md](../release.md)）→ **0.1.0**（发布执行为用户侧动作） | 首发 |
 | it17+ | subagent、skills、web、LSP、windows-acl + pwsh、Landlock——按社区 issue 声音排序 | 社区驱动 |
 
 ## 许可与引用

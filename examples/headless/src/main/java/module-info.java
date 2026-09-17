@@ -26,7 +26,7 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.interaction.commands;
     requires io.javanatic.harness.bundle.base;
     requires org.yaml.snakeyaml;
-    requires jdk.httpserver; // 测试:本地假服务端 e2e
+    requires static jdk.httpserver; // 测试:本地假服务端 e2e(static=不进 jlink 镜像)
 
     exports io.javanatic.harness.examples.headless;
     // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性

@@ -31,7 +31,7 @@ llm/         llm（seam）、openai-compat（通用适配器）、deepseek（真
 fs/ shell/   capability 三角色：seam / provider / tool consumer（均已实现；shell 有本机 bash 与 docker 两个互斥 provider）
 session/     persistence seam + jsonl 后端（R1 闭环）
 sandbox/ interaction/   沙箱（seatbelt/bwrap 平台链 + 策略解析）与审批（三模式）+ 命令面（it14）
-dist/        jh：jlink 运行时镜像编排（无代码；产出 target/jlink-image/bin/jh）
+dist/        jh：jlink 运行时镜像编排（无代码；产出 target/jlink-image/bin/jh 与 tar.gz/zip 归档）
 bundle/ examples/       base 组合（AppBoot 数据化装配）；agent-spine 与 headless（CLI runner）
 docs/        design/ 12 篇设计文档 + dsh-reference.md；plan/ 逐迭代验收清单（[README](docs/plan/README.md)）
 ```
@@ -75,6 +75,15 @@ DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在
 ```
 
 组合是数据（it8）：内置 headless profile → base bundle 行资源 → CLI flag overlay 经 AppBoot 装配；dist 镜像即 `examples/headless` 的 jlink 打包（无手拼 module-path）。
+
+### 发布（0.1.0，执行侧 = 用户）
+
+```sh
+mvn -B -P release -Dgpg.skip=true package   # 干跑：release 剖面工件完整（sources/javadoc/元数据；无 .asc 属预期）
+mvn -B -P release deploy                    # 真签名 + 上传 Central 草稿（autoPublish=false；server id `central`）
+```
+
+完整序列（GPG 生成 / Portal 命名空间验证 / 版本翻转 / 草稿审核 Publish / tag / bump）见 [docs/release.md](docs/release.md)。**签名硬门槛**：真 key 签名后复查 bundle 内 `.asc` 齐全——干跑「无 .asc」不得当作达标证据。
 
 ### 命令权限分级
 

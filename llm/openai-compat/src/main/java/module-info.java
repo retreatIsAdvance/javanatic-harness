@@ -11,7 +11,7 @@ module io.javanatic.harness.llm.openai.compat {
     requires io.javanatic.harness.llm.llm;
     requires com.fasterxml.jackson.databind;
     requires java.net.http;
-    requires jdk.httpserver; // 测试用本地假服务端(keyless 双形状覆盖)
+    requires static jdk.httpserver; // 测试用本地假服务端(keyless 双形状覆盖;static=不进 jlink 镜像)
     provides io.javanatic.harness.kernel.plugin.Plugin with io.javanatic.harness.llm.openai.compat.OpenAiCompatPlugin;
 
     exports io.javanatic.harness.llm.openai.compat;

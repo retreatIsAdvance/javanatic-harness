@@ -15,6 +15,11 @@
          (pom packaging 下该前提直接 NPE);空 jar 不参与镜像。 -->
     <packaging>jar</packaging>
 
+    <properties>
+        <!-- 归档基名 = 归档内顶层目录名(解压即用);平台标记由 profile 按 os family 注入 -->
+        <jh.archive.name>javanatic-harness-${project.version}-${jh.archive.platform}</jh.archive.name>
+    </properties>
+
     <dependencies>
         <!-- 唯一入口模块:其传递闭包 = 全 reactor 运行时模块 + jackson/snakeyaml -->
         <dependency>
@@ -74,6 +79,8 @@
                             <outputDirectory>${project.build.directory}/jlink-image</outputDirectory>
                             <!-- NONE:不带 jars/ 依赖拷贝;null 会令 moditect copyJars NPE -->
                             <jarInclusionPolicy>NONE</jarInclusionPolicy>
+                            <!-- JDK 25 jlink 只认 zip-[0-9](数字档已移除);6 = 经典默认档 -->
+                            <compression>zip-6</compression>
                             <stripDebug>true</stripDebug>
                             <noHeaderFiles>true</noHeaderFiles>
                             <noManPages>true</noManPages>
@@ -85,6 +92,52 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- 3) tar.gz + zip 归档(解压即用):同一 package 相位,声明序保证在 jlink 之后。
+                 模式按目录分档:bin/ 与 lib/(含 jspawnhelper)必须带执行位,其余 0644。
+                 平台标记进文件名与归档顶层目录名——镜像与平台绑定,未标记即误下载源。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <executions>
+                    <execution>
+                        <id>archive-runtime-image</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/archive.xml</descriptor>
+                            </descriptors>
+                            <finalName>${jh.archive.name}</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <!-- conf/security/policy/... 深路径超 ustar 100 字符上限:posix(pax) 扩展头,
+                                 bsdtar 与 GNU tar 均原生可解 -->
+                            <tarLongFileMode>posix</tarLongFileMode>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- 平台标记注入归档名。plexus-utils 在 macOS 上 mac 与 unix family 同时命中(3.3.1 实测),
+             故 linux 档再加 name=Linux 收窄保证互斥;windows 只靠 family(name 带版本号不可枚举)。
+             三分之外如常暴露未解析占位符 = fail loud,不做静默兜底。 -->
+        <profile>
+            <id>archive-macos</id>
+            <activation><os><family>mac</family><name>Mac OS X</name></os></activation>
+            <properties><jh.archive.platform>macos-${os.arch}</jh.archive.platform></properties>
+        </profile>
+        <profile>
+            <id>archive-linux</id>
+            <activation><os><family>unix</family><name>Linux</name></os></activation>
+            <properties><jh.archive.platform>linux-${os.arch}</jh.archive.platform></properties>
+        </profile>
+        <profile>
+            <id>archive-windows</id>
+            <activation><os><family>windows</family></os></activation>
+            <properties><jh.archive.platform>windows-${os.arch}</jh.archive.platform></properties>
+        </profile>
+    </profiles>
 </project>
