@@ -132,7 +132,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 
 - 叶子 POM 内部依赖**不写版本**（根 POM dependencyManagement 唯一版本源）；聚合 POM 只有 `<modules>`。
 - 新增第三方依赖：先查 BOM；再问"它删掉了多少自有代码与测试"；边界模块才允许。
-- `opens` 仅给 codec/adapter 的反射门面；`requires transitive` 不用（无聚合 jar）。
+- `opens` 仅给 codec/adapter 的反射门面与 JUnit 运行时反射（各叶子模块开自身主包，测试与主类同包；只放开运行时反射，不改编译期可见性）；`requires transitive` 不用（无聚合 jar）。
 
 ## 测试策略（[10](docs/design/10-testing.md)）
 

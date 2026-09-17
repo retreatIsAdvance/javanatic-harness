@@ -51,7 +51,7 @@ JH 把 dsh 的工程直觉收敛成四条可验证的不变式，机制与测试
 |---|---|---|
 | 语言 | **Java 25 LTS** | `sealed`/`record`/pattern matching 是移植 dsh 类型纪律的基础；Java 25 在此之上 finalize 了 **Scoped Values（JEP 506）、Flexible Constructor Bodies（JEP 513）、Module Import Declarations（JEP 511）**（见下方"Java 25 增量收益"）|
 | 并发 | **Virtual Thread + ScopedValue** | Agent loop 天然 IO 密集（LLM 流式、工具子进程）；虚拟线程让"同步写法、异步调度"成为默认；`ScopedValue` 替代 `ThreadLocal` 做 initiator 传递，不可变且虚拟线程自动继承。**无 preview 依赖**：工具并行 = submit + join（错误即数据，[09 §5](09-concurrency.md)）|
-| 模块 | **JPMS（`module-info.java`）** | `requires`/`exports` 是 capability seam 边界的天然表达；`opens` 仅给 codec/adapter 的反射门面；**`import module`（JEP 511）** 让模块消费者不用罗列几十个包级 import |
+| 模块 | **JPMS（`module-info.java`）** | `requires`/`exports` 是 capability seam 边界的天然表达；`opens` 仅给 codec/adapter 的反射门面与 JUnit 运行时反射（各叶子模块开自身主包）；**`import module`（JEP 511）** 让模块消费者不用罗列几十个包级 import |
 | 构建 | **Maven（多模块 reactor）+ BOM** | 多模块、JPMS 友好、生态成熟、IDE 支持广 |
 | YAML | **SnakeYAML（构造器白名单）** | profile/preset 等价物；拒绝任意类反序列化 |
 | JSON | **Jackson（只在边界）** | 持久化 codec、LLM 请求/响应、DeepSeek HTTP；domain record **零 Jackson 注解**（[03 §6](03-session-event-sourcing.md)）|
