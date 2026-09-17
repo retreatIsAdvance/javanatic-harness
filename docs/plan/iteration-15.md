@@ -85,8 +85,8 @@
 | `examples/headless/…/HeadlessMain.java:RunnerOptions/parse/USAGE/buildOverlays` | `--budget=N`（正值校验；Replace loop-guard.maxBudgetTokens） | ☑（S2 已放行） |
 | `examples/headless/…/HeadlessOptionsTest.java` | --budget 用例 + USAGE 断言 | ☑（S2 已放行） |
 | `examples/headless/…/HeadlessVerifyTest.java` | PRODUCTION 可达正反用例 | ☑（S2 已放行） |
-| `examples/agent-spine/…/R1ReplayHashTest.java` | 逐锚点前缀折叠升级（schema 重取口径同上） | ☑（S3 待放行） |
-| `docs/design/10-testing.md:§3.4` / `docs/design/README.md` / `AGENTS.md` | 口径与状态同步 | ☑（S3 待放行） |
+| `examples/agent-spine/…/R1ReplayHashTest.java` | 逐锚点前缀折叠升级（schema 重取口径同上） | ☑（S3 已放行） |
+| `docs/design/10-testing.md:§3.4` / `docs/design/README.md` / `AGENTS.md` | 口径与状态同步 | ☑（S3 已放行） |
 
 ## 审查停点（到点 agent 停下出 packet 等放行）
 
@@ -94,7 +94,7 @@
 |---|---|---|
 | S1 生产场景测试（replay 注入 + 剧本 + 局部 fold） | `ProductionScenarioTest` + `pom.xml` + 首步核对结果 | ☑ 已放行（9a6da31） |
 | S2 `--budget=` CLI | `HeadlessMain` + `HeadlessOptionsTest` / `HeadlessVerifyTest` | ☑ 已放行（a8cf8c8） |
-| S3 R1ReplayHashTest 升级 + 文档同步 | `R1ReplayHashTest` + 10/README/AGENTS | ☐ packet 已出，待放行 |
+| S3 R1ReplayHashTest 升级 + 文档同步 | `R1ReplayHashTest` + 10/README/AGENTS | ☑ 已放行（e465b87） |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -102,7 +102,7 @@
 - [x] S1 聚焦测试绿：`mvn -B -pl examples/headless test` → 37/37 绿（ProductionScenarioTest 1/1）；突变验证：折叠前缀改全量日志 → R1 断言拒（"anchor seq 4 提示词重建" 哈希不符），还原后复绿
 - [x] S2 聚焦测试绿：`mvn -B -pl examples/headless test` → 41/41 绿（HeadlessOptionsTest/HeadlessVerifyTest 各新增 2 例）；突变验证：注释掉 loop-guard overlay → `verifyProductionReachableWithHumanGateAndBudget` 拒（expected: 0 but was: 1），还原后复绿
 - [x] S3 聚焦测试绿：`mvn -B -pl examples/agent-spine -am test` → BUILD SUCCESS（上游全模块绿；agent-spine 4 类 6 用例 0 败 1 跳——keyless e2e 自跳过）；突变验证：折叠前缀改全量日志 → R1ReplayHashTest 拒（"anchor seq 4 提示词重建" 哈希不符），还原后复绿
-- [ ] 全反应堆 `mvn -B -q package` 绿（组合面改动）——2026-09-17 首两跑均中途红于 `harness-core-todo` 既有 flake（#25：并行批慢工具 `tool/call` 落账晚于快工具全序列时可成相邻；`ToolExecutorImpl.java:89` 审计 append 在各 worker 内；与 it15 改动面无交集——diff 仅 5 文件，不含 core/todo）；修复/收口口径待裁
+- [x] 全反应堆 `mvn -B -q package` 绿（组合面改动）——2026-09-17：BUILD SUCCESS，63 类 / 365 用例 / 0 败 0 错 4 跳（keyless e2e 自跳过），jlink 镜像建成（`harness-dist-jh` SUCCESS）；前置修复 #25 flake（58c5195，见「修正」）——首两跑红皆因它（2/2），修复后一次通过。注：构建树另含非本迭代的 module-info opens 未提交扫批（并行工作面，非本迭代改动面）
 - [x] 文档同步：10 §3.4 R1 口径（逐锚点前缀折叠 + 非平凡化前件）、README 路线表（it15 入已完成、表起点 it16）、AGENTS 现状（headless 增 `--budget=` + 场景测试；治理档示例补 budget）
 - [ ] CI 双 job 绿（push 放行后复验；与积压提交同批挂账）
 
@@ -110,6 +110,7 @@
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| 58c5195 | `TodoPluginTest.parallelBatchInterleavesAndPairsByCallIdNotAdjacency`（#25）门禁单向因果仍有缺口：`tool/call` 在各批内 worker 落账，慢 worker 晚于快工具全序列起步时审计对成相邻（全量两连红 2/2；434c017 的因果设计未闭合） | `gate_echo` 双向因果门控——门控等 slow 的 `tool/call`、slow 等门控 result，`slow.call < gate.result < slow.result` 恒成立；任一串行执行序必超时炸红。证据：聚焦 20/20、14-spinner 饱和 8/8、串行执行突变红（`TodoPluginTest:174` 超时）/还原 6/6 |
 
 ## 设计偏离（如有）
 
