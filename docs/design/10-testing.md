@@ -27,7 +27,7 @@
 
 | 不变式 | 测试形态 | 本篇 |
 |---|---|---|
-| R1 可重建 | 回放会话 → 重组装 prompt/schema → sha256 比对 LlmRequestEvent | §3.4 |
+| R1 可重建 | 逐锚点前缀折叠 → 重组装 prompt/schema → sha256 比对 LlmRequestEvent | §3.4 |
 | R2 执行一致 | 架构测试：toolCalls 分发点全库唯一；审计 append 在 executor | §6 |
 | R3 副作用消除 | 插件失败回滚测试 + teardown 顺序测试 + 吊销后重解析测试 | §5 |
 | R4 治理完备 | `--verify` 的档位断言（production 拒绝 AUTO 等） | §7 |
@@ -185,27 +185,22 @@ class AgentLoopSnapshotTest {
 
 ### R1 回放哈希测试
 
+口径（it15 落地，两处实现：`examples/agent-spine` 的 `R1ReplayHashTest`、`examples/headless` 的 `ProductionScenarioTest`）：从持久化事实出发**逐锚点前缀折叠**——对每条 `LlmRequestEvent`，取该锚点之前的日志前缀重放为新 Session，同组合重注册提示词段后组装，与锚点双哈希比对：
+
 ```java
-class ReconstructabilityTest {
-
-    @Test
-    void replayedRequestHashesMatchLoggedFingerprints() throws Exception {
-        Session session = jsonl.load(SessionId.of("snap-1"));       // 从持久化事实出发
-        CompositionManifest manifest = session.header().composition();
-
-        List<LoggedEvent<? extends SessionEvent>> log = session.events();
-        for (LoggedEvent<? extends SessionEvent> e : log) {
-            if (!(e.event() instanceof LlmRequestEvent req)) continue;
-            // 重组装到该 seq 前缀：窗口 = deriveMessages(log[0..req.messagesToSeq])
-            String prompt = reassembleSystemPrompt(manifest, prefix(log, req));
-            String schemas = reassembleToolSchemas(manifest, prefix(log, req));
-            assertThat(sha256(prompt)).isEqualTo(req.systemPromptSha256());
-            assertThat(sha256(schemas)).isEqualTo(req.toolsSchemaSha256());
-        }
-        // 全绿 = R1 成立：代码演进改变提示词时，此处立刻红
-    }
+Session loaded = persistence.load(sessionId);
+List<SessionEvent> log = loaded.events();
+for (每条 LlmRequestEvent anchor 的日志下标 index) {
+    assert anchor.messagesFromSeq() == 0 && anchor.messagesToSeq() == index - 1;  // 窗口字段自洽
+    Session folded = Session.create(newId("fold"), log.subList(0, index), loaded.header());
+    assert sha256(prompts.assemble(folded)).equals(anchor.systemPromptSha256());
+    // schema 无窗口参数：从同组合 registry 重取（终局 Runtime 无 agent）
+    assert sha256(toolSchemaFingerprint(registry.schemas(root))).equals(anchor.toolsSchemaSha256());
 }
+// 全绿 = R1 成立：代码演进改变提示词重建路径时，此处立刻红
 ```
+
+**非平凡化前件**：提示词注册须含动态段（自日志派生，如工具结果计数）并断言锚点 `systemPromptSha256` 去重数 > 1——「静态提示词对多锚点」只证恒常，不证重建。
 
 ## 4. Provider Fake —— 隔离 capability seam
 

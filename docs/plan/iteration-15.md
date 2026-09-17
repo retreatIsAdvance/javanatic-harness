@@ -82,28 +82,28 @@
 |---|---|---|
 | `examples/headless/…/ProductionScenarioTest.java`（新） | 场景全量：boot+verify、注入、剧本、逐锚点 fold | ☑（S1 已放行） |
 | `examples/headless/pom.xml` | test-scope `harness-llm-replay` | ☑（S1 已放行） |
-| `examples/headless/…/HeadlessMain.java:RunnerOptions/parse/USAGE/buildOverlays` | `--budget=N`（正值校验；Replace loop-guard.maxBudgetTokens） | ☑（S2 待放行） |
-| `examples/headless/…/HeadlessOptionsTest.java` | --budget 用例 + USAGE 断言 | ☑（S2 待放行） |
-| `examples/headless/…/HeadlessVerifyTest.java` | PRODUCTION 可达正反用例 | ☑（S2 待放行） |
-| `examples/agent-spine/…/R1ReplayHashTest.java` | 逐锚点前缀折叠升级（schema 重取口径同上） | ☐ |
-| `docs/design/10-testing.md:§3.4` / `docs/design/README.md` / `AGENTS.md` | 口径与状态同步 | ☐ |
+| `examples/headless/…/HeadlessMain.java:RunnerOptions/parse/USAGE/buildOverlays` | `--budget=N`（正值校验；Replace loop-guard.maxBudgetTokens） | ☑（S2 已放行） |
+| `examples/headless/…/HeadlessOptionsTest.java` | --budget 用例 + USAGE 断言 | ☑（S2 已放行） |
+| `examples/headless/…/HeadlessVerifyTest.java` | PRODUCTION 可达正反用例 | ☑（S2 已放行） |
+| `examples/agent-spine/…/R1ReplayHashTest.java` | 逐锚点前缀折叠升级（schema 重取口径同上） | ☑（S3 待放行） |
+| `docs/design/10-testing.md:§3.4` / `docs/design/README.md` / `AGENTS.md` | 口径与状态同步 | ☑（S3 待放行） |
 
 ## 审查停点（到点 agent 停下出 packet 等放行）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | S1 生产场景测试（replay 注入 + 剧本 + 局部 fold） | `ProductionScenarioTest` + `pom.xml` + 首步核对结果 | ☑ 已放行（9a6da31） |
-| S2 `--budget=` CLI | `HeadlessMain` + `HeadlessOptionsTest` / `HeadlessVerifyTest` | ☐ packet 已出，待放行 |
-| S3 R1ReplayHashTest 升级 + 文档同步 | `R1ReplayHashTest` + 10/README/AGENTS | ☐ 待放行 |
+| S2 `--budget=` CLI | `HeadlessMain` + `HeadlessOptionsTest` / `HeadlessVerifyTest` | ☑ 已放行（a8cf8c8） |
+| S3 R1ReplayHashTest 升级 + 文档同步 | `R1ReplayHashTest` + 10/README/AGENTS | ☐ packet 已出，待放行 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
 - [x] 首步核对清单结果在案（工具审批面 / LlmPlugin 注入可见性 / 数值钉——见「剧本骨架」后核对结果块）
 - [x] S1 聚焦测试绿：`mvn -B -pl examples/headless test` → 37/37 绿（ProductionScenarioTest 1/1）；突变验证：折叠前缀改全量日志 → R1 断言拒（"anchor seq 4 提示词重建" 哈希不符），还原后复绿
 - [x] S2 聚焦测试绿：`mvn -B -pl examples/headless test` → 41/41 绿（HeadlessOptionsTest/HeadlessVerifyTest 各新增 2 例）；突变验证：注释掉 loop-guard overlay → `verifyProductionReachableWithHumanGateAndBudget` 拒（expected: 0 but was: 1），还原后复绿
-- [ ] S3 聚焦测试绿：`mvn -B -q -pl examples/agent-spine -am test`
-- [ ] 全反应堆 `mvn -B -q package` 绿（组合面改动）
-- [ ] 文档同步（10 §3.4 / README / AGENTS）
+- [x] S3 聚焦测试绿：`mvn -B -pl examples/agent-spine -am test` → BUILD SUCCESS（上游全模块绿；agent-spine 4 类 6 用例 0 败 1 跳——keyless e2e 自跳过）；突变验证：折叠前缀改全量日志 → R1ReplayHashTest 拒（"anchor seq 4 提示词重建" 哈希不符），还原后复绿
+- [ ] 全反应堆 `mvn -B -q package` 绿（组合面改动）——2026-09-17 首两跑均中途红于 `harness-core-todo` 既有 flake（#25：并行批慢工具 `tool/call` 落账晚于快工具全序列时可成相邻；`ToolExecutorImpl.java:89` 审计 append 在各 worker 内；与 it15 改动面无交集——diff 仅 5 文件，不含 core/todo）；修复/收口口径待裁
+- [x] 文档同步：10 §3.4 R1 口径（逐锚点前缀折叠 + 非平凡化前件）、README 路线表（it15 入已完成、表起点 it16）、AGENTS 现状（headless 增 `--budget=` + 场景测试；治理档示例补 budget）
 - [ ] CI 双 job 绿（push 放行后复验；与积压提交同批挂账）
 
 ## 修正（如有）

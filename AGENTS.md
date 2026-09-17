@@ -18,7 +18,7 @@ Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 
 
 ## 现状
 
-- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 三模块（bash 真执行）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval）+ 命令面（interaction/commands：registry/slash 解析/事件对，it14）；`examples/headless`（CLI runner：--verify/policy/--workspace=/--approval=，经 AppBoot 数据化组合；裸 `jh` 进 REPL——命令面 + 流式渲染 + typed 失败渲染（按 `FailureKind`），it14；dist/jh 打成 jlink 镜像，`bin/jh` 直接运行）；kernel/config + bundle/base（ConfigService/AppBoot/YAML 三层/CompositionManifest）；core/preset（per-session 能力集）；scoped 工具注册表 + setup window（06 落地）；compaction 生产者 + budget 档 + durable resume + request-context（长跑能力）；core/todo + core/plan（todo_write 整表快照 + 计划模式；ExtensionEvent + ServiceLoader codec 三实例——含 it14 的 assistant/chunk）；sandbox 三模块（同机进程约束：darwin=seatbelt / linux=bwrap 均已实测落地，fail-closed + plan 压只读；windows 后端入 0.2.0）。
+- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 三模块（bash 真执行）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval）+ 命令面（interaction/commands：registry/slash 解析/事件对，it14）；`examples/headless`（CLI runner：--verify/policy/--workspace=/--approval=/--budget=，经 AppBoot 数据化组合；裸 `jh` 进 REPL——命令面 + 流式渲染 + typed 失败渲染（按 `FailureKind`），it14；生产模拟场景测试（replay 驱动、keyless：压缩 + resume + 预算 + R1 全比对），it15；dist/jh 打成 jlink 镜像，`bin/jh` 直接运行）；kernel/config + bundle/base（ConfigService/AppBoot/YAML 三层/CompositionManifest）；core/preset（per-session 能力集）；scoped 工具注册表 + setup window（06 落地）；compaction 生产者 + budget 档 + durable resume + request-context（长跑能力）；core/todo + core/plan（todo_write 整表快照 + 计划模式；ExtensionEvent + ServiceLoader codec 三实例——含 it14 的 assistant/chunk）；sandbox 三模块（同机进程约束：darwin=seatbelt / linux=bwrap 均已实测落地，fail-closed + plan 压只读；windows 后端入 0.2.0）。
 - **占位**：其余叶子模块只有 `module-info.java` + 标记类——依赖图从第一天起由 JPMS 编译器强制，不是待办清单，而是模块契约。
 - **Pre-release**：无外部消费者。正确地基 > 兼容包袱：可自由重命名/重排包并同步全部引用，不写兼容垫片。
 
@@ -70,7 +70,8 @@ DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在
 # 容器级隔离（本机须有 docker 与镜像在场，不自动拉取）:
 #   … bin/jh "任务" --docker --image=ubuntu:24.04
 # 审批与治理档:
-#   … bin/jh --verify --policy=PRODUCTION --approval=ask   # PRODUCTION 拒 AUTO 等不合格组合，exit 1
+#   … bin/jh --verify --policy=PRODUCTION --approval=ask --budget=100000   # PRODUCTION 组合可达(exit 0);
+#                                       # 缺 --budget / AUTO 审批 / 非耐久持久化仍逐项拒(exit 1)
 ```
 
 组合是数据（it8）：内置 headless profile → base bundle 行资源 → CLI flag overlay 经 AppBoot 装配；dist 镜像即 `examples/headless` 的 jlink 打包（无手拼 module-path）。
