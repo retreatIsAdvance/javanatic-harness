@@ -24,6 +24,7 @@
 | 09 | [并发模型](09-concurrency.md) | Virtual Thread、错误即数据 + join 收敛（无 preview）、有界队列背压、teardown 顺序 |
 | 10 | [测试策略](10-testing.md) | R1–R4 测试映射、jqwik 属性测试、keyless snapshot 回放、架构测试 |
 | 11 | [Java 25 升级专题](11-java25-upgrade.md) | 为何选 25 不选 21、依赖的 JEP 状态、无 preview 立场、降级路径 |
+| 12 | [API 稳定面](12-api-stability.md) | 0.1.0 门面冻结：导出包 / seam 契约 / 事件 schema / 配置键 / CLI + 0.x 语义与变更程序 |
 
 ## 核心设计决策（TL;DR）
 
@@ -31,7 +32,7 @@
 - **Java 25 LTS**：`sealed`/`record`/pattern matching（自 21 final）+ `ScopedValue`（JEP 506 final）+ `import module`（JEP 511 final）+ Flexible Constructor Bodies（JEP 513 final）；**无 preview 依赖**（505 不用，[11 §5](11-java25-upgrade.md)）
 - **Virtual Thread**：IO 密集 agent loop 的默认并发模型，"同步写法、异步调度"；工具并行 = submit + join，错误即数据（[09 §5](09-concurrency.md)）
 - **JPMS（`module-info.java`）**：`requires`/`exports`/`provides` 是 capability seam 边界的编译期表达
-- **Maven 多模块 + BOM**：kernel 三模块（core/brand/config），全仓 27 个叶子模块（38 个 reactor 项目）
+- **Maven 多模块 + BOM**：kernel 三模块（core/brand/config），全仓 33 个叶模块（45 个 reactor 模块）
 - **System.Logger**：JDK 内建日志，零依赖
 - **JUnit 5 + AssertJ + jqwik**：单测 + 属性测试
 - **不引入 Spring**：自研统一 Scope 内核（< 1200 行），保留对生命周期的控制权
@@ -76,7 +77,7 @@
 - Shell seam（Definition + Bash-Local Provider + Tool Consumer）
 - Sandbox seam（Definition + Local）
 - Session Persistence（SessionStore + SessionEventCodec SPI + JSONL backend）
-- Interaction（**Approval 三模式真实实现** + Commands stub）
+- Interaction（**Approval 三模式真实实现** + 命令面 registry/slash 解析，it14）
 - 治理（`--verify` + `policy: standard/production` 档位）
 - Bundle（base + headless）
 - Examples（agent-spine demo + headless runner）

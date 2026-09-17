@@ -1,118 +1,129 @@
 # Javanatic Harness
 
-基于 JVM 的插件化 Agent Harness —— **Java 25 LTS / JPMS / Maven**。把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 Java 体系：**思想照搬，形状不照搬**。
+> [中文](README.zh-CN.md)
 
-> **状态**：kernel、core 全主干（session/tools/todo/plan/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7-14 与 12.6 硬化回填（openai-compat、治理上线、AppBoot 组合数据化、scope/preset、长跑能力 compaction/budget/resume、todo_write + 计划模式、sandbox 同机进程约束（darwin/linux）、shell-docker 环境级隔离、可运行产物 dist/jlink + CLI 完备、JSONL 耐久 / typed LLM 失败 / fs realpath 围栏 / 平台预警、REPL 交互面（命令面 + 流式渲染 + typed 失败渲染））已完成——组合是数据、R1 三规则齐备、真实任务经 CLI 跑通；其余叶子模块为 `module-info.java` + 标记类——依赖图从第一天起由编译器强制执行。
+Plugin-based agent harness on the JVM — **Java 25 LTS / JPMS / Maven**. Ports the engineering ideas of [DeepSeek Harness (dsh)](docs/dsh-reference.md) to the Java ecosystem: **ideas carry over, shapes do not**.
+
+> **Status**: the kernel, the full core trunk (session/tools/todo/plan/agent/agent-loop/system-prompt), the capability trio (llm + fs + shell), the real llm/deepseek provider, and JSONL persistence (R1 closed loop) are implemented and tested — **a real model can already drive the full vertical slice** (model tool_use → real tool execution → journaled events → R1 hash verifiable). Iterations 7–14 and the 12.6 hardening backfill (openai-compat, governance, data-driven AppBoot composition, scope/preset, long-run capability with compaction/budget/resume, todo_write + plan mode, sandbox on-host process confinement (darwin/linux), shell-docker environment-level isolation, runnable dist/jlink artifact + complete CLI, JSONL durability / typed LLM failures / fs realpath fence / platform warnings, REPL interaction surface (command registry + streaming render + typed failure rendering)) are done — composition is data, the R1–R4 invariants are in place, and real tasks run through the CLI; the remaining leaf modules are `module-info.java` + marker classes — the dependency graph is compiler-enforced from day one.
 >
-> 命名：JPMS 根名 / 包名 `io.javanatic.harness.*`；Maven `io.github.retreatIsAdvance:harness-*`（groupId = 中央仓命名空间，与包名不同源属有意为之）。
+> Naming: JPMS root name / packages `io.javanatic.harness.*`; Maven coordinates `io.github.retreatIsAdvance:harness-*` (groupId = Central namespace, intentionally different from the package names).
 
-## 设计思想（五大基石 + 四条不变式）
+## Design cornerstones (five pillars + four invariants)
 
-1. **一切皆插件** —— 稳定插件 id + 静态组合，换 Provider 即换产品形态
-2. **Session 是事件日志** —— `LoggedEvent(seq, event)` 信封；模型历史是 derived 投影（Event Sourcing）
-3. **Capability Seam 三角色** —— Definition / Provider / Consumer，JPMS 编译期隔离
-4. **配置即组合** —— Profile / Bundle / Patch 三层叠加，受限插值（无任意代码）
-5. **显式与纪律** —— sealed 穷尽、ScopedValue、fail loud、teardown 顺序
+1. **Everything is a plugin** — stable plugin ids + static composition; swapping a provider swaps the product shape
+2. **A session is an event log** — `LoggedEvent(seq, event)` envelope; model history is a derived projection (event sourcing)
+3. **Capability seam, three roles** — Definition / Provider / Consumer, isolated at JPMS compile time
+4. **Configuration is composition** — profile / bundle / patch layering, restricted interpolation (no arbitrary code)
+5. **Explicitness and discipline** — exhaustive sealed switches, ScopedValue, fail loud, teardown ordering
 
-四条治理不变式贯穿全部设计：
+Four governance invariants run through the whole design:
 
-| # | 不变式 | 一句话 | 当前机制 |
+| # | Invariant | One-liner | Current mechanism |
 |---|---|---|---|
-| R1 | 可重建性 | 模型某一轮的完整请求可从持久化事实逐字节重建 | `llm/request` 双哈希锚点 + JSONL 回放闭环测试 |
-| R2 | 执行一致性 | 模型发起的副作用有且仅有一条受控路径 | ToolExecutor 五段 pipeline + ArchUnit 唯一分发点断言 |
-| R3 | 副作用消除 | 插件失败/作用域关闭即清理一切注册副作用 | Scope effect 栈 LIFO + 插件装载原子回滚 |
-| R4 | 治理完备 | 生产配置能证明权限、审计、停止条件已挂载 | 构造器强制（已落地）+ `--verify`/policy 档位（it7） |
+| R1 | Reconstructability | A model turn's complete request can be rebuilt byte-for-byte from persisted facts | `llm/request` double hash anchor + JSONL replay closed-loop test |
+| R2 | Execution consistency | Model-initiated side effects have exactly one controlled path | ToolExecutor five-stage pipeline + ArchUnit single-dispatch-point assertion |
+| R3 | Effect disposal | Plugin failure / scope close cleans up every registered effect | Scope effect stack (LIFO) + atomic plugin mount rollback |
+| R4 | Governance completeness | A production configuration can prove permissions, audit, and stop conditions are mounted | Constructor enforcement (landed) + `--verify` / policy profiles (it7) |
 
-完整设计文档：[docs/design/README.md](docs/design/README.md)（12 篇，含导航索引与 R1–R4 总表）。
+Full design docs: [docs/design/README.md](docs/design/README.md) (13 docs, with a navigation index and the R1–R4 master table). Design docs are written in Chinese (language policy: Chinese body + English titles).
 
-## 环境要求
+## Requirements
 
-- **JDK 25**（LTS）+ Maven 3.8+
-- 本仓库用 [jenv](https://www.jenv.be/) 管理局部 JDK：根目录的 `.java-version`（`25.0`）随仓库提交，进入目录即自动切换；Maven 经 jenv shim 解析到同一 JDK，无需手动设置 `JAVA_HOME`：
+- **JDK 25** (LTS) + Maven 3.8+
+- This repo uses [jenv](https://www.jenv.be/) for its local JDK: the committed `.java-version` (`25.0`) switches JDKs on `cd`; Maven resolves to the same JDK through the jenv shim, no manual `JAVA_HOME`:
 
 ```sh
-jenv local 25.0        # 仅当首次新增 JDK 或改版本时执行
-mvn -B package         # 直接构建
+jenv local 25.0        # only when adding a JDK or changing the version
+mvn -B package         # build directly
 ```
 
-无 jenv 的环境（如 CI）退回显式指定：
+Without jenv (e.g. CI), be explicit:
 
 ```sh
 export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS
 ```
 
-## 构建与验证
+## Build & verify
 
 ```sh
-mvn -B package              # 全量编译打包（45 个 reactor 项目，357 项测试；e2e 无 key 自跳过）
-mvn -B -pl :harness-kernel-core -am package   # 单模块及其依赖
+mvn -B package              # full build (45 reactor modules, 362 tests; environment-gated tests self-skip)
+mvn -B -pl :harness-kernel-core -am package   # one module plus its dependencies
 ```
 
-`mvn -B package` 顺带产出 jlink 运行时镜像（it13）：解出即用，无需手拼 module-path。
+`mvn -B package` also produces the jlink runtime image (it13): unpack and run, no hand-built module path.
 
 ```sh
-dist/jh/target/jlink-image/bin/jh --help     # 全部 flag 与示例（exit 0）
-dist/jh/target/jlink-image/bin/jh --verify   # 组合 + 治理断言（无 key，exit 0/1）
+dist/jh/target/jlink-image/bin/jh --help     # all flags and examples (exit 0)
+dist/jh/target/jlink-image/bin/jh --verify   # composition + governance assertions (no key, exit 0/1)
 
-dist/jh/target/jlink-image/bin/jh            # 裸启动进 REPL（it14）：非 / 行成轮送模型并流式渲染，
-                                             # /help 列命令、/exit（或 EOF/Ctrl-D）退出；进行中轮以 aborted 落账
+dist/jh/target/jlink-image/bin/jh            # bare start enters the REPL (it14): non-/ lines become turns
+                                             # sent to the model and streamed back; /help lists commands,
+                                             # /exit (or EOF/Ctrl-D) quits; an in-flight turn is journaled as aborted
 
-DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
-# 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 续跑同一会话
-# --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
-# 任意 OpenAI 兼容厂商：
-#   … bin/jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
-# 容器级隔离（须本机 docker 与镜像在场，不自动拉取）：
-#   … bin/jh "任务" --docker --image=ubuntu:24.04
+DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<existing-dir> "task text"
+# every run prints its session id (headless-<timestamp>-<short-random>); --resume=<id> continues the same session
+# --resume=<id> without task text → REPL on that existing session
+# any OpenAI-compatible vendor:
+#   … bin/jh "task" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
+# container-level isolation (requires local docker and the image present; no auto-pull):
+#   … bin/jh "task" --docker --image=ubuntu:24.04
 ```
 
-keyless 竖切（replay 模型 + fs 工具 + 完整落账）见 `examples/agent-spine`；真实模型 e2e 见其 `RealModelAgentE2ETest`。
+The keyless vertical slice (replay model + fs tools + full journaling) is `examples/agent-spine`; the real-model e2e is its `RealModelAgentE2ETest`.
 
-## 仓库结构
+## Repository layout
 
 ```
-docs/design/        12 篇设计文档（00-overview … 11-java25-upgrade）+ docs/plan/ 逐迭代验收
-docs/dsh-reference.md   设计参照系说明（dsh 仓库路径约定）
-kernel/             Cordis 等价物：core（统一 Scope/Events/Plugin）+ brand + config（YAML + ConfigService）
-core/               Agent 主干：session/tools/todo/plan/agent/agent-loop/system-prompt/preset（全部已实现）
-sandbox/            同机进程约束：Definition + seatbelt/bwrap Provider + 策略解析（darwin/linux 实测；windows 设计先行）
-llm/                seam + replay（keyless 测试地基）+ openai-compat（通用适配器）+ deepseek（真实 Provider）
-fs/ shell/          capability 三角色（均已实现；shell 有两个互斥 Provider——本机 bash 与 docker 容器，见 it12.5）
-session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端（R1 闭环）
-interaction/        审批三模式（auto/ask/deny，it7）+ 命令面（registry/slash 解析/事件对，it14）
-dist/               jlink 运行时镜像编排：产出 bin/jh（解出即用，无需手拼 module-path，it13）
-bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可运行示例（agent-spine / headless）
+docs/design/        13 design docs (00-overview … 12-api-stability) + docs/plan/ per-iteration acceptance
+docs/dsh-reference.md   the reference-frame notes (dsh repo path conventions)
+kernel/             the Cordis equivalent: core (unified Scope/Events/Plugin) + brand + config (YAML + ConfigService)
+core/               agent trunk: session/tools/todo/plan/agent/agent-loop/system-prompt/preset (all implemented)
+sandbox/            on-host process confinement: Definition + seatbelt/bwrap providers + policy resolution
+                    (darwin/linux tested; windows designed-first)
+llm/                seam + replay (the keyless test foundation) + openai-compat (generic adapter) + deepseek (real provider)
+fs/ shell/          the capability trio (all implemented; shell has two mutually exclusive providers —
+                    local bash and docker containers, see it12.5)
+session/            persistence seam (JsonValue tree + codec SPI) + JSONL backend (R1 closed loop)
+interaction/        approval three modes (auto/ask/deny, it7) + command surface (registry/slash parsing/event pairs, it14)
+dist/               jlink runtime image orchestration: produces bin/jh (unpack and run, no hand-built
+                    module path, it13)
+bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly) + runnable examples
+                    (agent-spine / headless)
 ```
 
-## 实现路线（垂直切片）
+## Roadmap (vertical slices)
 
-| 切片 | 模块 | 设计文档 |
+| Slice | Modules | Design doc |
 |---|---|---|
-| 1 ✅ | `kernel.core`（统一 Scope 内核）| [01-kernel.md](docs/design/01-kernel.md) |
-| 2 ✅ | `core.session`（LoggedEvent 信封 + Surface）| [03-session-event-sourcing.md](docs/design/03-session-event-sourcing.md) |
-| 3 ✅ | `llm.seam` + `llm.replay`（keyless 测试地基）| [10-testing.md](docs/design/10-testing.md) |
-| 4 ✅ | `core.tools` + `fs.*`（R2 单一执行路径打通）| [05-capability-seam.md](docs/design/05-capability-seam.md) |
-| 5 ✅ | `core.agent` + `core.agent-loop` + `examples/agent-spine`（竖切闭环 + R2 架构测试）| [04-agent-loop.md](docs/design/04-agent-loop.md) |
-| 6 ✅ | `shell.*` + `llm.deepseek` + 持久化 JSONL + R1 回放哈希闭环 + 真实模型全栈 e2e | [05](docs/design/05-capability-seam.md) / [03](docs/design/03-session-event-sourcing.md) |
-| 7 ✅ | `llm.openai-compat` 重构 + fs 根目录 + 审批三模式 + `--verify`/policy + `examples.headless` | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
-| 8 ✅ | AppBoot 组合数据化：kernel/config + bundle/base + CompositionManifest + headless 迁移 | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
-| 9 ✅ | scope/preset：ScopedToolRegistry + setup window + preset 组合 + home profile 发现（最后的 API 破坏性迭代） | [06-scope.md](docs/design/06-scope.md) |
-| 10 ✅ | 长跑能力：compaction 生产者 + budget 档 + --resume + request-context（生产模拟门槛前半） | [03](docs/design/03-session-event-sourcing.md) |
-| 11 ✅ | 能干活：todo_write（整表替换快照）+ 计划模式（plan/mode 纯 fold + exit_plan_mode 直写翻转 + 动态提示段）；扩展事件 codec 走 ServiceLoader | — |
-| 12 ✅ | 敢让人跑：sandbox（平台链 darwin=seatbelt 实测，linux/windows 设计先行）+ restriction（shell wrap + fs 围栏 + plan 压只读 + PRODUCTION 断言） | [05](docs/design/05-capability-seam.md) |
-| 12.5 ✅ | 环境级隔离：`shell-docker` 第二个 `ShellExecutor` Provider——挂载面即可写面（整个容器根只读），沙箱三档词表在容器后端同义且更强；换 Provider 不动 seam，纯组合选择 | [05](docs/design/05-capability-seam.md) |
-| 12.6 ✅ | 硬化回填（13 后插入）：JSONL 耐久（fsync 屏障 + 撕裂尾修复）、typed LLM 失败（`LlmCallException` + `Kind` 词表）、LocalFs realpath 围栏（symlink 出界封死）、`--verify` 平台预警；LoopGuard 注释 + 02 漂移订正 | [03](docs/design/03-session-event-sourcing.md) / [05](docs/design/05-capability-seam.md) |
-| 12.7 ✅ | 平台链落地：Linux 同机约束（bwrap 后端）——darwin=seatbelt / linux=bwrap / win32=空链；CI 双 job 真验（ubuntu 装 bubblewrap、macos 补 seatbelt） | [05](docs/design/05-capability-seam.md) |
-| 13 ✅ | 可运行产物：dist（jlink）+ CLI 完备（`--help` / `--workspace=` / `--approval=`；运行 id + CI 冒烟）| — |
-| 14 ✅ | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染（chunk 落账 + typed 失败渲染按 `FailureKind`）| — |
-| 15 | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
-| 16 | 发布工程 → **0.1.0**：Maven Central、门面冻结、双语 README | — |
-| 17+ | subagent、skills、web、LSP、windows-acl + pwsh provider、Landlock 第二候选——按社区声音排序 | — |
+| 1 ✅ | `kernel.core` (unified Scope kernel) | [01-kernel.md](docs/design/01-kernel.md) |
+| 2 ✅ | `core.session` (LoggedEvent envelope + Surface) | [03-session-event-sourcing.md](docs/design/03-session-event-sourcing.md) |
+| 3 ✅ | `llm.seam` + `llm.replay` (keyless test foundation) | [10-testing.md](docs/design/10-testing.md) |
+| 4 ✅ | `core.tools` + `fs.*` (R2 single execution path) | [05-capability-seam.md](docs/design/05-capability-seam.md) |
+| 5 ✅ | `core.agent` + `core.agent-loop` + `examples/agent-spine` (slice closed loop + R2 architecture tests) | [04-agent-loop.md](docs/design/04-agent-loop.md) |
+| 6 ✅ | `shell.*` + `llm.deepseek` + JSONL persistence + R1 replay hash closed loop + real-model full-stack e2e | [05](docs/design/05-capability-seam.md) / [03](docs/design/03-session-event-sourcing.md) |
+| 7 ✅ | `llm.openai-compat` refactor + fs root + approval three modes + `--verify`/policy + `examples.headless` | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
+| 8 ✅ | Data-driven AppBoot composition: kernel/config + bundle/base + CompositionManifest + headless migration | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
+| 9 ✅ | scope/preset: ScopedToolRegistry + setup window + preset composition + home profile discovery (last breaking API iteration) | [06-scope.md](docs/design/06-scope.md) |
+| 10 ✅ | Long-run capability: compaction producer + budget profile + --resume + request-context (first half of the production-simulation gate) | [03](docs/design/03-session-event-sourcing.md) |
+| 11 ✅ | Getting work done: todo_write (whole-table snapshot) + plan mode (pure-fold + exit_plan_mode direct flip + dynamic prompt section); extension event codecs via ServiceLoader | — |
+| 12 ✅ | Safe to let it run: sandbox (platform chain, darwin=seatbelt tested, linux/windows designed-first) + restriction (shell wrap + fs fence + plan read-only + PRODUCTION assertions) | [05](docs/design/05-capability-seam.md) |
+| 12.5 ✅ | Environment-level isolation: `shell-docker`, a second `ShellExecutor` provider — the mount surface is the writable surface (the whole container root read-only); the three sandbox tiers are synonymously stronger in the container backend; provider swap, not seam change | [05](docs/design/05-capability-seam.md) |
+| 12.6 ✅ | Hardening backfill: JSONL durability (fsync barrier + torn-tail repair), typed LLM failures (`LlmCallException` + `Kind`), LocalFs realpath fence (symlink escape sealed), `--verify` platform warnings; LoopGuard comments + 02 drift corrections | [03](docs/design/03-session-event-sourcing.md) / [05](docs/design/05-capability-seam.md) |
+| 12.7 ✅ | Platform chain landed: Linux on-host confinement (bwrap backend) — darwin=seatbelt / linux=bwrap / win32=empty chain; CI dual-job real verification (ubuntu installs bubblewrap, macos adds seatbelt) | [05](docs/design/05-capability-seam.md) |
+| 13 ✅ | Runnable artifact: dist (jlink) + complete CLI (`--help` / `--workspace=` / `--approval=`; run ids + CI smoke) | — |
+| 14 ✅ | Interaction surface: REPL (landed in `interaction/commands`) + streaming render (chunk journaling + typed failure rendering by `FailureKind`) | — |
+| 15 | Production simulation in CI: replay-driven (keyless, deterministic) + PRODUCTION policy + multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison | [03](docs/design/03-session-event-sourcing.md) |
+| 16 | Release engineering → **0.1.0**: Maven Central, facade freeze, bilingual README | — |
+| 17+ | subagent, skills, web, LSP, windows-acl + pwsh provider, Landlock (second candidate) — ordered by community voice | — |
 
-**0.1.0 平台支持面**：macOS 与 Linux 可用（含同机沙箱）。macOS 自带 seatbelt、开箱即用；Linux 走 bwrap——**需主机安装 bubblewrap**，就绪后开箱可用；无 userns 权限的主机受限档 fail-closed（Landlock 兜底入 0.2.0）。**Windows 不在 0.1.0 支持面**——缺同机沙箱后端，且 `shell-bash-local` 假设 bash 存在（pwsh provider 待做），两者随 windows-acl 一并排入 0.2.0。
+**0.1.0 platform support**: macOS and Linux (including on-host sandboxing). macOS ships seatbelt, works out of the box; Linux uses bwrap — **the host must install bubblewrap**, then it works out of the box; hosts without userns privileges fall back fail-closed (Landlock is the 0.2.0 fallback). **Windows is not in the 0.1.0 support surface** — no on-host sandbox backend, and `shell-bash-local` assumes bash exists (pwsh provider pending); both land with windows-acl in 0.2.0.
 
-R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
+R1–R4 tests travel with each slice, never backfilled at the end ([10-testing.md](docs/design/10-testing.md)).
 
-## 许可
+## API stability
 
-**Apache-2.0**（2026-09-08 确认）。架构思想源自对 dsh 的移植分析（见 [docs/dsh-reference.md](docs/dsh-reference.md)）；本仓库代码为原创实现。目标：开源供社区使用——JDK 25 LTS 单版本（ScopedValue 终版叙事优先），首发同时面向国际与中文社区。
+0.1.0 freezes its public surface — JPMS exports, seam contracts, the event schema, plugin config keys, and the CLI. The full list is [docs/design/12-api-stability.md](docs/design/12-api-stability.md): **0.1.x patch releases do not break it; breaking changes go to 0.2.0 with release notes and a migration path.**
+
+## License
+
+**Apache-2.0** (confirmed 2026-09-08). The architecture is ported from an analysis of dsh (see [docs/dsh-reference.md](docs/dsh-reference.md)); this repository's code is an original implementation. Goal: open source for community use — a single JDK 25 LTS version (the finalized-ScopedValue narrative takes priority), with the first release targeting both international and Chinese-speaking communities.

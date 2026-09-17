@@ -60,8 +60,8 @@
 | `examples/pom.xml`、`dist/pom.xml` | `maven.deploy.skip=true` | ✅ 落盘为兜底；实闸 = 根 profile `excludeArtifacts`（见设计偏离①） |
 | `docs/design/02-module-layout.md:14+397/471-511/590-703` | 坐标口径 + Maven 片段；加「不同源」注 | ✅ |
 | `docs/design/00-overview.md:115`、`README.md:7`、`AGENTS.md:3` | 坐标口径同步 | ✅ |
-| `README.md`（整体）+ `README.zh-CN.md`（新） | 英文主 + 中文从 + 互链 + 计数 | ☐（S2） |
-| `docs/design/12-api-stability.md`（新） | 稳定面清单 + 0.x 语义 | ☐（S2） |
+| `README.md`（整体）+ `README.zh-CN.md`（新） | 英文主 + 中文从 + 互链 + 计数 | ✅ 英文主 129 行 / 中文从 124 行；互链双向；计数 45/362 四处一致 |
+| `docs/design/12-api-stability.md`（新） | 稳定面清单 + 0.x 语义 | ✅ 117 行；导出面 32 模块 36 包与 module-info 扫描 diff IDENTICAL；配置键 12+12 实核 |
 | `dist/jh/pom.xml`：moditect `<compression>` + 归档 | 压缩 + tar.gz/zip | ☐（S3） |
 | `docs/release.md`（新） | GPG / Portal / 发布命令序列 | ☐（S3） |
 | `docs/design/README.md:108-117` | 路线表 it16 | ☐（S3） |
@@ -72,7 +72,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | S1 发布工装 + 坐标改名 | 46 POM + 根 POM 元数据/release profile + 排除面 + 文档 4 处 | ✅ 2026-09-17 用户放行 |
-| S2 双语 README + 门面冻结文档 | `README.md` / `README.zh-CN.md` / `docs/design/12-api-stability.md` | ☐ |
+| S2 双语 README + 门面冻结文档 | `README.md` / `README.zh-CN.md` / `docs/design/12-api-stability.md` | ✅ 2026-09-17 用户放行 |
 | S3 归档 + 压缩 + 发布文档 | `dist/jh` + `docs/release.md` + 路线表 | ☐ |
 | 终局：发布执行（用户动作；Central 公开不可逆） | 版本翻转 + `mvn -P release deploy` + Portal Publish + tag + GitHub Release | ☐ |
 
@@ -81,8 +81,8 @@
 - [x] S1 改名后全量绿：`mvn -B -q validate` + 全量 `mvn -B -q install` → BUILD SUCCESS 2:52；65 套件 / 362 用例 / 0 败 0 错 4 跳（2 keyless e2e + 2 linux-only 沙箱）；jlink 镜像重建后 `--help`/`--verify` exit 0（"verify 通过"）
 - [x] S1 release 剖面工件完整：全量 `package` SUCCESS（45 模块，1:12）；sources 32/32、javadoc 32/32（JPMS 包结构在场）；effective-pom 抽查 kernel/brand + core/tools 两条父链：url/licenses/developers/scm 继承生效
 - [x] S1 签名链路（隔离测试密钥）：一次性 GNUPGHOME 真签名 6 件 `.asc` → jar/sources/pom 三件 `gpg --verify` = 完好的签名；干跑 deploy（/tmp 0.1.0 副本 + 假凭据 + `-Dgpg.skip=true`）→ bundle zip 650 项 = 130 主件 × (1+4 校验和)；40 坐标（1 根 + 9 聚合器 + 30 叶）；排除项零泄漏；唯一红点 = 上传 401（预期）
-- [ ] S2 双语 README：英文主本审阅通过 + 中文从本完整 + 互链 + 计数订正
-- [ ] S2 稳定面文档：`12-api-stability.md` 清单与实况核对（导出面 = 文档列面）
+- [x] S2 双语 README：英文主本（129 行）用户审阅放行 + 中文从本（124 行）完整 + 双向互链 + 计数订正（45 模块 / 362 用例，四处一致）
+- [x] S2 稳定面文档：`12-api-stability.md` 导出面 32 模块 36 包与 `module-info` 扫描 diff IDENTICAL（36/36）；bundle.yml 24 行实核（12 可配 + 12 无配）；CLI 面与 `jh --help` 逐 flag 比对一致；4 文件链接核查 0 缺失
 - [ ] S3 归档：tar.gz/zip 解压可用（`bin/jh --verify` exit 0）；镜像压缩前后体积记录
 - [ ] 终局发布执行（用户放行 + 用户侧凭据）：Portal deployment 草稿审核 Publish 回执 + tag `v0.1.0` + GitHub Release
 - [ ] **签名硬门槛（用户拍板附加）**：真 key 签名后复查 bundle 内 `.asc` 齐全——干跑的「无 .asc」仅是 `gpg.skip` 预期，不得当作达标证据
@@ -94,6 +94,7 @@
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
 | S1 | reactor 计数误记：46 个 POM 文件 ≠ 46 项目；审查包一度写 44（漏计 examples 聚合器与 dist/jh 口径） | 订正为 45 个 reactor 模块（根 1 + 聚合器 11 + 叶 33）；发布面 40 + 排除 5 = 45 自洽；计划文本与 S2 README 计数均按此 |
+| S2 | `docs/design/README.md` 索引滞后 3 处：快速导航无 12 行；技术栈「27 个叶子模块 / 38 个 reactor 项目」为旧口径；MVP 清单 Commands 仍标 stub（it14 已落地） | 补 12 行导航；口径改「33 个叶模块 / 45 个 reactor 模块」；Commands 行改「命令面 registry/slash 解析，it14」 |
 
 ## 设计偏离（如有）
 
