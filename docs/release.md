@@ -60,7 +60,8 @@ mvn -B -P release -Dgpg.skip=true package      # release 剖面干跑：sources/
 ```sh
 # 3.1 版本翻转 0.1.0-SNAPSHOT → 0.1.0（每个 POM 各一处）
 mvn versions:set -DnewVersion=0.1.0 -DgenerateBackupPoms=false   # 首次运行会拉取 versions-maven-plugin
-grep -rl "0.1.0-SNAPSHOT" --include=pom.xml . | wc -l            # 预期 46（另有 2 个孤岛 POM 不入 reactor，见下注）
+rm -rf dist/jh/target                                            # 旧版本 jar 残留 → jlink「Two versions of module」（注2）
+grep -rl "0.1.0-SNAPSHOT" --include=pom.xml . | wc -l            # 翻转后应仅剩 1（孤岛，见注）；翻转前全仓 46 = reactor 45 + 孤岛 1
 
 # 3.2 提交翻转（tag 必须指向承载该 commit 的同一提交）
 git add -A && git commit -m "chore(release): 0.1.0"
@@ -70,6 +71,7 @@ mvn -B -P release deploy
 ```
 
 > 注：`bundle/headless/` 孤岛 POM 不入 reactor，不参与 versions:set——已知状态（it16 设计偏离④），其旧版本号不影响发布面。
+> 注2：版本变更后 `dist/jh/target/` 残留旧版本 jar，jlink 报 `Two versions of module ... found`；构建前 `rm -rf dist/jh/target` 即可（it16 实撞）。
 
 ## 4. 校验点
 
