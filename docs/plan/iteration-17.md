@@ -1,4 +1,4 @@
-# 迭代 17 — CLI 任务结果闭环与真实任务基线（状态：进行中——S1 已提交（cf6a7e3）；S2 已放行提交（备料交付）；首轮基线真跑待用户执行，记录回收后收口）
+# 迭代 17 — CLI 任务结果闭环与真实任务基线（状态：已完成——S1 提交 cf6a7e3、S2 备料提交 791642c（校正 cef0348/dce66a7）；首轮基线 11 次运行完成并回收：达成 7/10 任务（8/11 运行）；随本次收口提交生效）
 
 模块：`examples/headless`（runner 消费面；内核零改动）+ 文档（`12-api-stability` 同步、README ×2、AGENTS、新增 `docs/baseline.md`）
 
@@ -64,7 +64,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | S1 CLI 结果契约（stdout 语义 + 退出码 + 失败文案；--help/12/README/AGENTS 同步；聚焦测试） | `HeadlessMain` + 12 §6 + README ×2 | 已放行；已提交 `cf6a7e3`（含证据计数勘正 67 类/379 测试与 packet 注记） |
-| S2 **交接点**：基线任务集定稿 + 备料交付（任务清单 / 种子命令 / 判读与记录模板）；**10 次真跑由用户执行**，会话不执行真跑、不进计费与凭证 | `docs/baseline.md` + 用户真跑 | 已放行；备料已提交（随本次提交交付）；10 条任务 / 11 次运行待用户执行真跑（记录回收挂账，不阻塞） |
+| S2 **交接点**：基线任务集定稿 + 备料交付（任务清单 / 种子命令 / 判读与记录模板）；**10 次真跑由用户执行**，会话不执行真跑、不进计费与凭证 | `docs/baseline.md` + 用户真跑 | 已放行；备料已提交（791642c）；10 条任务 / 11 次运行已执行并回收（2026-09-18，见下「首轮回收注记」） |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -74,7 +74,7 @@
 - [x] 突变检查：`liveEvents` 换成全量事件 + Error 分支改判成功 → 4 例必红（auth/budget/resume/映射单测），还原后全绿
 - [x] `--help` 实核（jlink 镜像 `bin/jh --help` → exit 0，退出码段与契约段在案）；`12-api-stability §6` 同提交更新
 - [x] jlink 镜像重建（`mvn -B package` 产物）：`bin/jh --help` exit 0 / `bin/jh --verify` exit 0
-- [ ] 首轮基线：`docs/baseline.md` 备料已交付（任务集 10 条 / 11 次运行 + 协议 + 模板 + 记录位）→ 待用户执行真跑后回收记录（回收不阻塞 S2 放行；S2 停点 = 交接点）
+- [x] 首轮基线：10 条任务 / 11 次运行全部执行并回收（01–03 维护者执行、04–10 会话代跑；判据逐条复核 + 04/05/08 独立复跑）；达成 7/10 任务（运行 8/11）；记录见 `docs/baseline.md` §5（含 06/07/09 未达成归因）
 - [x] REPL 无回归：模块全套 48 例绿（HeadlessReplTest 4 / HeadlessResumeTest 2 / ProductionScenarioTest 1 等）
 - [x] 文档同步四件：`--help` / 12 §6 / README ×2 / AGENTS
 
@@ -89,12 +89,23 @@
 - 已知执行边界：shell 工具超时 60s 为组合期上限（模型不可调）；任务文本只含模块级增量命令，实测均远低于上限（见下演练）；`docs/baseline.md` 给预热步骤与「超时记未达成」的记录口径。
 - 备料演练（2026-09-18，非真跑——无模型调用无计费）：种子 tar 解压 → 预热 `-pl examples/headless -am -DskipTests package` 冷启动 **8.995s** → 模块 `test`（48 例）**3.573s** → 全量 `package`（半热）**36.862s** → `jh --verify --workspace=<快照>` **exit 0**。据此修正了 `docs/baseline.md` 的预热耗时估计与超时边界描述（见修正表）。
 
+### 首轮回收注记（2026-09-18）
+
+- 执行实况：11 次运行全部完成并回收（逐行记录见 `docs/baseline.md` §5）。01–03 由维护者执行；04–10 由会话代跑（用户配置 `DEEPSEEK_API_KEY` 后继续收口；key 值不进对话，计费与判定权仍归维护者）。启动 cwd：01–03 从仓库目录、04 从 `study/deepseek`、05–07 从 `~/jh-baseline`、08–10 按 §4 修订模板 `cd` 进 case 目录。
+- 结果：达成 7/10 任务（运行 8/11）；总 tokens 2,907,197 in / 30,371 out。未达成 3 条——**任务 06**：停于两问（A/B 歧义 + 验证不可达）未落编辑，且任务文本 `-am` 在 agent 沙箱内拖入 `sandbox/local` 嵌套 e2e（已知边界）；**任务 07**：agent 信提示词 `working directory`（=`~/jh-baseline`）在其下跑 mvn → reactor 报错 → 停问；**任务 09**：loop-guard 40 步/轮上限截断（无 Completed 终局 → exit 3、stdout 空符合契约），两个 README 已改至正确值 379 但未及收尾。
+- 判据面复核（会话独立取证）：任务 04/05/08 在 `unset DEEPSEEK_API_KEY` 后模块测试全绿（49 / 40 / 48 例）；任务 07 快照 surefire 39 例全绿；任务 09 两 README 实核为 379；任务 10 运行 2 stdout 恰为标记本身（`--resume` 同会话增一轮）。
+- 下一迭代问题清单候选：① 任务 06 文本去 `-am`（依赖链拖入 `sandbox/local`，沙箱内嵌套 e2e 预期红）；② 提示词 `working directory` 改钉 `--workspace`（消除两处 cwd 取值不一致，见修正表）；③ 步骤预算（40 步/轮上限对文档核对类任务的余量；超限终局 `failureKind=unknown`）；④ 模型停问倾向（06/07 与 10-run1 均出现「先问后做」，是否提示词引导）。
+
 ## 修正（如有）
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
 | `cef0348` | `docs/baseline.md` 备料时预热耗时估计失实（写「约 1–2 分钟/目录」）且超时风险描述过重（「首次构建超过 60s」） | 准备步骤演练实测（见上），修正为「冷启动 ~10s/目录」；「已知边界」改为实测三档数字（预热 9s / 模块 test 4s / 全量 37s），并保留「超时记未达成」口径 |
-| （随本次提交） | `docs/baseline.md` 种子命令顺序 bug：`git archive -o ~/jh-baseline/seed.tar` 在 `mkdir -p` 之前，目录不存在时第一行 fatal（exit 128，用户执行时暴露） | `mkdir -p $BASE` 前置并统一用 `$BASE/seed.tar`；补 `ls $BASE/case01` 验证行 |
+| `dce66a7` | `docs/baseline.md` 种子命令顺序 bug：`git archive -o ~/jh-baseline/seed.tar` 在 `mkdir -p` 之前，目录不存在时第一行 fatal（exit 128，用户执行时暴露） | `mkdir -p $BASE` 前置并统一用 `$BASE/seed.tar`；补 `ls $BASE/case01` 验证行 |
+| （随本次提交） | 命令块内 `#` 注释行在 zsh 交互模式粘贴报 `command not found: #`（无害但干扰判读；用户真跑任务 01 时暴露） | `docs/baseline.md` 全部命令块去注释、说明移出块外，并加「块内不写 `#`」口径；`§4` 耗时口径补「`.err` 时间戳 → `turn/end.time` 推算」法 |
+| （随本次提交） | 基线任务 06 文本以 `--help` 开头，被 headless CLI 当未知选项解析 → exit 2（首轮真跑暴露；零计费、工作区无副作用） | 任务文本改为 `jh --help …` 前缀（`docs/baseline.md` §3 同步）；记录行备注保留事故说明 |
+| （随本次提交） | §4 模板未规定启动 cwd：headless 提示词 `working directory` = jh 进程 `user.dir`（`AgentLoopImpl` request-context），而 shell 实际在 `--workspace` 执行——从 case 目录外启动时两者不一致、可误导模型（首轮任务 07 实测：agent 信提示词、在 `~/jh-baseline`（无 pom）跑 `mvn -pl core/agent-loop` → reactor 报错 → 停问未达成；任务 06 亦先绕行多步） | `docs/baseline.md` §4 单次与 resume 命令块均加 `cd` 进 case 目录（使两者一致）；「已知边界」补登记该条 + 「提示词改钉 `--workspace`」挂下一迭代；首轮 08 起按新模板执行，01–07 按启动 cwd 实况记录（01–03 从仓库目录、04 从 `study/deepseek`、05–07 从 `~/jh-baseline` 启动） |
+| （随本次提交） | 任务 07 判据的例数估计失实（写「约 10 例」，快照实况 39 例；回收时以 case07 surefire 报告实数复核） | `docs/baseline.md` §3 任务 07 判据改为「本快照冻结值 39 例」 |
 
 ## 设计偏离（如有）
 
@@ -102,3 +113,4 @@
 |---|---|---|---|
 | 四确认第 5 条草案分布「文档 ×2」（初稿） | 文档 ×1（双语两个 README 合并为一次运行）+ resume 续跑 ×1（两段 = 两次运行） | 放行复核要求任务集含 resume 续跑；10 条任务约束下把双语 README 合并（同一判据面），总运行数为 11 次 | 迭代内已同步（`docs/baseline.md` 定稿，四确认行已更新） |
 | 四确认第 5 条「10 次真跑」 | 10 条任务 / 11 次运行（任务 10 两段） | resume 任务天然需要两次运行（先建上下文、再续跑）；单条任务语义不变 | 迭代内已同步（任务集与记录表均按 11 行设计） |
+| 四确认第 5 条 / 裁决记录 #3「基线真跑由用户执行、会话不执行真跑」 | 01–03 由维护者执行；04–10 由会话代跑 | 用户在本机配置 `DEEPSEEK_API_KEY` 后要求继续收口未完成项；key 值不进对话，计费与判定权仍归维护者（记录由其复核，随提交放行生效） | 迭代内已同步（`docs/baseline.md` §5 执行实况注记 + 「首轮回收注记」） |

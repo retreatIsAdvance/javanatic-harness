@@ -8,19 +8,19 @@
 
 ### 种子（钉提交，冻结）
 
+在 javanatic-harness 仓库工作树执行（`cf6a7e3` = it17 S1「任务结果契约」落地后的提交）：
+
 ```sh
 BASE=~/jh-baseline
 mkdir -p $BASE
-
-# 在 javanatic-harness 仓库工作树执行；cf6a7e3 = it17 S1（任务结果契约）落地后的提交
 git archive --format=tar -o $BASE/seed.tar cf6a7e3
-
 for i in 01 02 03 04 05 06 07 08 09 10; do
   mkdir -p $BASE/case$i && tar -xf $BASE/seed.tar -C $BASE/case$i
 done
-ls $BASE/case01 | head    # 验证：应看到 AGENTS.md / README.md 等
+ls $BASE/case01 | head
 ```
 
+- `ls` 行验证：应看到 `AGENTS.md` / `README.md` 等。
 - 快照无 `.git`；判据用「文件包含性检查」而非 diff（见任务表）。
 - 每个任务在自己的 case 目录里跑——任务间的文件改动互不污染。
 
@@ -31,16 +31,21 @@ ls $BASE/case01 | head    # 验证：应看到 AGENTS.md / README.md 等
 ```sh
 mvn -B -q -pl dist/jh -am package
 JH="$PWD/dist/jh/target/jlink-image/bin/jh"
-"$JH" --help        # 冒烟：应含「退出码」段
+"$JH" --help
 ```
+
+`--help` 冒烟：输出应含「退出码」段。
 
 ### 前置（宿主 shell）
 
 ```sh
-export PATH="$HOME/Documents/apache-maven-3.8.8/bin:$PATH"   # 本机 mvn 不在 PATH
+export PATH="$HOME/Documents/apache-maven-3.8.8/bin:$PATH"
 export JAVA_HOME=$(/usr/libexec/java_home -v 25)
-export DEEPSEEK_API_KEY=sk-...                                # 用户自管；不进记录、不入库
+export DEEPSEEK_API_KEY=sk-...
 ```
+
+- 本机 mvn 不在 `PATH`，故显式追加。
+- `DEEPSEEK_API_KEY` 由用户自管；不进记录、不入库。
 
 ### 预热（构建类任务推荐）
 
@@ -58,6 +63,9 @@ done
 
 - shell 命令 60s 硬超时（组合期上限，不可由模型调大）。实测（本机备料演练）：冷启动预热 ~9s、模块 `test`（48 例）~4s、半热全量 `package` ~37s——任务文本里的模块级命令都在安全区内；唯一可能触顶的是全冷状态下的全量构建（如任务 09 若选择跑全量核对），触顶按「未达成 + 备注原因」记录（maven 增量不丢进度，重试通常更快）。
 - 工作区 = case 目录（`--workspace`）；fs 围栏与沙箱授予面都钉在此目录。maven 只读本地仓库、写 case 内 `target/`，不触发围栏。
+- 提示词里的 `working directory` 与 shell 实际 cwd 是两处取值：前者 = jh 进程的 `user.dir`（`AgentLoopImpl` 的 request-context 落账），后者 = `--workspace`（`ShellToolPlugin` → `LocalBashExecutor`）。从 case 目录外启动 jh 时两者不一致——首轮任务 07 实测：agent 信提示词、把 `mvn` 跑在 `~/jh-baseline`（无 pom）→ reactor 报错 → 停问未达成；任务 06 的 agent 亦先绕行多步。口径：启动前 `cd` 进工作区（§4 模板已含）；「提示词改钉 `--workspace`」记为下一迭代问题清单候选。
+- 模块测试含环境敏感用例：`examples/headless` 的 `HeadlessVerifyTest.missingTaskWithKeyAbsentFailsLoud` 要求 key **缺席**——在 key 已导出的 shell 里该用例预期失败（expected 2, got 0，与任务改动无关）。判定口径：以剔除该用例后全绿为准；`unset DEEPSEEK_API_KEY` 复跑可验证全绿（首轮任务 04 实测：带 key 49 例 1 失败 → unset 后 49 例全绿）。
+- 嵌套沙箱边界：agent 的 shell 工具运行在本机 seatbelt 沙箱内；在其中跑 maven，`sandbox/local` 的 4 个 macOS seatbelt e2e（`@EnabledOnOs(OS.MAC)`、无 assume 门控）需要**嵌套** sandbox-exec，宿主一律拒绝（`sandbox_apply: Operation not permitted`, rc 71）→ 预期红（与任务改动无关）。沙箱外同命令实测全绿（首轮任务 06：沙箱内 1 失败 3 错误 → 沙箱外 exit 0）。判定口径：以沙箱外复跑为准；任务文本带 `-am` 且依赖链含 `sandbox/local` 时注意此条。
 - 会话（JSONL）落 `~/.harness/sessions/<sessionId>/`，与工作区无关；`--resume` 靠会话 id。
 
 ## 2. 记录协议
@@ -124,7 +132,7 @@ resume 任务（10）记第二次运行时，把两次输出的差值作为本�
 
 ### 06 修改+验证 — USAGE 补示例（case06）
 
-> 任务文本：`--help 的示例段没有 --resume 用法示例；在 HeadlessMain 的 USAGE 里补一条简短示例（--resume 一次性续跑）。跑 mvn -B -q -pl examples/headless -am test 确认全绿。`
+> 任务文本：`jh --help 的示例段没有 --resume 用法示例；在 HeadlessMain 的 USAGE 里补一条简短示例（--resume 一次性续跑）。跑 mvn -B -q -pl examples/headless -am test 确认全绿。`
 
 判据：exit 0；`HeadlessMain.java` 的 USAGE 文本出现 `--resume` 示例行；模块测试绿。
 
@@ -132,7 +140,7 @@ resume 任务（10）记第二次运行时，把两次输出的差值作为本�
 
 > 任务文本：`跑 mvn -B -q -pl core/agent-loop test 并报告结果：通过数、失败数与结论。`
 
-判据：exit 0；stdout 报告与真实一致（全绿，约 10 例）；用户复跑可复核。
+判据：exit 0；stdout 报告与真实一致（全绿，本快照冻结值 39 例）；用户复跑可复核。
 
 ### 08 重构 — finishOneShot 拆分（case08）
 
@@ -160,44 +168,57 @@ resume 任务（10）记第二次运行时，把两次输出的差值作为本�
 
 ## 4. 运行模板
 
+一次性任务（01–09 同理，只换 case 编号与任务文本）：
+
 ```sh
 BASE=~/jh-baseline
 JH=<镜像路径>/bin/jh
-
-# 一次性任务（04-09 同理，换 case 编号与任务文本）
+cd $BASE/case01
 "$JH" --workspace=$BASE/case01 "任务文本" >$BASE/case01.out 2>$BASE/case01.err
 echo "exit=$?"
+```
 
-# resume 两段（10）
+resume 两段（10）：先跑 run1，从它的 `.err` 里 `grep 'session='` 取 session id，再跑 run2：
+
+```sh
+cd $BASE/case10
 "$JH" --workspace=$BASE/case10 "记住这个标记：BASELINE-MARKER-7391（不要写入任何文件）。然后用一句话概括 Session.firstLiveSeq() 的语义。" \
   >$BASE/case10-run1.out 2>$BASE/case10-run1.err
-grep 'session=' $BASE/case10-run1.err        # 取 session id
+grep 'session=' $BASE/case10-run1.err
 "$JH" --resume=<sessionId> --workspace=$BASE/case10 "我第一轮让你记住的标记是什么？只回答标记本身。" \
   >$BASE/case10-run2.out 2>$BASE/case10-run2.err
 ```
 
+- 启动前 `cd` 进该 case 目录：headless 提示词里的 `working directory` 取 jh 进程的 `user.dir`，而 shell 工具实际在 `--workspace` 里执行命令；从 case 目录外启动时两者不一致，模型可能被误导（首轮任务 07 实测：agent 信提示词、把 `mvn` 跑在 `~/jh-baseline`（无 pom）→ reactor 报错 → 停问未达成）。`cd` 使两者一致；真实使用中用户就在项目内启动 jh，天然一致。
+- 本文各命令块不含 `#` 注释行：zsh 交互模式默认不把 `#` 当注释，粘贴注释行会报 `command not found: #`（无害但干扰判读）；说明一律写在块外。
 - `stdout`（判据对象）落 `.out`；会话 id、事件清单、失败诊断在 `.err`。
-- 耗时：命令前加 `time`（zsh 内建），或手工记开始/结束。
+- 耗时：命令前加 `time`（zsh 内建），或按 `.err` 首行时间戳到会话日志 `turn/end.time` 推算（millis）。
 
-## 5. 首轮记录（待填）
+## 5. 首轮记录（2026-09-18）
 
-> 首轮由维护者执行；填完把本节替换为实际记录（或追加轮次小节），并在 `docs/plan/iteration-17.md` 勾对应验收项。
+> 执行实况：01–03 由维护者执行（01/02 各有两次会话，记录取末次）；04–10 由会话代跑（用户配置 key；计费与判定权归维护者）。启动 cwd：01–03 从仓库目录、04 从 `study/deepseek`、05–07 从 `~/jh-baseline`、08–10 按 §4 修订模板 `cd` 进 case 目录（08 起生效）。
 
 | # | 任务 | 运行 | 日期 | exit | stdout 判据 | 耗时 | in tok | out tok | 费用 | 判定 | 备注 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 01 | 定位 firstLiveSeq | — | | | | | | | | | |
-| 02 | 定位 退出码映射 | — | | | | | | | | | |
-| 03 | 定位 PRODUCTION 违规类 | — | | | | | | | | | |
-| 04 | 修改 budget 正例 | — | | | | | | | | | |
-| 05 | 修改 等值边界 | — | | | | | | | | | |
-| 06 | 修改 USAGE 示例 | — | | | | | | | | | |
-| 07 | 测试运行 agent-loop | — | | | | | | | | | |
-| 08 | 重构 finishOneShot | — | | | | | | | | | |
-| 09 | 文档 README 计数 | — | | | | | | | | | |
-| 10 | resume 上下文延续 | run1 | | | | | | | | | |
-| 10 | resume 上下文延续 | run2 | | | | | | | | | |
+| 01 | 定位 firstLiveSeq | — | 2026-09-18 | 0 | ✓ | ~3s | 6216 | 511 | — | 达成 | calls=3；行号引用逐条核对无误 |
+| 02 | 定位 退出码映射 | — | 2026-09-18 | 0 | ✓ | ~6s | 11468 | 672 | — | 达成 | calls=5；行号 2 处偏 1 行（实为 :416/:419），要点无误 |
+| 03 | 定位 PRODUCTION 违规类 | — | 2026-09-18 | 0 | ✓ | ~6s | 26779 | 1134 | — | 达成 | calls=4；列 5 类且与 `Policy.java` 逐条相符 |
+| 04 | 修改 budget 正例 | — | 2026-09-18 | 0 | ✓ | ~85s | 880355 | 6196 | — | 达成 | calls=31；新增 `budgetNotExceededCompletesWithAnswerOnStdout`（7→8 例）；复跑 unset key 后 49 例全绿 |
+| 05 | 修改 等值边界 | — | 2026-09-18 | 0 | ✓ | ~34s | 49924 | 1215 | — | 达成 | calls=11；新增 `exactlyAtBudgetPasses`；复跑 agent-loop 40 例全绿 |
+| 06 | 修改 USAGE 示例 | — | 2026-09-18 | 0 | ✗ | ~65s | 812106 | 6534 | — | 未达成 | calls=37；未落编辑，停于两问（A/B 歧义 + 验证不可达）；另 `-am` 命令在 agent 沙箱内不可达全绿（已知边界）；首次运行因任务文本 `--help` 前缀 exit 2（零计费，见修正表） |
+| 07 | 测试运行 agent-loop | — | 2026-09-18 | 0 | ✗ | ~11s | 24501 | 1078 | — | 未达成 | calls=5；agent 信提示词 `working directory`（启动 cwd=`~/jh-baseline`）在其下跑 mvn → reactor 报错 → 停问；维护者复跑 case07 39 例全绿（判据面实况） |
+| 08 | 重构 finishOneShot | — | 2026-09-18 | 0 | ✓ | ~27s | 246441 | 1965 | — | 达成 | calls=15；抽出 `printFailureDiagnostics`（private）；复跑 unset key 后 48 例全绿（含 HeadlessOneShotResultTest 7 例） |
+| 09 | 文档 README 计数 | — | 2026-09-18 | 3 | ✗ | ~204s | 847205 | 11004 | — | 未达成 | calls=40；loop-guard 40 步/轮上限截断（无终局 Completed）；两 README 已改为正确值 379（判据面实质完成）但未及收尾；stdout 空符合失败契约 |
+| 10 | resume 上下文延续 | run1 | 2026-09-18 | 0 | ✓ | ~1s | 1066 | 53 | — | 达成 | calls=1；标记已确认；未落文件（合规）；未做 firstLiveSeq 概括（反问是否检索） |
+| 10 | resume 上下文延续 | run2 | 2026-09-18 | 0 | ✓ | ~1s | 1136 | 9 | — | 达成 | stdout 恰为标记本身；同一会话增一轮（`--resume` 生效） |
 
-汇总：达成 __ / 10 任务（运行 __ / 11）；总 tokens in/out：__ / __。
+汇总：达成 7 / 10 任务（运行 8 / 11）；总 tokens in/out：2,907,197 / 30,371。
+
+失败行归因（→ 后续迭代问题清单）：
+
+- **06**：agent 未落编辑（停问）；且任务文本 `-am` 在 agent 沙箱内不可达全绿——候选修订：任务文本去 `-am`，或预注边界口径。
+- **07**：提示词 `working directory`（= 启动 cwd）与 shell 实际 `--workspace` 不一致误导模型（§4 模板已加 `cd` 修住；「提示词改钉 `--workspace`」挂下一迭代）。
+- **09**：loop-guard 40 步/轮上限截断调查型任务（README 已改对但未及终局）——候选：步骤预算可配 / 任务文本收敛取数路径。
 
 ## 6. 维护
 
