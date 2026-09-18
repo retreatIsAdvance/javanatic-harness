@@ -123,7 +123,11 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 | 14 ✅ | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染（chunk 落账 + typed 失败渲染按 `FailureKind`）| — |
 | 15 ✅ | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
 | 16 ✅ | 发布工程 → **0.1.0** 已发布：Maven Central + GitHub Release（jlink 归档）、门面冻结、双语 README | — |
-| 17+ | subagent、skills、web、LSP、windows-acl + pwsh provider、Landlock 第二候选——按社区声音排序 | — |
+| 17–25（计划） | **0.2.0**：可靠单 Agent CLI、取消/恢复/资源边界、工作区与会话易用性、外部 Java 接入、Linux 归档 + Landlock、Windows 本机隔离 + pwsh | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 0.3 系列（计划） | 可复用能力：先 skills + MCP Tools，随后网络资料获取与 LSP | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 0.4（计划） | 先可管理的后台任务，再受控多 Agent 委派 | [总体计划](docs/design/README.md#phased-evolution-plan) |
+
+**规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。以上未来阶段均未开工；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。
 
 **0.1.0 平台支持面**：macOS 与 Linux 可用（含同机沙箱）。macOS 自带 seatbelt、开箱即用；Linux 走 bwrap——**需主机安装 bubblewrap**，就绪后开箱可用；无 userns 权限的主机受限档 fail-closed（Landlock 兜底入 0.2.0）。**Windows 不在 0.1.0 支持面**——缺同机沙箱后端，且 `shell-bash-local` 假设 bash 存在（pwsh provider 待做），两者随 windows-acl 一并排入 0.2.0。
 

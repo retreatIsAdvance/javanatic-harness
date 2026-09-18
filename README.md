@@ -128,7 +128,11 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 | 14 ✅ | Interaction surface: REPL (landed in `interaction/commands`) + streaming render (chunk journaling + typed failure rendering by `FailureKind`) | — |
 | 15 ✅ | Production simulation in CI: replay-driven (keyless, deterministic) + PRODUCTION policy + multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison | [03](docs/design/03-session-event-sourcing.md) |
 | 16 ✅ | Release engineering → **0.1.0** published: Maven Central + GitHub Release (jlink archives), facade freeze, bilingual README | — |
-| 17+ | subagent, skills, web, LSP, windows-acl + pwsh provider, Landlock (second candidate) — ordered by community voice | — |
+| 17–25 (planned) | **0.2.0**: reliable single-agent CLI, cancellation/recovery/resource limits, workspace and session usability, external Java integration, Linux archives + Landlock, Windows confinement + pwsh | [Overall plan](docs/design/README.md#phased-evolution-plan) |
+| 0.3 series (planned) | Reusable capabilities: skills + MCP Tools first; web access and LSP follow | [Overall plan](docs/design/README.md#phased-evolution-plan) |
+| 0.4 (planned) | Managed background tasks first, then controlled multi-agent delegation | [Overall plan](docs/design/README.md#phased-evolution-plan) |
+
+**Planning principle**: maintainer-led scenarios, real-task acceptance, and community feedback for calibration—not a prerequisite to begin. These future stages have not started; scope, dependencies, and acceptance gates live in the overall plan, with each iteration requiring its own scope confirmation and review checkpoints.
 
 **0.1.0 platform support**: macOS and Linux (including on-host sandboxing). macOS ships seatbelt, works out of the box; Linux uses bwrap — **the host must install bubblewrap**, then it works out of the box; hosts without userns privileges fall back fail-closed (Landlock is the 0.2.0 fallback). **Windows is not in the 0.1.0 support surface** — no on-host sandbox backend, and `shell-bash-local` assumes bash exists (pwsh provider pending); both land with windows-acl in 0.2.0.
 

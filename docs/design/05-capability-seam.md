@@ -447,8 +447,9 @@ Ubuntu 24.04 默认态）的主机受限档 fail-closed；denial 标记以 `exit
 spawn；`ShellResult.sandboxDenied` 标记「沙箱拒了文件效果」（stderr 命中本后端方言 +
 非零退出）——模型能分辨拒绝与命令失败。fs——fs-tool 变异工具在 READ_ONLY（含计划
 模式）下直接拒（进程内围栏，模式级；WORKSPACE_WRITE 的路径边界由 fs-local root 与
-sandbox workspace 对齐保证，漂移=交集生效）。容器/microVM/云 Provider 按社区声音
-排期（it12.5 docker 起）。
+sandbox workspace 对齐保证，漂移=交集生效）。容器隔离已由 shell-docker 提供（§5）；
+后续 Provider 扩展按[总体迭代计划](README.md#phased-evolution-plan) 的生产场景、能力依赖
+与验收闸门自主排期；microVM/云 Provider 未列入当前阶段范围。
 
 ### Approval Definition（`harness.interaction.approval`）—— 不是 stub
 
