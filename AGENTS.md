@@ -64,6 +64,9 @@ dist/jh/target/jlink-image/bin/jh                 # 裸启动进 REPL（it14）�
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
 # 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 按打印 id 续跑
 # --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
+# 任务结果契约（it17）：stdout = 成功给最终答案 / 失败为空（成功无文本合法 → stdout 空 + exit 0）；
+#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败 · 4 任务被取消；
+#   诊断（失败文案、模型遗言）走 stderr——`out=$(bin/jh "任务")` 取答案、按退出码判成败
 # 任意 OpenAI 兼容厂商:
 #   … bin/jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 \
 #                --model=kimi-k2 --provider=kimi

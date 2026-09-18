@@ -20,8 +20,14 @@ import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.SessionEvents;
+import io.javanatic.harness.session.event.AssistantMessageEvent;
 import io.javanatic.harness.session.event.LoggedEvent;
+import io.javanatic.harness.session.event.SessionEvent;
+import io.javanatic.harness.session.event.TurnEnd;
+import io.javanatic.harness.session.event.TurnEndReason;
+import io.javanatic.harness.session.message.ContentBlock;
 import io.javanatic.harness.session.message.MessageSource;
+import io.javanatic.harness.session.message.TextBlock;
 import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 import io.javanatic.harness.systemprompt.PromptSection;
@@ -95,6 +101,17 @@ public final class HeadlessMain {
 
         REPL 说明:非 / 行作为消息发送(各成其 turn,与模型运行并行排队);/ 行走命令面
         (未知命令只提示、不送模型);--approval=ask 的裁决行走同一输入通道(不另起 stdin 读者)。
+
+        任务结果(一次性路径;输出契约):
+          stdout         任务完成时输出最终答案文本(成功但无文本时为空)
+        退出码:
+          0  任务完成(或 --verify 通过 / --help)
+          1  --verify 违规
+          2  用法错误 / 缺少 API key
+          3  任务失败(厂商错误 / 守卫或预算超限;原因在 stderr)
+          4  任务被取消(REPL 路径不适用:退出码 0)
+        契约:成功有结果 / 失败为空——失败的 stdout 为空,诊断(会话 id、事件清单、失败
+        文案、模型遗言)全部走 stderr;`out=$(jh "任务")` 取答案、按退出码判成败。
 
         示例:
           jh "把 README 的快速开始改准"
@@ -290,6 +307,15 @@ public final class HeadlessMain {
     /** @param in REPL 行源（测试注入；一次性路径不读） @param out 屏幕（渲染器与 REPL 面板共写） */
     static int run(RunnerOptions options, Path workspace, Path sessions, BufferedReader in, PrintStream out)
             throws Exception {
+        return run(options, workspace, sessions, in, out, System.err);
+    }
+
+    /**
+     * @param err one-shot 失败诊断面（测试注入；成功路径不写）——stdout 契约 = 成功有结果 /
+     *            失败为空，诊断（失败文案、模型遗言）全走 stderr
+     */
+    static int run(RunnerOptions options, Path workspace, Path sessions, BufferedReader in, PrintStream out,
+                   PrintStream err) throws Exception {
         Path profile = resolveProfile(options.profile());
         AppBoot.BootOptions boot = new AppBoot.BootOptions(profile, buildOverlays(options, workspace, sessions),
             options.verify(), options.policy());
@@ -325,6 +351,7 @@ public final class HeadlessMain {
                         new AgentOptions(options.provider(), options.model())));
             }
             Agent agent = handle.agent();
+            int exit = 0;
             if (options.task() == null) {
                 runRepl(rt, agent, in, out); // 裸 jh / --resume 无任务:交互循环
             } else {
@@ -335,14 +362,112 @@ public final class HeadlessMain {
                     .filter(entry -> !(entry.event() instanceof AssistantChunkEvent))
                     .forEach(entry ->
                         LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
+                exit = finishOneShot(agent, out, err);
             }
             handle.disposeAndAwait();
             rt.root().require(SessionPersistence.KEY).save(agent.session());
-            return 0;
+            return exit;
         } catch (AppBoot.VerifyFailedException e) {
             e.violations().forEach(v -> LOG.log(Level.ERROR, "违规: {0}", v));
             return 1;
         }
+    }
+
+    /**
+     * one-shot 终局处理（run 尾段；package-private 供测试）：成功 → stdout 最终答案
+     * （空答案合法，不打）;失败 → stdout 空 + stderr 诊断块（模型遗言 + 终局文案）。
+     *
+     * @return 退出码 0/3/4（词表见 {@link #USAGE} 与 12 §6）
+     */
+    static int finishOneShot(Agent agent, PrintStream out, PrintStream err) {
+        List<LoggedEvent<? extends SessionEvent>> live = liveEvents(agent.session());
+        int exit = oneShotExitCode(live);
+        if (exit == 0) {
+            String answer = finalAnswerText(live);
+            if (!answer.isEmpty()) {
+                out.println(answer);
+            }
+            return 0;
+        }
+        String lastWords = finalAnswerText(live);
+        if (!lastWords.isEmpty()) {
+            err.println("失败前最后输出:");
+            err.println(lastWords);
+        }
+        err.println(oneShotFailureText(live));
+        return exit;
+    }
+
+    /** 本次运行新开轮的事件切片：seq >= firstLiveSeq()（seed 长度）——resume 不误判旧轮。 */
+    static List<LoggedEvent<? extends SessionEvent>> liveEvents(Session session) {
+        long firstLive = session.firstLiveSeq();
+        return session.events().stream()
+            .filter(entry -> entry.seq() >= firstLive)
+            .toList();
+    }
+
+    /** 终局 → 退出码：Completed→0;Error→3;Aborted→4;无 turn/end（含未知变体）→3,fail loud。 */
+    static int oneShotExitCode(List<LoggedEvent<? extends SessionEvent>> live) {
+        TurnEndReason reason = lastTurnEndReason(live);
+        if (reason == null) {
+            return 3;
+        }
+        if (reason instanceof TurnEndReason.Completed) {
+            return 0;
+        }
+        if (reason instanceof TurnEndReason.Aborted) {
+            return 4;
+        }
+        return 3;
+    }
+
+    /** 失败诊断一行（stderr）：与 REPL 同源文案（复用 {@link StreamRenderer#failureText}）。 */
+    static String oneShotFailureText(List<LoggedEvent<? extends SessionEvent>> live) {
+        TurnEndReason reason = lastTurnEndReason(live);
+        if (reason instanceof TurnEndReason.Error error) {
+            return "任务失败: " + StreamRenderer.failureText(error);
+        }
+        if (reason instanceof TurnEndReason.Aborted aborted) {
+            return "任务被取消: " + aborted.cause();
+        }
+        if (reason == null) {
+            return "任务未达终局（无 turn/end），按失败处理";
+        }
+        return "任务失败: 未知终局变体 " + reason;
+    }
+
+    /** 新开轮最后一条 assistant/message 的文本（无文本/无消息 → 空串）。 */
+    static String finalAnswerText(List<LoggedEvent<? extends SessionEvent>> live) {
+        String text = "";
+        for (LoggedEvent<? extends SessionEvent> entry : live) {
+            if (entry.event() instanceof AssistantMessageEvent messageEvent) {
+                text = messageText(messageEvent);
+            }
+        }
+        return text;
+    }
+
+    private static String messageText(AssistantMessageEvent event) {
+        StringBuilder text = new StringBuilder();
+        for (ContentBlock block : event.message().content()) {
+            if (block instanceof TextBlock textBlock) {
+                if (text.length() > 0) {
+                    text.append('\n');
+                }
+                text.append(textBlock.text());
+            }
+        }
+        return text.toString();
+    }
+
+    private static TurnEndReason lastTurnEndReason(List<LoggedEvent<? extends SessionEvent>> live) {
+        TurnEndReason reason = null;
+        for (LoggedEvent<? extends SessionEvent> entry : live) {
+            if (entry.event() instanceof TurnEnd end) {
+                reason = end.reason();
+            }
+        }
+        return reason;
     }
 
     /** REPL:注册内置命令 + 渲染订阅接线 + 行循环;返回后走 run 的既有 dispose/save 尾。 */
