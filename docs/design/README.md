@@ -106,7 +106,7 @@
 
 ## 实现路线（垂直切片；2026-09 开源目标修订）
 
-已完成的垂直切片（it1 kernel / it2 session / it3 llm seam + replay / it4 tools + fs / it5 agent-loop + 竖切 / it6 shell + deepseek + 持久化 + R1 闭环 / it7 openai-compat + 治理上线 / it7.1 厂商灵活化 / it8 组合数据化 AppBoot + ConfigService + manifest / it9 scope + preset / it10 长跑能力 compaction + budget + resume / it11 todo_write + 计划模式 / it12 sandbox 同机进程约束 + restriction / it12.5 shell-docker 环境级隔离 / it12.6 硬化回填（JSONL 耐久、typed LLM 失败、LocalFs realpath、`--verify` 平台预警）/ it12.7 平台链落地（linux=bwrap + CI 双 job）/ it13 dist jlink + CLI 完备 / it14 交互面 REPL + 流式渲染 / it15 生产模拟场景进 CI（replay 驱动：keyless、确定性）+ `--budget=` 收口 + R1 逐锚点前缀折叠口径）。R1–R4 测试随切片走，不做收尾补（[10](10-testing.md)）。
+已完成的垂直切片（it1 kernel / it2 session / it3 llm seam + replay / it4 tools + fs / it5 agent-loop + 竖切 / it6 shell + deepseek + 持久化 + R1 闭环 / it7 openai-compat + 治理上线 / it7.1 厂商灵活化 / it8 组合数据化 AppBoot + ConfigService + manifest / it9 scope + preset / it10 长跑能力 compaction + budget + resume / it11 todo_write + 计划模式 / it12 sandbox 同机进程约束 + restriction / it12.5 shell-docker 环境级隔离 / it12.6 硬化回填（JSONL 耐久、typed LLM 失败、LocalFs realpath、`--verify` 平台预警）/ it12.7 平台链落地（linux=bwrap + CI 双 job）/ it13 dist jlink + CLI 完备 / it14 交互面 REPL + 流式渲染 / it15 生产模拟场景进 CI（replay 驱动：keyless、确定性）+ `--budget=` 收口 + R1 逐锚点前缀折叠口径 / it16 发布工程 → **0.1.0 已发布**（Maven Central + GitHub Release；门面冻结 + 双语 README + jlink 归档 + [release.md](../release.md)））。R1–R4 测试随切片走，不做收尾补（[10](10-testing.md)）。
 
 **开源决策（2026-09-08 确认）**：License Apache-2.0；JDK 25 LTS 单版本（不降 21——ScopedValue 终版叙事与差异化优先，采用税在文档中明示）；首发同时面向国际与中文社区。
 
@@ -114,7 +114,6 @@
 
 | 迭代 | 内容 | 性质 |
 |---|---|---|
-| it16 | 发布工程（Central 工装/门面冻结/双语 README/归档 + 发布文档 [release.md](../release.md)）→ **0.1.0**（发布执行为用户侧动作） | 首发 |
 | it17+ | subagent、skills、web、LSP、windows-acl + pwsh、Landlock——按社区 issue 声音排序 | 社区驱动 |
 
 ## 许可与引用

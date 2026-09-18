@@ -1,4 +1,4 @@
-# 迭代 16 — 发布工程 → 0.1.0（状态：进行中）
+# 迭代 16 — 发布工程 → 0.1.0（状态：已完成——0.1.0 已发布：Maven Central + GitHub Release）
 
 模块：全仓 POM 坐标层（46 个 POM）、根 POM（元数据 + release profile）、`docs/design`（00/02 + 新增 12）、README（双语重构）、`dist/jh`（压缩 + 归档）、`docs/release.md`（新）、AGENTS
 
@@ -75,7 +75,7 @@
 | S1 发布工装 + 坐标改名 | 46 POM + 根 POM 元数据/release profile + 排除面 + 文档 4 处 | ✅ 2026-09-17 用户放行 |
 | S2 双语 README + 门面冻结文档 | `README.md` / `README.zh-CN.md` / `docs/design/12-api-stability.md` | ✅ 2026-09-17 用户放行 |
 | S3 归档 + 压缩 + 发布文档 | `dist/jh` + `docs/release.md` + 路线表 | ✅ 2026-09-17 用户放行 |
-| 终局：发布执行（用户动作；Central 公开不可逆） | 版本翻转 + `mvn -P release deploy` + Portal Publish + tag + GitHub Release | ☐ |
+| 终局：发布执行（用户动作；Central 公开不可逆） | 版本翻转 + `mvn -P release deploy` + Portal Publish + tag + GitHub Release | ✅ 2026-09-18 完成（deploy a751069b → 用户手动 Publish → tag v0.1.0 → Release 建成） |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -87,10 +87,10 @@
 - [x] S3 归档：tar.gz/zip 解压可用——双格式独立解压后 `bin/jh --help`/`--verify` 均 exit 0（"verify 通过"）；`gzip -t`/`unzip -t` 无错；126 项；权限实核（bin//lib/ 0755，含 jspawnhelper；其余 0644）。镜像体积 86M → 53M（zip-6 + jdk.httpserver 出链；模块 41 → 40，`bin/jwebserver` 消失）；全量 `package` SUCCESS（45 模块，1:21）
 - [x] 终局前坐标小写校正复审：全量 `mvn -B install` exit 0；65 套件 / 362 用例 / 0 败 0 错 4 跳（与 S1 基线一致）；46 POM camelCase 残留 = 0（sed 297 处 = 46 POM + 9 当前态文档）
 - [x] 发布前 README 复审（终局前）：双语三处同步（状态段 7-15 + 生产模拟场景项 / 路线表 15 ✅ / ZH 统一「R1–R4 治理不变式就位」）+ 新增「Get it / 获取」段；归档命名与 `dist/jh` profile 实配核一致（`javanatic-harness-<版本>-<平台>`，如 `macos-aarch64`）；计数复核 45 模块 / 362 用例不变；it15 计划头状态订正「已完成——CI 待 push 放行后复验」；追击过时文案：状态段删除「剩余叶模块为 module-info + 标记类」句；module-info 头注释 5 处同类措辞一并订正（shell/tool、shell/shell、shell/bash-local、kernel/brand、examples/agent-spine，纯注释；会进 javadoc 制品，javadoc jar 实核；唯 `bundle/headless` 仍为骨架、保留）
-- [ ] 终局发布执行（用户放行 + 用户侧凭据）：Portal deployment 草稿审核 Publish 回执 + tag `v0.1.0` + GitHub Release
-- [ ] **签名硬门槛（用户拍板附加）**：真 key 签名后复查 bundle 内 `.asc` 齐全——干跑的「无 .asc」仅是 `gpg.skip` 预期，不得当作达标证据
-- [ ] 推送收口：积压 + tag push 后 CI 双 job 绿（it14 #29 / it15 #25 挂账行一并勾）
-- [ ] 文档同步：路线表 / AGENTS / 设计文档（00/02/12）
+- [x] 终局发布执行：Portal deployment `a751069b` 草稿校验通过 → 用户手动 Publish（最终确认弹窗为人工步骤）；tag `v0.1.0` 已推（CI 双绿）；GitHub Release 建成（tar.gz/zip 双归档 uploaded）；repo1 收录实核（`harness-kernel-core/0.1.0` HTTP 200）
+- [x] **签名硬门槛**：deploy 第 3 次 bundle 780 项 = 650 主件 + 130 `.asc` 齐全；抽查 3 处（叶 jar / 根 POM / 聚合器 POM）均「完好的签名，来自于 retreatIsAdvance」
+- [x] 推送收口：积压（26 笔 `1b3aeaf..2889117`）+ 终局批（`2889117..4793245` + tag）推送后 CI 双 job 绿（run 35221934106 / 35243840871 / 35243840822）；it14 #29 / it15 #25 挂账行已勾
+- [x] 文档同步：路线表（双语 README 16 ✅ + 设计 README it16 入已完成、表起点 it17+）/ AGENTS / 设计文档（00/02/12）；02 POM 片段版本串随 bump 同步 0.2.0-SNAPSHOT
 
 ## 修正（如有）
 

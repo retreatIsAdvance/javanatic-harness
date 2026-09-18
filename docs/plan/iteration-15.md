@@ -1,4 +1,4 @@
-# 迭代 15 — 生产模拟场景进 CI（replay 驱动：keyless、确定性）（状态：已完成——CI 待 push 放行后复验）
+# 迭代 15 — 生产模拟场景进 CI（replay 驱动：keyless、确定性）（状态：已完成）
 
 模块：`examples/headless`（main：`--budget=`；test：生产场景）、`examples/agent-spine`（test：R1ReplayHashTest 升级）、docs；`bundle/base` 零改动（AppBoot/Policy 复用）
 
@@ -104,7 +104,7 @@
 - [x] S3 聚焦测试绿：`mvn -B -pl examples/agent-spine -am test` → BUILD SUCCESS（上游全模块绿；agent-spine 4 类 6 用例 0 败 1 跳——keyless e2e 自跳过）；突变验证：折叠前缀改全量日志 → R1ReplayHashTest 拒（"anchor seq 4 提示词重建" 哈希不符），还原后复绿
 - [x] 全反应堆 `mvn -B -q package` 绿（组合面改动）——2026-09-17：BUILD SUCCESS，63 类 / 365 用例 / 0 败 0 错 4 跳（keyless e2e 自跳过），jlink 镜像建成（`harness-dist-jh` SUCCESS）；前置修复 #25 flake（58c5195，见「修正」）——首两跑红皆因它（2/2），修复后一次通过。注：构建树另含非本迭代的 module-info opens 扫批（并行工作面，非本迭代改动面；已于 01fec03 提交）
 - [x] 文档同步：10 §3.4 R1 口径（逐锚点前缀折叠 + 非平凡化前件）、README 路线表（it15 入已完成、表起点 it16）、AGENTS 现状（headless 增 `--budget=` + 场景测试；治理档示例补 budget）
-- [ ] CI 双 job 绿（push 放行后复验；与积压提交同批挂账）
+- [x] CI 双 job 绿（2026-09-17 推送批 run 35221934106 复验；it16 终局批 + tag 批 35243840871 / 35243840822 双绿）
 
 ## 修正（如有）
 

@@ -96,7 +96,7 @@
 - [x] **真跑：`--approval=ask` 在 REPL 下走行通道审批**（session `headless-1789443830726-fdc7`）：问句打 stderr（既有 ApprovalPrompt 未改，见设计偏离）；「y」经 REPL 行通道转交 → `fs_read` 真执行（「← hello from it14 e2e」）；「n」→ `← error: denied: denied by human gate: fs_read`；裁决行不入模型历史（日志 user/message 计数不含裁决行）
 - [x] **真跑：typed 失败渲染**：坏 key → `turn 失败: 认证失败：检查 API key（--api-key= 或 --api-key-env=）（LlmCallException: deepseek http 401）`——按 `FailureKind` 出可行动文案、厂商细节仅附注；坏 key 真跑 exit 码仍 0，判据看渲染文本与日志（符合预期）
 - [x] **回归：one-shot `jh "任务"` 输出形态不变、`--verify` 无 key exit 0**：one-shot stdout 为空、stderr 事件清单 `0: turn/start … 10: turn/end` seq 连续形态不变且**无 `assistant/chunk` 行**（渲染订阅只在 REPL 挂）；`--verify` 无 key exit 0
-- [ ] **CI 双 job 绿（push 需用户放行）**：待 push 放行后推送积压提交（434c017 / e8ee1e4 / d0eab5e / dc82b30 / 7a19fd0 / 7d2a027 / ac9445b + 本轮 S3 与文档）并复验
+- [x] **CI 双 job 绿**：积压提交（434c017 / e8ee1e4 / d0eab5e / dc82b30 / 7a19fd0 / 7d2a027 / ac9445b + S3 与文档）随 2026-09-17 推送批（run 35221934106 双 job 绿）；it16 终局批 + tag `v0.1.0` 双绿（35243840871 / 35243840822）
 
 ## 修正（如有）
 
