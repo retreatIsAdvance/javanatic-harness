@@ -9,14 +9,16 @@
 ### 种子（钉提交，冻结）
 
 ```sh
-# 在 javanatic-harness 仓库工作树执行；cf6a7e3 = it17 S1（任务结果契约）落地后的提交
-git archive --format=tar -o ~/jh-baseline/seed.tar cf6a7e3
-
 BASE=~/jh-baseline
 mkdir -p $BASE
+
+# 在 javanatic-harness 仓库工作树执行；cf6a7e3 = it17 S1（任务结果契约）落地后的提交
+git archive --format=tar -o $BASE/seed.tar cf6a7e3
+
 for i in 01 02 03 04 05 06 07 08 09 10; do
   mkdir -p $BASE/case$i && tar -xf $BASE/seed.tar -C $BASE/case$i
 done
+ls $BASE/case01 | head    # 验证：应看到 AGENTS.md / README.md 等
 ```
 
 - 快照无 `.git`；判据用「文件包含性检查」而非 diff（见任务表）。
