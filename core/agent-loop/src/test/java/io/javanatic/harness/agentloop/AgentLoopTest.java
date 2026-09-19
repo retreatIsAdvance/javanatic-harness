@@ -53,6 +53,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -253,6 +254,67 @@ class AgentLoopTest {
             assertThat(types).contains("tool/call");
             assertThat(types).doesNotContain("tool/result", "step/end");
             assertThat(reasons(agent.session())).containsExactly(new TurnEndReason.Aborted("user"));
+        }
+    }
+
+    @Test
+    void cancelJoinsParallelToolBatchBeforeIdle() throws Exception {
+        CountDownLatch blockerStarted = new CountDownLatch(1);
+        CountDownLatch releaseWriter = new CountDownLatch(1);
+        AtomicBoolean writerStopped = new AtomicBoolean();
+        ToolDefinition writer = ToolDefinition.of("writer", "慢写", NO_ARGS, (args, ctx) -> {
+            releaseWriter.await();
+            writerStopped.set(true);
+            return ToolExecutionResult.success("written");
+        });
+        try (Rig rig = new Rig(List.of(List.of(
+                new StreamChunk.DeltaToolUse(CallId.of("c1"), "blocker", "{}"),
+                new StreamChunk.DeltaToolUse(CallId.of("c2"), "writer", "{}"),
+                new StreamChunk.Finish(FinishReason.TOOL_USE))))) {
+            rig.tools.register(rig.rt.root(), blockingTool(blockerStarted));
+            rig.tools.register(rig.rt.root(), writer);
+            Agent agent = rig.agent("a16").agent();
+            agent.followup(text("go"));
+            assertThat(blockerStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+            agent.cancel(new AgentCancelCause.User(), CancelOptions.DEFAULT);
+            Thread.sleep(100); // 首异常即传播的旧语义会在此窗口内关轮
+            // 路线表原话的逆否形态：慢写工具未停，whenIdle 不得完成
+            assertThat(writerStopped.get()).as("写手仍被压住").isFalse();
+            assertThat(agent.whenIdle().isDone()).isFalse();
+
+            releaseWriter.countDown();
+            agent.whenIdle().join();
+            assertThat(writerStopped.get()).isTrue();
+            assertThat(types(agent.session())).doesNotContain("step/end");
+            assertThat(reasons(agent.session())).containsExactly(new TurnEndReason.Aborted("user"));
+        }
+    }
+
+    @Test
+    void uncooperativeToolDelaysIdleUntilItReturns() throws Exception {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        ToolDefinition stubborn = ToolDefinition.of("stubborn", "无视取消", NO_ARGS, (args, ctx) -> {
+            started.countDown();
+            release.await();
+            return ToolExecutionResult.success("done-anyway");
+        });
+        try (Rig rig = new Rig(List.of(useTool("c1", "stubborn", "{}")))) {
+            rig.tools.register(rig.rt.root(), stubborn);
+            Agent agent = rig.agent("a17").agent();
+            agent.followup(text("go"));
+            assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+            CompletableFuture<Void> idle = agent.whenIdle();
+
+            agent.cancel(new AgentCancelCause.User(), CancelOptions.DEFAULT);
+            assertThat(idle.isDone()).isFalse(); // 无上界：取消不强制停不合作工具
+
+            release.countDown();
+            idle.join();
+            // 批完整返回 → 数据面闭环、关轮 Completed（取消只阻止后续推进）
+            assertThat(types(agent.session())).contains("tool/call", "tool/result");
+            assertThat(reasons(agent.session())).containsExactly(new TurnEndReason.Completed());
         }
     }
 

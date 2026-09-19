@@ -65,16 +65,34 @@ final class ToolExecutorImpl implements ToolExecutor {
             });
             futures.add(future);
         }
+        // join 全部再传播(it18):先等每个 future 落定,再裁决异常——取消/失败都不许
+        // 撇下仍在跑的兄弟(静止语义 = 无工具线程在跑)。选择规则:AbortedException
+        // (输入序首个)优先——取消不被兄弟失败掩盖,turn 才能收敛成 Aborted;余按输入序。
         List<LoggedEvent<ToolResultEvent>> results = new ArrayList<>(futures.size());
+        AbortedException firstAbort = null;
+        Throwable firstFailure = null;
         for (CompletableFuture<LoggedEvent<ToolResultEvent>> future : futures) {
             try {
                 results.add(future.join());
             } catch (CompletionException e) {
-                if (e.getCause() instanceof RuntimeException runtime) {
-                    throw runtime; // AbortedException 等取消语义原样上抛
+                Throwable cause = e.getCause();
+                if (cause instanceof AbortedException aborted) {
+                    if (firstAbort == null) {
+                        firstAbort = aborted;
+                    }
+                } else if (firstFailure == null) {
+                    firstFailure = cause;
                 }
-                throw new IllegalStateException("tool execution failed", e.getCause());
             }
+        }
+        if (firstAbort != null) {
+            throw firstAbort;
+        }
+        if (firstFailure != null) {
+            if (firstFailure instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new IllegalStateException("tool execution failed", firstFailure);
         }
         return results;
     }

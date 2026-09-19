@@ -173,6 +173,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - `.jqwik-database`（jqwik 模糊缓存）不入库，已在 .gitignore。
 - 事件订阅表遍历用 `CopyOnWriteArrayList`；waterfall 的 next 守卫包在 rest 上（invokeOnce），不在最外层。
 - checkstyle 不解析 `module-info.java`（已排除在门禁外）；首次使用 `import module`（JEP 511）前先升级 checkstyle 依赖，否则解析报错。
+- 跨模块改动的聚焦测试必须带 `-am`：裸 `mvn -pl <module> test` 会静默解析**本地仓库里的旧 SNAPSHOT**（有件 ≠ 件是新的）——新写的失败测试假红、形似代码缺陷（it18 S-a 实撞）；`-pl <module> -am test` 走 reactor 内解析才用最新源码。
 
 ## 修改本文件
 

@@ -64,7 +64,12 @@ public interface Agent {
      */
     void cancel(AgentCancelCause cause, CancelOptions options);
 
-    /** 等当前整个 agent 活动达到静止（driver 退出且无 pending 唤醒）。 */
+    /**
+     * 等当前整个 agent 活动达到静止（driver 退出且无 pending 唤醒）。
+     * 静止含工具面：全部已启动的工具调用已落定——取消也一样（executor
+     * join 全部再传播）。无视取消且不返回的工具会让本 future 永不完成
+     * （无强制手段，04 §8 不合作边界）。
+     */
     CompletableFuture<Void> whenIdle();
 
     /**

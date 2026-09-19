@@ -413,6 +413,8 @@ public final class AgentLoopImpl implements Agent {
             session.append(new StepEnd(clock.millis(), turn, step));
 
             if (abort.isAborted()) {
+                // 工具批完整返回才可能到这(取消被无视/迟到):数据面已闭环(executor
+                // join 全部),关轮 Completed——取消只保证不推进后续 step
                 return;
             }
             if (results.stream().anyMatch(entry -> entry.event().concludesTurn())) {

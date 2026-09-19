@@ -16,6 +16,9 @@ import io.javanatic.harness.session.message.ToolUseBlock;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,6 +57,22 @@ class ToolExecutorTest {
         @Override
         public void close() {
             rt.close();
+        }
+    }
+
+    /** 测试用可取消信号：cancel() 后 checkAbort 抛 AbortedException。 */
+    private static final class TestSignal implements AbortSignal {
+        private final AtomicBoolean aborted = new AtomicBoolean();
+
+        void cancel() {
+            aborted.set(true);
+        }
+
+        @Override
+        public void checkAbort() {
+            if (aborted.get()) {
+                throw new AbortedException("test-cancel");
+            }
         }
     }
 
@@ -160,6 +179,121 @@ class ToolExecutorTest {
                 .execute(List.of(call("c1", "{\"path\":\"x\"}")), session, 0, 0, rig.rt.root(), AbortSignal.never()))
                 .isInstanceOf(AbortedException.class);
             assertThat(session.events()).hasSize(1); // 只有 tool/call——取消不伪造结果
+        }
+    }
+
+    @Test
+    void abortWaitsForAllToolsBeforePropagating() throws Exception {
+        CountDownLatch writerStarted = new CountDownLatch(1);
+        CountDownLatch releaseWriter = new CountDownLatch(1);
+        AtomicBoolean writerStopped = new AtomicBoolean();
+        TestSignal signal = new TestSignal();
+        ToolDefinition poller = ToolDefinition.of("poller", "轮询取消", ARGS, (args, ctx) -> {
+            while (true) {
+                ctx.signal().checkAbort();
+                Thread.sleep(5);
+            }
+        });
+        ToolDefinition writer = ToolDefinition.of("writer", "慢写", ARGS, (args, ctx) -> {
+            writerStarted.countDown();
+            releaseWriter.await();
+            writerStopped.set(true);
+            return ToolExecutionResult.success("written");
+        });
+        try (Rig rig = Rig.with(Approvals.auto())) {
+            rig.registry.register(rig.rt.root(), poller);
+            rig.registry.register(rig.rt.root(), writer);
+            Session session = Session.create(Session.newId("t"), null, null);
+            AtomicBoolean stoppedAtPropagation = new AtomicBoolean();
+            Thread batch = Thread.ofVirtual().start(() -> {
+                try {
+                    rig.executor.execute(List.of(
+                            new ToolUseBlock(CallId.of("a"), "poller", "{\"path\":\"p\"}"),
+                            new ToolUseBlock(CallId.of("b"), "writer", "{\"path\":\"w\"}")),
+                        session, 0, 0, rig.rt.root(), signal);
+                } catch (AbortedException e) {
+                    stoppedAtPropagation.set(writerStopped.get());
+                }
+            });
+            assertThat(writerStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            signal.cancel();
+            // writer 未停前不得传播：首异常即抛的旧语义会在此窗口内提前返回
+            batch.join(100);
+            assertThat(batch.isAlive()).isTrue();
+            releaseWriter.countDown();
+            batch.join(5_000);
+            assertThat(batch.isAlive()).isFalse();
+            assertThat(stoppedAtPropagation.get()).isTrue();
+            assertThat(session.events().stream().map(LoggedEvent::type))
+                .filteredOn("tool/call"::equals).hasSize(2);
+            // 已完成工具成对落账（取消不抹除已发生的执行）；被取消者无 result
+            assertThat(session.events().stream().map(LoggedEvent::type))
+                .filteredOn("tool/result"::equals).hasSize(1);
+        }
+    }
+
+    @Test
+    void abortOutranksEarlierPlainFailureInInputOrder() {
+        ToolDefinition bomb = ToolDefinition.of("bomb", "炸", ARGS, (args, ctx) -> {
+            throw new AssertionError("boom");
+        });
+        ToolDefinition aborter = ToolDefinition.of("aborter", "取消", ARGS, (args, ctx) -> {
+            throw new AbortedException("cancelled");
+        });
+        try (Rig rig = Rig.with(Approvals.auto())) {
+            rig.registry.register(rig.rt.root(), bomb);
+            rig.registry.register(rig.rt.root(), aborter);
+            Session session = Session.create(Session.newId("t"), null, null);
+            // 输入序 0 是普通失败、1 是取消：取消优先——否则 turn 收敛成 Error 而非 Aborted
+            assertThatThrownBy(() -> rig.executor.execute(List.of(
+                    new ToolUseBlock(CallId.of("a"), "bomb", "{\"path\":\"x\"}"),
+                    new ToolUseBlock(CallId.of("b"), "aborter", "{\"path\":\"x\"}")),
+                session, 0, 0, rig.rt.root(), AbortSignal.never()))
+                .isInstanceOf(AbortedException.class)
+                .hasMessageContaining("cancelled");
+        }
+    }
+
+    @Test
+    void firstAbortInInputOrderIsThrown() {
+        ToolDefinition first = ToolDefinition.of("first", "取消", ARGS, (args, ctx) -> {
+            throw new AbortedException("first-abort");
+        });
+        ToolDefinition second = ToolDefinition.of("second", "取消", ARGS, (args, ctx) -> {
+            throw new AbortedException("second-abort");
+        });
+        try (Rig rig = Rig.with(Approvals.auto())) {
+            rig.registry.register(rig.rt.root(), first);
+            rig.registry.register(rig.rt.root(), second);
+            Session session = Session.create(Session.newId("t"), null, null);
+            assertThatThrownBy(() -> rig.executor.execute(List.of(
+                    new ToolUseBlock(CallId.of("a"), "first", "{\"path\":\"x\"}"),
+                    new ToolUseBlock(CallId.of("b"), "second", "{\"path\":\"x\"}")),
+                session, 0, 0, rig.rt.root(), AbortSignal.never()))
+                .isInstanceOf(AbortedException.class)
+                .hasMessageContaining("first-abort");
+        }
+    }
+
+    @Test
+    void plainFailureSelectionStaysInputOrder() {
+        ToolDefinition first = ToolDefinition.of("first", "炸", ARGS, (args, ctx) -> {
+            throw new AssertionError("first-boom");
+        });
+        ToolDefinition second = ToolDefinition.of("second", "炸", ARGS, (args, ctx) -> {
+            throw new AssertionError("second-boom");
+        });
+        try (Rig rig = Rig.with(Approvals.auto())) {
+            rig.registry.register(rig.rt.root(), first);
+            rig.registry.register(rig.rt.root(), second);
+            Session session = Session.create(Session.newId("t"), null, null);
+            assertThatThrownBy(() -> rig.executor.execute(List.of(
+                    new ToolUseBlock(CallId.of("a"), "first", "{\"path\":\"x\"}"),
+                    new ToolUseBlock(CallId.of("b"), "second", "{\"path\":\"x\"}")),
+                session, 0, 0, rig.rt.root(), AbortSignal.never()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("tool execution failed")
+                .hasRootCauseMessage("first-boom");
         }
     }
 

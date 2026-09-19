@@ -317,6 +317,8 @@ class AgentLoopImpl implements Agent {
 - 取消的**传播**靠 `AbortSignal.checkAbort()`（§9）：模型流式消费循环、工具执行、waterfall listener 在关键点自查，快速失败为 `AbortedException`。
 - 取消的**收敛**：drainLoop 捕获 `AbortedException` → turn 以 `aborted(cause)` 关闭（`TurnEnd` 落账）→ hasWork() 决定是否继续下一个 turn。
 - `keepInbox=true` 是 resume 场景：取消驱动但保留 pending 输入。
+- **执行收敛（it18）**：工具批的取消/失败在 executor 内 **join 全部再传播**——传播发生时本批全部工具线程已停止（AbortedException 按输入序首个优先，其余失败按输入序首个）。因此 `whenIdle()` 完成 ⇒ 无工具线程在跑（含取消路径）。
+- **不合作边界**：纯 Java 工具若无视 `checkAbort()` 且不返回，静止永不达成——无上界、无强制手段（Java 不能强杀线程）；子进程击杀已由 `onCancel` 钩子覆盖（it6 shell）。若整批工具无视取消并正常返回，turn 以 `completed` 关轮——取消只保证不推进后续 step。
 
 ## 9. AbortController — 取消传播
 
