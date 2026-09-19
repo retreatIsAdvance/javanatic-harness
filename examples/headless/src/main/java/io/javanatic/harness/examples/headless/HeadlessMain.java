@@ -1,9 +1,11 @@
 package io.javanatic.harness.examples.headless;
 
 import io.javanatic.harness.agent.Agent;
+import io.javanatic.harness.agent.AgentCancelCause;
 import io.javanatic.harness.agent.AgentHandle;
 import io.javanatic.harness.agent.AgentOptions;
 import io.javanatic.harness.agent.AgentRegistry;
+import io.javanatic.harness.agent.CancelOptions;
 import io.javanatic.harness.agent.CreateAgentOptions;
 import io.javanatic.harness.agent.ResumeAgentOptions;
 import io.javanatic.harness.agentloop.AssistantChunkEvent;
@@ -47,7 +49,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
+import java.util.function.Supplier;
+
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
 
 /**
  * 命令行 runner：带任务文本一次性执行，裸 `jh`（无任务、非 --verify）进入 REPL
@@ -71,8 +84,9 @@ public final class HeadlessMain {
 
         用法:
           jh "任务文本" [flags]                 执行任务(需 API key)
-          jh [flags]                            进入交互模式(需 API key;/help 命令, /exit 或
-                                                EOF 退出;进行中的轮以 aborted 落账,可 --resume 续)
+          jh [flags]                            进入交互模式(需 API key;/help 命令;/exit、EOF 或
+                                                空闲 Ctrl-C 退出;进行中的轮 Ctrl-C 取消,以
+                                                aborted 落账,可 --resume 续)
           jh --resume=<sessionId> [flags]       在既有会话上进入交互模式(带任务文本则一次性续跑)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1)
           jh --help                            显示本说明
@@ -101,6 +115,14 @@ public final class HeadlessMain {
 
         REPL 说明:非 / 行作为消息发送(各成其 turn,与模型运行并行排队);/ 行走命令面
         (未知命令只提示、不送模型);--approval=ask 的裁决行走同一输入通道(不另起 stdin 读者)。
+
+        Ctrl-C(SIGINT) 语义:
+          一次性任务 取消当前轮:收敛后以 turn/end(aborted) 落账、退出码 4(stdout 为空);
+                     再按一次 = 强制退出(130;取消卡在收敛时的逃生门)
+          交互模式  取消当前轮并清空排队输入,REPL 继续(不退出);空闲时 Ctrl-C 退出(同 /exit);
+                     再按一次 = 强制退出(130)
+          注意:取消只对协作面生效——整批工具无视取消并正常返回时,turn 以 Completed 收口
+          (退出码 0);不合作工具会拖住收敛,强制退出即为此备。
 
         任务结果(一次性路径;输出契约):
           stdout         任务完成时输出最终答案文本(成功但无文本时为空)
@@ -351,18 +373,29 @@ public final class HeadlessMain {
                         new AgentOptions(options.provider(), options.model())));
             }
             Agent agent = handle.agent();
+            SigintPolicy sigint = new SigintPolicy(() -> agent.whenIdle(),
+                () -> agent.cancel(new AgentCancelCause.User(), CancelOptions.DEFAULT),
+                options.task() == null,
+                // java.lang.Runtime 全限定:本作用域 Runtime 是 kernel scope 类型(import 冲突)
+                code -> java.lang.Runtime.getRuntime().halt(code),
+                message -> (options.task() == null ? out : err).println(message));
+            Runnable restoreSigint = bindSigint(sigint);
             int exit = 0;
-            if (options.task() == null) {
-                runRepl(rt, agent, in, out); // 裸 jh / --resume 无任务:交互循环
-            } else {
-                agent.followup(UserMessage.of(options.task(), new MessageSource.User()));
-                agent.whenIdle().join();
-                // chunk 是流式事实（S3 渲染面消费），不进 one-shot 事件清单——it13 输出形态不动
-                agent.session().events().stream()
-                    .filter(entry -> !(entry.event() instanceof AssistantChunkEvent))
-                    .forEach(entry ->
-                        LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
-                exit = finishOneShot(agent, out, err);
+            try {
+                if (options.task() == null) {
+                    runRepl(rt, agent, in, out, sigint); // 裸 jh / --resume 无任务:交互循环
+                } else {
+                    agent.followup(UserMessage.of(options.task(), new MessageSource.User()));
+                    agent.whenIdle().join();
+                    // chunk 是流式事实（S3 渲染面消费），不进 one-shot 事件清单——it13 输出形态不动
+                    agent.session().events().stream()
+                        .filter(entry -> !(entry.event() instanceof AssistantChunkEvent))
+                        .forEach(entry ->
+                            LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
+                    exit = finishOneShot(agent, out, err);
+                }
+            } finally {
+                restoreSigint.run();
             }
             handle.disposeAndAwait();
             rt.root().require(SessionPersistence.KEY).save(agent.session());
@@ -471,7 +504,8 @@ public final class HeadlessMain {
     }
 
     /** REPL:注册内置命令 + 渲染订阅接线 + 行循环;返回后走 run 的既有 dispose/save 尾。 */
-    private static void runRepl(Runtime rt, Agent agent, BufferedReader in, PrintStream out) throws IOException {
+    private static void runRepl(Runtime rt, Agent agent, BufferedReader in, PrintStream out,
+                                SigintPolicy sigint) {
         CommandRegistry registry = rt.root().require(CommandRegistry.KEY);
         registry.register(new Command("help", "显示命令一览", invocation ->
             new CommandResult.Text(commandsText(registry))));
@@ -490,7 +524,7 @@ public final class HeadlessMain {
             System.setIn(approvalIn);
             renderer.println("jh 交互模式 —— 输入消息回车提交;/help 命令;/exit 或 Ctrl-D 退出");
             try {
-                replLoop(agent, registry, renderer, approvalIn, in);
+                replLoop(agent, registry, renderer, approvalIn, in, sigint);
             } finally {
                 System.setIn(originalIn);
                 approvalIn.close();
@@ -500,17 +534,35 @@ public final class HeadlessMain {
     }
 
     /**
-     * 行循环:裁决行转交(补充 6) → 空行跳过 → `/` 行走命令面(未知命令只提示,
-     * 不送模型) → 非 `/` 行 followup(各成其 turn,与模型运行并行排队)。
+     * 行循环:伴生虚拟线程做 stdin 阻塞读(push 进队列),主循环 50ms 轮询队列与 SIGINT
+     * 退出请求——阻塞读不可中断,可轮询形状(同 {@code ApprovalPrompt.stdin})才能让空闲期
+     * 的 Ctrl-C 不等下一行就退出。裁决行转交(补充 6) → 空行跳过 → `/` 行走命令面
+     * (未知命令只提示,不送模型) → 非 `/` 行 followup(各成其 turn,与模型运行并行排队)。
      * EOF ≡ /exit:进行中的轮由 dispose 链以 aborted 落账,可 --resume 续。
      */
     static void replLoop(Agent agent, CommandRegistry registry, StreamRenderer renderer,
-                         ReplApprovalInput approvalIn, BufferedReader in) throws IOException {
+                         ReplApprovalInput approvalIn, BufferedReader in, SigintPolicy sigint) {
+        BlockingQueue<Optional<String>> lines = new LinkedBlockingQueue<>();
+        Thread.ofVirtual().name("jh-repl-reader").start(() -> readLines(in, lines));
+        long pollMillis = 50; // 退出请求轮询间隔:静止期 Ctrl-C 的响应时延上界
         while (true) {
-            String line = in.readLine();
-            if (line == null) {
+            Optional<String> next;
+            try {
+                next = lines.poll(pollMillis, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 return;
             }
+            if (next == null) {
+                if (sigint.exitRequested()) {
+                    return; // 静止期 Ctrl-C ≡ /exit
+                }
+                continue;
+            }
+            if (next.isEmpty()) {
+                return;
+            }
+            String line = next.get();
             if (approvalIn.forward(line)) {
                 continue;
             }
@@ -548,6 +600,19 @@ public final class HeadlessMain {
         }
     }
 
+    /** 伴生读线程体:阻塞 readLine → 队列;读尽/读失败一律 EOF(退出等走行循环既有路径)。 */
+    private static void readLines(BufferedReader in, BlockingQueue<Optional<String>> lines) {
+        try {
+            String line;
+            while ((line = in.readLine()) != null) {
+                lines.add(Optional.of(line));
+            }
+        } catch (IOException e) {
+            // 读失败 ≡ EOF:行循环退出,未决裁决得 -1(拒绝语义,与既有一致)
+        }
+        lines.add(Optional.empty());
+    }
+
     /** /help 文本:执行时读注册表(注册晚于 /help 也能列出;名升序,list 已保证)。 */
     static String commandsText(CommandRegistry registry) {
         StringBuilder text = new StringBuilder("命令:");
@@ -555,6 +620,71 @@ public final class HeadlessMain {
             text.append("\n  /").append(command.name()).append(" — ").append(command.summary());
         }
         return text.toString();
+    }
+
+    /** 绑定 SIGINT → 策略;返回还原器(恢复上一个 handler)。信号不可用(-Xrs 等)降级并告警。 */
+    private static Runnable bindSigint(SigintPolicy policy) {
+        try {
+            SignalHandler previous = Signal.handle(new Signal("INT"), signal -> policy.onSignal());
+            return () -> Signal.handle(new Signal("INT"), previous);
+        } catch (IllegalArgumentException | UnsupportedOperationException e) {
+            LOG.log(Level.WARNING, "SIGINT 处理不可用（Ctrl-C 将直杀进程）: {0}", e.getMessage());
+            return () -> { };
+        }
+    }
+
+    /**
+     * SIGINT 裁决(run 期间绑定;策略与 Signal 绑定分离,测试同步驱动本类)。规则:
+     *   未静止·首次         → cancel(User):一次性任务收敛后 exit 4;REPL 取消当前轮不退出
+     *   未静止·同一活动再按 → halt(130):逃生门——取消没让收敛停下(不合作工具等)时强退
+     *   静止·REPL           → 请求退出(行循环轮询;同 EOF / /exit 路径)
+     *   静止·一次性         → 忽略(轮已收盘,进程即将退出)
+     * 「同一活动」按 whenIdle future 的身份识别:driver 每次启动换新实例(AgentLoopImpl
+     * ensureDriver),实例未变且未完成 = 上次取消尚未收敛——据此把「再按一次 = 催停」与
+     * 「下一轮的第一次取消」分开(否则新轮首按会误触 halt)。
+     */
+    static final class SigintPolicy {
+
+        private final Supplier<CompletableFuture<Void>> whenIdle;
+        private final Runnable cancelTurn;
+        private final boolean repl;
+        private final IntConsumer halt;
+        private final Consumer<String> notice;
+        private final AtomicBoolean exitRequested = new AtomicBoolean();
+
+        /** Signal Dispatcher 单线程访问;行循环只读 {@link #exitRequested}。 */
+        private CompletableFuture<Void> cancelledEpoch;
+
+        SigintPolicy(Supplier<CompletableFuture<Void>> whenIdle, Runnable cancelTurn, boolean repl,
+                     IntConsumer halt, Consumer<String> notice) {
+            this.whenIdle = whenIdle;
+            this.cancelTurn = cancelTurn;
+            this.repl = repl;
+            this.halt = halt;
+            this.notice = notice;
+        }
+
+        void onSignal() {
+            CompletableFuture<Void> epoch = whenIdle.get();
+            if (epoch.isDone()) {
+                if (repl) {
+                    exitRequested.set(true);
+                }
+                return;
+            }
+            if (epoch == cancelledEpoch) {
+                halt.accept(130);
+                return;
+            }
+            cancelledEpoch = epoch;
+            notice.accept("已请求取消，等待收敛（再按一次 Ctrl-C 强制退出）");
+            cancelTurn.run();
+        }
+
+        /** 行循环轮询:静止期的 Ctrl-C 请求退出。 */
+        boolean exitRequested() {
+            return exitRequested.get();
+        }
     }
 
     /** CLI 参数 → 组合行 overlay（run 与验收测试共用;审批三 Provider 的互斥收口在此）。 */

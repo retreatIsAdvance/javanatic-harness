@@ -78,6 +78,8 @@ stream.forEach(chunk -> { signal.checkAbort(); session.append(...); });
 
 HTTP body 是阻塞读——虚拟线程挂起不占 platform thread；取消时 `AbortedException` 抛出，连接由 try-with-resources 关闭。
 
+**等待型协作点也必须可取消（it18）**：阻塞等待不能把取消挡在门外。审批等待（`ApprovalPrompt.stdin`）改为「伴生虚拟线程做阻塞读 + 调用线程轮询 `checkAbort()`（50ms）」的可轮询形状：取消即抛 `AbortedException`（按取消收敛，不落 error result），并经 `onCancel` 中断读线程撤回等待；不可中断的原流阻塞读留在原地直到自行返回（虚拟线程，不碍 JVM 退出）。REPL 行循环同形——静止期的 Ctrl-C 不必等下一行即可退出（`jh` 的 SIGINT 三件套，12 §6）。
+
 ## 5. 工具并行 —— 错误即数据，join 即收敛（无需 preview）
 
 工具并行的语义在 R2 下发生了关键简化：**单个工具失败不是异常，是 error result**（04 §executeTools；executor 把每个工具的异常转成 `ToolResultEvent(error)`，只有 `AbortedException` 传播）。因此根本不需要 `ShutdownOnFailure` 的"任一失败取消其余"——失败已经是数据，全部跑完、逐个落账即可：
@@ -88,22 +90,34 @@ List<LoggedEvent<ToolResultEvent>> execute(List<ToolCallEvent> calls, AbortSigna
     List<Future<LoggedEvent<ToolResultEvent>>> futures = calls.stream()
         .map(call -> virtualThreads.submit(() -> executeOne(call, signal)))
         .toList();
-    return futures.stream().map(this::await).toList();   // 逐个 join；错误已封装为 result
-}
-
-private LoggedEvent<ToolResultEvent> await(Future<LoggedEvent<ToolResultEvent>> f) {
-    try {
-        return f.get();
-    } catch (ExecutionException e) {
-        // executeOne 内已捕获一切工具异常并转 error result；
-        // 能到这里的只有 AbortedException（取消要传播）或执行框架自身的 bug
-        throw (RuntimeException) e.getCause();
+    // join 全部再传播（it18）：先等每个 future 落定，再裁决异常——取消/失败都不许
+    // 撇下仍在跑的兄弟（静止语义 = 无工具线程在跑）。选择规则：AbortedException
+    // （输入序首个）优先——取消不被兄弟失败掩盖，turn 才能收敛成 Aborted；余按输入序。
+    AbortedException firstAbort = null;
+    Throwable firstFailure = null;
+    List<LoggedEvent<ToolResultEvent>> results = new ArrayList<>();
+    for (Future<LoggedEvent<ToolResultEvent>> f : futures) {
+        try {
+            results.add(f.get());
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof AbortedException aborted) {
+                if (firstAbort == null) firstAbort = aborted;
+            } else if (firstFailure == null) {
+                firstFailure = cause;
+            }
+        }
     }
+    if (firstAbort != null) throw firstAbort;
+    if (firstFailure != null) throw asRuntime(firstFailure);   // 到此即框架 bug，见下
+    return results;
 }
 ```
 
+- **join 全部再传播（it18）**：传播发生时本批全部工具线程已停止——`whenIdle()` 完成 ⇒ 无工具线程在跑（含取消路径）。早抛会在取消/失败时撇下仍在跑的兄弟，破坏该静止语义。
+- **选择规则**：`AbortedException` 按输入序首个优先——取消不被兄弟失败掩盖，turn 才收敛成 `Aborted`；其余失败按输入序首个，`Error` result 已由 `executeOne` 落账，能传到这里的是框架自身异常（无 `CompletedFuture` 包装等）。
 - **不引入 `--enable-preview`**：MVP 零 preview 依赖，分发与工具链最简。
-- **为何曾经考虑 StructuredTaskScope**：为了"任一失败取消其余 + 作用域退出自动 join"。前者被错误即数据消解（失败不中断同伴，这正是期望语义——一个 bash 失败不该浪费掉并行的 fs_read 结果）；后者由"submit 全部 → get 全部"的顺序结构等价给出。
+- **为何曾经考虑 StructuredTaskScope**：为了"任一失败取消其余 + 作用域退出自动 join"。前者被错误即数据消解（失败不中断同伴，这正是期望语义——一个 bash 失败不该浪费掉并行的 fs_read 结果）；后者由"submit 全部 → join 全部"的顺序结构等价给出。
 - **将来 JEP 505 final 后**：可换 `StructuredTaskScope.Open` 获得 join 的取消传播与线程转储归组——纯实现替换，语义不变，单文件迁移（11 §8）。
 
 ## 6. 并发安全：哪些是线程安全的

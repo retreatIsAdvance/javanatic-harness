@@ -26,6 +26,8 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.interaction.commands;
     requires io.javanatic.harness.bundle.base;
     requires org.yaml.snakeyaml;
+    // SIGINT 取消入口(sun.misc.Signal);非 static——jlink 镜像须含 jdk.unsupported(dist 实跑验证)
+    requires jdk.unsupported;
     requires static jdk.httpserver; // 测试:本地假服务端 e2e(static=不进 jlink 镜像)
 
     exports io.javanatic.harness.examples.headless;

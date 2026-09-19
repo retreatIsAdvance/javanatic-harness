@@ -126,6 +126,12 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 - “本次运行新开轮” = `seq >= Session.firstLiveSeq()`（seed 长度）;`--resume` 续跑不误判旧轮文本与旧终局。
 - 诊断（会话 id、事件清单、`FailureKind` 文案、模型遗言）全部走 stderr;kind 级分辨读 stderr 文案,退出码保持三态粗粒度（不设预算专属码）。
 
+Ctrl-C（SIGINT）契约（it18 起，随 §1 语义声明）：
+
+- **一次性任务**：Ctrl-C → `cancel(User)` → 收敛后 `turn/end(aborted("user"))`、exit 4（stdout 空）；不 `System.exit` 硬退——主线程自然走完收敛与落账。**REPL**：Ctrl-C 取消当前轮并清空排队输入、不退出（空闲 Ctrl-C ≡ `/exit`/EOF，exit 0）。
+- **再按一次逃生门**：上次取消尚未收敛（同一活动）时再按 Ctrl-C → halt(130)（不跑钩子，收敛卡住时可强退）。
+- **取消仅对协作面生效**：整批工具无视取消并正常返回时，turn 以 Completed 收口（exit 0）——不合作工具会拖住收敛，逃生门即为此备（04 §8 不合作边界）。
+
 ## 7. 变更程序
 
 - 与本文冲突的实现改动：**同提交**先改本文，禁止静默漂移（[AGENTS](../../AGENTS.md) 文档即事实源）。

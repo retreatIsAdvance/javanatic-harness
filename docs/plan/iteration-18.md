@@ -1,4 +1,4 @@
-# 迭代 18 — 取消与执行收敛（状态：进行中——四确认与四裁决点 2026-09-18 已裁定）
+# 迭代 18 — 取消与执行收敛（状态：进行中——四确认与四裁决点 2026-09-18 已裁定；S-a/S-b/S-c 均已放行（2026-09-19）；验收 ①–⑧ 勾选与 ④ 补测归收尾段）
 
 模块：`core/tools`（executor join-all 收敛 + 审批 seam 变更）+ `core/agent-loop`（whenIdle 语义/重试语义注释）+ `interaction/approval`（可轮询审批通道）+ `examples/headless`（SIGINT 入口 + exit 4 + REPL Ctrl-C）+ 文档（04 / 09 / 12 迁移 / `--help` / README ×2）
 
@@ -44,18 +44,18 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| `core/tools/.../ToolExecutorImpl.java:execute`（:57-79 join 循环） | 全 Future settle 再传播；异常选择（Aborted 输入序优先，余按输入序） | |
-| `core/tools/.../ApprovalService.java:require`（:27） | 增 `AbortSignal` 参数（javadoc：等待中取消抛 `AbortedException`） | |
-| `core/tools/.../ApprovalAutoPlugin.java` + `ApprovalDeniedException` 调用链 | 实现新签名 | |
-| `interaction/approval/.../ApprovalAskPlugin.java`（:46-50）/ `ApprovalDenyPlugin.java` | 实现新签名；Ask 走可轮询 prompt | |
-| `interaction/approval/.../ApprovalPrompt.java:stdin`（:25-38） | 阻塞读改可轮询形状（signal 感知，取消即抛） | |
-| `examples/headless/.../ReplApprovalInput.java` | 同步新形状（取消/退出语义） | |
-| `examples/headless/.../HeadlessMain.java`（run :302-；oneShotExitCode :409-431；runRepl/replLoop :473-549） | SIGINT 处理三件套；REPL Ctrl-C 取消当前轮；二次 SIGINT halt | |
-| `examples/headless/src/main/java/module-info.java` | `requires jdk.unsupported`（非 static；jlink 镜像实跑验证 include） | |
-| `core/agent-loop/.../AgentLoopImpl.java`（runStepLoop 重试 `continue` :392-395；whenIdle 语义） | 语义注释（重试同号 step；静止=含工具线程） | |
-| `core/agent/src/main/java/io/javanatic/harness/agent/Agent.java:whenIdle`（:67-68) | javadoc 钉「静止」定义 | |
-| 测试：`core/tools/.../ToolExecutorTest.java`、`core/agent-loop/.../AgentLoopTest.java`、`interaction/approval/.../ApprovalModesTest.java`（或新增 fake prompt 用例）、`examples/headless/...`（信号/审批 e2e） | 新用例（见验收 ①–⑥） | |
-| 文档：`docs/design/04-agent-loop.md` §8/§9、`09-concurrency.md` §4/§5、`12-api-stability.md`、`--help`、README ×2 | 同步（含迁移说明） | |
+| `core/tools/.../ToolExecutorImpl.java:execute`（:57-79 join 循环） | 全 Future settle 再传播；异常选择（Aborted 输入序优先，余按输入序） | ☑ S-a 已放行（commit add1089） |
+| `core/tools/.../ApprovalService.java:require`（:27） | 增 `AbortSignal` 参数（javadoc：等待中取消抛 `AbortedException`） | ☑ S-b 已放行（commit cd76cc5） |
+| `core/tools/.../ApprovalAutoPlugin.java` + `ApprovalDeniedException` 调用链 | 实现新签名 | ☑ S-b 已放行（commit cd76cc5） |
+| `interaction/approval/.../ApprovalAskPlugin.java`（:46-50）/ `ApprovalDenyPlugin.java` | 实现新签名；Ask 走可轮询 prompt | ☑ S-b 已放行（commit cd76cc5） |
+| `interaction/approval/.../ApprovalPrompt.java:stdin`（:25-38） | 阻塞读改可轮询形状（signal 感知，取消即抛） | ☑ S-b 已放行（commit cd76cc5） |
+| `examples/headless/.../ReplApprovalInput.java` | 同步新形状（取消/退出语义） | ☑ S-b 已放行（commit cd76cc5） |
+| `examples/headless/.../HeadlessMain.java`（run :324-；finishOneShot :415；runRepl/replLoop :507-601；bindSigint :626；SigintPolicy :646-688） | SIGINT 处理三件套；REPL Ctrl-C 取消当前轮；二次 SIGINT halt | ☑ S-c 已放行（2026-09-19，本提交） |
+| `examples/headless/src/main/java/module-info.java` | `requires jdk.unsupported`（非 static；jlink 镜像实跑验证 include） | ☑ S-c 已放行（2026-09-19，本提交）；镜像实跑已验（钉①✓ `--list-modules` 含 `jdk.unsupported@25.0.4.1`） |
+| `core/agent-loop/.../AgentLoopImpl.java`（runStepLoop 重试 `continue` :392-395；whenIdle 语义） | 语义注释（重试同号 step；静止=含工具线程） | ☑ S-a 已放行（commit add1089） |
+| `core/agent/src/main/java/io/javanatic/harness/agent/Agent.java:whenIdle`（:67-68) | javadoc 钉「静止」定义 | ☑ S-a 已放行（commit add1089） |
+| 测试：`core/tools/.../ToolExecutorTest.java`、`core/agent-loop/.../AgentLoopTest.java`、`interaction/approval/.../ApprovalModesTest.java`（或新增 fake prompt 用例）、`examples/headless/...`（信号/审批 e2e） | 新用例（见验收 ①–⑥） | S-a/S-b 用例已随停点放行；S-c=新增 `HeadlessSigintTest`（7 例，已放行） |
+| 文档：`docs/design/04-agent-loop.md` §8/§9、`09-concurrency.md` §4/§5、`12-api-stability.md`、`--help`、README ×2 | 同步（含迁移说明） | ☑ S-c 面全部落笔（04 §8 表/§9 句、09 §4 段/§5 join-all、12 §3 迁移（S-b）/§6 SIGINT 契约、`--help`、README ×2） |
 
 ## 审查停点（开工前填写：按锚点分组的必停点）
 
@@ -63,7 +63,7 @@
 |---|---|---|
 | **S-a 收敛语义**：executor join-all + 异常选择 + `whenIdle` 定义（承载类全文 = `ToolExecutorImpl`/`AgentLoopImpl` 相关段） | 锚点 1 + 9 | ☑ 已放行（2026-09-19） |
 | **S-b 审批 seam 变更**：`ApprovalService.require` 签名 + 可轮询 stdin + `ReplApprovalInput`（跨模块效应） | 锚点 2–6 | ☑ 已放行（2026-09-19） |
-| **S-c CLI 信号入口**：SIGINT 三件套 + `requires jdk.unsupported` 取舍 + jlink 镜像实跑 + REPL 语义；落地时 12 §6 补一行「取消仅对协作面生效，不合作批以 Completed 收口（exit 0）」（2026-09-19 放行附注） | 锚点 7–8 | 待放行 |
+| **S-c CLI 信号入口**：SIGINT 三件套 + `requires jdk.unsupported` 取舍 + jlink 镜像实跑 + REPL 语义；落地时 12 §6 补一行「取消仅对协作面生效，不合作批以 Completed 收口（exit 0）」（2026-09-19 放行附注） | 锚点 7–8 | ☑ 已放行（2026-09-19；证据见下 §S-c 证据） |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -85,6 +85,22 @@
 本迭代定性的四个面：① 并行工具取消的收敛次序（`execute` 早抛放弃兄弟 join，09 §5 文档意图为「submit 全部 + join 全部」——单工具协作场景不暴露，现有测试恰是单工具）；② 不合作工具（拖住收敛或被遗留，二者必居其一）；③ 审批等待取消（`require` 无信号；`AskApproval` 阻塞在 `prompt.ask` stdin 读）；④ 重试不重放（结构上不重放，无测试钉住）。
 
 CLI 层事实：headless 一次性路径无任何信号处理，Ctrl-C 直杀 JVM（会话停在中途、无收敛落账）；REPL 的 `EOF ≡ /exit` 经 dispose 链以 aborted 收敛，交互式 Ctrl-C 同上直杀。`oneShotExitCode` 的 Aborted→4 映射在案（it17），端到端不可达。
+
+### S-c 证据（2026-09-19，待放行）
+
+- **实现面**：`HeadlessMain` 增 `SigintPolicy`（epoch = `whenIdle` future 身份——同轮首按 → 提示 + `cancelTurn`；未收敛再按 → `halt(130)`；静止期 REPL → 退出请求、一次性 → 忽略；收敛后新轮首按不误触 halt）；REPL 行循环改可轮询（companion 读线程 + `BlockingQueue` + `poll(50ms)` + `exitRequested`——阻塞 stdin 不可中断）；`module-info` `requires jdk.unsupported`（非 static）；it14 挂账「Ctrl-C 优雅取消（中断处理另片）」由本步收口。
+- **聚焦**：`HeadlessSigintTest` **7 例全绿**（`-pl examples/headless -am -Dtest=HeadlessSigintTest`，`/tmp/jh-sc-t3-restore.log`，内回显 `EXIT=0`）。7 例 = 策略层 3（首按取消/再按 130；一次性静止忽略 vs REPL 静止退出；收敛后新轮首按=取消）+ 真 SIGINT e2e 4（一次性：exit 4 + stdout 0 字节 + stderr「任务被取消: user」+ 落账 `aborted("user")`；REPL 取消当前轮循环不退；REPL 静止退出无取消提示；aborted 后 `--resume` 续跑落「答复」）。真信号用例带 POSIX+可装 handler 前置（`Assumptions`）。
+- **突变检查**（变体在源码带 `MUT-x` 标注、日志名带变体、日志内回显退出码）：**mutA**（剥离首按动作：注释 `notice.accept`+`cancelTurn.run()`）→ **5 红**（:97/:130 断言、:185→awaitLogContains 20s、两个 e2e 20s ERROR）；**mutB**（注释 `epoch == cancelledEpoch → halt(130)` 分支）→ **1 红**（:101）；**mutC**（注释行循环 `exitRequested` 轮询）→ **1 红**（:203 20s ERROR）。逐一还原。日志 `/tmp/jh-sc-t3-mut{A,B,C}.log`（EXIT=1）；还原复绿见上。`grep -rn "MUT-"` 无残留。
+- **饱和压测**：8× `yes` 负载 6 轮 + 16× 2 轮全绿（逐轮日志内回显 `EXIT=0`，`/tmp/jh-sc-sat1-8.log`）。
+- **全量**：`mvn -B package` BUILD SUCCESS 38.6s（`/tmp/jh-sc-package.log`，EXIT=0）；surefire XML 汇总 **67 套 / 385 测试 / 0 败 / 0 错 / 11 跳过**（docker 门控自跳）；headless 模块 56 例。
+- **jlink 镜像实跑**：`bin/java --list-modules` 含 `jdk.unsupported@25.0.4.1`（钉①生效）；`bin/jh --help` exit 0（Ctrl-C 契约段在案）/ `--verify` exit 0；**四场景 SIGINT 冒烟**（直起镜像 JVM；非交互 bash 后台默认 SIG_IGN 吞 INT——脚本 `set -m` 作业控制修正，机制已实证）：
+  - 一次性 → **exit 4**，stdout 0 字节，stderr「已请求取消」+「任务被取消: user」，journal 终态 `turn/end {"cause":"user","kind":"aborted"}`（seq 5，无后续）
+  - 双 INT → **exit 130**，journal 停于 `llm/request` seq 4 无 `turn/end`（halt 跳过收敛 hook——逃生门设计如此）
+  - REPL 在飞 → **exit 0**，stdout 含「已请求取消」，journal `aborted("user")` → `command/run exit` → `command/done`
+  - REPL 静止 → **exit 0**，stdout 仅横幅无取消提示，会话目录仅 `header.json`（无轮事件）
+  日志 `/tmp/jh-smoke-{oneshot,double,repl-inflight,repl-idle}-{out,err}.log`；**退出码持久化** = `/tmp/jh-smoke-{同名}-result.log`（放行附注后复跑一轮，4/130/0/0 复现实核）。
+- **收尾待办（放行附注点名）**：④「重试不重放」——REQUEST_ERROR 重试路径 `tool/call` 恰好一次的**测试面尚未落**（实核：`AgentLoopTest` 无工具 × 重试用例，仅 `requestErrorRetriesThenCompletes` 覆盖重试机制无工具面；同号 `step/start` 重复的注释裁定已随 S-a 落仓）。归收尾段独立补测取证，**不并入 S-c 提交**（停点↔提交对应）。
+- **前瞻（it19 输入，放行附注）**：双 INT 冒烟的 journal 残形（`llm/request` 无 `turn/end`）= 崩溃恢复的设计输入；本冒烟脚手架（`/tmp/jh-smoke.sh` + hold server）可复用为恢复测试 fixture 生成器。
 
 ## 修正（如有）
 

@@ -73,6 +73,8 @@ dist/jh/target/jlink-image/bin/jh --verify   # composition + governance assertio
 dist/jh/target/jlink-image/bin/jh            # bare start enters the REPL (it14): non-/ lines become turns
                                              # sent to the model and streamed back; /help lists commands,
                                              # /exit (or EOF/Ctrl-D) quits; an in-flight turn is journaled as aborted
+                                             # Ctrl-C (it18) cancels the in-flight turn (journaled aborted) and stays in the REPL;
+                                             # idle Ctrl-C quits like /exit; a second Ctrl-C before the cancel converges → exit 130
 
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<existing-dir> "task text"
 # every run prints its session id (headless-<timestamp>-<short-random>); --resume=<id> continues the same session
@@ -81,6 +83,9 @@ DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<existing-
 #   (success with no text is valid, exit 0); exit codes 0 done · 1 verify violation ·
 #   2 usage/missing key · 3 task failed · 4 cancelled; diagnostics (failure text, the model's
 #   last words) go to stderr — `out=$(bin/jh "task")` reads the answer, exit code judges success
+# Ctrl-C during a task (it18): cooperative cancel → turn/end aborted("user"), exit 4, stdout empty;
+#   a second Ctrl-C before the cancel converges force-quits (130). Cancellation governs cooperative
+#   operations only — a tool batch that ignores it and returns still closes Completed (exit 0)
 # any OpenAI-compatible vendor:
 #   … bin/jh "task" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
 # container-level isolation (requires local docker and the image present; no auto-pull):

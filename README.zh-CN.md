@@ -72,6 +72,8 @@ dist/jh/target/jlink-image/bin/jh --verify   # 组合 + 治理断言（无 key�
 
 dist/jh/target/jlink-image/bin/jh            # 裸启动进 REPL（it14）：非 / 行成轮送模型并流式渲染，
                                              # /help 列命令、/exit（或 EOF/Ctrl-D）退出；进行中轮以 aborted 落账
+                                             # Ctrl-C（it18）取消进行中轮（以 aborted 落账）并留在 REPL；
+                                             # 空闲 Ctrl-C 同 /exit 退出；取消未收敛时再按一次 → 强制退出 130
 
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
 # 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 续跑同一会话
@@ -79,6 +81,9 @@ DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在
 # 任务结果契约（it17）：stdout = 成功给最终答案 / 失败为空（成功但无文本合法，exit 0）
 #   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败 · 4 任务被取消
 #   诊断（失败文案、模型遗言）走 stderr；`out=$(bin/jh "任务")` 取答案、按退出码判成败
+# Ctrl-C（it18）：协作取消 → turn/end aborted("user")、exit 4、stdout 为空；
+#   取消未收敛时再按一次 = 强制退出（130）。取消只对协作面生效——
+#   整批工具无视取消并正常返回时仍以 Completed 收口（exit 0）
 # 任意 OpenAI 兼容厂商：
 #   … bin/jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
 # 容器级隔离（须本机 docker 与镜像在场，不自动拉取）：

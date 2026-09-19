@@ -174,6 +174,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - 事件订阅表遍历用 `CopyOnWriteArrayList`；waterfall 的 next 守卫包在 rest 上（invokeOnce），不在最外层。
 - checkstyle 不解析 `module-info.java`（已排除在门禁外）；首次使用 `import module`（JEP 511）前先升级 checkstyle 依赖，否则解析报错。
 - 跨模块改动的聚焦测试必须带 `-am`：裸 `mvn -pl <module> test` 会静默解析**本地仓库里的旧 SNAPSHOT**（有件 ≠ 件是新的）——新写的失败测试假红、形似代码缺陷（it18 S-a 实撞）；`-pl <module> -am test` 走 reactor 内解析才用最新源码。
+- jlink 镜像 SIGINT 冒烟两坑（it18 S-c 实撞，探针实证）：① `bin/jh` 是无 exec 的 sh 包装——`kill -INT $!` 打到包装壳、JVM 收不到；须直接起 `bin/java -m ...HeadlessMain` 或对 JVM pid 定向。② 非交互 bash 后台 `&` 启动的子进程继承 `SIGINT=SIG_IGN`（disposition=1），`kill -INT` 被静默吞掉——脚本开头 `set -m` 开作业控制即恢复默认处置；交互式终端手测无此坑。
 
 ## 修改本文件
 

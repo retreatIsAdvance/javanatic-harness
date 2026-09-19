@@ -319,6 +319,16 @@ class AgentLoopImpl implements Agent {
 - `keepInbox=true` 是 resume 场景：取消驱动但保留 pending 输入。
 - **执行收敛（it18）**：工具批的取消/失败在 executor 内 **join 全部再传播**——传播发生时本批全部工具线程已停止（AbortedException 按输入序首个优先，其余失败按输入序首个）。因此 `whenIdle()` 完成 ⇒ 无工具线程在跑（含取消路径）。
 - **不合作边界**：纯 Java 工具若无视 `checkAbort()` 且不返回，静止永不达成——无上界、无强制手段（Java 不能强杀线程）；子进程击杀已由 `onCancel` 钩子覆盖（it6 shell）。若整批工具无视取消并正常返回，turn 以 `completed` 关轮——取消只保证不推进后续 step。
+- **超时 / 取消 / idle 的关系**（it18 钉死，互不代偿）：
+
+| 面 | 触发源 | 落账 / 返回 | 后续 |
+|---|---|---|---|
+| 工具超时（shell 60s 等） | 工具自身 | 该工具 error result | turn 继续——失败是数据 |
+| LLM 空闲看门狗 | 传输停滞 | `LlmCallException(TIMEOUT)` | 按重试词表重试或 Error 关轮 |
+| 取消 | `cancel(cause)`（CLI SIGINT 走 `User`） | `AbortedException` 传播 → `aborted(cause)` 关轮 | 不推进后续 step |
+| idle | 驱动静止 | `whenIdle()` 完成 | **含全部工具线程已停**（本页上一条） |
+
+  超时不是取消（不停轮）；idle 只说明静止、不说明为什么停。
 
 ## 9. AbortController — 取消传播
 
@@ -342,7 +352,7 @@ public final class AbortController {
 }
 ```
 
-取消监听（onCancel 钩子）已随首个消费者落地（it6 shell 的 kill-tree、deepseek 看门狗旁路）；`llm.AbortSignal` 以 default 方法承载,轮询与监听双通道。虚拟线程 + `checkAbort()` 是 JH 的取消机制：不用 `Thread.interrupt()`（不会在任意安全点抛 `InterruptedException`，传播点显式可控）。
+取消监听（onCancel 钩子）已随首个消费者落地（it6 shell 的 kill-tree、deepseek 看门狗旁路）；`llm.AbortSignal` 以 default 方法承载,轮询与监听双通道。等待型协作点同样收信号：it18 起 `ApprovalService.require` / `ApprovalPrompt.ask` 带 `AbortSignal` 参数（12 §3 迁移），审批等待中取消抛 `AbortedException` 按取消收敛（不落 error result）。虚拟线程 + `checkAbort()` 是 JH 的取消机制：不用 `Thread.interrupt()`（不会在任意安全点抛 `InterruptedException`，传播点显式可控）。
 
 ## 10. AgentRegistry 与 initiator（ScopedValue 绑定点）
 
