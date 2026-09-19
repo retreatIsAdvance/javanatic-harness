@@ -10,6 +10,9 @@ import java.util.ArrayDeque;
  * 裁决行由行循环 {@link #forward} 转交（有 read 阻塞等待才收下，否则行归
  * 命令面/模型），不引入第二个 stdin 读者。行循环退出（EOF 或 /exit）后
  * {@link #close}：未决裁决读到 -1 —— 拒绝语义（与既有一致）。
+ * 等待中的裁决可被取消撤出（{@code ApprovalPrompt.stdin} 的取消会中断读
+ * 线程）：{@code awaitLine} 以 InterruptedException 撤出、等待态复位且该次
+ * 读得 -1；撤出后 {@link #forward} 不再收下行——行归 REPL。
  */
 final class ReplApprovalInput extends InputStream {
 
@@ -63,6 +66,11 @@ final class ReplApprovalInput extends InputStream {
     public synchronized void close() {
         closed = true;
         notifyAll();
+    }
+
+    /** 观测点（测试）：当前是否有裁决在读上等待。 */
+    synchronized boolean awaitingApproval() {
+        return awaiting;
     }
 
     private byte[] awaitLine() {

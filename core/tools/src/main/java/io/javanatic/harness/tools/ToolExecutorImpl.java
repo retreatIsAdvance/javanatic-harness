@@ -118,10 +118,10 @@ final class ToolExecutorImpl implements ToolExecutor {
                 return appendResult(call, session, turn, step,
                     ToolExecutionResult.error("vetoed: " + plan.vetoReason()));
             }
-            // 3. 审批（固定 stage；拒绝 → error result，不炸 turn）
+            // 3. 审批（固定 stage；拒绝 → error result，不炸 turn；等待中取消 → AbortedException 收敛）
             ApprovalService.ApprovalRequest request = new ApprovalService.ApprovalRequest(
                 call.name(), call.name() + " " + call.arguments(), call.arguments());
-            approval.require(request);
+            approval.require(request, signal);
             // 4. 执行（未知工具与异常 → error result；错误即数据）
             ToolDefinition tool = registry.resolve(context.agentScope(), call.name()).orElse(null);
             if (tool == null) {

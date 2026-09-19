@@ -32,6 +32,7 @@
 5. **（补充）重试 `continue` 不 `step++` → 同号 `step/start` 重复**：新测试断言 `tool/call` 恰一时顺带裁定（倾向文档化为预期语义）。
 6. **（补充）审批取消单测**用 fake prompt 注入信号实现；端到端 SIGINT 手工验收记录。
 7. **（2026-09-19 放行附注）** S-a 放行；冻结语义「整批工具无视取消并正常返回 → turn 以 `completed` 关轮」背书（裁决 4 的逻辑必然，日志诚实）。CLI 入口停点（S-c；放行附注写作「S-d」）落地时 12 §6 须补一行「取消仅对协作面生效，不合作批以 Completed 收口（exit 0）」。
+8. **（2026-09-19 放行附注）** S-b 放行；偏离 1–4 全部接受（`onCancel` 保留不计时断言；REPL 用例断言结局非路径；`ReplApprovalInput` 仅补观测面；不可中断原读残留已文档化）。附带项：并发 ask 行窃取观察行见「修正」表（pre-existing，挂账不拦）；S-a 与 S-b 分两个 commit；证据措辞自 S-c 起——mutation 日志带变体标注、sat 轮日志内回显退出码。
 
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
@@ -61,7 +62,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | **S-a 收敛语义**：executor join-all + 异常选择 + `whenIdle` 定义（承载类全文 = `ToolExecutorImpl`/`AgentLoopImpl` 相关段） | 锚点 1 + 9 | ☑ 已放行（2026-09-19） |
-| **S-b 审批 seam 变更**：`ApprovalService.require` 签名 + 可轮询 stdin + `ReplApprovalInput`（跨模块效应） | 锚点 2–6 | 待放行 |
+| **S-b 审批 seam 变更**：`ApprovalService.require` 签名 + 可轮询 stdin + `ReplApprovalInput`（跨模块效应） | 锚点 2–6 | ☑ 已放行（2026-09-19） |
 | **S-c CLI 信号入口**：SIGINT 三件套 + `requires jdk.unsupported` 取舍 + jlink 镜像实跑 + REPL 语义；落地时 12 §6 补一行「取消仅对协作面生效，不合作批以 Completed 收口（exit 0）」（2026-09-19 放行附注） | 锚点 7–8 | 待放行 |
 
 ## 验收（证据 = 实际执行的命令与结果）
@@ -91,6 +92,8 @@ CLI 层事实：headless 一次性路径无任何信号处理，Ctrl-C 直杀 JV
 |---|---|---|
 | S-a（未提交） | 新用例 `cancelJoinsParallelToolBatchBeforeIdle` 初版（`whenIdle().thenRun` 回调采证）在 8× CPU 饱和压测中出现 1 次瞬态红（1/~13 轮；证据 `/private/tmp/jh-sa-loop-3.log`：`:288` AssertionFailedError，0.113s；机制未构造出，此后未复现——倾测试形态时序敏感，非产品缺陷） | 改写为确定性逆否形态：取消后先断言「工具未停 且 `whenIdle` 未完成」，再放闸 `join`（无时序回调面）。饱和压测合计 140 轮 0 失败（逐轮日志 `/private/tmp/jh-sat{2,3,4,5}-N.log`，30/40/40/30 轮；最终形态 = `jh-sat5-*` 30 轮，单跑/成对交替，含 8×/16× 负载；红绿判定：日志含 `^\[ERROR\]` 或 `AssertionFailedError` 即红） |
 | S-a（措辞订正，不改代码） | 描述「reason 在 runStepLoop 前初始化」不准 | 实况：`reason` 是 `runTurn` 局部变量（`AgentLoopImpl`:294 声明）；`runStepLoop` **正常返回后** :311 赋 `Completed`；工具批后的 abort 早退（:415-418）是 `runStepLoop` 内 `return`，落回同一正常路径——非「默认初始化」 |
+| S-b（观察，pre-existing 锐边） | 同批多工具 + HUMAN_GATE 时各工具并发等待审批：两个 ask 的读线程互相窃取 stdin 行（REPL 代理下 `forward` 只喂到一个等待者；裸 stdin 下 `readLine` 瓜分字节流）——误答可能投给错误请求 | 挂账（S-c 不处理）：executor 级审批串行化（一次只放一个 ask 进读），或人读摘要标注 callId 使误裁决可辨；触发面 = 同批多工具 + 交互审批 |
+| S-b（证据措辞，下轮顺手） | mutation/sat 日志的命名与自含性：变体需在文件名标注、轮日志需自回显退出码（本轮靠外层 echo 承载） | 自 S-c 起：mutation 日志名含变体（`*-mutA/B/C`），sat 轮日志内回显 `EXIT=` |
 
 ## 设计偏离（如有）
 

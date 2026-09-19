@@ -2,6 +2,7 @@ package io.javanatic.harness.interaction.approval;
 
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
+import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.tools.ApprovalDeniedException;
 import io.javanatic.harness.tools.ApprovalService;
 
@@ -43,8 +44,8 @@ public final class ApprovalAskPlugin implements Plugin {
         }
 
         @Override
-        public void require(ApprovalRequest request) {
-            if (!prompt.ask(request)) {
+        public void require(ApprovalRequest request, AbortSignal signal) {
+            if (!prompt.ask(request, signal)) {
                 throw new ApprovalDeniedException("denied by human gate: " + request.toolName());
             }
         }

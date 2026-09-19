@@ -1,5 +1,7 @@
 package io.javanatic.harness.tools;
 
+import io.javanatic.harness.llm.AbortSignal;
+
 /** 内置审批实现：全放行（测试/headless）与全拒绝（策略验证）。 */
 public final class Approvals {
 
@@ -13,7 +15,7 @@ public final class Approvals {
                 return Mode.AUTO;
             }
 
-            @Override public void require(ApprovalRequest request) {
+            @Override public void require(ApprovalRequest request, AbortSignal signal) {
                 // AUTO:放行
             }
         };
@@ -26,7 +28,7 @@ public final class Approvals {
                 return Mode.DENY_ALL;
             }
 
-            @Override public void require(ApprovalRequest request) {
+            @Override public void require(ApprovalRequest request, AbortSignal signal) {
                 throw new ApprovalDeniedException("denied by policy: " + request.toolName());
             }
         };

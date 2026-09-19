@@ -74,6 +74,8 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | `PlanModeService` | `plan` | 计划模式（纯 fold） |
 | `Agent` / `AgentFactory` | `agent` | agent 公开契约（[04](04-agent-loop.md)）|
 
+**0.2.0 迁移（it18 取消收敛）**：审批 seam 两处签名加取消信号——`ApprovalService.require(request)` → `require(request, signal)`；`ApprovalPrompt.ask(request)` → `ask(request, signal)`。等待中取消抛 `AbortedException`（走取消收敛，不落 error result）；`ApprovalPrompt.stdin()` 默认可轮询（取消即抛并撤回阻塞读）。AUTO / deny 实现与忽略信号的自定义 prompt 维持原语义。
+
 ## 4. 事件 schema
 
 - **信封**：`LoggedEvent(seq, event)`——seq 单调（JSONL 一行一条）；`SessionEvent.time()` = epoch 毫秒。

@@ -1,6 +1,7 @@
 package io.javanatic.harness.tools;
 
 import io.javanatic.harness.kernel.scope.ServiceKey;
+import io.javanatic.harness.llm.AbortSignal;
 
 import java.util.Objects;
 
@@ -21,10 +22,15 @@ public interface ApprovalService {
     Mode mode();
 
     /**
+     * 等待裁决期间须感知取消：已取消/等待中取消抛
+     * {@link io.javanatic.harness.llm.AbortedException}（走取消收敛，
+     * 不落 error result）；无等待的实现照常放行/拒绝。
+     *
      * @param request 审批请求
+     * @param signal  取消信号（等待中的轮询/监听依据）
      * @throws ApprovalDeniedException 拒绝（调用方转 error result，turn 不炸）
      */
-    void require(ApprovalRequest request);
+    void require(ApprovalRequest request, AbortSignal signal);
 
     /** 一次审批请求：工具名、人读摘要、原始实参。 */
     record ApprovalRequest(String toolName, String summary, String arguments) {
