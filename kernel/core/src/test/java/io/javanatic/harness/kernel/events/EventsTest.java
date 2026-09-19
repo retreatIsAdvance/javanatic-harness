@@ -78,6 +78,27 @@ class EventsTest {
     }
 
     @Test
+    void notifyAndWaitFailsFutureAfterAllListenersRan() throws Exception {
+        // barrier 语义:失败不许被吞(否则派发前的耐久校验形同虚设);
+        // 但也必须等全部 listener 跑完——不许 fail-fast 撇下在执行者
+        try (Runtime rt = new Runtime()) {
+            AtomicInteger done = new AtomicInteger();
+            rt.root().events().onGlobal(PING, (carrier, payload) -> done.incrementAndGet());
+            rt.root().events().onGlobal(PING, (carrier, payload) -> {
+                Thread.sleep(10);
+                throw new IllegalStateException("disk full");
+            });
+            rt.root().events().onGlobal(PING, (carrier, payload) -> done.incrementAndGet());
+            assertThatThrownBy(() ->
+                rt.events().notifyAndWait(PING, rt.root(), this, new Ping("x")).join())
+                .isInstanceOf(CompletionException.class)
+                .hasRootCauseInstanceOf(IllegalStateException.class)
+                .hasRootCauseMessage("disk full");
+            assertThat(done.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
     void waterfallRunsInSubscriptionOrderAndReturnsTail() {
         try (Runtime rt = new Runtime()) {
             List<String> calls = new ArrayList<>();

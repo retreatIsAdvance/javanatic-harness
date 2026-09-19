@@ -30,6 +30,12 @@ public enum FailureKind {
     /** 输入超窗——由上层压缩恢复，传输重试无意义。 */
     OVERFLOW,
 
+    /**
+     * 耐久屏障失败（落盘/对账不确认，{@code DurabilityException}）——
+     * 非-llm 通道：不经 {@code LlmCallException.Kind}，由 agent-loop 直接识别。
+     */
+    DISK,
+
     /** 未分类（非 llm 失败、旧日志缺分类、未知分类拼写）。 */
     UNKNOWN
 }

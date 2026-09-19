@@ -171,7 +171,7 @@ driver 虚拟线程                持久化虚拟线程
      │ ... 继续 turn ...
 ```
 
-**flush barrier**：resume 前 / dispose 前确保持久化落盘，`SessionStore.flush` dispatch `session/flush` 并 await 全部持久化 listener（01 §5 `notifyAndWait`——并发派发 + join，异常不传播只记日志）：
+**flush barrier**：resume 前 / dispose 前确保持久化落盘，`SessionStore.flush` dispatch `session/flush` 并 await 全部持久化 listener（01 §5 `notifyAndWait`——并发派发 + join；listener 失败使 barrier 失败，**不许吞**——it19 起为派发前屏障：落盘/对账不确认即不放行派发）：
 
 ```java
 // dispose 前：先静止，再 flush

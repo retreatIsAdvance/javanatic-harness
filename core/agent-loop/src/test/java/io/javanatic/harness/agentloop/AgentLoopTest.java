@@ -513,6 +513,70 @@ class AgentLoopTest {
     }
 
     @Test
+    void dispatchBarrierFailureBlocksLlmCallWithDiskKind() {
+        try (Rig rig = new Rig(List.of(say("never")))) {
+            AtomicInteger flushes = new AtomicInteger();
+            AtomicInteger calls = new AtomicInteger();
+            rig.rt.root().events().onGlobal(SessionEvents.FLUSH, (carrier, session) -> {
+                if (flushes.incrementAndGet() == 1) {
+                    throw new IllegalStateException("disk full"); // 伪 writer:落盘不确认
+                }
+            });
+            LlmService llm = rig.rt.root().require(LlmService.KEY);
+            llm.registerAdapter("flaky", (config, request, signal) -> {
+                calls.incrementAndGet();
+                return Stream.of(new StreamChunk.Delta("x"),
+                    new StreamChunk.Finish(FinishReason.STOP));
+            });
+
+            Agent agent = rig.agent("a19", new AgentOptions("flaky", "m")).agent();
+            agent.followup(text("go"));
+            agent.whenIdle().join();
+
+            // 请求锚已落账,但屏障不确认 → 调用未发生(崩于此刻不存在"无据请求")
+            assertThat(flushes.get()).isEqualTo(1);
+            assertThat(calls.get()).isZero();
+            assertThat(types(agent.session())).contains("llm/request")
+                .doesNotContain("assistant/chunk", "step/end");
+            TurnEndReason reason = reasons(agent.session()).getFirst();
+            assertThat(reason).isInstanceOf(TurnEndReason.Error.class);
+            assertThat(((TurnEndReason.Error) reason).kind()).isEqualTo(FailureKind.DISK);
+            assertThat(reason.toString()).contains("DurabilityException");
+        }
+    }
+
+    @Test
+    void toolBatchBarrierFailureStopsExecutionAfterCallsLanded() {
+        try (Rig rig = new Rig(List.of(useTool("c1", "echo", "{\"path\":\"x\"}")))) {
+            AtomicInteger flushes = new AtomicInteger();
+            AtomicInteger toolRuns = new AtomicInteger();
+            rig.rt.root().events().onGlobal(SessionEvents.FLUSH, (carrier, session) -> {
+                if (flushes.incrementAndGet() == 2) {
+                    throw new IllegalStateException("disk full"); // 第 2 次 = 工具批屏障
+                }
+            });
+            rig.tools.register(rig.rt.root(), ToolDefinition.of("echo", "回显 path",
+                new ValueSchema.Object("参数", Map.of("path", new ValueSchema.Str("文本"))),
+                (args, ctx) -> {
+                    toolRuns.incrementAndGet();
+                    return ToolExecutionResult.success(args.readString("path"));
+                }));
+
+            Agent agent = rig.agent("a20").agent();
+            agent.followup(text("go"));
+            agent.whenIdle().join();
+
+            // 批前导已落账全部 tool/call,但屏障不确认 → 无一工具执行、无结果落账
+            assertThat(flushes.get()).isEqualTo(2);
+            assertThat(toolRuns.get()).isZero();
+            assertThat(types(agent.session())).contains("tool/call")
+                .doesNotContain("tool/result", "step/end");
+            TurnEndReason reason = reasons(agent.session()).getFirst();
+            assertThat(((TurnEndReason.Error) reason).kind()).isEqualTo(FailureKind.DISK);
+        }
+    }
+
+    @Test
     void chunkEventsCarryTurnStepAndPayloadInOrder() {
         try (Rig rig = new Rig(List.of(say("你好!")))) {
             Agent agent = rig.agent("a14").agent();

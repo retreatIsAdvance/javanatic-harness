@@ -33,8 +33,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code {"seq":N,"type":"...","ignorable":b,"data":{...}}}。写侧无 codec 的
  * 类型 fail loud;读侧未知 type 按 ignorable 跳过或拒绝。单进程追加
  * (多进程锁挂账 persistence 后续)。写入是同步逐事件的——SessionStore 的
- * APPENDED 派发为 notifyOrdered 保序。耐久:flush barrier = fsync
- * ({@code FileChannel.force});load/续写打开时修复撕裂尾(末行无换行终止:
+ * APPENDED 派发为 notifyOrdered 保序。耐久:flush barrier = 对账(已写行数
+ * 追平 session seq,不符即抛——写失败被 contained 吞后由此显形)+ fsync
+ * ({@code FileChannel.force});管辖限于本实例 backfill 过的会话(无写者 =
+ * 从未在此持久化,屏障跳过不假证);
+ * load/续写打开时修复撕裂尾(末行无换行终止:
  * 可解析则补换行,否则截到最后完整行——丢失至多半行),内部行破损仍 fail loud。
  */
 public final class JsonlPersistence implements SessionPersistence {
@@ -64,8 +67,18 @@ public final class JsonlPersistence implements SessionPersistence {
             writer((Session) carrier).append((LoggedEvent<?>) entry)));
         handles.add(owner.events().onGlobal(SessionEvents.DISPOSED, (carrier, session) ->
             writers.remove(session.id())));
-        handles.add(owner.events().onGlobal(SessionEvents.FLUSH, (carrier, session) ->
-            writer(session).flushBarrier()));
+        handles.add(owner.events().onGlobal(SessionEvents.FLUSH, (carrier, session) -> {
+            SessionWriter writer = writers.get(session.id());
+            if (writer == null) {
+                // 本实例未持久化过此会话(直构/未经 store 创建):无写者即无「已耐久」
+                // 主张可言——屏障对其无管辖(等价于无 listener),不假证也不误报
+                LOG.log(System.Logger.Level.WARNING,
+                    "flush barrier skipped for session {0}: no writer (never persisted here)",
+                    session.id().value());
+                return;
+            }
+            writer.flushBarrier(session.seq());
+        }));
         return Disposable.of(() -> handles.forEach(Disposable::close));
     }
 
@@ -215,8 +228,18 @@ public final class JsonlPersistence implements SessionPersistence {
             writeEnvelope(entry);
         }
 
-        /** 落盘 barrier:fsync 已有日志(无文件=尚无事件,无可 force)。 */
-        void flushBarrier() throws IOException {
+        /**
+         * 落盘 barrier:fsync 已有日志 + 对账(已写行数必须追平会话 seq)。
+         * 对账是写失败的第一观察点——append 观察者异常按 session 契约 contained
+         * (记日志不炸 append),写失败只在此显形;不符即抛,barrier 不放行。
+         *
+         * @param expectedSeq 调用方视角的事件数(= session.seq())
+         */
+        synchronized void flushBarrier(long expectedSeq) throws IOException {
+            if (writtenLines != expectedSeq) {
+                throw new IllegalStateException("durability barrier mismatch: "
+                    + writtenLines + " lines written, session at seq " + expectedSeq);
+            }
             Path log = dir.resolve("log.jsonl");
             if (!Files.isRegularFile(log)) {
                 return;
@@ -227,6 +250,11 @@ public final class JsonlPersistence implements SessionPersistence {
         }
 
         private void writeEnvelope(LoggedEvent<?> entry) throws IOException {
+            // 跳号拒绝:前一条写失败被 contained 吞过(洞里再写会把对账追平、把破损写实)
+            if (entry.seq() > writtenLines) {
+                throw new IllegalStateException("write gap: entry seq " + entry.seq()
+                    + " but only " + writtenLines + " lines durable");
+            }
             SessionEvent event = entry.event();
             SessionEventCodec<SessionEvent> codec =
                 (SessionEventCodec<SessionEvent>) codecs.forType(event.type())

@@ -98,8 +98,8 @@ public final class AgentLoopPlugin implements Plugin {
                     throw new IllegalStateException("Setup failed and rolled back", e);
                 }
             }
-            AgentLoopImpl agent = new AgentLoopImpl(agentScope, session, llm(), tools(), executor(),
-                prompts(), guard(), registry(), clock(), agentOptions,
+            AgentLoopImpl agent = new AgentLoopImpl(agentScope, session, owner.require(SessionStore.KEY),
+                llm(), tools(), executor(), prompts(), guard(), registry(), clock(), agentOptions,
                 agentScope.resolve(CompactionService.KEY).orElse(null));
             agentScope.require(Runtime.KEY).events()
                 .notify(AgentEvents.CREATED, agentScope, agent, agent);
@@ -114,9 +114,13 @@ public final class AgentLoopPlugin implements Plugin {
                         SessionStore store = owner.require(SessionStore.KEY);
                         agentScope.require(Runtime.KEY).events()
                             .notify(AgentEvents.DISPOSED, agentScope, agent, agent);
-                        store.flush(agentScope, session);
-                        agentScope.close();
-                        done.complete(null);
+                        try {
+                            store.flush(agentScope, session);
+                            done.complete(null);
+                        } finally {
+                            // 屏障失败（DurabilityException）也必须收拢 scope
+                            agentScope.close();
+                        }
                     } catch (Throwable t) {
                         done.completeExceptionally(t);
                     }

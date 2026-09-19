@@ -142,6 +142,7 @@ final class StreamRenderer implements AutoCloseable {
             case TIMEOUT -> "请求超时：可重试";
             case PROTOCOL -> "协议错误：厂商响应不符合预期（细节见日志）";
             case OVERFLOW -> "上下文溢出：自动压缩后仍超出模型窗口";
+            case DISK -> "会话日志写盘失败：检查磁盘/权限后重试（会话需 --resume 校验）";
             case UNKNOWN -> "失败（未分类，细节见日志）";
         };
         String detail = error.message() == null ? "" : preview(error.message());

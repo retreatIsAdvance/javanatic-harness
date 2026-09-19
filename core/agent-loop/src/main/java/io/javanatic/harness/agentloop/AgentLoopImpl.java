@@ -20,7 +20,9 @@ import io.javanatic.harness.llm.LlmRequest;
 import io.javanatic.harness.llm.LlmService;
 import io.javanatic.harness.llm.StreamChunk;
 import io.javanatic.harness.llm.ToolSchema;
+import io.javanatic.harness.session.DurabilityException;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.session.event.AssistantMessageEvent;
 import io.javanatic.harness.session.event.FailureKind;
@@ -61,7 +63,8 @@ import java.util.stream.Stream;
  * Turn/Step 状态机驱动。治理依赖（Session/ToolExecutor/LoopGuard/SystemPromptService）
  * 全部构造器强制——「可选的治理」组装不出来（R4）。driver 是每次唤醒新建的虚拟线程，
  * 取消只经 {@link AbortSignal#checkAbort()} 显式传播点；模型 toolCalls 只交
- * {@link ToolExecutor}（全库唯一分发点，R2 架构测试断言）；请求指纹先于调用落账（R1）。
+ * {@link ToolExecutor}（全库唯一分发点，R2 架构测试断言）；请求指纹先于调用落账
+ * 且经耐久屏障确认（R1 + it19 派发前屏障：引擎写不确认即不派发）。
  */
 public final class AgentLoopImpl implements Agent {
 
@@ -69,6 +72,7 @@ public final class AgentLoopImpl implements Agent {
 
     private final Scope agentScope;
     private final Session session;
+    private final SessionStore store;
     private final LlmService llm;
     private final ToolRegistry tools;
     private final ToolExecutor executor;
@@ -91,12 +95,13 @@ public final class AgentLoopImpl implements Agent {
     private CompletableFuture<Void> idleFuture = CompletableFuture.completedFuture(null);
 
     // CHECKSTYLE:OFF ParameterNumber —— R4 构造器强制:治理依赖全显式注入(04 §4),拆分即弱化证明
-    AgentLoopImpl(Scope agentScope, Session session, LlmService llm, ToolRegistry tools,
-                  ToolExecutor executor, SystemPromptService prompts, LoopGuard guard,
-                  AgentRegistry registry, Clock clock, AgentOptions options,
+    AgentLoopImpl(Scope agentScope, Session session, SessionStore store, LlmService llm,
+                  ToolRegistry tools, ToolExecutor executor, SystemPromptService prompts,
+                  LoopGuard guard, AgentRegistry registry, Clock clock, AgentOptions options,
                   CompactionService compaction) {
         this.agentScope = Objects.requireNonNull(agentScope, "agentScope");
         this.session = Objects.requireNonNull(session, "session");
+        this.store = Objects.requireNonNull(store, "store");
         this.llm = Objects.requireNonNull(llm, "llm");
         this.tools = Objects.requireNonNull(tools, "tools");
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -366,6 +371,9 @@ public final class AgentLoopImpl implements Agent {
                 RequestFingerprints.sha256(RequestFingerprints.toolSchemaFingerprint(schemas)),
                 0, session.seq() - 1, Map.of()));
 
+            // 派发前耐久屏障（it19）：请求锚落盘确认后才许调用——崩溃时不出现无据请求
+            store.flush(agentScope, session);
+
             ChunkAssembly.Assembled assembled;
             try (Stream<StreamChunk> chunks = llm.stream(config, new LlmRequest(
                 systemPrompt.isEmpty() ? null : systemPrompt,
@@ -432,8 +440,11 @@ public final class AgentLoopImpl implements Agent {
         return e instanceof LlmCallException llm && llm.kind() == LlmCallException.Kind.OVERFLOW;
     }
 
-    /** llm Kind → session 词表的穷尽映射（llm 词表加变体,此处编译期强制更新）。 */
+    /** llm Kind → session 词表的穷尽映射；非-llm 分支识别耐久屏障专用异常（DISK）。 */
     private static FailureKind failureKind(Throwable e) {
+        if (e instanceof DurabilityException) {
+            return FailureKind.DISK;
+        }
         if (!(e instanceof LlmCallException llm)) {
             return FailureKind.UNKNOWN;
         }

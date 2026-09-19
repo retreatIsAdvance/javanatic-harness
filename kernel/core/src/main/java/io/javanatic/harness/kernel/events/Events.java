@@ -17,7 +17,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * NOTIFY 族三个方法：notify（每 listener 一个虚拟线程，尽力而为）、
  * notifyOrdered（顺序派发，异常传播）、notifyAndWait（并发派发并 join 全部完成，
- * 持久化 flush barrier 用）。
+ * listener 失败使返回的 future 异常完成——持久化 flush barrier 用：barrier 不得
+ * 用「记日志」把失败吞掉，否则派发前的耐久校验形同虚设）。
  * WATERFALL 族两个方法：waterfall（中间件链）、firstOf（查询，替代 cordis bail）。
  * 模式与方法由 {@link EventKey} 的 requireMode 配对把关，错配 fail loud。
  *
@@ -117,19 +118,20 @@ public final class Events {
             if (!passesFilter(reg, origin)) {
                 continue;
             }
-            invokePropagating(reg, carrier, payload);
+            invokePropagating(reg, carrier, payload, key.name());
         }
     }
 
     /**
      * 并发通知并返回全部完成的 future（join barrier：持久化 flush 等待全体落账用）。
-     * 单 listener 失败记日志，不使 future 异常完成。
+     * 单个 listener 失败不取消其余（全部跑完），但使 future 异常完成
+     * （CompletionException，barrier 语义——见 {@link #invokePropagating}）。
      * @param <T> 负载类型
      * @param key NOTIFY key
      * @param origin 派发方 scope
      * @param carrier 派发方对象
      * @param payload 事件负载
-     * @return 全部 listener 完成时完成的 future
+     * @return 全部 listener 完成时完成的 future（任一听者失败则异常完成）
      */
     public <T> CompletableFuture<Void> notifyAndWait(EventKey<T> key, Scope origin, Object carrier, T payload) {
         key.requireMode(EventKey.Mode.NOTIFY);
@@ -138,7 +140,8 @@ public final class Events {
             if (!passesFilter(reg, origin)) {
                 continue;
             }
-            futures.add(CompletableFuture.runAsync(() -> invokeLoggingFailures(reg, carrier, payload), virtualThreads));
+            futures.add(CompletableFuture.runAsync(
+                () -> invokePropagating(reg, carrier, payload, key.name()), virtualThreads));
         }
         return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
@@ -210,11 +213,11 @@ public final class Events {
     }
 
     @SuppressWarnings("unchecked") // 同上
-    private void invokePropagating(Registration<?> reg, Object carrier, Object payload) {
+    private void invokePropagating(Registration<?> reg, Object carrier, Object payload, String label) {
         try {
             ((EventListener<Object>) reg.listener()).handle(carrier, payload);
         } catch (Exception e) {
-            throw new CompletionException("notifyOrdered listener failed", e);
+            throw new CompletionException(label + " listener failed", e);
         }
     }
 

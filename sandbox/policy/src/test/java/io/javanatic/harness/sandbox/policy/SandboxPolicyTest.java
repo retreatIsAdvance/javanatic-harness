@@ -9,6 +9,7 @@ import io.javanatic.harness.sandbox.sandbox.SandboxMode;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicyService;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.systemprompt.SystemPromptPlugin;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
 import io.javanatic.harness.tools.ToolsPlugin;
@@ -35,7 +36,8 @@ class SandboxPolicyTest {
     private SandboxPolicyService boot(SandboxPolicyPlugin policyPlugin) {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new SystemPromptPlugin(),
                 new PlanModePlugin("Plan mode guidance (test)."), policyPlugin));
             return rt.root().require(SandboxPolicyService.KEY);
         }
@@ -71,7 +73,8 @@ class SandboxPolicyTest {
         try (Runtime rt = new Runtime()) {
             rt.root().provide(ConfigService.KEY, id -> Map.of());
             assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new SystemPromptPlugin(),
                 new PlanModePlugin("Plan mode guidance (test)."),
                 new SandboxPolicyPlugin())))
                 .hasMessageContaining("Plugin failed and rolled back: sandbox-policy")

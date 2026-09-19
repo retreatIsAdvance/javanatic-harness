@@ -353,7 +353,7 @@ public final class Events {
         return false;
     }
 
-    // ────────── NOTIFY：notify（尽力而为）/ notifyOrdered（顺序传播）/ notifyAndWait（并发 join）──────────
+    // ────────── NOTIFY：notify（尽力而为）/ notifyOrdered（顺序传播）/ notifyAndWait（并发 join，失败传播）──────────
 
     /** 每个 listener 各跑一个虚拟线程，fire-and-forget；异常记录日志不传播。 */
     public <T> void notify(EventKey<T> key, Scope origin, Object carrier, T payload) {
@@ -373,7 +373,7 @@ public final class Events {
         }
     }
 
-    /** 并发派发并 join 全部完成（持久化 flush barrier 用）；单 listener 失败记日志。 */
+    /** 并发派发并 join 全部完成（持久化 flush barrier 用）；listener 失败使返回的 future 异常完成（其余照跑完，不 fail-fast）。 */
     public <T> CompletableFuture<Void> notifyAndWait(EventKey<T> key, Scope origin, Object carrier, T payload) {
         key.requireMode(Mode.NOTIFY);
         List<CompletableFuture<Void>> futures = /* filter 后逐个 submit，同 notify */;
@@ -461,7 +461,7 @@ public interface ScopedEvents {
 | Cordis | JH | 说明 |
 |---|---|---|
 | emit | `notify` | fire-and-forget，每 listener 一个虚拟线程 |
-| parallel | `notifyAndWait` | 并发 + join，返回 barrier |
+| parallel | `notifyAndWait` | 并发 + join，返回 barrier（listener 失败经 future 传播，全部照跑完） |
 | serial | `notifyOrdered` | 顺序，异常传播 |
 | waterfall | `waterfall` | around-middleware，next() 串链 |
 | bail | `firstOf` | waterfall 的查询形态，inner = null 默认 |

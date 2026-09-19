@@ -3,6 +3,7 @@ package io.javanatic.harness.session.persistence.jsonl;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.session.CreateOptions;
+import io.javanatic.harness.session.DurabilityException;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.session.SessionStorePlugin;
@@ -368,6 +369,68 @@ class JsonlPersistenceTest {
             SessionPersistence.Loaded loaded = rt.root().require(SessionPersistence.KEY).load(live.id());
             assertThat(loaded.events()).hasSize(2);
             assertThat(Files.readAllLines(root.resolve("s1/log.jsonl"))).hasSize(2);
+        }
+    }
+
+    @Test
+    void flushBarrierIgnoresSessionsNeverPersistedHere() {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            // 直构会话(未经 store):本实例无写者——屏障无管辖(等价无 listener),
+            // 不假证已落盘也不误报;也不为该会话凭空建目录
+            Session direct = Session.create(Session.newId("direct"), null, null);
+            direct.append(new TurnStart(1, 1));
+            rt.root().require(SessionStore.KEY).flush(rt.root(), direct);
+            assertThat(Files.exists(root.resolve("direct"))).isFalse();
+        }
+    }
+
+    @Test
+    void flushBarrierExposesSwallowedWriteFailure() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            SessionStore store = rt.root().require(SessionStore.KEY);
+            live.append(new TurnStart(1, 1));
+
+            // 只读日志:后续写失败被 append 契约 contained(记日志不炸 append)
+            Path log = root.resolve("s1/log.jsonl");
+            log.toFile().setWritable(false);
+            live.append(new TurnEnd(2, 1, new TurnEndReason.Completed()));
+            assertThat(live.events()).hasSize(2); // 内存照记账
+
+            // 对账是写失败的第一观察点:落盘数落后 seq → barrier fail loud(DISK 通道)
+            assertThatThrownBy(() -> store.flush(rt.root(), live))
+                .isInstanceOf(DurabilityException.class)
+                .hasMessageContaining("flush barrier failed")
+                .hasMessageContaining("durability barrier mismatch");
+            assertThat(Files.readAllLines(log)).hasSize(1);
+        }
+    }
+
+    @Test
+    void gapWriteAfterSwallowedFailureIsRejectedSoBarrierStaysRed() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            SessionStore store = rt.root().require(SessionStore.KEY);
+
+            Path log = root.resolve("s1/log.jsonl");
+            live.append(new TurnStart(1, 1)); // 盘上 1 行
+            log.toFile().setWritable(false);
+            live.append(new TurnEnd(2, 1, new TurnEndReason.Completed())); // 写失败被 contained
+
+            // 恢复写入后续写:seq 跳号会被拒(contained)——洞不许被写实、
+            // 对账不许被追平(否则 barrier 给出假的"已耐久"结论,load 才炸)
+            log.toFile().setWritable(true);
+            live.append(new TurnStart(3, 1));
+            assertThat(Files.readAllLines(log)).hasSize(1);
+            assertThatThrownBy(() -> store.flush(rt.root(), live))
+                .isInstanceOf(DurabilityException.class)
+                .hasMessageContaining("durability barrier mismatch");
         }
     }
 }

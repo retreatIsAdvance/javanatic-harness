@@ -7,6 +7,7 @@ import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.message.CallId;
 import io.javanatic.harness.session.message.ToolUseBlock;
@@ -47,6 +48,7 @@ class ApprovalModesTest {
         AtomicInteger asked = new AtomicInteger();
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(),
                 new ApprovalAskPlugin((request, signal) -> {
                     asked.incrementAndGet();
                     return true;
@@ -65,6 +67,7 @@ class ApprovalModesTest {
     void askDenialBecomesErrorResultNotCrash() throws Exception {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(),
                 new ApprovalAskPlugin((request, signal) -> false), new ToolsPlugin()));
             rt.root().require(ToolRegistry.KEY).register(rt.root(), echoTool());
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
@@ -78,7 +81,7 @@ class ApprovalModesTest {
     void denyAllRejectsEverythingWithModeSelfReport() throws Exception {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalDenyPlugin(), new ToolsPlugin()));
+                new SessionStorePlugin(), new ApprovalDenyPlugin(), new ToolsPlugin()));
             rt.root().require(ToolRegistry.KEY).register(rt.root(), echoTool());
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             assertThat(rt.root().require(ApprovalService.KEY).mode())
@@ -109,6 +112,7 @@ class ApprovalModesTest {
         CountDownLatch asking = new CountDownLatch(1);
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(),
                 new ApprovalAskPlugin((request, signal) -> {
                     asking.countDown(); // fake 通道:进入等待即挂起,只由信号撤出
                     while (true) {

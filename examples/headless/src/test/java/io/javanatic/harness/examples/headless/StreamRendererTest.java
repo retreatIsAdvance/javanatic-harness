@@ -105,6 +105,8 @@ class StreamRendererTest {
             .contains("服务端错误");
         assertThat(StreamRenderer.failureText(new TurnEndReason.Error("boom", FailureKind.PROTOCOL)))
             .contains("协议错误");
+        assertThat(StreamRenderer.failureText(new TurnEndReason.Error("boom", FailureKind.DISK)))
+            .contains("写盘失败").contains("--resume");
         assertThat(StreamRenderer.failureText(new TurnEndReason.Error("boom", FailureKind.UNKNOWN)))
             .contains("未分类");
     }

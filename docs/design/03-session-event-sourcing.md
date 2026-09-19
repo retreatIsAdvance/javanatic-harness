@@ -355,7 +355,7 @@ public final class SessionEvents {
         EventKey.notify("session/created", Session.class);
     public static final EventKey<Session> DISPOSED =
         EventKey.notify("session/disposed", Session.class);
-    /** 持久化 barrier：notifyAndWait，全部 flush listener 完成才返回。 */
+    /** 持久化 barrier：notifyAndWait，全部 flush listener 完成才返回；任一失败使 barrier 失败。 */
     public static final EventKey<Session> FLUSH =
         EventKey.notify("session/flush", Session.class);
     public static final EventKey<LoggedEvent<? extends SessionEvent>> APPENDED =

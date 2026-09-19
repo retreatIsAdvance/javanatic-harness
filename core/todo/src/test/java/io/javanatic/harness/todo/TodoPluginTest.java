@@ -53,7 +53,8 @@ class TodoPluginTest {
     void snapshotLandsBetweenAuditPairWithCanonicalItems() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new TodoPlugin(false)));
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new TodoPlugin(false)));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
 
             Session session = Session.create(Session.newId("todo"), null, null);
@@ -77,7 +78,8 @@ class TodoPluginTest {
     void validationMatrixRejectsAndLeavesNoSnapshot() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new TodoPlugin(false)));
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new TodoPlugin(false)));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             Session session = Session.create(Session.newId("reject"), null, null);
 
@@ -107,7 +109,8 @@ class TodoPluginTest {
     void parallelDeploymentAllowsMultipleInProgress() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new TodoPlugin(true)));
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new TodoPlugin(true)));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
 
             Session session = Session.create(Session.newId("parallel"), null, null);
@@ -128,7 +131,8 @@ class TodoPluginTest {
         try (Runtime rt = new Runtime()) {
             rt.root().provide(ConfigService.KEY, id -> Map.of());
             assertThatThrownBy(() ->
-                new PluginLoader().loadAll(rt, List.of(new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new PluginLoader().loadAll(rt, List.of(
+                    new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
                     new TodoPlugin())))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Plugin failed and rolled back: todo")
@@ -151,7 +155,8 @@ class TodoPluginTest {
     void parallelBatchInterleavesAndPairsByCallIdNotAdjacency() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new TodoPlugin(false)));
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new TodoPlugin(false)));
             ToolRegistry registry = rt.root().require(ToolRegistry.KEY);
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             registry.register(rt.root(), ToolDefinition.of("slow_echo", "慢工具",

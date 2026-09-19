@@ -70,7 +70,8 @@ class PlanModePluginTest {
     void exitValidationsRejectWithoutFlipping() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new SystemPromptPlugin(),
                 new PlanModePlugin(SECTION)));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             Session session = Session.create(Session.newId("reject"), null, null);
@@ -95,7 +96,7 @@ class PlanModePluginTest {
     void exitFlipsModeAtOnceAndSectionFollowsFold() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
                 new SystemPromptPlugin(), new PlanModePlugin(SECTION)));
             PlanModeService service = rt.root().require(PlanModeService.KEY);
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
@@ -124,7 +125,8 @@ class PlanModePluginTest {
     void parallelDoubleExitStaysConsistent() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new SystemPromptPlugin(),
                 new PlanModePlugin(SECTION)));
             PlanModeService service = rt.root().require(PlanModeService.KEY);
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);

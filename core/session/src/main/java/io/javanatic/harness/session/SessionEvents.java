@@ -12,7 +12,10 @@ public final class SessionEvents {
     /** 会话从 store 移除（关闭回收路径）。 */
     public static final EventKey<Session> DISPOSED = EventKey.notify("session/disposed", Session.class);
 
-    /** 持久化 barrier：notifyAndWait，全部 flush listener 完成才返回。 */
+    /**
+     * 持久化 barrier：notifyAndWait，全部 flush listener 完成才返回；
+     * 任一 listener 失败使 barrier 失败（落盘/对账不确认即不许放行派发）。
+     */
     public static final EventKey<Session> FLUSH = EventKey.notify("session/flush", Session.class);
 
     /**

@@ -6,6 +6,8 @@ import io.javanatic.harness.kernel.scope.ServiceNotAvailableException;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionStore;
+import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.message.CallId;
@@ -47,7 +49,9 @@ class ToolExecutorTest {
         private Rig(ApprovalService approval) {
             this.rt = new Runtime();
             this.registry = new ScopedRegistry();
-            this.executor = new ToolExecutorImpl(registry, approval, rt.events(), rt.root());
+            // 直装无持久化 listener：barrier 立即返回（屏障语义由 session 模块测试覆盖）
+            this.executor = new ToolExecutorImpl(registry, approval,
+                new SessionStore(null), rt.events(), rt.root());
         }
 
         static Rig with(ApprovalService approval) {
@@ -346,9 +350,10 @@ class ToolExecutorTest {
     }
 
     @Test
-    void pluginAssemblyRequiresApprovalFirst() {
+    void pluginAssemblyRequiresApprovalFirstThenSessionStore() {
         try (Runtime rt = new Runtime()) {
-            new PluginLoader().loadAll(rt, List.of(new ApprovalAutoPlugin(), new ToolsPlugin()));
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin()));
             assertThat(rt.root().resolve(ToolExecutor.KEY)).isPresent();
             assertThat(rt.root().resolve(ToolRegistry.KEY)).isPresent();
         }
@@ -361,6 +366,17 @@ class ToolExecutorTest {
                 .hasRootCauseInstanceOf(ServiceNotAvailableException.class)
                 .getRootCause()
                 .hasMessageContaining("approval");
+        }
+        try (Runtime rt = new Runtime()) {
+            // 缺会话存储：同步 fail loud（屏障需 store）；归因序审批在前，与上例互补
+            assertThatThrownBy(() ->
+                new PluginLoader().loadAll(rt, List.of(
+                    new ApprovalAutoPlugin(), new ToolsPlugin())))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("rolled back")
+                .hasRootCauseInstanceOf(ServiceNotAvailableException.class)
+                .getRootCause()
+                .hasMessageContaining("session-store");
         }
     }
 

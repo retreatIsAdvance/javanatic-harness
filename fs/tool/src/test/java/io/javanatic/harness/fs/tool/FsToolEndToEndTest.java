@@ -6,6 +6,7 @@ import io.javanatic.harness.plan.PlanModeEvent;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.message.CallId;
@@ -40,7 +41,8 @@ class FsToolEndToEndTest {
     void fsToolsExecuteThroughPipelineAndLeaveAuditTrail() {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new SystemPromptPlugin(),
                 new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
                 new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, dir)),
                 new FsLocalPlugin(dir), new FsToolPlugin()));
@@ -73,7 +75,8 @@ class FsToolEndToEndTest {
     void planModeFencesMutatingFsTools() throws Exception {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new SystemPromptPlugin(),
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new SystemPromptPlugin(),
                 new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
                 new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, dir)),
                 new FsLocalPlugin(dir), new FsToolPlugin()));
