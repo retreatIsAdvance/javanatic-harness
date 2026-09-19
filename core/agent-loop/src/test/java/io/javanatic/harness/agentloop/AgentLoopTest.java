@@ -254,6 +254,8 @@ class AgentLoopTest {
             assertThat(types).contains("tool/call");
             assertThat(types).doesNotContain("tool/result", "step/end");
             assertThat(reasons(agent.session())).containsExactly(new TurnEndReason.Aborted("user"));
+            // idle 纪律(it18 ②):aborted 收敛完成,turn/end 已落账,状态才到 IDLE
+            assertThat(agent.status()).isEqualTo(AgentStatus.IDLE);
         }
     }
 
@@ -421,6 +423,51 @@ class AgentLoopTest {
 
             assertThat(calls.get()).isEqualTo(2);
             assertThat(types(agent.session()).stream().filter("llm/request"::equals).count()).isEqualTo(2);
+            assertThat(reasons(agent.session())).containsExactly(new TurnEndReason.Completed());
+        }
+    }
+
+    @Test
+    void requestErrorRetryDoesNotReplayToolCalls() throws Exception {
+        try (Rig rig = new Rig(List.of())) {
+            AtomicInteger calls = new AtomicInteger();
+            AtomicInteger toolRuns = new AtomicInteger();
+            LlmService llm = rig.rt.root().require(LlmService.KEY);
+            llm.registerAdapter("flaky", (config, request, signal) -> {
+                int n = calls.incrementAndGet();
+                if (n == 1) {
+                    return Stream.of(new StreamChunk.Delta("checking"),
+                        new StreamChunk.DeltaToolUse(CallId.of("c1"), "echo", "{\"path\":\"x\"}"),
+                        new StreamChunk.Finish(FinishReason.TOOL_USE));
+                }
+                if (n == 2) {
+                    throw new IllegalStateException("boom"); // 工具批已执行;下一步请求失败一次
+                }
+                return Stream.of(new StreamChunk.Delta("done"),
+                    new StreamChunk.Finish(FinishReason.STOP));
+            });
+            rig.rt.root().events().onWaterfall(AgentEvents.REQUEST_ERROR, (carrier, args) ->
+                new AgentEvents.RequestErrorDecision(1));
+            rig.tools.register(rig.rt.root(), ToolDefinition.of("echo", "回显 path",
+                new ValueSchema.Object("参数", Map.of("path", new ValueSchema.Str("文本"))),
+                (args, ctx) -> {
+                    toolRuns.incrementAndGet();
+                    return ToolExecutionResult.success(args.readString("path"));
+                }));
+
+            Agent agent = rig.agent("a18", new AgentOptions("flaky", "m")).agent();
+            agent.followup(text("go"));
+            agent.whenIdle().join();
+
+            // 重试只重发请求:工具不重放(执行面 + 事件面双重计数)
+            assertThat(toolRuns.get()).isEqualTo(1);
+            assertThat(types(agent.session()).stream().filter("tool/call"::equals).count()).isEqualTo(1);
+            // 重试 continue 不 step++:同号 step/start 重复是裁定语义(04 §7)
+            assertThat(agent.session().events().stream()
+                .map(LoggedEvent::event)
+                .filter(StepStart.class::isInstance)
+                .map(event -> ((StepStart) event).step()))
+                .containsExactly(0, 1, 1);
             assertThat(reasons(agent.session())).containsExactly(new TurnEndReason.Completed());
         }
     }

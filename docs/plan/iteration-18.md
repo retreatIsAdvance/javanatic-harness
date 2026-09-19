@@ -1,4 +1,4 @@
-# 迭代 18 — 取消与执行收敛（状态：进行中——四确认与四裁决点 2026-09-18 已裁定；S-a/S-b/S-c 均已放行（2026-09-19）；验收 ①–⑧ 勾选与 ④ 补测归收尾段）
+# 迭代 18 — 取消与执行收敛（状态：已完成——S-a/S-b/S-c 分别提交 add1089/cd76cc5/6649f46；④ 补测与 ②⑦⑧ 核对随本次收口提交生效；验收 ①–⑧ 全部勾选）
 
 模块：`core/tools`（executor join-all 收敛 + 审批 seam 变更）+ `core/agent-loop`（whenIdle 语义/重试语义注释）+ `interaction/approval`（可轮询审批通道）+ `examples/headless`（SIGINT 入口 + exit 4 + REPL Ctrl-C）+ 文档（04 / 09 / 12 迁移 / `--help` / README ×2）
 
@@ -54,7 +54,7 @@
 | `examples/headless/src/main/java/module-info.java` | `requires jdk.unsupported`（非 static；jlink 镜像实跑验证 include） | ☑ S-c 已放行（2026-09-19，本提交）；镜像实跑已验（钉①✓ `--list-modules` 含 `jdk.unsupported@25.0.4.1`） |
 | `core/agent-loop/.../AgentLoopImpl.java`（runStepLoop 重试 `continue` :392-395；whenIdle 语义） | 语义注释（重试同号 step；静止=含工具线程） | ☑ S-a 已放行（commit add1089） |
 | `core/agent/src/main/java/io/javanatic/harness/agent/Agent.java:whenIdle`（:67-68) | javadoc 钉「静止」定义 | ☑ S-a 已放行（commit add1089） |
-| 测试：`core/tools/.../ToolExecutorTest.java`、`core/agent-loop/.../AgentLoopTest.java`、`interaction/approval/.../ApprovalModesTest.java`（或新增 fake prompt 用例）、`examples/headless/...`（信号/审批 e2e） | 新用例（见验收 ①–⑥） | S-a/S-b 用例已随停点放行；S-c=新增 `HeadlessSigintTest`（7 例，已放行） |
+| 测试：`core/tools/.../ToolExecutorTest.java`、`core/agent-loop/.../AgentLoopTest.java`、`interaction/approval/.../ApprovalModesTest.java`（或新增 fake prompt 用例）、`examples/headless/...`（信号/审批 e2e） | 新用例（见验收 ①–⑥） | S-a/S-b 用例已随停点放行；S-c=新增 `HeadlessSigintTest`（7 例，已放行）；收尾段=④ `requestErrorRetryDoesNotReplayToolCalls` + ② `cancelDuringToolExecutionAbortsTurn` 补断言 + `CompactionTest` 溢出断言（待终局放行） |
 | 文档：`docs/design/04-agent-loop.md` §8/§9、`09-concurrency.md` §4/§5、`12-api-stability.md`、`--help`、README ×2 | 同步（含迁移说明） | ☑ S-c 面全部落笔（04 §8 表/§9 句、09 §4 段/§5 join-all、12 §3 迁移（S-b）/§6 SIGINT 契约、`--help`、README ×2） |
 
 ## 审查停点（开工前填写：按锚点分组的必停点）
@@ -67,14 +67,14 @@
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] ① 取消后无遗留执行（join-all）：并行批次「协作阻塞工具 + 忽略信号的慢写工具」取消后 `whenIdle` 完成 ⇒ 慢写工具已停（测试读工具侧标志断言）；异常选择规则单测（双异常批次 → Aborted 输入序优先）
-- [ ] ② idle 纪律：`turn/end(aborted)` 先于 `STATUS.IDLE`；「idle 后无写」由 ① 的慢写工具断言覆盖
-- [ ] ③ 不合作插件限制：不设上界口径有测试（单不合作工具拖住收敛可用超时断言观察）+ 04/09 有文字
-- [ ] ④ 模型重试不重放：REQUEST_ERROR / 溢出重试路径 `tool/call` 恰好一次（测试）；同号 `step/start` 重复裁定为预期语义并有注释/文档
-- [ ] ⑤ 审批等待取消：fake prompt 注入信号 → 等待中 cancel 收敛为 aborted、**不落 error result**（单测）
-- [ ] ⑥ CLI：一次性任务 SIGINT → `turn/end(aborted("user"))` + exit 4（子进程 INT 集成测试或手工验收记录）；REPL Ctrl-C 取消当前轮不退出、二次 SIGINT → 130
-- [ ] ⑦ 文档同步：04 / 09 / 12（迁移）/ `--help` / README ×2
-- [ ] ⑧ 全量 `mvn -B package` 绿 + jlink 镜像实跑（`bin/jh --help` / `--verify` / SIGINT 冒烟）
+- [x] ① 取消后无遗留执行（join-all）：`ToolExecutorTest.abortWaitsForAllToolsBeforePropagating`（等全部 settle 再传播）+ 异常选择三例（`abortOutranksEarlierPlainFailureInInputOrder` / `firstAbortInInputOrderIsThrown` / `plainFailureSelectionStaysInputOrder`）+ `AgentLoopTest.cancelJoinsParallelToolBatchBeforeIdle`（先断言「写手未停 且 whenIdle 未完成」`:285-286`，放闸后 join 完成时写手已停 `:290`）——S-a 放行（add1089）
+- [x] ② idle 纪律：`AgentLoopTest.cancelDuringToolExecutionAbortsTurn:258` 补断言（whenIdle 完成 ⇒ `status()==IDLE`；mutB 红在 :258）；「idle 后无写」由 ① 的 `:290` 覆盖；「turn/end 先于状态迁移」由结构保证（`AgentLoopImpl` runTurn 内 append `:323` 先于 driver finally 的 `settleDriver` `:210-223`）——STATUS 为异步 NOTIFY 派发，无以事件顺序直证的测试，此处如实注明
+- [x] ③ 不合作插件限制：`AgentLoopTest.uncooperativeToolDelaysIdleUntilItReturns`（a17：取消后 `idle.isDone()==false`、返回后批 Completed 关轮）+ 04 §8/§9、09 §4 文字（S-a/S-c）
+- [x] ④ 模型重试不重放：`AgentLoopTest.requestErrorRetryDoesNotReplayToolCalls`（新）+ `CompactionTest` 溢出路径 `tool/call` 恰 1 断言；同号 `step/start` 语义注释随 S-a（04 §7）——见「收尾段证据」
+- [x] ⑤ 审批等待取消：`ApprovalModesTest.cancelDuringApprovalWaitAbortsWithoutErrorResult`（fake prompt 注入信号）+ `stdinPromptAbortsOnCancelWhileWaiting`——S-b 放行（cd76cc5）
+- [x] ⑥ CLI：`HeadlessSigintTest` 7 例（含真 `Signal.raise` e2e：exit 4 + `aborted("user")` 落账 + `--resume` 续跑）+ 镜像冒烟 4/130/0/0（S-c 证据 + 收尾段终态树复跑）
+- [x] ⑦ 文档同步：04 / 09 / 12（迁移）/ `--help` / README ×2——commit 6649f46
+- [x] ⑧ 全量 `mvn -B package` 绿（67 套 / 386 测试）+ jlink 镜像实跑（`--help` / `--verify` / 四场景 SIGINT 冒烟）——见「收尾段证据」
 
 ### 核验起点（2026-09-18 调研，引用前复核）
 
@@ -86,7 +86,7 @@
 
 CLI 层事实：headless 一次性路径无任何信号处理，Ctrl-C 直杀 JVM（会话停在中途、无收敛落账）；REPL 的 `EOF ≡ /exit` 经 dispose 链以 aborted 收敛，交互式 Ctrl-C 同上直杀。`oneShotExitCode` 的 Aborted→4 映射在案（it17），端到端不可达。
 
-### S-c 证据（2026-09-19，待放行）
+### S-c 证据（2026-09-19，已放行——commit 6649f46）
 
 - **实现面**：`HeadlessMain` 增 `SigintPolicy`（epoch = `whenIdle` future 身份——同轮首按 → 提示 + `cancelTurn`；未收敛再按 → `halt(130)`；静止期 REPL → 退出请求、一次性 → 忽略；收敛后新轮首按不误触 halt）；REPL 行循环改可轮询（companion 读线程 + `BlockingQueue` + `poll(50ms)` + `exitRequested`——阻塞 stdin 不可中断）；`module-info` `requires jdk.unsupported`（非 static）；it14 挂账「Ctrl-C 优雅取消（中断处理另片）」由本步收口。
 - **聚焦**：`HeadlessSigintTest` **7 例全绿**（`-pl examples/headless -am -Dtest=HeadlessSigintTest`，`/tmp/jh-sc-t3-restore.log`，内回显 `EXIT=0`）。7 例 = 策略层 3（首按取消/再按 130；一次性静止忽略 vs REPL 静止退出；收敛后新轮首按=取消）+ 真 SIGINT e2e 4（一次性：exit 4 + stdout 0 字节 + stderr「任务被取消: user」+ 落账 `aborted("user")`；REPL 取消当前轮循环不退；REPL 静止退出无取消提示；aborted 后 `--resume` 续跑落「答复」）。真信号用例带 POSIX+可装 handler 前置（`Assumptions`）。
@@ -99,8 +99,18 @@ CLI 层事实：headless 一次性路径无任何信号处理，Ctrl-C 直杀 JV
   - REPL 在飞 → **exit 0**，stdout 含「已请求取消」，journal `aborted("user")` → `command/run exit` → `command/done`
   - REPL 静止 → **exit 0**，stdout 仅横幅无取消提示，会话目录仅 `header.json`（无轮事件）
   日志 `/tmp/jh-smoke-{oneshot,double,repl-inflight,repl-idle}-{out,err}.log`；**退出码持久化** = `/tmp/jh-smoke-{同名}-result.log`（放行附注后复跑一轮，4/130/0/0 复现实核）。
-- **收尾待办（放行附注点名）**：④「重试不重放」——REQUEST_ERROR 重试路径 `tool/call` 恰好一次的**测试面尚未落**（实核：`AgentLoopTest` 无工具 × 重试用例，仅 `requestErrorRetriesThenCompletes` 覆盖重试机制无工具面；同号 `step/start` 重复的注释裁定已随 S-a 落仓）。归收尾段独立补测取证，**不并入 S-c 提交**（停点↔提交对应）。
+- **收尾待办（放行附注点名）→ 已落地**：④「重试不重放」测试面当时缺（`AgentLoopTest` 无工具 × 重试用例）；收尾段独立补测（见「收尾段证据」），**不并入 S-c 提交**（6649f46）——停点↔提交对应保持。
 - **前瞻（it19 输入，放行附注）**：双 INT 冒烟的 journal 残形（`llm/request` 无 `turn/end`）= 崩溃恢复的设计输入；本冒烟脚手架（`/tmp/jh-smoke.sh` + hold server）可复用为恢复测试 fixture 生成器。
+
+### 收尾段证据（2026-09-19，已放行——随本次收口提交）
+
+- **④ 重试不重放（新测试）**：
+  - `AgentLoopTest.requestErrorRetryDoesNotReplayToolCalls`（agent a18）：工具批执行后**下一请求**失败 → REQUEST_ERROR 裁决 1 次重试 → 断言执行面 `toolRuns==1`、事件面 `tool/call` 恰 1、`step/start` 序列 `[0,1,1]`（重试 `continue` 不 `step++` → 同号重复 = 裁定语义，04 §7）、终局 `Completed`。
+  - `CompactionTest.overflowKindTriggersForcedCompactionAndRetry` 补 `tool/call` 恰 1 断言（溢出恢复同径：只重发请求、不重放工具）。
+  - 聚焦绿：`-pl core/agent-loop -am -Dtest='AgentLoopTest,CompactionTest' -Dsurefire.failIfNoSpecifiedTests=false`（19+6 例，EXIT=0，`/tmp/jh-it18-04-t1.log`）。
+  - 突变 **mutA**（重试分支插 `step++`，即把「continue 不 `step++`」改坏）→ **1 红**在 `AgentLoopTest.java:470`（新用例的 step 序列断言 `containsExactly(0,1,1)`），`/tmp/jh-it18-04-mutA.log`（EXIT=1，19+6 例中 1 败）；还原复绿 `/tmp/jh-it18-04-restore2.log`（EXIT=0；surefire XML 19+6 例 0 败）。mutA/还原均在**终态树**上复跑（行号与现文件一致）。
+- **② idle 纪律（补断言 + 突变）**：`cancelDuringToolExecutionAbortsTurn` 尾部补 `agent.status() == IDLE`（`:258`）。突变 **mutB**（`AgentLoopImpl.settleDriver` 不落 IDLE）→ **2 红**（`:258` 新断言 + `:195` 既有 happy path），`/tmp/jh-it18-02-mutB.log`（EXIT=1，"expected: IDLE but was: RUNNING"）；还原复绿 `/tmp/jh-it18-02-restore.log`（EXIT=0）。两轮 `grep -rn "MUT-"` 无残留。
+- **⑧ 全量 + 镜像实跑（终态树）**：`mvn -B package` BUILD SUCCESS 39.9s（`/tmp/jh-it18-close-full.log`，EXIT=0）；surefire XML 汇总 **67 套 / 386 测试 / 0 败 / 0 错 / 11 跳过**（385 + ④ 新例 1）。镜像重建时间 13:35 实跑：`bin/jh --help` exit 0（`/tmp/jh-it18-close-help.log`）/ `--verify` exit 0（「信息: verify 通过」，`/tmp/jh-it18-close-verify.log`）；**四场景 SIGINT 冒烟复跑**（终态树）：**4 / 130 / 0 / 0**，持久化 `/tmp/jh-smoke-{oneshot,double,repl-inflight,repl-idle}-result.log`；journal 复核——一次性 `turn/end aborted("user")` 收尾（seq 5 无后续）、双 INT 残形止于 `llm/request` seq 4 无 `turn/end`（逃生门）、REPL 在飞 `aborted("user")` → `command/run exit` → `command/done`、REPL 静止仅 `header.json`（无轮事件）。
 
 ## 修正（如有）
 

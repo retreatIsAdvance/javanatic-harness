@@ -225,6 +225,8 @@ class CompactionTest {
                 .map(e -> e.event().type()).toList();
             assertThat(types).containsSubsequence("compaction/start", "user/message",
                 "compaction/summary", "compaction/end");
+            // 溢出重试同径:重试只重发请求,工具不重放(it18 ④)
+            assertThat(types.stream().filter("tool/call"::equals).count()).isEqualTo(1);
             assertThat(agent.session().events().stream()
                 .map(e -> e.event())
                 .filter(TurnEnd.class::isInstance)
