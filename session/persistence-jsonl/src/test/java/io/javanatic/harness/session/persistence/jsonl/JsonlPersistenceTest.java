@@ -518,4 +518,70 @@ class JsonlPersistenceTest {
             assertThat(loaded.events()).hasSize(1);
         }
     }
+
+    @Test
+    void surfaceSourceSeqsRoundTripInBothStates() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            List<SessionEvent> history = List.of(
+                new TurnStart(1, 1),
+                new UserMessageEvent(2, UserMessage.of("改口", new MessageSource.User()),
+                    new SurfaceOp.Append(), List.of(0L)),
+                new StepStart(3, 1, 0),
+                new AssistantMessageEvent(4, 1, 0,
+                    new AssistantMessage(new MessageSource.Model("replay", "m"),
+                        List.of(new TextBlock("答"))),
+                    null, new SurfaceOp.Append(), List.of(0L, 2L)),
+                new ToolCallEvent(5, 1, 0, CallId.of("c1"), "fs_read", "{}"),
+                new ToolResultEvent(6, 1, 0,
+                    new ToolResultBlock(CallId.of("c1"), "结果未知，可自行核验", true),
+                    false, new SurfaceOp.Append(), List.of(0L)),
+                new UserMessageEvent(7, UserMessage.of("旧态", new MessageSource.User()),
+                    new SurfaceOp.Append(), null),
+                new AssistantMessageEvent(8, 1, 0,
+                    new AssistantMessage(new MessageSource.Model("replay", "m"),
+                        List.of(new TextBlock("旧态答"))),
+                    null, new SurfaceOp.Append(), null),
+                new ToolResultEvent(9, 1, 0,
+                    new ToolResultBlock(CallId.of("c2"), "旧态结果", false),
+                    false, new SurfaceOp.Append(), null),
+                new StepEnd(10, 1, 0),
+                new TurnEnd(11, 1, new TurnEndReason.Completed()));
+            for (SessionEvent event : history) {
+                live.append(event);
+            }
+
+            // 键恰出现 3 次:带 seqs 的三事件写出、不带者无键(absence 面在盘上钉住)
+            String log = Files.readString(root.resolve("s1/log.jsonl"));
+            assertThat(log.split("\"sourceEventSeqs\"", -1)).hasSize(4);
+            SessionPersistence.Loaded loaded =
+                rt.root().require(SessionPersistence.KEY).load(live.id());
+            assertThat(loaded.events()).containsExactlyElementsOf(history);
+        }
+    }
+
+    @Test
+    void oldLogWithoutSourceSeqsKeyReadsAsNull() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            liveSession(rt);
+            // 升级前写入的 surface 事件:无 sourceEventSeqs 键 → 读回 null(v0 天然兼容)
+            Files.writeString(root.resolve("s1/log.jsonl"),
+                "{\"seq\":0,\"type\":\"turn/start\",\"ignorable\":false,"
+                    + "\"data\":{\"time\":1,\"turn\":1}}\n"
+                    + "{\"seq\":1,\"type\":\"user/message\",\"ignorable\":false,"
+                    + "\"data\":{\"time\":2,\"message\":{\"source\":{\"kind\":\"user\"},"
+                    + "\"content\":[{\"kind\":\"text\",\"text\":\"旧\"}]}}}\n");
+
+            SessionPersistence.Loaded loaded =
+                rt.root().require(SessionPersistence.KEY).load(Session.newId("s1"));
+            assertThat(loaded.events()).containsExactly(
+                new TurnStart(1, 1),
+                new UserMessageEvent(2, UserMessage.of("旧", new MessageSource.User()),
+                    new SurfaceOp.Append(), null));
+        }
+    }
 }

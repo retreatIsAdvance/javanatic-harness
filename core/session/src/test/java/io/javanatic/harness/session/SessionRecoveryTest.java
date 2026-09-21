@@ -36,15 +36,15 @@ class SessionRecoveryTest {
     @Test
     void cleanTailProducesNoFacts() {
         List<LoggedEvent<? extends SessionEvent>> events = history(
-            new TurnStart(1, 0),
-            new StepStart(2, 0, 0),
-            toolUseMessage(3, 0, 0, "c1"),
-            new ToolCallEvent(4, 0, 0, CallId.of("c1"), "fs_read", "{}"),
-            new ToolResultEvent(5, 0, 0,
+            new TurnStart(1, 1),
+            new StepStart(2, 1, 0),
+            toolUseMessage(3, 1, 0, "c1"),
+            new ToolCallEvent(4, 1, 0, CallId.of("c1"), "fs_read", "{}"),
+            new ToolResultEvent(5, 1, 0,
                 new ToolResultBlock(CallId.of("c1"), "ok", false), false,
                 new SurfaceOp.Append(), null),
-            new StepEnd(6, 0, 0),
-            new TurnEnd(7, 0, new TurnEndReason.Completed()));
+            new StepEnd(6, 1, 0),
+            new TurnEnd(7, 1, new TurnEndReason.Completed()));
         assertThat(SessionRecovery.analyze(events)).isEmpty();
     }
 
@@ -53,51 +53,51 @@ class SessionRecoveryTest {
         // 配对口径 = 消息级 tool_use ∪ 审计级 tool/call − 已配对 tool/result：
         // 缺审计 tool/call（崩溃于批量前导前）时，result 已够解悬空
         List<LoggedEvent<? extends SessionEvent>> events = history(
-            new TurnStart(1, 0),
-            new StepStart(2, 0, 0),
-            toolUseMessage(3, 0, 0, "c1"),
-            new ToolResultEvent(4, 0, 0,
+            new TurnStart(1, 1),
+            new StepStart(2, 1, 0),
+            toolUseMessage(3, 1, 0, "c1"),
+            new ToolResultEvent(4, 1, 0,
                 new ToolResultBlock(CallId.of("c1"), "ok", false), false,
                 new SurfaceOp.Append(), null),
-            new StepEnd(5, 0, 0),
-            new TurnEnd(6, 0, new TurnEndReason.Completed()));
+            new StepEnd(5, 1, 0),
+            new TurnEnd(6, 1, new TurnEndReason.Completed()));
         assertThat(SessionRecovery.analyze(events)).isEmpty();
     }
 
     @Test
     void danglingAuditCallWithoutAssistantMessageLocatedAtCallSeq() {
         List<LoggedEvent<? extends SessionEvent>> events = history(
-            new TurnStart(1, 0),
-            new StepStart(2, 0, 0),
-            new ToolCallEvent(3, 0, 0, CallId.of("c2"), "fs_read", "{}"),
-            new StepEnd(4, 0, 0),
-            new TurnEnd(5, 0, new TurnEndReason.Completed()));
+            new TurnStart(1, 1),
+            new StepStart(2, 1, 0),
+            new ToolCallEvent(3, 1, 0, CallId.of("c2"), "fs_read", "{}"),
+            new StepEnd(4, 1, 0),
+            new TurnEnd(5, 1, new TurnEndReason.Completed()));
         // 审计级 tool/call 位于 seq 2（历史按索引分配 seq）；turn 已闭合 → 无收口事实
         assertThat(SessionRecovery.analyze(events))
-            .containsExactly(new SessionRecovery.Fact.ResultUnknown(0, 0, CallId.of("c2"), 2));
+            .containsExactly(new SessionRecovery.Fact.ResultUnknown(1, 0, CallId.of("c2"), 2));
     }
 
     @Test
     void openTailYieldsCallFactsThenStepCloseThenTurnClose() {
         List<LoggedEvent<? extends SessionEvent>> events = history(
-            new TurnStart(1, 0),
-            new StepStart(2, 0, 0),
-            toolUseMessage(3, 0, 0, "c1"),
-            new ToolCallEvent(4, 0, 0, CallId.of("c1"), "fs_read", "{}"));
+            new TurnStart(1, 1),
+            new StepStart(2, 1, 0),
+            toolUseMessage(3, 1, 0, "c1"),
+            new ToolCallEvent(4, 1, 0, CallId.of("c1"), "fs_read", "{}"));
         // 消息级与审计级同 id 都悬空：sourceSeq 取首现（assistant 消息 seq 2）
         assertThat(SessionRecovery.analyze(events)).containsExactly(
-            new SessionRecovery.Fact.ResultUnknown(0, 0, CallId.of("c1"), 2),
-            new SessionRecovery.Fact.StepClose(0, 0),
-            new SessionRecovery.Fact.TurnClose(0));
+            new SessionRecovery.Fact.ResultUnknown(1, 0, CallId.of("c1"), 2),
+            new SessionRecovery.Fact.StepClose(1, 0),
+            new SessionRecovery.Fact.TurnClose(1));
     }
 
     @Test
     void closeInterruptedAppendsFactsAfterEndSeedAndIsIdempotent() {
         List<SessionEvent> seed = List.of(
-            new TurnStart(1, 0),
-            new StepStart(2, 0, 0),
-            toolUseMessage(3, 0, 0, "c1"),
-            new ToolCallEvent(4, 0, 0, CallId.of("c1"), "fs_read", "{}"));
+            new TurnStart(1, 1),
+            new StepStart(2, 1, 0),
+            toolUseMessage(3, 1, 0, "c1"),
+            new ToolCallEvent(4, 1, 0, CallId.of("c1"), "fs_read", "{}"));
         Session session = Session.create(Session.newId("s1"), seed, null);
 
         assertThat(SessionRecovery.closeInterrupted(session, CLOCK)).isEqualTo(3);
@@ -118,9 +118,9 @@ class SessionRecoveryTest {
             .isLessThan((long) seed.size() + 1);
 
         // StepEnd 必须先于 TurnEnd（invariant：turn/end 不得落在开着的 step 内）
-        assertThat(events.get(seed.size() + 2).event()).isEqualTo(new StepEnd(9_000, 0, 0));
+        assertThat(events.get(seed.size() + 2).event()).isEqualTo(new StepEnd(9_000, 1, 0));
         assertThat(events.get(seed.size() + 3).event())
-            .isEqualTo(new TurnEnd(9_000, 0, new TurnEndReason.Aborted(SessionRecovery.INTERRUPTED)));
+            .isEqualTo(new TurnEnd(9_000, 1, new TurnEndReason.Aborted(SessionRecovery.INTERRUPTED)));
 
         SessionInvariants.validate(events);
         // 配对闭合：投影里出现 c1 的 tool 结果消息（悬空 tool_use 不再存在）

@@ -76,34 +76,34 @@ final class CoreCodecs {
                         .set("message", message(e.message()));
                     if (e.surfaceOp() instanceof SurfaceOp.Replace r) {
                         b.set("replaceStart", r.start()).set("replaceEnd", r.end());
-                        if (e.sourceEventSeqs() != null) {
-                            b.set("sourceEventSeqs", new JsonValue.Arr(e.sourceEventSeqs().stream()
-                                    .map(seq -> (JsonValue) new JsonValue.Num(seq)).toList()));
-                        }
+                    }
+                    if (e.sourceEventSeqs() != null) {
+                        b.set("sourceEventSeqs", seqsWire(e.sourceEventSeqs()));
                     }
                     return b.build();
                 },
                 b -> {
                     SurfaceOp op = new SurfaceOp.Append();
-                    List<Long> seqs = null;
                     if (b.get("replaceStart").asLong() > 0 || b.get("replaceEnd").asLong() > 0) {
                         op = new SurfaceOp.Replace(b.get("replaceStart").asLong(),
                             b.get("replaceEnd").asLong());
-                        JsonValue raw = b.get("sourceEventSeqs");
-                        if (raw instanceof JsonValue.Arr arr) {
-                            seqs = arr.items().stream().map(JsonValue::asLong).toList();
-                        }
                     }
                     return new UserMessageEvent(b.get("time").asLong(),
-                        userMessage(b.get("message").asObj()), op, seqs);
+                        userMessage(b.get("message").asObj()), op, sourceSeqs(b));
                 }),
             codec("assistant/message", AssistantMessageEvent.class,
-                e -> JsonValue.object().set("time", e.time()).set("turn", e.turn())
-                    .set("step", e.step()).set("message", message(e.message()))
-                    .set("usage", usage(e.usage())).build(),
+                e -> {
+                    JsonValue.Builder b = JsonValue.object().set("time", e.time()).set("turn", e.turn())
+                        .set("step", e.step()).set("message", message(e.message()))
+                        .set("usage", usage(e.usage()));
+                    if (e.sourceEventSeqs() != null) {
+                        b.set("sourceEventSeqs", seqsWire(e.sourceEventSeqs()));
+                    }
+                    return b.build();
+                },
                 b -> new AssistantMessageEvent(b.get("time").asLong(), (int) b.get("turn").asLong(),
                     (int) b.get("step").asLong(), assistantMessage(b.get("message").asObj()),
-                    usage(b.get("usage").asObj()), new SurfaceOp.Append(), null)),
+                    usage(b.get("usage").asObj()), new SurfaceOp.Append(), sourceSeqs(b))),
             codec("llm/request", LlmRequestEvent.class,
                 e -> {
                     JsonValue.Builder params = JsonValue.object();
@@ -128,15 +128,21 @@ final class CoreCodecs {
                     (int) b.get("step").asLong(), CallId.of(b.get("callId").asString()),
                     b.get("name").asString(), b.get("arguments").asString())),
             codec("tool/result", ToolResultEvent.class,
-                e -> JsonValue.object().set("time", e.time()).set("turn", e.turn())
-                    .set("step", e.step()).set("toolUseId", e.block().toolUseId().value())
-                    .set("content", e.block().content()).set("isError", e.block().isError())
-                    .set("concludesTurn", e.concludesTurn()).build(),
+                e -> {
+                    JsonValue.Builder b = JsonValue.object().set("time", e.time()).set("turn", e.turn())
+                        .set("step", e.step()).set("toolUseId", e.block().toolUseId().value())
+                        .set("content", e.block().content()).set("isError", e.block().isError())
+                        .set("concludesTurn", e.concludesTurn());
+                    if (e.sourceEventSeqs() != null) {
+                        b.set("sourceEventSeqs", seqsWire(e.sourceEventSeqs()));
+                    }
+                    return b.build();
+                },
                 b -> new ToolResultEvent(b.get("time").asLong(), (int) b.get("turn").asLong(),
                     (int) b.get("step").asLong(),
                     new ToolResultBlock(CallId.of(b.get("toolUseId").asString()),
                         b.get("content").asString(), b.get("isError").asBool()),
-                    b.get("concludesTurn").asBool(), new SurfaceOp.Append(), null)),
+                    b.get("concludesTurn").asBool(), new SurfaceOp.Append(), sourceSeqs(b))),
             codec("compaction/start", CompactionStart.class,
                 e -> JsonValue.object().set("time", e.time()).set("turn", e.turn()).build(),
                 b -> new CompactionStart(
@@ -204,6 +210,19 @@ final class CoreCodecs {
     }
 
     // ────────── 子模型 ──────────
+
+    /** surface 来源序的盘上形状(非 null 即写;与 Replace 判定解耦,Append 亦然)。 */
+    private static JsonValue seqsWire(List<Long> seqs) {
+        return new JsonValue.Arr(seqs.stream().map(seq -> (JsonValue) new JsonValue.Num(seq)).toList());
+    }
+
+    /** surface 来源序读回(键缺失 → null;v0 旧行天然兼容)。 */
+    private static List<Long> sourceSeqs(JsonValue.Obj body) {
+        if (body.get("sourceEventSeqs") instanceof JsonValue.Arr arr) {
+            return arr.items().stream().map(JsonValue::asLong).toList();
+        }
+        return null;
+    }
 
     private static JsonValue reason(TurnEndReason reason) {
         return switch (reason) {

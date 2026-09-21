@@ -162,7 +162,7 @@ class SessionTest {
 
     @Test
     void seedGetsEndSeedMarkerAndReopenDoesNotRemark() {
-        List<SessionEvent> seed = List.of(new TurnStart(1, 0), user("你好"));
+        List<SessionEvent> seed = List.of(new TurnStart(1, 1), user("你好"));
         Session first = Session.create(Session.newId("a"), seed, null);
         assertThat(first.firstLiveSeq()).isEqualTo(2);
         assertThat(first.events()).hasSize(3); // seed 2 + marker 1

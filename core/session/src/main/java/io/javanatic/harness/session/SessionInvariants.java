@@ -14,7 +14,8 @@ import java.util.List;
  * 不变式复核（append/load 双侧结构性保证之外的独立检查，回放测试用）：
  * <ul>
  *   <li>信封连续：seq[i] == i</li>
- *   <li>turn/step 嵌套：turn 号 = TurnStart 计数；step 必在 turn 内且单调；配对闭合</li>
+ *   <li>turn/step 嵌套：turn 号 = TurnStart 计数（**1 起**）；step = turn 内序号（**0 起**）——
+ *       两侧起点不对称是有意口径（对齐生产 loop 与 03/04 规格），勿当不一致修正；配对闭合</li>
  *   <li>surface 重放：全部 surface 元数据经全新 SurfaceManager 再校验（provenance 三规则）</li>
  * </ul>
  */
@@ -42,7 +43,7 @@ public final class SessionInvariants {
             switch (entry.event()) {
                 case TurnStart e -> {
                     expect(openTurn < 0, "turn/start inside open turn " + openTurn);
-                    expect(e.turn() == nextTurn, "turn/start number " + e.turn() + " != expected " + nextTurn);
+                    expect(e.turn() == nextTurn + 1, "turn/start number " + e.turn() + " != expected " + (nextTurn + 1));
                     openTurn = e.turn();
                     nextTurn++;
                     nextStep = 0;

@@ -25,20 +25,20 @@ class SessionInvariantsTest {
     @Test
     void validConversationPasses() {
         Session s = Session.create(Session.newId("a"), null, null);
-        s.append(new TurnStart(1, 0));
+        s.append(new TurnStart(1, 1));
         s.append(user(2));
-        s.append(new TurnEnd(3, 0, new TurnEndReason.Completed()));
-        s.append(new TurnStart(4, 1));
+        s.append(new TurnEnd(3, 1, new TurnEndReason.Completed()));
+        s.append(new TurnStart(4, 2));
         s.append(user(5));
-        s.append(new TurnEnd(6, 1, new TurnEndReason.Completed()));
+        s.append(new TurnEnd(6, 2, new TurnEndReason.Completed()));
         assertThatCode(() -> SessionInvariants.validate(s.events())).doesNotThrowAnyException();
     }
 
     @Test
     void brokenSeqContiguityRejected() {
         List<LoggedEvent<SessionEvent>> events = new ArrayList<>();
-        events.add(new LoggedEvent<>(0, new TurnStart(1, 0)));
-        events.add(new LoggedEvent<>(2, new TurnEnd(2, 0, new TurnEndReason.Completed()))); // 跳号
+        events.add(new LoggedEvent<>(0, new TurnStart(1, 1)));
+        events.add(new LoggedEvent<>(2, new TurnEnd(2, 1, new TurnEndReason.Completed()))); // 跳号
         assertThatThrownBy(() -> SessionInvariants.validate(List.copyOf(events)))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("contiguity");
@@ -47,7 +47,7 @@ class SessionInvariantsTest {
     @Test
     void turnEndWithoutOpenTurnRejected() {
         assertThatThrownBy(() -> SessionInvariants.validate(List.of(
-            new LoggedEvent<>(0, new TurnEnd(1, 0, new TurnEndReason.Completed())))))
+            new LoggedEvent<>(0, new TurnEnd(1, 1, new TurnEndReason.Completed())))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("without matching open turn");
     }
@@ -63,7 +63,7 @@ class SessionInvariantsTest {
     @Test
     void logEndingInsideOpenTurnRejected() {
         assertThatThrownBy(() -> SessionInvariants.validate(List.of(
-            new LoggedEvent<>(0, new TurnStart(1, 0)))))
+            new LoggedEvent<>(0, new TurnStart(1, 1)))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("inside open turn");
     }
