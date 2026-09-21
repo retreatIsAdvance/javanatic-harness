@@ -1,4 +1,4 @@
-# 迭代 20 — 长任务资源边界（状态：进行中——四确认与三项裁决已于 2026-09-21 裁定）
+# 迭代 20 — 长任务资源边界（状态：已完成——四确认与三项裁决 2026-09-21 裁定；S-a 380c109 / S-b 5ff3480 / S-c 6f92598 全部放行；收尾 2026-09-21：全量 package 绿 + jlink 三出口真跑）
 
 模块：`core/agent-loop`（压缩触发与失败策略）+ `fs/fs` / `fs/local` / `fs/tool`（有界读写列举）+ `examples/headless`（统计出口与 `--verify` 治理摘要）+ 文档（04 §7/§15、03 §6、07 §6、12 §5/§6）
 
@@ -31,6 +31,46 @@
 1. **触发口径** = 末次 LLM 响应的 inputTokens（非 max 水位）；压力路径 nothing-to-compact → **跳过 + WARN**（不杀轮；真实失败由请求侧 OVERFLOW 显形）。
 2. **fs 阈值** = 读 256 KiB（与 bash 对称，标记 ` (output truncated)`）；list 1000 条（尾行 `… (list truncated)`）。
 3. **统计出口** = REPL 轮末一行 + one-shot **成功路径** stderr 一行（stdout 契约不动）。
+
+### 收尾取证（2026-09-21；日志在 /tmp）
+
+**① 压缩（core/agent-loop）**：`mvn -B -q -pl core/agent-loop -am test` → EXIT=0；surefire 汇总 46 tests / 0 failures / 0 errors。
+
+**② fs（fs/local 等）**：`mvn -B -q -pl fs/fs,fs/local,fs/tool -am test` → EXIT=0；fs/local 22 / 0 / 0、fs/tool 3 / 0 / 0（fs/fs 为 seam 无测试类）。
+
+**③ 统计（examples/headless）**：`mvn -B -q -pl examples/headless -am test` → EXIT=0（61 / 0 / 0）；S-c 停点聚焦 `-Dtest='StreamRendererTest,HeadlessOneShotResultTest,HeadlessVerifyTest'` → 21 / 0 / 0。
+
+**④ 突变检查（本轮实测；各自还原后套件复绿、`git status` 空 = 工作树 ≡ HEAD）**
+
+| MUT | 破坏点 | 预期 | 实测 |
+|---|---|---|---|
+| A | `lastInputTokens` 回退 max() 高位水位 | ①回归用例红 | `triggerReadsLastInputTokensNotHighWater` 恰红（1/8） |
+| B | 跳过语义改回 throw | ①跳过用例红 | `nothingToCompactSkipsAndTurnCompletes` 恰红（1/8） |
+| C | 删 fs 读上限（`readAllBytes`） | ②截断用例红 | `readTruncatesAtByteCapWithMarker` + `readTruncationKeepsMultiByteCharacterWhole` 红（2/19） |
+| 1 | REPL 统计行不写 | ③`StreamRendererTest` 红 | 4/8 红 |
+| 2 | one-shot 统计行不写 | ③`HeadlessOneShotResultTest` 红 | 2/7 红 |
+| 3 | verify 摘要不打印（调用保留） | ③`HeadlessVerifyTest` 红 | 2/6 红 |
+
+**⑤ 全量**：`mvn -B -q package` → PACKAGE_EXIT=0（/tmp/it20-package.log，无 ERROR / 失败行）。
+
+**⑥ 真跑（jlink 镜像，stdout/stderr 分离捕获）**
+
+| 场景 | 命令 | 结果 |
+|---|---|---|
+| verify STANDARD | `jh --verify` | exit 0；stdout 五行摘要（`19 rows, 24 discovered, 0 unreferenced` / `AUTO (approval-auto)` / `jsonl … (durable)` / `budget=unlimited`）；stderr 空 |
+| verify PRODUCTION | `jh --verify --policy=PRODUCTION --approval=ask --budget=2000000` | exit 0；`HUMAN_GATE (approval-ask)`、`budget=2000000` |
+| verify 违规 | `jh --verify --policy=PRODUCTION --approval=auto --budget=100000` | exit 1；stdout 0 字节；stderr「违规: policy=PRODUCTION 但审批为 AUTO…」 |
+| one-shot | `jh "只回复一个词:ok"` | exit 0；stdout 仅 `ok`；stderr 末行 `stats: turn=1 steps=1 tokens_in=1043 tokens_out=1 elapsed=0.8s` |
+| REPL | 管道输入消息 → sleep 8 → `/exit` | exit 0；stdout 含 `ok` + `stats: turn=1 steps=1 tokens_in=1043 tokens_out=1 elapsed=0.6s` |
+
+**⑦ 文档同步**（均引自当前文件）：04 §7.1 规格节（331 起：压力/强制两路径 + 跳过语义 + 理由）+ §7 伪码注释 255-256 + §15 落定 539（压缩口径修正）/ 540（预算口径）；03 §6 行 470（末次口径 + nothing-to-compact + `Kind.OVERFLOW` 措辞订正）；07 §6 行 188-195（真跑实况样例 + 注记）/ 202-203（实现自述清单）；12 §5 行 99（fs-local 两键）+ §6 行 113 / 127（CLI 面 + stderr 统计行）。
+
+### 实施中披露汇总（S-a/S-b/S-c packet 内逐项已报；仍在案者）
+
+- 摘要 `Profile:` 行取自 profile 文件的 `name`（非 `--profile=` 参数原文）；`unreferenced` 计数在校验通过后恒 0（校验与摘要同口径的代价，见设计偏离表）。
+- `TurnStats.elapsed` 负值钳 0（事件时间单调假设外的显示防护）；切片出口无 `turn/end` 即抛（fail loud）。
+- 摘要自述失败（治理服务在而清单无 `approval-*`/`persistence-*` 行、或行缺 `config.root`）当前组合形态下不可达；将来若允许自定义治理插件命名，需把该失败并入 `VerifyFailedException` 词表（挂账）。
+- `fs_list` 排序需先物化全部子项（排序是钉死契约），上限只在输出面截断——极端目录规模的内存边界见设计偏离表。
 
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
@@ -74,17 +114,17 @@
 |---|---|---|
 | **S-a 压缩触发与失败策略**：`CompactionPlugin`/`CompactionService`/`AgentLoopImpl` 调用点 + 两用例 + 04 规格节 | 锚点 1–6 | 编辑与取证（聚焦 + 突变 + 还原复绿）完成 → **已放行（提交 380c109）** |
 | **S-b fs 有界化**：`FsService`（承载契约——接口返回型变更）+ 三个实现/消费类 + 用例 | 锚点 7–11 | 编辑与取证（聚焦 + 突变 + 还原复绿）完成 → **已放行（提交 5ff3480）** |
-| **S-c 统计出口与文档**：verify / REPL / one-shot 三面 + 07/12 文档 | 锚点 12–16 | 编辑与取证（聚焦 + MUT-1/2/3 + 全量复绿 + 真跑）完成 → **待放行** |
+| **S-c 统计出口与文档**：verify / REPL / one-shot 三面 + 07/12 文档 | 锚点 12–16 | 编辑与取证（聚焦 + MUT-1/2/3 + 全量复绿 + 真跑）完成 → **已放行（提交 6f92598）** |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] ① 压缩：`mvn -B -q -pl core/agent-loop -am test` 绿；新用例覆盖「跨阈压缩后末次 input 回落 → 不再复发压缩（compaction/start 恰 1 次）」与「nothing-to-compact → 跳过 + WARN，turn Completed」
-- [ ] ② fs：`mvn -B -q -pl fs/fs,fs/local,fs/tool -am test` 绿；用例覆盖读截断标记（含多字节边界不留半字符）、edit 超限 fail loud（error result，消息含大小）、list 截断尾行、配置键解析
-- [ ] ③ 统计：`mvn -B -q -pl examples/headless -am test` 绿；verify 摘要进 stdout（`stop: max-turns=…` 形状）、one-shot 成功 stderr 含统计行且 stdout 逐字节不回归、REPL 轮末行（StreamRendererTest）
-- [ ] ④ 突变检查：`lastInputTokens` 回退 max() → ①回归用例必红；跳过改回 throw → ②用例必红；删 fs 读上限 → 截断用例必红；删统计行 → ③用例必红（各自恰红、还原复绿）
-- [ ] ⑤ 全量 `mvn -B -q package` 绿
-- [ ] ⑥ 真跑：`--verify` 实测输出治理摘要（jlink 或 java -jar）；一条 one-shot 小任务观测 stderr 统计行与 stdout 纯净
-- [ ] ⑦ 文档同步：04（新规格节 + 伪码 + 预算口径）、03 §6、07 §6、12 §5/§6
+- [x] ① 压缩：`mvn -B -q -pl core/agent-loop -am test` 绿（46 / 0 / 0）；新用例覆盖「跨阈压缩后末次 input 回落 → 不再复发压缩（compaction/start 恰 1 次）」= `CompactionTest.triggerReadsLastInputTokensNotHighWater`，与「nothing-to-compact → 跳过 + WARN，turn Completed」= `CompactionTest.nothingToCompactSkipsAndTurnCompletes` —— 见「收尾取证」①/④
+- [x] ② fs：`mvn -B -q -pl fs/fs,fs/local,fs/tool -am test` 绿（fs/local 22 / 0 / 0、fs/tool 3 / 0 / 0）；用例覆盖读截断标记含多字节边界（`LocalFsTest.readTruncatesAtByteCapWithMarker` / `readAtCapExactlyIsNotTruncated` / `readTruncationKeepsMultiByteCharacterWhole`）、edit 超限 fail loud 消息含大小与上限（`editOverReadCapFailsLoudWithSizeAndCap`）、list 截断（`listTruncatesAtCapAndFlagsIt`）、配置键解析（`FsLocalConfigTest.quotaKeysResolveFromConfig`）、工具面端到端（`FsToolEndToEndTest.boundedReadsListsAndEditsSurfaceThroughTools`）—— 见「收尾取证」②/④
+- [x] ③ 统计：`mvn -B -q -pl examples/headless -am test` 绿（61 / 0 / 0）+ 聚焦 21 / 0 / 0；verify 摘要进 stdout（`stop: max-turns=…` 形状 = `HeadlessVerifyTest` 6 则）、one-shot 成功 stderr 含统计行且 stdout 逐字节不回归（`HeadlessOneShotResultTest` 7 则）、REPL 轮末行（`StreamRendererTest` 8 则）—— 见「收尾取证」③/⑥
+- [x] ④ 突变检查：`lastInputTokens` 回退 max() → ①回归用例恰红；跳过改回 throw → ①跳过用例恰红；删 fs 读上限 → ②两截断用例红；删统计行（REPL / one-shot）与 verify 摘要不打印 → ③三套件各自红——六变体本轮实测（1/8、1/8、2/19、4/8、2/7、2/6），各自还原复绿且工作树 ≡ HEAD —— 见「收尾取证」④
+- [x] ⑤ 全量 `mvn -B -q package` 绿 —— PACKAGE_EXIT=0（/tmp/it20-package.log）—— 见「收尾取证」⑤
+- [x] ⑥ 真跑：`--verify` 实测输出治理摘要（STANDARD / PRODUCTION+ask+budget 两档 exit 0；违规 auto 档 exit 1 且 stdout 0 字节）；一条 one-shot 小任务观测 stderr 统计行与 stdout 纯净（stdout 仅 `ok`）；REPL 同观（轮末 stats 行）—— 见「收尾取证」⑥
+- [x] ⑦ 文档同步：04（新规格节 §7.1 + 伪码 + 预算口径）/ 03 §6 / 07 §6 / 12 §5/§6 均点名在案 —— 见「收尾取证」⑦
 
 ## 修正（如有）
 
@@ -95,3 +135,5 @@
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
+| 07 §6 样例 `0 unreferenced` | `unreferenced` 计数在校验通过后恒 0（非零即 `IllegalStateException`，先于摘要） | 计数保留作「校验与摘要同一口径」的证据——同一函数产出，打印值不可能与校验结论分叉 | 迭代内已同步：07 §6 注记补句（`unreferenced` 恒 0 的语义） |
+| README it20「大输出不撑爆内存」+ `FsService.list` 有界契约 | 输出面按 `maxListEntries` 截断并携 `truncated` 位；按名排序需先物化全部子项（内存随目录规模） | 按名排序是钉死契约（`LocalFsTest.listIsSortedByNameWithType`）；流式有界枚举需另立契约（超出本迭代裁决面） | 迭代内已同步：javadoc 措辞限于「排序 + 截断」，不宣称内存有界；目录规模极端时的内存边界挂账（release notes 候选） |

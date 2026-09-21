@@ -192,7 +192,7 @@ Profile: headless   policy: PRODUCTION
   stop: max-turns=50 max-steps=40 budget=2000000
 ```
 
-（it20 起实况：摘要五行打 stdout、exit 0；`policy` 沿用 CLI 词表大写；rows = 加载行数、discovered = ServiceLoader 发现总数；预算 0 显示 `unlimited`；违规路径逐项打 stderr 且 stdout 为空。）
+（it20 起实况：摘要五行打 stdout、exit 0；`policy` 沿用 CLI 词表大写；rows = 加载行数、discovered = ServiceLoader 发现总数、unreferenced 校验通过后恒 0（非零即 boot 失败——计数与校验同一口径）；预算 0 显示 `unlimited`；违规路径逐项打 stderr 且 stdout 为空。）
 
 | 档位 | 校验内容 |
 |---|---|
