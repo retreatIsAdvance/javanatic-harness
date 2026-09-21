@@ -1,4 +1,4 @@
-# 迭代 19 — 崩溃恢复与写入安全（状态：进行中——四确认与五裁决点已于 2026-09-19 裁定；S-a 已放行（提交 30a0799）；S-b 已放行（提交 0434803）；S-c 编辑与取证（聚焦 + MUT K + 孤儿对照/修复 + 全量复绿）完成，停点待放行）
+# 迭代 19 — 崩溃恢复与写入安全（状态：已完成——四确认与五裁决点 2026-09-19 裁定；S-a 30a0799 / S-b 0434803 / S-c d3bab74 全部放行；收尾 2026-09-21：全量 package 绿 + jlink 镜像 SIGKILL 冒烟入 jh-smoke.sh 家族）
 
 模块：`session/persistence-jsonl`（屏障对账 + 单写者锁）+ `core/agent-loop`（派发前屏障调用点 + resume 恢复收口）+ `core/tools`（工具批派发前屏障）+ `core/session`（恢复尾形分析 + `SessionStore` 修复 + `FailureKind.DISK`）+ `examples/headless`（`--resume` 占用/恢复出口 + SIGKILL e2e）+ 文档（03 / 04 / 09 / 12 / `--help`）
 
@@ -138,6 +138,24 @@
 - **文档面超出锚点列**：`AGENTS.md` 退出码镜像行同步（`3 任务失败（含 --resume 写者锁冲突）`）；12 §6 诊断 bullet 增占用拒绝条目（不等待、不并发写；锁随进程死亡释放，崩溃/SIGKILL 后可直接 resume）。
 - **放行附条件修正（随本 commit）**：全量计数双计订正（原报 832 = 类行 + 模块行双计；正确 416 测试 / 69 类 / 29 模块，与基线吻合），计数口径约定入 `AGENTS.md`「测试计数口径」绝根；`ToolResultEvent` javadoc 补「两个产出者」（执行 pipeline + 恢复收口事实，S-b 白名单扩面的文档补课）。
 
+### 收尾取证（2026-09-21；日志在 /tmp）
+
+**全量 package**：`mvn -B package` = /tmp/it19-wrapup-package1.log，BUILD SUCCESS、**416 测试 / 69 类 / 29 模块，0 失败 0 错误**（11 skip = keyless 门控常态；计数口径 = 模块汇总行求和）；`JsonlPersistenceTest` 20/20——含撕裂尾五则（`tornTailPartialLineTruncatedOnLoad` / `completeTailMissingNewlineHealedOnLoad` / `interiorCorruptionStaysFailLoud` / `repairThenResumeContinuesFromLastCompleteLine` / `flushBarrierSafeWithoutLogAndAfterEvents`）与锁/屏障共存新例。
+
+**jlink 镜像 SIGKILL 冒烟**（新 case `sigkill`，入 `/tmp/jh-smoke.sh` 家族；服务端 `/tmp/jh-smoke-sigkill.py`：请求 0 回 bash 工具调用 `echo smoke >> runs.txt; sleep 30`，后续回文本「恢复完成」）：`bash /tmp/jh-smoke.sh sigkill` = /tmp/it19-wrapup-sigkill-run2.log，退出码持久化 /tmp/jh-smoke-sigkill-result.log：
+
+| 断言面 | 观察值 |
+|---|---|
+| 第一跑被 SIGKILL（观察门 = 盘上/进程表事实：`tool/call` 落账 + `runs.txt` 出现 + sleep 后代在途；非计时） | `JH_EXIT=137`、stdout 0 字节 |
+| 崩溃尾（盘上） | 止于 `assistant/message` + `tool/call`（seq 9），无 `tool/result`、无 `turn/end` |
+| resume 第二跑 | `RESUME_EXIT=0`、stdout「恢复完成」 |
+| 恢复事实事件序（盘上） | seq 10 `session/end-seed` → 11 `tool/result`（`isError=true`、`toolUseId="call-smoke-1"`、content「结果未知，可自行核验」）→ 12 `step/end` → 13 `turn/end` `{"kind":"aborted","cause":"interrupted"}` → 14–23 新 turn `completed` |
+| 不自动重放 | `tool_calls=1 tool_results=1`、`runs_lines=1`（副作用仅一次） |
+| 配对契约（wire） | resume 首请求体（/tmp/jh-smoke-sigkill-req-1.txt）：`assistant.tool_calls[0].id=call-smoke-1` ↔ `tool.tool_call_id=call-smoke-1`、content「结果未知，可自行核验」——`req1_has_call_id=1` |
+| 孤儿回收（冒烟侧） | kill 前快照 JVM 后代，测尾逐个回收：`orphans_after_reap=0`，收尾 `ps` 扫 `sleep 30` 无残留 |
+
+冒烟脚手架修正（首跑暴露）：服务端 `read_request` 只回第一段 recv（头 324B），请求体读入却未回传 → 首跑 `req1_has_call_id=0`；改为回传 `head + body` 后二跑 `=1`（首跑日志 /tmp/it19-wrapup-sigkill-run1.log 留作对照）。
+
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
 - **ADDED**：03 持久化语义（派发前屏障口径与失败语义、写者锁占用/释放/平台注记、恢复收口口径与「不重放」承诺、**恢复事实事件序：end-seed 后追加 + `sourceEventSeqs` 引 seed 前 seq**）；04 派发前屏障调用点与失败收敛；09 并发（单写者保护 + `SessionStore.create` fail loud）；12 §6 exit 3 词表扩「写者锁冲突」；`--help` / README ×2 同步；`FailureKind.DISK` 分类说明；恢复文案「结果未知，可自行核验」＝模型可见文本（钉进测试）；测试 rig 伪 writer/FLUSH 钩子（记录屏障调用序 + 可注入失败）
@@ -169,7 +187,7 @@
 |---|---|---|
 | **S-a 派发前屏障**：`AgentLoopImpl` 派发段 + `ToolExecutorImpl` 批派发段（承载类全文）+ `flushBarrier` 对账口径 + **DISK 词表落地**（enum + codec + 渲染 + `failureKind` 通道）+ **隐含重构 #3/#4 披露** | 锚点 1、4、5、6、7、11 | 编辑与取证（聚焦 + 突变 + 复绿）完成 → **已放行（提交 30a0799）** |
 | **S-b 单写者锁 + 恢复收口**（跨模块 + 新词表：锁异常/占用行为、恢复追加事实的文案与 reason、分析纯函数） | 锚点 2、3、8、9、10 | 编辑与取证（聚焦 + 突变 F–J + 还原复绿）完成 → **已放行（提交 0434803）** |
-| **S-c CLI 出口与 SIGKILL e2e**：`--resume` 占用拒绝（文案 + 退出码）+ 子进程 SIGKILL 测试形态与夹具 + 12 §6 / `--help` | 锚点 12、13（+ 12 §6 / `--help` 文档面） | 编辑与取证（聚焦 + MUT K + 孤儿对照/修复 + 全量复绿）完成——packet 已出，待放行 |
+| **S-c CLI 出口与 SIGKILL e2e**：`--resume` 占用拒绝（文案 + 退出码）+ 子进程 SIGKILL 测试形态与夹具 + 12 §6 / `--help` | 锚点 12、13（+ 12 §6 / `--help` 文档面） | 编辑与取证（聚焦 + MUT K + 孤儿对照/修复 + 全量复绿）完成 → **已放行（提交 d3bab74，附条件计数订正随 commit）** |
 
 （停点↔提交一一对应；证据约定延续：mutation 日志名带变体、日志内回显退出码、冒烟退出码持久化 `-result.log`。）
 
@@ -178,9 +196,9 @@
 - [x] ① SIGKILL：子进程 e2e（工具执行窗口或请求在飞中 `kill -9` → `--resume`；**kill 由观察盘上事实触发**，非 sleep）——恢复后工具执行计数不增（**不自动重放**）、日志含恢复收口（error `tool/result` 结果未知 + `turn/end(Aborted("interrupted"))`）、新任务可在同一会话继续；撕裂尾与恢复组合路径实跑 —— S-c 完成：`HeadlessCrashResumeE2ETest.sigkilledChildLeavesJudgableTailAndResumeClosesWithoutReplay`（2/2 绿；kill 前观察 = `tool/call` 落账 + 副作用出现 + sleep 在途），见「S-c 取证」
 - [x] ② 写入失败：确定性注入（**伪 writer 钩子**注入屏障失败；另只读日志 → 追加被 contained 吞由对账捕获）→ 屏障 fail loud → **无副作用**（请求未派发 / 工具未执行，假 LLM / 工具计数器为 0）+ turn 收口 `Error(DISK)` —— S-a 完成，见上方「S-a 取证」（聚焦测试 7 则 + MUT A–E）
 - [x] ③ 双进程竞争：同 JVM 第二 Runtime 与真第二进程两例——第二写者 fail loud、首写者不受扰；`jh --resume=<占用中>` 文案 + **exit 3**（12 §6 词表「写者锁冲突」）；`SessionStore.create` 重复 id fail loud 回归（旧 owner `onClose` 不再移除新会话）—— S-b（同 JVM 两则 + create 回归）+ S-c（真第二进程占用 e2e：exit 3 / stdout 空 / 文案「写者锁冲突」/ 首写者不受扰）完成
-- [ ] ④ 恢复不自动重放 + 配对契约：工具执行次数不变；恢复后下一轮请求的消息投影合法（tool_use 有配对 result，文案「结果未知，可自行核验」）——不收口即 OpenAI 配对 400（必需性依据）；恢复事实事件序 = end-seed 后追加 + `sourceEventSeqs` 引 seed 前 seq
-- [ ] ⑤ 撕裂尾回归：`JsonlPersistenceTest` 既有五则全绿 + 锁/屏障共存新例
-- [ ] ⑥ 全量 `mvn -B package` 绿 + jlink 镜像实跑（SIGKILL 冒烟场景并入 `/tmp/jh-smoke.sh` 家族，退出码持久化 `-result.log`）；突变检查（屏障调用点 / 锁获取 / 恢复收口各设 MUT）
+- [x] ④ 恢复不自动重放 + 配对契约：工具执行次数不变；恢复后下一轮请求的消息投影合法（tool_use 有配对 result，文案「结果未知，可自行核验」）——不收口即 OpenAI 配对 400（必需性依据）；恢复事实事件序 = end-seed 后追加 + `sourceEventSeqs` 引 seed 前 seq —— S-b（`HeadlessResumeTest` 首个请求配对 result + `SessionRecoveryTest` 钉 `sourceEventSeqs`）+ S-c（e2e：`tool/call` 计数 1、副作用 1 行、wire 第二请求含 `tool_call_id`）+ 收尾冒烟三重印证，见「收尾取证」（工具次数不变 `runs_lines=1`；wire 配对 `req1_has_call_id=1`；事件序 seq 10 end-seed → 11 结果未知 → 13 `aborted(interrupted)`）
+- [x] ⑤ 撕裂尾回归：`JsonlPersistenceTest` 既有五则全绿 + 锁/屏障共存新例 —— 全量 package 中 20/20 绿，见「收尾取证」（五则点名在案）
+- [x] ⑥ 全量 `mvn -B package` 绿 + jlink 镜像实跑（SIGKILL 冒烟场景并入 `/tmp/jh-smoke.sh` 家族，退出码持久化 `-result.log`）；突变检查（屏障调用点 / 锁获取 / 恢复收口各设 MUT）—— `mvn -B package` BUILD SUCCESS（/tmp/it19-wrapup-package1.log）；冒烟 `bash /tmp/jh-smoke.sh sigkill` 退出码持久化 /tmp/jh-smoke-sigkill-result.log（`JH_EXIT=137` / `RESUME_EXIT=0`）；突变 A–E（S-a，屏障）×F–J（S-b，锁/恢复）×K（S-c，占用识别）在案
 - [x] ⑦ 文档同步：03 / 04 / 09 / 12 §6 / `--help` / README ×2 —— 03/04/09 S-b 落地（04 §13 伪码、03 §6 布局行订正）；12 §6 占用拒绝诊断条目 + 退出码表行 / `--help` USAGE 两行 / README ×2 / AGENTS 退出码行 S-c 落地
 
 ### 核验起点（2026-09-19 调研，引用前复核）
@@ -205,8 +223,13 @@
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| d3bab74（放行附条件） | 全量计数双计：报 832，实为 416 测试 / 69 类 / 29 模块（类行 + 模块行求和）——同类口径错误第三次出现 | iteration-19.md 计数订正为模块汇总行口径；`AGENTS.md` 新增「测试计数口径」条目绝根（只数模块汇总行或 surefire XML） |
+| 收尾（/tmp 脚手架，非仓库） | 冒烟服务端 `read_request` 只回第一段 recv（324B 头），请求体读入却未回传——wire 配对断言假红（首跑 `req1_has_call_id=0`） | 改为回传 `head + body`；二跑 `req1_has_call_id=1`，首跑日志留作对照（/tmp/it19-wrapup-sigkill-run1.log） |
+| S-c（测试卫生，实跑挖出） | 崩溃 e2e 的 SIGKILL 不级联子进程：bash 工具与 `sleep 30` 成机器级孤儿（ppid=1）存活 ~30s，污染 `LocalBashExecutorTest` 全机扫描（全量恰 1 红，/tmp/it19-sc-test-full1.log EXIT=1） | 「sleep 在途」观察门 + 后代快照 + `finally` 回收；负向对照（回收禁用）复现孤儿在场、修复态零残留（见「S-c 取证」） |
 
 ## 设计偏离（如有）
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
+| 裁决④事件序锚点「恢复事实 `sourceEventSeqs` 引 seed 前 seq」（字面易读作进盘） | `tool/result` 不进盘 `sourceEventSeqs`（既有 wire 口径：仅 Replace 事件持久化 provenance）；引用关系为**进程内契约**，由 `SessionRecoveryTest` 钉住；跨重载归属靠 `toolUseId`（= 悬空调用 id）+ 位于 resume 侧 end-seed 之后 | 沿用既有 wire 口径，不为恢复单开字段 | 迭代内已同步（03 §6 措辞即现状；S-b 实施中披露在案） |
+| — | `SessionInvariants` turn 校验 0-based vs 生产 loop 1-based（`validate` 会拒绝一切真实日志；现仅测试夹具调用，未接 load/resume 路径） | 既有缺陷，不在四确认范围 | 挂账（修法一行 `nextTurn + 1` + 夹具更新；见 S-b 披露） |
