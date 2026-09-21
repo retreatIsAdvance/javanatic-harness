@@ -18,7 +18,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  * 同步执行，回调只入队（不写终端、不做 IO——chunk 风暴下不拖 append 屏障）；
  * 单渲染虚拟线程按序出队写 out。映射：chunk Delta 逐块落字、Finish 收行；
  * tool/call|result 一行摘要；turn 失败按 {@link io.javanatic.harness.session.event.FailureKind}
- * 渲染可行动文案（05 §3 承诺：不解析消息文本）。REPL 面板输出经 {@link #println}
+ * 渲染可行动文案（05 §3 承诺：不解析消息文本）；turn/end 恒打一行轮末统计
+ * （{@link TurnStats}，与 one-shot 出口同形）。REPL 面板输出经 {@link #println}
  * 入同一队列——屏幕只有一个写者。
  */
 final class StreamRenderer implements AutoCloseable {
@@ -31,6 +32,9 @@ final class StreamRenderer implements AutoCloseable {
     private final PrintStream out;
     private final BlockingQueue<Item> queue = new LinkedBlockingQueue<>();
     private final Thread worker;
+
+    /** 轮末统计累计器（渲染线程私有）。 */
+    private final TurnStats.Accumulator stats = new TurnStats.Accumulator();
 
     /** 是否有未闭合的输出行；仅渲染线程读写。 */
     private boolean lineOpen;
@@ -85,6 +89,7 @@ final class StreamRenderer implements AutoCloseable {
     }
 
     private void render(SessionEvent event) {
+        stats.on(event);
         switch (event) {
             case AssistantChunkEvent chunked -> renderChunk(chunked.chunk());
             case ToolCallEvent call -> {
@@ -101,11 +106,14 @@ final class StreamRenderer implements AutoCloseable {
         }
     }
 
+    /** 失败行先落（可行动文案），末了恒补一行轮末统计——同形见 {@link TurnStats#line()}。 */
     private void renderTurnEnd(TurnEnd end) {
         if (end.reason() instanceof TurnEndReason.Error error) {
             breakLine();
             write("turn 失败: " + failureText(error) + "\n");
         }
+        breakLine();
+        write(stats.finish(end).line() + "\n");
     }
 
     private void renderChunk(StreamChunk chunk) {

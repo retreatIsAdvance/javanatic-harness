@@ -85,16 +85,21 @@ class HeadlessOneShotResultTest {
         assertThat(exit).isZero();
         assertThat(stdout.toString(StandardCharsets.UTF_8))
             .isEqualTo("回答完成" + System.lineSeparator());
-        assertThat(stderr.toString(StandardCharsets.UTF_8)).doesNotContain("任务失败");
+        assertThat(stderr.toString(StandardCharsets.UTF_8))
+            .doesNotContain("任务失败")
+            .contains("stats: turn=1 steps=1 tokens_in=0 tokens_out=0 elapsed=");
     }
 
     @Test
     void emptyFinalTextIsStillSuccessWithEmptyStdout() throws Exception {
         answerEmpty();
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
-        int exit = run(new String[] {"测试任务"}, stdout, new ByteArrayOutputStream());
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        int exit = run(new String[] {"测试任务"}, stdout, stderr);
         assertThat(exit).isZero();
         assertThat(stdout.toString(StandardCharsets.UTF_8)).isEmpty();
+        // 统计行独立于答案文本:空答案同样落一行
+        assertThat(stderr.toString(StandardCharsets.UTF_8)).contains("stats: turn=1 steps=1");
     }
 
     @Test

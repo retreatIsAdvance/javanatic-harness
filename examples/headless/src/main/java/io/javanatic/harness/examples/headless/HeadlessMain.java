@@ -9,14 +9,17 @@ import io.javanatic.harness.agent.CancelOptions;
 import io.javanatic.harness.agent.CreateAgentOptions;
 import io.javanatic.harness.agent.ResumeAgentOptions;
 import io.javanatic.harness.agentloop.AssistantChunkEvent;
+import io.javanatic.harness.agentloop.LoopGuard;
 import io.javanatic.harness.kernel.scope.Disposable;
 import io.javanatic.harness.kernel.scope.Runtime;
+import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.boot.AppBoot;
 import io.javanatic.harness.boot.Policy;
 import io.javanatic.harness.interaction.commands.Command;
 import io.javanatic.harness.interaction.commands.CommandInvocation;
 import io.javanatic.harness.interaction.commands.CommandRegistry;
 import io.javanatic.harness.interaction.commands.CommandResult;
+import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.kernel.config.ConfigRowSpec;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.SessionStore;
@@ -35,6 +38,7 @@ import io.javanatic.harness.session.persistence.SessionPersistence;
 import io.javanatic.harness.session.persistence.WriterLockException;
 import io.javanatic.harness.systemprompt.PromptSection;
 import io.javanatic.harness.systemprompt.SystemPromptService;
+import io.javanatic.harness.tools.ApprovalService;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -90,7 +94,8 @@ public final class HeadlessMain {
                                                 空闲 Ctrl-C 退出;进行中的轮 Ctrl-C 取消,以
                                                 aborted 落账,可 --resume 续)
           jh --resume=<sessionId> [flags]       在既有会话上进入交互模式(带任务文本则一次性续跑)
-          jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1)
+          jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1;
+                                                通过时 stdout 打印 07 §6 治理摘要)
           jh --help                            显示本说明
 
         flags:
@@ -117,7 +122,8 @@ public final class HeadlessMain {
           --profile=<文件|名字>      组合 profile;名字解析 ~/.harness/profiles/<名>/profile.yml
 
         REPL 说明:非 / 行作为消息发送(各成其 turn,与模型运行并行排队);/ 行走命令面
-        (未知命令只提示、不送模型);--approval=ask 的裁决行走同一输入通道(不另起 stdin 读者)。
+        (未知命令只提示、不送模型);--approval=ask 的裁决行走同一输入通道(不另起 stdin 读者);
+        每轮结束渲染一行轮末统计(stats: 见下)。
 
         Ctrl-C(SIGINT) 语义:
           一次性任务 取消当前轮:收敛后以 turn/end(aborted) 落账、退出码 4(stdout 为空);
@@ -129,6 +135,8 @@ public final class HeadlessMain {
 
         任务结果(一次性路径;输出契约):
           stdout         任务完成时输出最终答案文本(成功但无文本时为空)
+          stderr         成功时另打一行轮末统计,与 REPL 同形:
+                         stats: turn=… steps=… tokens_in=… tokens_out=… elapsed=…s
         退出码:
           0  任务完成(或 --verify 通过 / --help)
           1  --verify 违规
@@ -351,9 +359,16 @@ public final class HeadlessMain {
         Path profile = resolveProfile(options.profile());
         AppBoot.BootOptions boot = new AppBoot.BootOptions(profile, buildOverlays(options, workspace, sessions),
             options.verify(), options.policy());
-        try (Runtime rt = AppBoot.boot(boot)) {
+        AppBoot.Booted booted;
+        try {
+            booted = AppBoot.bootReported(boot);
+        } catch (AppBoot.VerifyFailedException e) {
+            e.violations().forEach(v -> LOG.log(Level.ERROR, "违规: {0}", v));
+            return 1;
+        }
+        try (Runtime rt = booted.runtime()) {
             if (options.verify()) {
-                LOG.log(Level.INFO, "verify 通过");
+                governanceSummary(booted, options, rt.root()).forEach(out::println);
                 return 0;
             }
             String apiKey = options.resolvedApiKey();
@@ -423,15 +438,13 @@ public final class HeadlessMain {
             handle.disposeAndAwait();
             rt.root().require(SessionPersistence.KEY).save(agent.session());
             return exit;
-        } catch (AppBoot.VerifyFailedException e) {
-            e.violations().forEach(v -> LOG.log(Level.ERROR, "违规: {0}", v));
-            return 1;
         }
     }
 
     /**
      * one-shot 终局处理（run 尾段；package-private 供测试）：成功 → stdout 最终答案
-     * （空答案合法，不打）;失败 → stdout 空 + stderr 诊断块（模型遗言 + 终局文案）。
+     * （空答案合法，不打）+ stderr 一行轮末统计（与 REPL 同形，stdout 契约不动）;
+     * 失败 → stdout 空 + stderr 诊断块（模型遗言 + 终局文案）。
      *
      * @return 退出码 0/3/4（词表见 {@link #USAGE} 与 12 §6）
      */
@@ -443,6 +456,7 @@ public final class HeadlessMain {
             if (!answer.isEmpty()) {
                 out.println(answer);
             }
+            err.println(TurnStats.of(live).line());
             return 0;
         }
         String lastWords = finalAnswerText(live);
@@ -524,6 +538,47 @@ public final class HeadlessMain {
             }
         }
         return reason;
+    }
+
+    /**
+     * 07 §6 治理摘要（--verify 成功路径 stdout；承诺「来自实现自述」）：组合计数 +
+     * 审批模式 / 审计耐久 / 停止上限——模式、耐久与 limits 全部读实现
+     * （{@code ApprovalService.mode()} 等），行数/发现数读 boot 与清单；不印文档常量。
+     * 走到这里 Policy.check 已过——治理服务缺失在 boot 期即违规（exit 1）。
+     */
+    static List<String> governanceSummary(AppBoot.Booted booted, RunnerOptions options, Scope root) {
+        CompositionManifest manifest = root.require(CompositionManifest.KEY);
+        ApprovalService approval = root.require(ApprovalService.KEY);
+        SessionPersistence persistence = root.require(SessionPersistence.KEY);
+        LoopGuard.Limits limits = root.require(LoopGuard.KEY).limits();
+        CompositionManifest.Row audit = mountedRow(manifest, "persistence-");
+        long budget = limits.maxBudgetTokens();
+        return List.of(
+            "Profile: " + booted.profileName() + "   policy: " + options.policy(),
+            "  composition: " + manifest.rows().size() + " rows, " + booted.discovered()
+                + " discovered, " + booted.unreferenced() + " unreferenced",
+            "  approval: " + approval.mode() + " (" + mountedRow(manifest, "approval-").plugin() + ")",
+            "  audit: " + audit.plugin().replaceFirst("^persistence-", "") + " "
+                + configText(audit, "root") + (persistence.durable() ? " (durable)" : " (non-durable)"),
+            "  stop: max-turns=" + limits.maxTurns() + " max-steps=" + limits.maxStepsPerTurn()
+                + " budget=" + (budget > 0 ? Long.toString(budget) : "unlimited"));
+    }
+
+    /** 清单中首个前缀挂载行（摘要按插件 id 定位挂的是哪个实现；缺失 fail loud）。 */
+    private static CompositionManifest.Row mountedRow(CompositionManifest manifest, String prefix) {
+        return manifest.rows().stream()
+            .filter(row -> row.plugin().startsWith(prefix))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("治理摘要无法自述:组合清单无 " + prefix + "* 行"));
+    }
+
+    /** 行 config 的字符串值（缺失 fail loud——摘要不猜）。 */
+    private static String configText(CompositionManifest.Row row, String key) {
+        Object value = row.config().get(key);
+        if (value == null) {
+            throw new IllegalStateException("治理摘要无法自述:行 " + row.plugin() + " 缺 config " + key);
+        }
+        return value.toString();
     }
 
     /** REPL:注册内置命令 + 渲染订阅接线 + 行循环;返回后走 run 的既有 dispose/save 尾。 */

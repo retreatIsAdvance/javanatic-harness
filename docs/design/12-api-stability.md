@@ -110,7 +110,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 ## 6. CLI 面（`jh`，dist/jh jlink 镜像）
 
-`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--budget=` / `--docker [--image=]` / `--resume=` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--help`。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）。`--verify` 无 key 可跑，exit 0/1。
+`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--budget=` / `--docker [--image=]` / `--resume=` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--help`。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。
 
 一次性任务的结果契约（it17 起，输出形状的稳定承诺）：
 
@@ -124,7 +124,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 - **stdout 契约 = 成功有结果 / 失败为空**：成功时 stdout 为本次运行新开轮最后一条 `assistant/message` 的文本（纯文本）;**成功但最终文本为空 → stdout 空 + exit 0**（合法成功）;**失败（Error / Aborted / 无终局）→ stdout 恒为空**——脚本判读无歧义。
 - “本次运行新开轮” = `seq >= Session.firstLiveSeq()`（seed 长度）;`--resume` 续跑不误判旧轮文本与旧终局。
-- 诊断（会话 id、事件清单、`FailureKind` 文案、模型遗言）全部走 stderr;kind 级分辨读 stderr 文案,退出码保持三态粗粒度（不设预算专属码）。
+- 诊断（会话 id、事件清单、`FailureKind` 文案、模型遗言）全部走 stderr;kind 级分辨读 stderr 文案,退出码保持三态粗粒度（不设预算专属码）。**成功路径** stderr 另有一行轮末统计（it20）：`stats: turn=… steps=… tokens_in=… tokens_out=… elapsed=…s`——与 REPL 轮末行同形，数据源全在事件流（`step/start` 计数、`assistant/message` 的 usage 求和、`turn/start→turn/end` 事件时间差）；stdout 契约不受影响。失败路径不另打统计行。
 - **`--resume=` 占用拒绝**（it19，单写者保护）：目标会话正被另一写者（另一进程 / 同 JVM 另一 Runtime）占用时,启动期以「写者锁冲突」文案拒绝（exit 3、stdout 空）——不等待、不并发写;写者锁随进程死亡释放（崩溃/SIGKILL 后可直接 resume,不需要人工清理）。
 
 Ctrl-C（SIGINT）契约（it18 起，随 §1 语义声明）：

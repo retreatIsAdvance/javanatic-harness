@@ -18,10 +18,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 组合装配入口（07 §5）：profile bundles → profile rows → CLI overlay 三层叠加
@@ -70,7 +72,11 @@ public final class AppBoot {
      * @throws IOException profile/bundle 读取失败
      */
     public static List<ConfigRowSpec> compose(BootOptions options) throws IOException {
-        YamlRows.Profile profile = YamlRows.parseProfile(options.profilePath());
+        return compose(YamlRows.parseProfile(options.profilePath()), options);
+    }
+
+    /** 已解析 profile 的行序（{@link #bootReported} 复用同一次解析）。 */
+    static List<ConfigRowSpec> compose(YamlRows.Profile profile, BootOptions options) throws IOException {
         Map<String, YamlRows.Bundle> bundles = new LinkedHashMap<>();
         for (YamlRows.Bundle bundle : YamlRows.discoverBundles()) {
             bundles.put(bundle.name(), bundle);
@@ -165,7 +171,22 @@ public final class AppBoot {
      * @throws VerifyFailedException verify 违规
      */
     public static Runtime boot(BootOptions options) throws IOException {
-        List<ConfigRowSpec> rows = compose(options);
+        return bootReported(options).runtime();
+    }
+
+    /**
+     * 同 {@link #boot}，另报组合自述计数（07 §6 治理摘要的数据面：profile 名与
+     * 行/发现/未引用计数——--verify 成功路径按它打印，不印文档常量）。
+     *
+     * @param options 装配选项
+     * @return Runtime + 组合自述计数
+     * @throws IOException 读取失败
+     * @throws IllegalStateException 双向校验或加载失败
+     * @throws VerifyFailedException verify 违规
+     */
+    public static Booted bootReported(BootOptions options) throws IOException {
+        YamlRows.Profile profile = YamlRows.parseProfile(options.profilePath());
+        List<ConfigRowSpec> rows = compose(profile, options);
         PluginLoader loader = new PluginLoader();
         Map<String, Plugin> discovered = loader.discover();
         // 双向校验对照全量行(禁用行也算引用——它在组合里,只是不加载)
@@ -185,7 +206,12 @@ public final class AppBoot {
             }
             sandboxWarning(root).ifPresent(warning -> LOG.log(System.Logger.Level.WARNING, warning));
         }
-        return runtime;
+        // 校验已过 → 恒 0；保留计数是摘要与校验同源的证据（不印常量）
+        return new Booted(runtime, profile.name(), discovered.size(), unreferencedPlugins(discovered, rows).size());
+    }
+
+    /** --verify 治理摘要的数据面：装配结果 + 组合自述计数（07 §6）。 */
+    public record Booted(Runtime runtime, String profileName, int discovered, int unreferenced) {
     }
 
     /**
@@ -232,16 +258,19 @@ public final class AppBoot {
                 violations.add("行引用的插件未发现: " + row.plugin());
             }
         }
-        java.util.Set<String> referenced = new java.util.HashSet<>();
-        rows.forEach(row -> referenced.add(row.plugin()));
-        for (String id : discovered.keySet()) {
-            if (!referenced.contains(id)) {
-                violations.add("发现的插件未被任何行引用: " + id);
-            }
+        for (String id : unreferencedPlugins(discovered, rows)) {
+            violations.add("发现的插件未被任何行引用: " + id);
         }
         if (!violations.isEmpty()) {
             throw new IllegalStateException(String.join("; ", violations));
         }
+    }
+
+    /** 发现集里未被任何行引用（含 disabled 行）的插件 id——校验与摘要同一口径。 */
+    private static List<String> unreferencedPlugins(Map<String, Plugin> discovered, List<ConfigRowSpec> rows) {
+        Set<String> referenced = new HashSet<>();
+        rows.forEach(row -> referenced.add(row.plugin()));
+        return discovered.keySet().stream().filter(id -> !referenced.contains(id)).sorted().toList();
     }
 
     private static ConfigService configServiceFrom(List<ConfigRowSpec> rows) {
