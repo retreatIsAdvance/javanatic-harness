@@ -1,4 +1,4 @@
-# 迭代 19.1 — 两条挂账收口：不变式复核 turn 口径 + Append-sources wire 保真（状态：进行中——S-a 编辑与取证完成、随本地提交放行（未 push）；余 ④ 全量 package / ⑤ 文档同步）
+# 迭代 19.1 — 两条挂账收口：不变式复核 turn 口径 + Append-sources wire 保真（状态：已完成——四确认与三项测试面要求 2026-09-21 裁定；S-a 随提交 6d16a71 放行；收尾同日：全量 package 418 测试 / 29 模块 0 失败 0 错误 + 文档收口）
 
 模块：`core/session`（`SessionInvariants` + 夹具）+ `session/persistence-jsonl`（`CoreCodecs` 三处）+ 文档（03 §6 / it19 挂账行）
 
@@ -31,7 +31,7 @@
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
 - **ADDED**：无
-- **MODIFIED**：03 §6 codec 说明（`sourceEventSeqs` 落盘口径：非 null 即写、读回对称、Append 亦然；**turn 1-based / step 0-based 不对称口径点明，勿当 bug 修**）；it19 设计偏离表第一行处理列标「已收口（it19.1）」；`CoreCodecs` 三处 surface codec；`SessionInvariants` turn 期望 + javadoc 口径注记；两处测试夹具
+- **MODIFIED**：03 §6 codec 说明（`sourceEventSeqs` 落盘口径：非 null 即写、读回对称、Append 亦然）+ §7 turn/step 口径（**1 起 / 0 起不对称是有意口径，勿当 bug 修**）；it19 设计偏离表两行处理列标「已收口（it19.1）」；`CoreCodecs` 三处 surface codec；`SessionInvariants` turn 期望 + javadoc 口径注记；两处测试夹具（+`SessionTest` 种子，见设计偏离）
 - **REMOVED**：无
 
 ## 锚点（开工前填写：本次将改动的既有代码位置）
@@ -49,7 +49,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| **S-a wire 保真**：`CoreCodecs` 三处（承载契约——盘上格式）+ 往返测试 | 锚点 4、5 | 编辑与取证（聚焦 + 突变 A/B + 复绿）完成 → **已放行（随本切片本地提交；未 push）** |
+| **S-a wire 保真**：`CoreCodecs` 三处（承载契约——盘上格式）+ 往返测试 | 锚点 4、5 | 编辑与取证（聚焦 + 突变 A/B + 复绿）完成 → **已放行（提交 6d16a71；未 push）** |
 
 （① 为机械修正，不设停点；本切片单停点——纯机械 + 一处契约面。）
 
@@ -58,8 +58,8 @@
 - [x] ① `SessionInvariantsTest` 与 `SessionRecoveryTest` 全绿（1-based 夹具），`mvn -B -q -pl core/session -am test`；javadoc 口径注记（turn 1-based / step 0-based 不对称）在案 —— **取证**：BUILD SUCCESS、`core/session` 模块汇总 **41 测试 / 0 失败 0 错误**（/tmp/it19.1-core-session-1.log，EXIT=0）；`SessionInvariants` javadoc 明写「turn 号 = TurnStart 计数（**1 起**）；step = turn 内序号（**0 起**）——两侧起点不对称是有意口径，勿当不一致修正」
 - [x] ② `JsonlPersistenceTest` 往返矩阵：三事件（`user/message` / `assistant/message` / `tool/result`）× 两态（带/不带 seqs）save→load 逐元素保真；Replace + sources 旧行为不回归；**手写旧格式行（无键 → null）读侧用例**把 v0 兼容变断言 —— **取证**：BUILD SUCCESS、模块汇总 **22 测试 / 0 失败**（/tmp/it19.1-jsonl-1.log，EXIT=0）。新例 `surfaceSourceSeqsRoundTripInBothStates`（`"sourceEventSeqs"` 键出现恰 3 次 + `containsExactlyElementsOf` 逐元素保真）+ `oldLogWithoutSourceSeqsKeyReadsAsNull`（手写旧行无键 → null）；`fullHistoryRoundTripsThroughDisk`（Replace + sources 旧行为）不回归
 - [x] ③ 突变检查：删 `CoreCodecs` 写分支 → 往返必红；turn 期望回退 0-based → `core/session` 必红（各自恰红、还原复绿）—— **取证**：MUT A（删 `CoreCodecs` tool/result 写侧分支）→ 恰 1 红 `surfaceSourceSeqsRoundTripInBothStates:558`（键计数 4→3；/tmp/it19.1-mutA-wire-red.log，BUILD FAILURE、22 测试 1 失败）；MUT B（turn 期望回退 0-based）→ `core/session` 41 测试 **3 失败 + 1 错误**（`validConversationPasses:34` / `brokenSeqContiguityRejected:44` / `logEndingInsideOpenTurnRejected:68` 三个先撞 turn 号消息 + `closeInterruptedAppendsFactsAfterEndSeedAndIsIdempotent:125 » turn/start number 1 != expected 0`；/tmp/it19.1-mutB-turn-red.log，BUILD FAILURE）；各自还原复绿（/tmp/it19.1-mutA-wire-green.log、/tmp/it19.1-mutB-turn-green.log，BUILD SUCCESS）
-- [ ] ④ 全量 `mvn -B -q package` 绿
-- [ ] ⑤ 文档同步：03 §6（口径权威化）/ it19 挂账行标注收口（引用本迭代号）
+- [x] ④ 全量 `mvn -B -q package` 绿 —— **取证**：`mvn -B package`（不加 `-q` 以留计数行）= /tmp/it19.1-package-1.log，BUILD SUCCESS、EXIT=0；模块汇总行求和 **418 测试 / 29 模块，0 失败 0 错误**（= it19 收尾 416 + 本迭代新增 2；4 skip = `SandboxLocalTest` 2 + keyless 门控 `DeepSeekE2ETest` / `RealModelAgentE2ETest` 各 1；`DockerShellTest` 11/11 实跑——较 it19 收尾多跑 7 例为 docker 可用性环境差，非行为差）
+- [x] ⑤ 文档同步：03 §6（口径权威化）/ it19 挂账行标注收口（引用本迭代号）—— **取证**：03 §6 实现落定新增「**（it19.1）surface codec 的 provenance 落盘口径**」（写侧非 null 即写、与 Replace 解耦、Append 亦然；读侧按 key 存在即回；旧日志缺键读 null）；03 §7 turn/step 口径补「**1 起 / 0 起不对称是有意口径，勿当 bug 修**」；it19 设计偏离表两行处理列均标「**已收口（it19.1，2026-09-21）**」
 
 ## 修正（如有）
 

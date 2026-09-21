@@ -231,5 +231,5 @@
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
-| 裁决④事件序锚点「恢复事实 `sourceEventSeqs` 引 seed 前 seq」（字面易读作进盘） | `tool/result` 不进盘 `sourceEventSeqs`（既有 wire 口径：仅 Replace 事件持久化 provenance）；引用关系为**进程内契约**，由 `SessionRecoveryTest` 钉住；跨重载归属靠 `toolUseId`（= 悬空调用 id）+ 位于 resume 侧 end-seed 之后 | 沿用既有 wire 口径，不为恢复单开字段 | 迭代内已同步（03 §6 措辞即现状；S-b 实施中披露在案） |
-| — | `SessionInvariants` turn 校验 0-based vs 生产 loop 1-based（`validate` 会拒绝一切真实日志；现仅测试夹具调用，未接 load/resume 路径） | 既有缺陷，不在四确认范围 | 挂账（修法一行 `nextTurn + 1` + 夹具更新；见 S-b 披露） |
+| 裁决④事件序锚点「恢复事实 `sourceEventSeqs` 引 seed 前 seq」（字面易读作进盘） | `tool/result` 不进盘 `sourceEventSeqs`（既有 wire 口径：仅 Replace 事件持久化 provenance）；引用关系为**进程内契约**，由 `SessionRecoveryTest` 钉住；跨重载归属靠 `toolUseId`（= 悬空调用 id）+ 位于 resume 侧 end-seed 之后 | 沿用既有 wire 口径，不为恢复单开字段 | 迭代内已同步（03 §6 措辞即现状；S-b 实施中披露在案）→ **已收口（it19.1，2026-09-21）**：Append 亦落盘（非 null 即写、读回对称），provenance 升为盘上事实 |
+| — | `SessionInvariants` turn 校验 0-based vs 生产 loop 1-based（`validate` 会拒绝一切真实日志；现仅测试夹具调用，未接 load/resume 路径） | 既有缺陷，不在四确认范围 | 挂账（修法一行 `nextTurn + 1` + 夹具更新；见 S-b 披露）→ **已收口（it19.1，2026-09-21；提交 6d16a71）** |

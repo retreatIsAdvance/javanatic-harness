@@ -473,6 +473,7 @@ public final class JsonlPersistence implements SessionPersistence {
 - **（it19）单写者保护**:会话目录级 `.writer.lock`(`FileChannel.tryLock`,不等待)——第二写者(另一进程或同 JVM 另一实例)占用即 `WriterLockException` fail loud,拒绝而非合并;写者随 CREATED backfill 创建,随 DISPOSED 或持久化插件 scope 收拢释放(幂等双路径);`load` 对外来写者先试锁(占用即拒——撕裂尾修复是写操作,不得与在写者并发),本实例为写者时在写者 monitor 内修复+读。`SessionStore.create` 对已存在 id 改 `putIfAbsent` + fail loud(静默覆盖会让两个 owner 的 `onClose` 交叉移除)。
 - **（it19）屏障对账口径**:`flushBarrier(expectedSeq)` 先对账(已写行数必须追平 `session.seq()`,不符即抛)再 fsync——append 观察者异常按契约 contained 吞掉的写失败只在此显形;`writeEnvelope` 跳号护栏(信封 seq > 已写行数即拒),洞不被后续写假性追平。派发前调用点见 04 §13;`SessionStore.flush` 把 listener 失败包成 `DurabilityException`(收敛为 `FailureKind.DISK`)。
 - **（it19）恢复收口**:resume 装载后由 `SessionRecovery` 分析未完成尾形(悬空调用 = 消息级 tool_use ∪ 审计级 tool/call − 已配对 tool/result;开着的 turn/step),以恢复事实闭合:**不自动重放**——error `tool/result`(文案「结果未知,可自行核验」,`sourceEventSeqs` 引悬空调用/消息 seq)+ `step/end` + `turn/end(Aborted("interrupted"))`;事实在 end-seed **之后**追加(`firstLiveSeq` 语义内)、分析纯函数、收口幂等。理由:悬空 tool_use 使 resume 后首个真实请求违反 OpenAI 配对契约(400)。
+- **（it19.1）surface codec 的 provenance 落盘口径**:写侧 `sourceEventSeqs` **非 null 即写**(与 `Replace` 分支解耦——Append 亦然),读侧按 key 存在即回(此前仅 Replace 落盘,Append——含 it19 恢复事实——重载丢来源,provenance 只是进程内契约);旧日志缺键读为 null(v0 口径,无兼容垫片)。往返矩阵与旧格式读侧用例在 `JsonlPersistenceTest`。
 
 - **load 重建**:逐行信封,seq == 行号校验(跳号/重复拒绝);未知 type 按信封 ignorable 跳过或拒绝;header 往返含 FORMAT_VERSION。
 
@@ -481,7 +482,7 @@ public final class JsonlPersistence implements SessionPersistence {
 对应 dsh 的 session invariant。`SessionInvariants.validate(List<LoggedEvent<?>>)` 逐条检查：
 
 - **信封连续**：`seq[i] == i`（load 与 append 双侧结构性保证，此处复核）
-- **turn/step 单调且嵌套**：turn 号 = TurnStart 计数；step 必在 turn 内；tool/call 与 tool/result 同 step 配对
+- **turn/step 单调且嵌套**：turn 号 = TurnStart 计数（**1 起**）；step = turn 内序号（**0 起**）——两侧起点不对称是**有意口径**（对齐生产 loop 与 04 规格），勿当 bug 修；step 必在 turn 内；tool/call 与 tool/result 同 step 配对
 - **provenance**：surface 事件的 sourceEventSeqs 全部 < 当前 seq、无重复；Replace 时 ⊇ shadowed
 - **end-seed**：只在 seed 末尾出现一次
 - **R1 复核**：LlmRequestEvent 的 `[messagesFromSeq, messagesToSeq] + systemPromptSha256 + toolsSchemaSha256` 重推导一致（回放测试用，见 10）
