@@ -17,7 +17,8 @@ public interface CompactionService {
     ServiceKey<CompactionService> KEY = new ServiceKey<>("compaction");
 
     /**
-     * 压力判断:末次模型请求的 inputTokens 是否超过配置阈值。
+     * 压力判断:末次模型请求的 inputTokens 是否超过配置阈值
+     * (it20 修正:此前实现取全日志 max() 高位水位,跨阈后每 step 复发压缩)。
      *
      * @param session 被驱动的会话(只读)
      * @return true 表示下次组装请求前应压缩
@@ -33,8 +34,8 @@ public interface CompactionService {
      * @param turn    发起压缩的轮号(锁持有者标识)
      * @param route   摘要调用的路由(Provider 配置了独立模型时覆盖)
      * @param signal  取消信号
-     * @return 审计事件(摘要/信封/盖写区间)
-     * @throws IllegalStateException 无可压缩区间或摘要失败时
+     * @return 审计事件(摘要/信封/盖写区间);无可压缩区间(tail 覆盖全部 surface)返回 null
+     * @throws IllegalStateException 摘要失败时
      */
     CompactionSummary compact(Session session, int turn, LlmCallConfig route, AbortSignal signal);
 

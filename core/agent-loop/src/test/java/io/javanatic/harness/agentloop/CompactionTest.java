@@ -47,6 +47,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -70,11 +71,39 @@ class CompactionTest {
         final AtomicInteger calls = new AtomicInteger();
 
         Rig(long threshold) {
+            this(threshold, 20, Rig::defaultScript);
+        }
+
+        /** 缺省脚本:1) tool_use + inputTokens=10;2) 摘要应答;3+) 终答。 */
+        static Stream<StreamChunk> defaultScript(int call) {
+            if (call == 1) {
+                return Stream.of(
+                    new StreamChunk.Delta("查"),
+                    new StreamChunk.DeltaToolUse(CallId.of("c1"), "echo", "{}"),
+                    new StreamChunk.Usage(new TokenUsage(REPORTED_INPUT_TOKENS, 5, 0)),
+                    new StreamChunk.Finish(FinishReason.TOOL_USE));
+            }
+            if (call == 2) {
+                return Stream.of(
+                    new StreamChunk.Delta("## Primary Request and Intent\n- 任务"),
+                    new StreamChunk.Finish(FinishReason.STOP));
+            }
+            return Stream.of(
+                new StreamChunk.Delta("终答"),
+                new StreamChunk.Finish(FinishReason.STOP));
+        }
+
+        /**
+         * @param threshold    压缩阈值(负值哨兵 = 走 contextWindow=10 的比例路径)
+         * @param retainTokens 保留预算
+         * @param script       按调用序(1 起)构造应答流
+         */
+        Rig(long threshold, long retainTokens, IntFunction<Stream<StreamChunk>> script) {
             rt = new Runtime();
             rt.root().provide(ConfigService.KEY, id -> id.equals("compaction")
                 ? threshold < 0
-                    ? Map.of("contextWindow", 10, "retainTokens", 20)
-                    : Map.of("maxContextTokens", threshold, "retainTokens", 20)
+                    ? Map.of("contextWindow", 10, "retainTokens", retainTokens)
+                    : Map.of("maxContextTokens", threshold, "retainTokens", retainTokens)
                 : Map.of());
             new PluginLoader().loadAll(rt, List.of(
                 new SessionStorePlugin(), new AgentPlugin(),
@@ -85,26 +114,9 @@ class CompactionTest {
             rt.root().require(ToolRegistry.KEY).register(rt.root(), ToolDefinition.of("echo", "回显",
                 new ValueSchema.Object("参数", Map.of()),
                 (a, c) -> ToolExecutionResult.success("回")));
-            // 脚本 adapter 三段:1) tool_use + 高 inputTokens;2) 压缩摘要;3) 终答
             rt.root().require(LlmService.KEY)
-                .registerAdapter("scripted", (config, request, signal) -> {
-                    int call = calls.incrementAndGet();
-                    if (call == 1) {
-                        return Stream.of(
-                            new StreamChunk.Delta("查"),
-                            new StreamChunk.DeltaToolUse(CallId.of("c1"), "echo", "{}"),
-                            new StreamChunk.Usage(new TokenUsage(REPORTED_INPUT_TOKENS, 5, 0)),
-                            new StreamChunk.Finish(FinishReason.TOOL_USE));
-                    }
-                    if (call == 2) {
-                        return Stream.of(
-                            new StreamChunk.Delta("## Primary Request and Intent\n- 任务"),
-                            new StreamChunk.Finish(FinishReason.STOP));
-                    }
-                    return Stream.of(
-                        new StreamChunk.Delta("终答"),
-                        new StreamChunk.Finish(FinishReason.STOP));
-                });
+                .registerAdapter("scripted", (config, request, signal) ->
+                    script.apply(calls.incrementAndGet()));
             agents = rt.root().require(AgentRegistry.KEY);
         }
 
@@ -181,6 +193,76 @@ class CompactionTest {
             agent.whenIdle().join();
             assertThat(agent.session().events().stream()
                 .map(e -> e.event().type())).doesNotContain("compaction/start");
+        }
+    }
+
+    @Test
+    void triggerReadsLastInputTokensNotHighWater() throws Exception {
+        // it20 回归:调用 1 报 input=60(跨阈 50)触发一次压缩;压缩后调用 3 报 input=10。
+        // max() 高位水位会在下一 step top 复发(压缩 2 次);末次口径恰 1 次且步数不变。
+        try (Rig rig = new Rig(50, 20, call -> switch (call) {
+            case 1 -> Stream.of(
+                new StreamChunk.Delta("查"),
+                new StreamChunk.DeltaToolUse(CallId.of("c1"), "echo", "{}"),
+                new StreamChunk.Usage(new TokenUsage(60, 5, 0)),
+                new StreamChunk.Finish(FinishReason.TOOL_USE));
+            case 2 -> Stream.of(
+                new StreamChunk.Delta("## Primary Request and Intent\n- 任务"),
+                new StreamChunk.Finish(FinishReason.STOP));
+            case 4 -> Stream.of(
+                new StreamChunk.Delta("终答"),
+                new StreamChunk.Finish(FinishReason.STOP));
+            default -> Stream.of(
+                new StreamChunk.DeltaToolUse(CallId.of("c2"), "echo", "{}"),
+                new StreamChunk.Usage(new TokenUsage(10, 5, 0)),
+                new StreamChunk.Finish(FinishReason.TOOL_USE));
+        })) {
+            AgentHandle handle = rig.agents.create(rig.rt.root(),
+                CreateAgentOptions.of(Session.newId("cpt4"), OPTIONS));
+            Agent agent = handle.agent();
+            agent.followup(UserMessage.of("任务", new MessageSource.User()));
+            agent.whenIdle().join();
+
+            List<String> types = agent.session().events().stream()
+                .map(e -> e.event().type()).toList();
+            assertThat(types.stream().filter("compaction/start"::equals).count()).isEqualTo(1);
+            assertThat(rig.calls.get()).isEqualTo(4);
+            assertThat(agent.session().events().stream()
+                .map(e -> e.event())
+                .filter(TurnEnd.class::isInstance)
+                .map(e -> ((TurnEnd) e).reason()))
+                .containsExactly(new TurnEndReason.Completed());
+        }
+    }
+
+    @Test
+    void nothingToCompactSkipsAndTurnCompletes() throws Exception {
+        // tail 覆盖全部 surface(retainTokens 大于日志估价):压力路径跳过 + WARN,
+        // 本 step 继续——此前此处抛 IllegalStateException → turn/end(Error) 判死可挽救的轮
+        try (Rig rig = new Rig(5, 10_000, call -> call == 1
+                ? Stream.of(
+                    new StreamChunk.Delta("查"),
+                    new StreamChunk.DeltaToolUse(CallId.of("c1"), "echo", "{}"),
+                    new StreamChunk.Usage(new TokenUsage(10, 5, 0)),
+                    new StreamChunk.Finish(FinishReason.TOOL_USE))
+                : Stream.of(
+                    new StreamChunk.Delta("终答"),
+                    new StreamChunk.Finish(FinishReason.STOP)))) {
+            AgentHandle handle = rig.agents.create(rig.rt.root(),
+                CreateAgentOptions.of(Session.newId("cpt5"), OPTIONS));
+            Agent agent = handle.agent();
+            agent.followup(UserMessage.of("任务", new MessageSource.User()));
+            agent.whenIdle().join();
+
+            List<String> types = agent.session().events().stream()
+                .map(e -> e.event().type()).toList();
+            assertThat(types).doesNotContain("compaction/start");
+            assertThat(rig.calls.get()).isEqualTo(2);
+            assertThat(agent.session().events().stream()
+                .map(e -> e.event())
+                .filter(TurnEnd.class::isInstance)
+                .map(e -> ((TurnEnd) e).reason()))
+                .containsExactly(new TurnEndReason.Completed());
         }
     }
 

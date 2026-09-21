@@ -353,7 +353,8 @@ public final class AgentLoopImpl implements Agent {
         while (true) {
             signal.checkAbort();
             guard.checkBudget(session, turn, step);
-            // 压力压缩:末次 inputTokens 超阈值 → 维护事务盖写前缀(dsh pre-step 语义)
+            // 压力压缩(it20 口径):末次 inputTokens 超阈值 → 维护事务盖写前缀(dsh pre-step 语义);
+            // 返回 null = 无可压缩区间,跳过继续(真空由请求侧溢出显形,不判死本 step)
             if (compaction != null && compaction.shouldCompact(session)) {
                 compaction.compact(session, turn, config0(turn, step, signal), signal);
             }

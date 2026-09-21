@@ -246,9 +246,17 @@ class AgentLoopImpl implements Agent {
 ```java
     private void runStepLoop(int turn, AbortSignal signal) {
         int step = 0;
+        int retriesLeft = 0;
+        int overflowRetries = 0;
         while (true) {
             signal.checkAbort();
             guard.checkBudget(session, turn, step);   // R4：每步先查停止条件（超限抛 GuardReject）
+
+            // 压力压缩（it10；口径见 §7.1）：末次 inputTokens 超阈 → 维护事务盖写前缀；
+            // 无可压缩区间 → 跳过 + WARN（不判死本 step，真空由请求侧溢出显形）
+            if (compaction != null && compaction.shouldCompact(session)) {
+                compaction.compact(session, turn, config0(turn, step, signal), signal);
+            }
 
             session.append(new StepStart(clock.millis(), turn, step));
 
@@ -267,25 +275,42 @@ class AgentLoopImpl implements Agent {
                 0, session.seq() - 1,                  // 消息窗口 = 当前日志前缀
                 callConfig.params()));
 
-            // 模型流式：阻塞 Stream，跑在 driver 虚拟线程上（05 §LLM seam）
-            AssistantMessage assistantMsg;
-            try (Stream<StreamChunk> chunks = llm.stream(callConfig, session.requestHeader()
-                .map(h -> buildRequest(systemPrompt, toolsSchema, session.deriveMessages(), h))
-                .orElseGet(() -> buildRequest(systemPrompt, toolsSchema, session.deriveMessages(), null)),
-                signal)) {
-                assistantMsg = accumulate(chunks, turn, step, signal);
-                // chunks 逐个：signal.checkAbort()；可选 append AssistantChunkEvent（遥测）
-                // 结束：append AssistantMessageEvent（surface，带 usage）
-            }
+            // 派发前耐久屏障（it19）：请求锚落盘确认后才许调用（工具批同形，见 §13）
+            store.flush(agentScope, session);
 
-            List<ToolCallEvent> calls = extractToolCalls(assistantMsg, turn, step);
+            // 模型流式：阻塞 Stream，跑在 driver 虚拟线程上（05 §LLM seam）
+            ChunkAssembly.Assembled assembled;
+            try (Stream<StreamChunk> chunks = llm.stream(callConfig, new LlmRequest(
+                    systemPrompt.isEmpty() ? null : systemPrompt,
+                    session.deriveMessages(), schemas, Map.of()), signal)) {
+                // 边消费边落 AssistantChunkEvent（流式事实）；装配失败也不抹已到分块
+                assembled = ChunkAssembly.fold(chunks.toList());
+            } catch (RuntimeException e) {
+                // 溢出恢复（it14；规格见 §7.1）：Kind.OVERFLOW 且本 turn 未恢复过
+                // → 强制压缩（compactNow）+ 同 step 重试一次
+                if (overflowRetries == 0 && compaction != null && isContextOverflow(e)
+                        && compaction.compactNow(session, turn, config0(turn, step, signal), signal) != null) {
+                    overflowRetries++;
+                    continue;
+                }
+                // REQUEST_ERROR 首决策（firstOf）：maxRetries 内同 step 重试；否则重抛
+                if (decision.isPresent() && retriesLeft < decision.orElseThrow().maxRetries()) {
+                    retriesLeft++;
+                    continue;
+                }
+                throw e;
+            }
+            retriesLeft = 0;
+
+            List<ToolCallEvent> calls = extractToolCalls(assembled, turn, step);
             if (calls.isEmpty()) {
                 session.append(new StepEnd(clock.millis(), turn, step));
                 return;
             }
 
             // 工具执行：唯一路径经 executor；tool/call 与 tool/result 均由 executor 落账（R2，05）
-            List<LoggedEvent<ToolResultEvent>> results = executor.execute(calls, signal);
+            List<LoggedEvent<ToolResultEvent>> results = executor.execute(calls, session, turn,
+                step, agentScope, signal);
 
             session.append(new StepEnd(clock.millis(), turn, step));
 
@@ -302,6 +327,19 @@ class AgentLoopImpl implements Agent {
 ```
 
 **user/message 的落账规则**（统一前版两处不一致）：admitted 批在 **turn 层**落账一次（pre-step 之后）；steering 在**认领它的 step 边界**落账。`UserMessageEvent` 无 turn/step 字段——它的位置由日志顺序表达，投影按顺序取。
+
+### 7.1 压缩与溢出恢复（it10 落地；it14/it20 口径修正）
+
+两个触发路径共用同一维护事务（`compaction/start` → 摘要维护调用 → `user/message` + `Replace` + `MessageSource.Compaction` → `compaction/summary` 审计 → `compaction/end`，词表见 03 §6）：
+
+| 路径 | 触发 | 边界/失败语义 |
+|---|---|---|
+| 压力（pre-step） | step 顶 `shouldCompact`：**末次** assistant 消息的 `inputTokens > 阈值`（阈值 = `maxContextTokens` 覆盖 > `contextWindow × thresholdRatio`，皆缺则 apply 期 fail loud——不猜窗口大小） | 保留边界（`retainTokens` 估价累计，切点回退 tool 配对）落在 0 = 无可压缩区间 → **跳过 + WARN**，本 step 继续 |
+| 溢出（request-error catch） | `LlmCallException.Kind.OVERFLOW` 且本 turn 尚未恢复过 → `compactNow`（无视阈值强制） | `compactNow` 返回 null（无可压缩区间）即不重试，落回 `REQUEST_ERROR` 决策 / 重抛——溢出以 `turn/end(Error, FailureKind.OVERFLOW)` 诚实收口 |
+
+- **为什么压力路径跳过而不抛**（it20 修正）：`keepFrom<=0` 说明「阈值判据与可压区间判据打架」（保留预算覆盖整个 surface）。此时 step 的真实需要是继续跑；若随后请求真超窗，溢出 catch 以强制路径接管并给出诚实终局（OVERFLOW），而非在 step 顶以 UNKNOWN 判死一个本可能完成的轮。
+- **为什么触发读末次而非 max()**（it20 修正）：max() 是高位水位——一次跨阈后判据永久为真，每个 step 顶复发压缩（it15 首步核对已在案）；末次读「最近一次真实请求的上下文规模」，压缩后新请求实测值自然回落，跨 resume 仍读最近一次请求（03 §6「触发用末次 inputTokens 实数」即此口径——此前实现偏离，it20 对齐）。
+- **估算边界**：保留切点用估价（chars/2.5 + 结构开销，agentscope 校准）——无 tokenizer 的诚实近似，只用于「切在哪里」，不用于判定当前占用；触发判定用模型回报的实数。`ProductionScenarioTest` 以 replay 脚本钉住两个触发点与 R1 折叠（it15 建立、it20 随口径重写脚本）。
 
 ## 8. cancel — 实现语义
 
@@ -498,3 +536,5 @@ public record AgentHandle(Agent agent, Disposer disposer) {
 - **resume**：in-memory `SessionStore.get` 命中即恢复（turn 号从日志 TurnStart 计数派生）；缺失会话由 get 本身 fail loud（NoSuchElementException）。durable 重载路径 = `persistence.load` → `SessionStore.create(seed)` → `agents.resume`；挂载前执行恢复收口（03 §6「恢复收口」）——悬空 tool_use 不闭合会让首个请求违反 OpenAI 配对契约。
 - **（it19）派发前屏障**：`llm/request` 落账后、`llm.stream` 前，与工具批（`tool/call` 全部落账后、fork 前）各落一次 `SessionStore.flush`（对账 + fsync）；屏障失败 ⇒ 该派发不进入、turn 以 `turn/end(Error)` 收口（`FailureKind.DISK`）。工具批的 `tool/call` 落账前移至 `ToolExecutorImpl` 批前导，重复 callId 检测随之搬家。
 - **构造器取总线**：`AgentLoopImpl` 从 `agentScope.require(Runtime.KEY)` 解析事件总线与驱动；装配期缺 Runtime 即失败。
+- **（it20）压缩口径修正与跳过语义**：`lastInputTokens` 由全日志 max() 改**末次** assistant 的 `inputTokens`（03 §6 措辞即此口径，此前实现偏离）；压力路径 `keepFrom<=0` 由抛错改**跳过 + WARN**（返回 null；真空由请求侧 OVERFLOW 显形）。规格与理由见 §7.1；it15 生产场景脚本随口径重写（`ProductionScenarioTest` 数值钉：跨阈在 C/E 两处、压缩 ×2、R1 全比对不变）。
+- **（it20）预算口径**（README it20「明确 token 预算口径」）：预算 = **全日志**（含 resume 前轮）`AssistantMessageEvent.usage().outputTokens` 累计（`LoopGuardPlugin.checkBudget`），**只计输出**——输入 token 在压缩/重放/重试下会重复计，不具可比性，故不计；超限经 GuardReject 收敛 `turn/end(Error)` → exit 3（kind `UNKNOWN`，12 §6 已裁不设预算专属码）；PRODUCTION 档要求非零（07 §6）。这是可解释的**累计口径**，不是厂商计费对齐，也不宣称费用硬上限。

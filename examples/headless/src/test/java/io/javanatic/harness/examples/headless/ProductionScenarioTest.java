@@ -55,13 +55,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * it15 生产模拟场景（replay 驱动:keyless、确定性）:AppBoot 以 PRODUCTION 组合
  * boot+verify → boot 后注入 {@link ReplayPlugin} → 多步工具任务（人闸真 stdin 放行）
- * → 中途 compaction ×3 → 重启（新 Runtime 载盘）resume → budget 累积超限优雅停
- * → 终局第三个 Runtime 逐锚点前缀折叠重建请求（R1 全比对）。
+ * → 中途 compaction ×2（turn1 / resume 后的 turn2 各一次）→ 重启（新 Runtime 载盘）
+ * resume → budget 累积超限优雅停 → 终局第三个 Runtime 逐锚点前缀折叠重建请求（R1 全比对）。
  *
- * <p>数值钉（首步核对修正,max() 高位水位语义）:maxContextTokens=100、retainTokens=1、
+ * <p>数值钉（it20 修正,末次 inputTokens 口径）:maxContextTokens=100、retainTokens=1、
  * maxBudgetTokens=40、单条 outputTokens=10;脚本 leg1=[A(60),C(150),S1,D(60)]、
- * leg2=[S2,E(60),S3,F(60)]——跨阈在 C,压缩在 turn1 step2 / turn2 step0 / step1,
- * 累计 output 50 在 turn3 起始越限。</p>
+ * leg2=[E(150),S2,F(60)]——跨阈在 C（turn1 step2 顶压缩 #1）与 E（turn2 step1 顶压缩 #2）；
+ * 累计 output 50（5 条 assistant）在 turn3 起始越限。压缩后各请求回落到 60（末次口径下
+ * 不再复发——旧脚本依赖的 max() 高位水位已随 it20 移除）。</p>
  */
 class ProductionScenarioTest {
 
@@ -105,7 +106,7 @@ class ProductionScenarioTest {
                 handle.agent().whenIdle().join();
                 disposeAndSave(rt, handle);
             }
-            // leg2:新 Runtime 载盘 resume(turn2:压缩 #2/#3 + 读回写入的文件)+ leg3:budget 优雅停
+            // leg2:新 Runtime 载盘 resume(turn2:读回写入的文件 + 压缩 #2)+ leg3:budget 优雅停
             try (Runtime rt = bootProduction(profile, leg2Scripts(written))) {
                 AgentHandle handle = resumeAgent(rt);
                 handle.agent().followup(UserMessage.of("续跑:读回写的文件", new MessageSource.User()));
@@ -179,16 +180,15 @@ class ProductionScenarioTest {
                 new StreamChunk.Finish(FinishReason.STOP)));
     }
 
-    /** leg2 脚本:S2 压缩 #2(turn2 step0)→ E fs_read → S3 压缩 #3(step1)→ F 终答。 */
+    /** leg2 脚本:turn2 step0 E(input=150 跨阈)fs_read → step1 顶压缩 #2(S2)→ F 终答。 */
     private static List<List<StreamChunk>> leg2Scripts(Path written) {
         return List.of(
-            summaryScript("S2"),
             List.of(new StreamChunk.Delta("读"),
                 new StreamChunk.DeltaToolUse(CallId.of("c3"), "fs_read",
                     "{\"path\":\"" + written + "\"}"),
-                new StreamChunk.Usage(new TokenUsage(60, STEP_OUTPUT, 0)),
+                new StreamChunk.Usage(new TokenUsage(150, STEP_OUTPUT, 0)),
                 new StreamChunk.Finish(FinishReason.TOOL_USE)),
-            summaryScript("S3"),
+            summaryScript("S2"),
             List.of(new StreamChunk.Delta("第二轮完成"),
                 new StreamChunk.Usage(new TokenUsage(60, STEP_OUTPUT, 0)),
                 new StreamChunk.Finish(FinishReason.STOP)));
@@ -246,21 +246,19 @@ class ProductionScenarioTest {
         assertThat(toolResults.stream().filter(result -> result.turn() == 1).count()).isEqualTo(2);
         assertThat(toolResults.stream().filter(result -> result.turn() == 2).count()).isEqualTo(1);
 
-        // ② 中途压缩 ×3:事务成对无错,摘要走 replay 路由;第一次在 turn1 锚点 C 与 D 之间
-        assertThat(starts).hasSize(3);
-        assertThat(ends).hasSize(3);
+        // ② 中途压缩 ×2:事务成对无错,摘要走 replay 路由;第一次在 turn1 锚点 C 与 D 之间
+        assertThat(starts).hasSize(2);
+        assertThat(ends).hasSize(2);
         assertThat(ends).allSatisfy(end -> assertThat(end.error()).isNull());
-        assertThat(summaries).hasSize(3);
+        assertThat(summaries).hasSize(2);
         assertThat(summaries).allSatisfy(summary -> {
             assertThat(summary.provider()).isEqualTo("replay");
             assertThat(summary.model()).isEqualTo("m");
         });
         assertThat(summaries.get(0).summary()).contains("S1-checkpoint");
         assertThat(summaries.get(1).summary()).contains("S2-checkpoint");
-        assertThat(summaries.get(2).summary()).contains("S3-checkpoint");
         assertThat(starts.get(0).turn()).isEqualTo(1);
         assertThat(starts.get(1).turn()).isEqualTo(2);
-        assertThat(starts.get(2).turn()).isEqualTo(2);
         List<Integer> startIndexes = new ArrayList<>();
         for (int i = 0; i < types.size(); i++) {
             if ("compaction/start".equals(types.get(i))) {
@@ -269,12 +267,10 @@ class ProductionScenarioTest {
         }
         int c1 = startIndexes.get(0);
         int c2 = startIndexes.get(1);
-        int c3 = startIndexes.get(2);
         assertThat(anchorIndexes.get(1)).isLessThan(c1);
         assertThat(c1).isLessThan(anchorIndexes.get(2));  // #1:C 之后、D 之前(turn1 step2 顶)
-        assertThat(c2).isLessThan(anchorIndexes.get(3));  // #2:E 之前(turn2 step0 顶)
-        assertThat(anchorIndexes.get(3)).isLessThan(c3);  // #3:E 之后(turn2 step1 顶)
-        assertThat(c3).isLessThan(anchorIndexes.get(4));  // #3 先于 F
+        assertThat(anchorIndexes.get(3)).isLessThan(c2);  // #2:E(input=150)之后(turn2 step1 顶)
+        assertThat(c2).isLessThan(anchorIndexes.get(4));  // #2 先于 F
         // 摘要成为模型可见背景(投影首条为 Compaction source)
         Session view = Session.create(Session.newId("view"), events, loaded.header());
         assertThat(view.deriveMessages().getFirst().source())

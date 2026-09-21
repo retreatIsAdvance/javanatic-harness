@@ -18,7 +18,6 @@ import io.javanatic.harness.session.event.CompactionEnd;
 import io.javanatic.harness.session.event.CompactionStart;
 import io.javanatic.harness.session.event.CompactionSummary;
 import io.javanatic.harness.session.event.ToolResultEvent;
-import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.SurfaceOp;
 import io.javanatic.harness.session.event.UserMessageEvent;
 import io.javanatic.harness.session.message.Message;
@@ -33,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 import java.util.Map;
+import java.lang.System.Logger;
 
 /**
  * 压缩 Provider(id "compaction",requires "llm")。阈值/保留预算/独立摘要模型/
@@ -40,6 +40,8 @@ import java.util.Map;
  * 最终-user-message 摘要指令 + fail-closed)。
  */
 public final class CompactionPlugin implements Plugin, CompactionService {
+
+    private static final Logger LOG = System.getLogger(CompactionPlugin.class.getName());
 
     /** 数据组合路径的文档化默认:阈值比例模型相对(dsh 对照);保留是摘要侧绝对预算。 */
     public static final double DEFAULT_THRESHOLD_RATIO = 0.8;
@@ -189,10 +191,13 @@ public final class CompactionPlugin implements Plugin, CompactionService {
         List<Long> surface = session.surfaceSeqs();
         int keepFrom = retainBoundary(session, surface);
         if (keepFrom <= 0) {
-            if (forced) {
-                return null; // 无可压缩区间:调用方不得重试
+            // 无可压缩区间(tail 覆盖全部 surface):压力路径跳过——真空由请求侧溢出显形
+            // (it20 前此处抛错直接判死可挽救的轮);强制路径交调用方不重试
+            if (!forced) {
+                LOG.log(Logger.Level.WARNING,
+                    "compaction skipped: nothing to compact (tail covers surface)");
             }
-            throw new IllegalStateException("compaction: nothing to compact (tail covers surface)");
+            return null;
         }
         long start = surface.getFirst();
         long end = surface.get(keepFrom - 1);
@@ -284,14 +289,21 @@ public final class CompactionPlugin implements Plugin, CompactionService {
         return event instanceof ToolResultEvent;
     }
 
+    /**
+     * 末次 assistant 消息报告的 inputTokens（0=尚无观测）。it20 修正：此前取全日志
+     * max()（高位水位）——一次跨阈后每个 step top 都复发压缩；末次口径与
+     * {@link CompactionService#shouldCompact} 措辞及 03 §6 一致，压缩后新请求的
+     * 实测值自然回落，且跨 resume 仍读最近一次真实请求。
+     */
     private static long lastInputTokens(Session session) {
-        return session.events().stream()
-            .map(LoggedEvent::event)
-            .filter(AssistantMessageEvent.class::isInstance)
-            .map(event -> ((AssistantMessageEvent) event).usage())
-            .filter(usage -> usage != null)
-            .mapToLong(TokenUsage::inputTokens)
-            .max().orElse(0);
+        var events = session.events();
+        for (int i = events.size() - 1; i >= 0; i--) {
+            if (events.get(i).event() instanceof AssistantMessageEvent message
+                    && message.usage() != null) {
+                return message.usage().inputTokens();
+            }
+        }
+        return 0;
     }
 
     /** 事件文本的估价(chars/2.5 + 结构开销;agentscope 校准,JH 无 tokenizer 的诚实口径)。 */
