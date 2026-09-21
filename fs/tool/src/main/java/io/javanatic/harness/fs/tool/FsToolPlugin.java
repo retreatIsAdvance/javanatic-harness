@@ -31,6 +31,9 @@ public final class FsToolPlugin implements Plugin {
     private static final ValueSchema.Str OLD = new ValueSchema.Str("被替换的原文（须唯一匹配）");
     private static final ValueSchema.Str NEW = new ValueSchema.Str("替换后的新文");
 
+    /** 列举截断尾行（it20）：条目达到上限时追加，模型面可见。 */
+    private static final String LIST_TRUNCATED_TAIL = "… (list truncated)";
+
     @Override
     public String id() {
         return "fs-tool";
@@ -105,9 +108,13 @@ public final class FsToolPlugin implements Plugin {
     private static ToolDefinition listTool(FsService fs) {
         return ToolDefinition.of("fs_list", "列出目录条目",
             new ValueSchema.Object("参数", Map.of("path", PATH)),
-            (args, ctx) -> ToolExecutionResult.success(
-                fs.list(Path.of(args.readString("path"))).stream()
+            (args, ctx) -> {
+                FsService.Listing listing = fs.list(Path.of(args.readString("path")));
+                String entries = listing.entries().stream()
                     .map(e -> (e.directory() ? "d " : "f ") + e.name())
-                    .collect(Collectors.joining("\n"))));
+                    .collect(Collectors.joining("\n"));
+                return ToolExecutionResult.success(
+                    listing.truncated() ? entries + "\n" + LIST_TRUNCATED_TAIL : entries);
+            });
     }
 }

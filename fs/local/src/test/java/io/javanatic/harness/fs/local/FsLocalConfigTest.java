@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** 数据组合路径:无参构造经 ConfigService 取 root;缺失 fail loud(安全边界无默认)。 */
@@ -31,6 +32,24 @@ class FsLocalConfigTest {
             assertThatThrownBy(() -> fs.read(Path.of("/etc/hosts")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("escapes workspace root");
+        }
+    }
+
+    @Test
+    void quotaKeysResolveFromConfig() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(ConfigService.KEY, id -> "fs-local".equals(id)
+                ? Map.of("root", root.toString(), "maxReadBytes", 4L, "maxListEntries", 1L)
+                : Map.of());
+            new PluginLoader().loadAll(rt, List.of(new FsLocalPlugin()));
+            FsService fs = rt.root().require(FsService.KEY);
+            fs.write(Path.of("note.txt"), "hello");
+            assertThat(fs.read(Path.of("note.txt")))
+                .isEqualTo("hell" + FsService.READ_TRUNCATED_MARKER);
+            fs.write(Path.of("b.txt"), "2");
+            FsService.Listing listing = fs.list(Path.of("."));
+            assertThat(listing.truncated()).isTrue();
+            assertThat(listing.entries()).hasSize(1);
         }
     }
 

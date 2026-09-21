@@ -57,7 +57,7 @@
 | `core/agent-loop/.../AgentLoopImpl.java:356-359` | 调用点注释（null=跳过） | |
 | `core/agent-loop/src/test/.../CompactionTest.java` | +2 用例（末次回归 / 跳过不杀轮）；Rig 脚本支持逐次 usage | |
 | `docs/design/04-agent-loop.md` §7 伪码 + 新规格节 + §15 | 压缩与溢出恢复规格（修伪码漂移）+ 预算口径 | |
-| `fs/fs/.../FsService.java:10-40` | `read` javadoc 有界契约 + `Listing` 记录 + `list` 返回类型 | |
+| `fs/fs/.../FsService.java:10-40`（含 `docs/design/05-capability-seam.md` §4 接口摘录同步） | `read` javadoc 有界契约 + `Listing` 记录 + `list` 返回类型 | |
 | `fs/local/.../LocalFs.java:20-30 / :65-68 / :79-91 / :98-107` | 配额字段；read 流式有界+标记；edit 超限 fail loud；list 截断 | |
 | `fs/local/.../FsLocalPlugin.java:32-40` | 键解析 `maxReadBytes` / `maxListEntries` | |
 | `fs/tool/.../FsToolPlugin.java:105-112` | list 渲染截断尾行 | |
@@ -73,7 +73,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | **S-a 压缩触发与失败策略**：`CompactionPlugin`/`CompactionService`/`AgentLoopImpl` 调用点 + 两用例 + 04 规格节 | 锚点 1–6 | 已完成，待放行 |
-| **S-b fs 有界化**：`FsService`（承载契约——接口返回型变更）+ 三个实现/消费类 + 用例 | 锚点 7–11 | 待开工 |
+| **S-b fs 有界化**：`FsService`（承载契约——接口返回型变更）+ 三个实现/消费类 + 用例 | 锚点 7–11 | 已完成，待放行 |
 | **S-c 统计出口与文档**：verify / REPL / one-shot 三面 + 07/12 文档 | 锚点 12–16 | 待开工 |
 
 ## 验收（证据 = 实际执行的命令与结果）

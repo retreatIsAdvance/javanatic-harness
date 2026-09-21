@@ -9,6 +9,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -81,10 +82,65 @@ class LocalFsTest {
         fs().write(dir.resolve("b.txt"), "1");
         fs().write(dir.resolve("a.txt"), "2");
         Files.createDirectory(dir.resolve("zdir"));
-        assertThat(fs().list(dir))
+        FsService.Listing listing = fs().list(dir);
+        assertThat(listing.truncated()).isFalse();
+        assertThat(listing.entries())
             .extracting(FsService.DirEntry::name)
             .containsExactly("a.txt", "b.txt", "zdir");
-        assertThat(fs().list(dir).getLast().directory()).isTrue();
+        assertThat(listing.entries().getLast().directory()).isTrue();
+    }
+
+    // ===== 有界化（it20）：字节/条目上限 + 截断标记 + 编辑 fail loud =====
+
+    @Test
+    void readTruncatesAtByteCapWithMarker() throws IOException {
+        Path file = dir.resolve("big.txt");
+        Files.writeString(file, "0123456789");
+        assertThat(new LocalFs(dir, 8, 1000).read(file))
+            .isEqualTo("01234567" + FsService.READ_TRUNCATED_MARKER);
+    }
+
+    @Test
+    void readAtCapExactlyIsNotTruncated() throws IOException {
+        Path file = dir.resolve("exact.txt");
+        Files.writeString(file, "12345678");
+        assertThat(new LocalFs(dir, 8, 1000).read(file)).isEqualTo("12345678");
+    }
+
+    @Test
+    void readTruncationKeepsMultiByteCharacterWhole() throws IOException {
+        Path file = dir.resolve("cjk.txt");
+        Files.writeString(file, "你你你");   // 每个「你」3 字节
+        // 5 字节截断落在第二个「你」中间：整字符回退，不留半字符
+        assertThat(new LocalFs(dir, 5, 1000).read(file))
+            .isEqualTo("你" + FsService.READ_TRUNCATED_MARKER);
+        // 6 字节：恰好两个完整字符
+        assertThat(new LocalFs(dir, 6, 1000).read(file))
+            .isEqualTo("你你" + FsService.READ_TRUNCATED_MARKER);
+    }
+
+    @Test
+    void editOverReadCapFailsLoudWithSizeAndCap() throws IOException {
+        Path file = dir.resolve("big.txt");
+        Files.writeString(file, "0123456789");
+        assertThatThrownBy(() -> new LocalFs(dir, 4, 1000).edit(file, "0123", "x"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("file too large to edit")
+            .hasMessageContaining("10 bytes")
+            .hasMessageContaining("maxReadBytes 4");
+        assertThat(Files.readString(file)).isEqualTo("0123456789");   // 拒而未写
+    }
+
+    @Test
+    void listTruncatesAtCapAndFlagsIt() throws IOException {
+        for (String name : List.of("a.txt", "b.txt", "c.txt", "d.txt")) {
+            fs().write(dir.resolve(name), "x");
+        }
+        FsService.Listing capped = new LocalFs(dir, 1000, 3).list(dir);
+        assertThat(capped.truncated()).isTrue();
+        assertThat(capped.entries()).extracting(FsService.DirEntry::name)
+            .containsExactly("a.txt", "b.txt", "c.txt");
+        assertThat(new LocalFs(dir, 1000, 4).list(dir).truncated()).isFalse();
     }
 
     @Test

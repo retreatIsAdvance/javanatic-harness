@@ -96,7 +96,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | compaction | `contextWindow` / `maxContextTokens` / `thresholdRatio` / `retainTokens` / `retries` / `summarizationProvider` / `summarizationModel` | 长跑压缩（窗口是模型属性，base 不猜数）|
 | plan | `section` | 计划模式提示段 |
 | sandbox-policy | `mode` / `workspace` | 沙箱档与围栏根 |
-| fs-local | `root` | fs 围栏根（安全边界值）|
+| fs-local | `root` / `maxReadBytes` / `maxListEntries` | fs 围栏根（安全边界值）；读取/编辑上限与列举上限（默认 256 KiB / 1000，超限截断标记 / fail loud）|
 | shell-tool | `workspace` / `timeoutSeconds` | shell 围栏与超时 |
 | shell-bash-local | `maxOutputBytes` | 输出截断 |
 | shell-docker | `image` / `maxOutputBytes` | 镜像须本机在场（不自动拉取）|

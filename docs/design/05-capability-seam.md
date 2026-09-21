@@ -220,17 +220,20 @@ agent-loop 通过 `scope.require(LlmService.KEY)` 拿到 LLM，try-with-resource
 public interface FsService {
     ServiceKey<FsService> KEY = new ServiceKey<>("fs");
 
-    String read(Path path) throws IOException;
+    String read(Path path) throws IOException;       // 有界:超 maxReadBytes 截断,尾附 " (output truncated)"
     void write(Path path, String content) throws IOException;
-    String edit(Path path, String oldString, String newString) throws IOException;
+    String edit(Path path, String oldString, String newString) throws IOException;  // 超上限 fail loud
     void delete(Path path) throws IOException;
-    List<DirEntry> list(Path path) throws IOException;
+    Listing list(Path path) throws IOException;      // 超 maxListEntries 截断,truncated 标志承载
 }
 ```
 
 ### Provider（`harness.fs.local`，plugin id `fs-local`）
 
-`Files.*` 的直接包装，无并发包装（阻塞语义，虚拟线程下安全）。
+`Files.*` 的直接包装，无并发包装（阻塞语义，虚拟线程下安全）。有界化（it20）：
+读取/编辑以 `maxReadBytes`（默认 256 KiB，与 shell-bash-local `maxOutputBytes` 对称）、
+列举以 `maxListEntries`（默认 1000）为界——读截断在文内标记、编辑超限 fail loud、
+列举截断以 `Listing.truncated` 标志承载，不静默丢数据；同一组上限经行配置可调（12 §5）。
 
 ### Consumer（`harness.fs.tool`，plugin id `fs-tool`）
 

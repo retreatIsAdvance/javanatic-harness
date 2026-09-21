@@ -7,6 +7,7 @@ import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.scope.Scope;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 /** 提供本地文件系统实现（id "fs-local"，Files.* 直包装，根目录限制强制在此）。 */
 public final class FsLocalPlugin implements Plugin {
@@ -32,9 +33,12 @@ public final class FsLocalPlugin implements Plugin {
     public void apply(Scope scope) {
         LocalFs fs = explicit;
         if (fs == null) {
-            String root = ConfigValues.requireString(
-                scope.require(ConfigService.KEY).configFor(id()), id(), "root");
-            fs = new LocalFs(Path.of(root));
+            Map<String, Object> config = scope.require(ConfigService.KEY).configFor(id());
+            String root = ConfigValues.requireString(config, id(), "root");
+            fs = new LocalFs(Path.of(root),
+                ConfigValues.longValue(config, id(), "maxReadBytes", LocalFs.DEFAULT_MAX_READ_BYTES),
+                (int) ConfigValues.longValue(config, id(), "maxListEntries",
+                    LocalFs.DEFAULT_MAX_LIST_ENTRIES));
         }
         scope.provide(FsService.KEY, fs);
     }
