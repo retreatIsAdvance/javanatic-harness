@@ -78,8 +78,9 @@ dist/jh/target/jlink-image/bin/jh            # 裸启动进 REPL（it14）：非
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
 # 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 续跑同一会话
 # --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
+# --resume 命中占用（另一进程/实例持写者锁）fail loud：exit 3、stdout 为空
 # 任务结果契约（it17）：stdout = 成功给最终答案 / 失败为空（成功但无文本合法，exit 0）
-#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败 · 4 任务被取消
+#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败（含 --resume 写者锁冲突） · 4 任务被取消
 #   诊断（失败文案、模型遗言）走 stderr；`out=$(bin/jh "任务")` 取答案、按退出码判成败
 # Ctrl-C（it18）：协作取消 → turn/end aborted("user")、exit 4、stdout 为空；
 #   取消未收敛时再按一次 = 强制退出（130）。取消只对协作面生效——

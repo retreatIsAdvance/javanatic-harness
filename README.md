@@ -79,10 +79,12 @@ dist/jh/target/jlink-image/bin/jh            # bare start enters the REPL (it14)
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<existing-dir> "task text"
 # every run prints its session id (headless-<timestamp>-<short-random>); --resume=<id> continues the same session
 # --resume=<id> without task text → REPL on that existing session
+# --resume onto a session held by another writer (process/JVM) is refused fail-loud: exit 3, stdout empty
 # task-result contract (it17): stdout = final answer on success / empty on failure
 #   (success with no text is valid, exit 0); exit codes 0 done · 1 verify violation ·
-#   2 usage/missing key · 3 task failed · 4 cancelled; diagnostics (failure text, the model's
-#   last words) go to stderr — `out=$(bin/jh "task")` reads the answer, exit code judges success
+#   2 usage/missing key · 3 task failed (incl. --resume writer-lock conflict) · 4 cancelled;
+#   diagnostics (failure text, the model's last words) go to stderr —
+#   `out=$(bin/jh "task")` reads the answer, exit code judges success
 # Ctrl-C during a task (it18): cooperative cancel → turn/end aborted("user"), exit 4, stdout empty;
 #   a second Ctrl-C before the cancel converges force-quits (130). Cancellation governs cooperative
 #   operations only — a tool batch that ignores it and returns still closes Completed (exit 0)

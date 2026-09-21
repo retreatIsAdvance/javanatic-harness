@@ -65,7 +65,7 @@ DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在
 # 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 按打印 id 续跑
 # --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
 # 任务结果契约（it17）：stdout = 成功给最终答案 / 失败为空（成功无文本合法 → stdout 空 + exit 0）；
-#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败 · 4 任务被取消；
+#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败（含 --resume 写者锁冲突） · 4 任务被取消；
 #   诊断（失败文案、模型遗言）走 stderr——`out=$(bin/jh "任务")` 取答案、按退出码判成败
 # 任意 OpenAI 兼容厂商:
 #   … bin/jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 \
@@ -152,6 +152,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - **不变式配属性测试**（jqwik）：LIFO 回收序、envelope seq 单调等结构性质用 `@Property`，不是单个例子。
 - **R1–R4 测试随切片走**，不做收尾补；每个改动的接受路径都要有拒绝无效用例的证明。
 - **keyless**：单元测试无网络、无 API key、可重复；未来真实 provider 测试无 key 自跳过。
+- **测试计数口径**：只数模块汇总行（`Tests run:` 不含 `-- in ` 后缀）或直接读 surefire XML；**不求和全部 `Tests run:` 行**——类行 + 模块行会双计（it19 实撞：832 实为 416），锚定行首 grep 还会漏掉与测试输出粘连的汇总行。
 - fixtures 在 macOS/Linux 可重放；修 fixture，不修 normalizer。
 
 ## Git 与安全

@@ -32,6 +32,7 @@ import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.TextBlock;
 import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.persistence.SessionPersistence;
+import io.javanatic.harness.session.persistence.WriterLockException;
 import io.javanatic.harness.systemprompt.PromptSection;
 import io.javanatic.harness.systemprompt.SystemPromptService;
 
@@ -51,6 +52,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -105,7 +107,8 @@ public final class HeadlessMain {
                                      PRODUCTION 档要求非零——与 --approval=ask|deny
                                      同用,生产组合才可达
           --docker [--image=<镜像>]  容器级隔离执行(镜像须本机在场,不自动拉取)
-          --resume=<sessionId>       恢复既有会话(load → seed → 续轮号)
+          --resume=<sessionId>       恢复既有会话(load → seed → 续轮号;会话被另一写者
+                                     占用时拒绝,写者锁冲突 → exit 3)
           --provider=<名>            厂商名(缺省 deepseek)
           --model=<名>               模型(缺省 deepseek-chat)
           --base-url=<url>           OpenAI 兼容端点(缺省 https://api.deepseek.com)
@@ -130,7 +133,7 @@ public final class HeadlessMain {
           0  任务完成(或 --verify 通过 / --help)
           1  --verify 违规
           2  用法错误 / 缺少 API key
-          3  任务失败(厂商错误 / 守卫或预算超限;原因在 stderr)
+          3  任务失败(厂商错误 / 守卫或预算超限 / --resume 写者锁冲突;原因在 stderr)
           4  任务被取消(REPL 路径不适用:退出码 0)
         契约:成功有结果 / 失败为空——失败的 stdout 为空,诊断(会话 id、事件清单、失败
         文案、模型遗言)全部走 stderr;`out=$(jh "任务")` 取答案、按退出码判成败。
@@ -298,6 +301,13 @@ public final class HeadlessMain {
         return path;
     }
 
+    /** --resume 占用识别:直接异常即 {@link WriterLockException};经 notifyOrdered 传播的
+     *  包装形取根因——两处形状归一,非占用异常返回 null(原样上抛)。 */
+    private static WriterLockException writerLockCause(Throwable failure) {
+        Throwable cause = failure instanceof CompletionException ? failure.getCause() : failure;
+        return cause instanceof WriterLockException lock ? lock : null;
+    }
+
     /** 每次运行新会话 id(07 §7):时间戳 + 短随机,不再复用固定 id 混写同一 log.jsonl。 */
     static String newRunSessionId() {
         return "headless-" + System.currentTimeMillis() + "-"
@@ -360,10 +370,23 @@ public final class HeadlessMain {
             AgentHandle handle;
             if (options.resume() != null) {
                 // durable resume:load → seed 重建 → registry.resume 续轮号
-                SessionPersistence.Loaded loaded =
-                    rt.root().require(SessionPersistence.KEY).load(Session.newId(sessionId));
-                rt.root().require(SessionStore.KEY).create(rt.root(), Session.newId(sessionId),
-                    new CreateOptions(loaded.events(), loaded.header()));
+                SessionPersistence.Loaded loaded;
+                try {
+                    loaded = rt.root().require(SessionPersistence.KEY).load(Session.newId(sessionId));
+                    rt.root().require(SessionStore.KEY).create(rt.root(), Session.newId(sessionId),
+                        new CreateOptions(loaded.events(), loaded.header()));
+                } catch (IOException | CompletionException e) {
+                    // 写者锁冲突:load 探测直抛 WriterLockException;CREATED-attach 获取锁失败
+                    // 经 notifyOrdered 包装成 CompletionException——两形归一,fail loud 出口一致
+                    WriterLockException lock = writerLockCause(e);
+                    if (lock == null) {
+                        throw e;
+                    }
+                    LOG.log(Level.ERROR,
+                        "会话被另一写者占用（写者锁冲突）: {0}；先结束占用该会话的进程/实例，再重试 --resume={1}",
+                        lock.getMessage(), sessionId);
+                    return 3;
+                }
                 handle = agents.resume(rt.root(),
                     new ResumeAgentOptions(
                         Session.newId(sessionId), new AgentOptions(options.provider(), options.model())));

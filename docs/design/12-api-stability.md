@@ -119,12 +119,13 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | 0 | 任务完成（本轮 `turn/end` Completed；`--verify` 通过 / `--help` 同） |
 | 1 | `--verify` 违规（不变） |
 | 2 | 用法错误 / 缺少 API key（不变） |
-| 3 | 任务失败（`turn/end` Error：厂商错误 / 守卫或预算超限;无 turn/end 同归 3） |
+| 3 | 任务失败（`turn/end` Error：厂商错误 / 守卫或预算超限 / `--resume` 写者锁冲突;无 turn/end 同归 3） |
 | 4 | 任务被取消（`turn/end` Aborted;REPL 路径不适用,恒 0） |
 
 - **stdout 契约 = 成功有结果 / 失败为空**：成功时 stdout 为本次运行新开轮最后一条 `assistant/message` 的文本（纯文本）;**成功但最终文本为空 → stdout 空 + exit 0**（合法成功）;**失败（Error / Aborted / 无终局）→ stdout 恒为空**——脚本判读无歧义。
 - “本次运行新开轮” = `seq >= Session.firstLiveSeq()`（seed 长度）;`--resume` 续跑不误判旧轮文本与旧终局。
 - 诊断（会话 id、事件清单、`FailureKind` 文案、模型遗言）全部走 stderr;kind 级分辨读 stderr 文案,退出码保持三态粗粒度（不设预算专属码）。
+- **`--resume=` 占用拒绝**（it19，单写者保护）：目标会话正被另一写者（另一进程 / 同 JVM 另一 Runtime）占用时,启动期以「写者锁冲突」文案拒绝（exit 3、stdout 空）——不等待、不并发写;写者锁随进程死亡释放（崩溃/SIGKILL 后可直接 resume,不需要人工清理）。
 
 Ctrl-C（SIGINT）契约（it18 起，随 §1 语义声明）：
 
