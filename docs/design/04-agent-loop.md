@@ -447,10 +447,12 @@ public record AgentHandle(Agent agent, Disposer disposer) {
             schemas = tools.schemaJson()        ← 唯一来源（R2）
             callConfig = waterfall(agent/request, default=options)
             append llm/request(sha256(prompt), sha256(schemas), [0, seq-1], params)   ← R1
+            sessions.flush(scope, session)      ← 派发前屏障（it19）：对账+fsync 未确认即不派发
             try (Stream<chunk> = llm.stream(callConfig, request, signal)):
               consume → append assistant/chunk?（遥测）→ append assistant/message
             calls = extractToolCalls(...)
-            append tool/call × N（executor 落账）
+            append tool/call × N（executor 批前导落账；重复 callId 检测在此）
+            sessions.flush(scope, session)      ← 工具批屏障（it19）：未确认不进入副作用
             empty → append step/end; break
             results = executor.execute(calls, signal)   ← 唯一执行路径（R2）
             append step/end
@@ -493,5 +495,6 @@ public record AgentHandle(Agent agent, Disposer disposer) {
 - **无条件续步**：`shouldContinue` 未实现——工具执行后只要未被取消、无 `concludesTurn`，一律进入下一步（失控由 LoopGuard 兜底；数据驱动停轮保留 `concludesTurn`）。
 - **LoopGuard 计数档先行**：max-turns / max-steps-per-turn（`LoopGuardPlugin` 构造注入 limits，组合期选择）；budget 档（token 计量）随 deepseek。guard 检查在关轮 try 内——超限以 `turn/end(Error)` 收口，不留下开着的 `turn/start`。
 - **user/message 落账位置**：admitted 批在 turn 层一次；steering/注入在认领它的 step 边界（认领后、下一 `step/start` 前），与 §7 一致。
-- **resume**：in-memory `SessionStore.get` 命中即恢复（turn 号从日志 TurnStart 计数派生）；缺失会话由 get 本身 fail loud（NoSuchElementException）。durable 重载随持久化切片。
+- **resume**：in-memory `SessionStore.get` 命中即恢复（turn 号从日志 TurnStart 计数派生）；缺失会话由 get 本身 fail loud（NoSuchElementException）。durable 重载路径 = `persistence.load` → `SessionStore.create(seed)` → `agents.resume`；挂载前执行恢复收口（03 §6「恢复收口」）——悬空 tool_use 不闭合会让首个请求违反 OpenAI 配对契约。
+- **（it19）派发前屏障**：`llm/request` 落账后、`llm.stream` 前，与工具批（`tool/call` 全部落账后、fork 前）各落一次 `SessionStore.flush`（对账 + fsync）；屏障失败 ⇒ 该派发不进入、turn 以 `turn/end(Error)` 收口（`FailureKind.DISK`）。工具批的 `tool/call` 落账前移至 `ToolExecutorImpl` 批前导，重复 callId 检测随之搬家。
 - **构造器取总线**：`AgentLoopImpl` 从 `agentScope.require(Runtime.KEY)` 解析事件总线与驱动；装配期缺 Runtime 即失败。

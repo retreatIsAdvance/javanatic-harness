@@ -46,6 +46,7 @@ class ToolDispatchArchitectureTest {
 
     private static final String LOOP = AgentLoopPlugin.class.getPackageName() + ".AgentLoopImpl";
     private static final String EXECUTOR = ToolExecutor.class.getPackageName() + ".ToolExecutorImpl";
+    private static final String RECOVERY = Session.class.getPackageName() + ".SessionRecovery";
 
     private static final JavaClasses CLASSES = importProductionClasses();
 
@@ -57,12 +58,17 @@ class ToolDispatchArchitectureTest {
         Scope.class, AbortSignal.class)
         .because("R2：新增第二条分发路径（如插件直接 execute 模型 toolCall）即破不变式");
 
-    /** tool/result 审计落账归属 executor：只有 ToolExecutorImpl 构造 ToolResultEvent。 */
-    private static final ArchRule ONLY_EXECUTOR_BUILDS_TOOL_RESULT_EVENTS = noClasses()
+    /**
+     * tool/result 审计落账归属：执行路径只有 ToolExecutorImpl；SessionRecovery
+     * 是恢复收口的第二产出者（悬空调用的「结果未知」事实，非执行——it19 裁决 ④），
+     * 白名单显式点名，新增第三产出者仍红。
+     */
+    private static final ArchRule ONLY_EXECUTOR_AND_RECOVERY_BUILD_TOOL_RESULT_EVENTS = noClasses()
         .that().doNotHaveFullyQualifiedName(EXECUTOR)
+        .and().doNotHaveFullyQualifiedName(RECOVERY)
         .should().callConstructor(ToolResultEvent.class,
             long.class, int.class, int.class, ToolResultBlock.class, boolean.class, SurfaceOp.class, List.class)
-        .because("R2：绕过 executor 构造结果事件 = 执行了但不留痕");
+        .because("R2：绕过 executor 构造结果事件 = 执行了但不留痕（恢复事实除外）");
 
     @Test
     void onlyLoopDispatchesModelToolCalls() {
@@ -70,15 +76,15 @@ class ToolDispatchArchitectureTest {
     }
 
     @Test
-    void onlyExecutorBuildsToolResultEvents() {
-        ONLY_EXECUTOR_BUILDS_TOOL_RESULT_EVENTS.check(CLASSES);
+    void onlyExecutorAndRecoveryBuildToolResultEvents() {
+        ONLY_EXECUTOR_AND_RECOVERY_BUILD_TOOL_RESULT_EVENTS.check(CLASSES);
     }
 
     /** 前置健全性：两条规则的目标类确实在扫描范围（防空规则假绿）。 */
     @Test
     void ruleTargetsExist() {
         assertThat(CLASSES.stream().map(clazz -> clazz.getName()).toList())
-            .contains(LOOP, EXECUTOR);
+            .contains(LOOP, EXECUTOR, RECOVERY);
     }
 
     /**

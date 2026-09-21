@@ -1,4 +1,4 @@
-# 迭代 19 — 崩溃恢复与写入安全（状态：进行中——四确认与五裁决点已于 2026-09-19 裁定；S-a 编辑与取证（聚焦 + 突变 + 还原复绿）完成，停点待放行）
+# 迭代 19 — 崩溃恢复与写入安全（状态：进行中——四确认与五裁决点已于 2026-09-19 裁定；S-a 已放行（提交 30a0799）；S-b 编辑与取证（聚焦 + 突变 F–J + 还原复绿）完成，停点待放行）
 
 模块：`session/persistence-jsonl`（屏障对账 + 单写者锁）+ `core/agent-loop`（派发前屏障调用点 + resume 恢复收口）+ `core/tools`（工具批派发前屏障）+ `core/session`（恢复尾形分析 + `SessionStore` 修复 + `FailureKind.DISK`）+ `examples/headless`（`--resume` 占用/恢复出口 + SIGKILL e2e）+ 文档（03 / 04 / 09 / 12 / `--help`）
 
@@ -69,6 +69,42 @@
 | E | 删 `writeEnvelope` 跳号护栏 | 恰 1 红（`gapWriteAfterSwallowedFailureIsRejectedSoBarrierStaysRed`） | /tmp/it19-sa-mutE.log |
 | 还原 | 五处全部还原（grep 复核：`AgentLoopImpl` :375 / `ToolExecutorImpl` :62 / `flushBarrier` 对账 :240 / 跳号护栏 :255 / `invokePropagating`） | 全仓 `mvn -B test` = BUILD SUCCESS、EXIT=0 | /tmp/it19-sa-test-full3.log |
 
+### S-b 取证（2026-09-19；日志在 /tmp）
+
+**聚焦测试**（`mvn -B -pl core/session,session/persistence-jsonl -am test` = /tmp/it19-sb-unit3.log；headless e2e = /tmp/it19-sb-e2e5.log）：
+
+| 断言面 | 测试 | 结果 |
+|---|---|---|
+| 第二写者（同 JVM 第二 Runtime）fail loud、首写者不受扰 | `JsonlPersistenceTest.secondWriterOnSameSessionFailsLoudAndFirstWriterUnaffected` | 绿 |
+| 外来写者占用时 `load` 拒绝（修复不与在写者并发） | `JsonlPersistenceTest.foreignLoadRefusedWhileWriterActive` | 绿 |
+| 写者释放（DISPOSED）后探测不残留、同实例 load 可读 | `JsonlPersistenceTest.disposedWriterReleasesLockAndProbeDoesNotLinger` | 绿 |
+| Runtime 关闭释放锁（下一进程可接管） | `JsonlPersistenceTest.runtimeCloseReleasesWriterLockForNextProcess` | 绿 |
+| 重复 id 创建 fail loud 且不覆盖既有实例 | `SessionStoreTest.createRejectsDuplicateIdWithoutClobbering` | 绿 |
+| 同 id 顺序重建：两 owner 各自实例各归各（值守卫） | `SessionStoreTest.recreateUnderNewOwnerDisposesEachOwnInstance` | 绿 |
+| 尾形分析：悬空审计调用 / 消息级配对 / 干净尾零事实 / 开 step+turn 事实序 / 收口幂等 | `SessionRecoveryTest` ×5 | 绿 |
+| resume 崩溃尾：配对结果上首个请求 + 恢复事实在 end-seed 后 + 不堵新轮 | `HeadlessResumeTest.resumeClosesCrashedTailAndSendsPairedResult` | 绿 |
+| 既有撕裂尾五则 + 屏障/对账/跳号回归 | `JsonlPersistenceTest` 全 20 绿 | 绿 |
+
+**突变检查**（破坏必红 → 还原复绿）：
+
+| MUT | 破坏点 | 红例（实际） | 日志 |
+|---|---|---|---|
+| F | 写者锁退化为「每实例独立锁文件」（互斥失效） | 恰 2 红（`secondWriterOnSameSessionFailsLoudAndFirstWriterUnaffected`、`foreignLoadRefusedWhileWriterActive`） | /tmp/it19-sb-mutF.log |
+| G | 删 `AgentLoopPlugin.resume` 的恢复收口调用 | 恰 1 红（`resumeClosesCrashedTailAndSendsPairedResult`：首个请求缺 `tool_call_id`） | /tmp/it19-sb-mutG.log |
+| H | 删 `load` 的外来写者探测 | 恰 1 红（`foreignLoadRefusedWhileWriterActive`） | /tmp/it19-sb-mutH.log |
+| I | `SessionStore.create` 回退静默覆盖（`put`） | 恰 1 红（`createRejectsDuplicateIdWithoutClobbering`） | /tmp/it19-sb-mutI.log |
+| J | 尾形分析不扣减已配对 `tool/result` | 3 红（`cleanTailProducesNoFacts`、`closeInterruptedAppendsFactsAfterEndSeedAndIsIdempotent`、`messageLevelResultResolvesToolUseEvenWithoutAuditCall`） | /tmp/it19-sb-mutJ.log |
+| 还原 | 五处全部还原（`diff -q` 与备份逐文件一致；grep `MUT ` = 0） | 全仓 `mvn -B test` = BUILD SUCCESS、EXIT=0 | /tmp/it19-sb-test-full3.log |
+
+### S-b 实施中披露（2026-09-19，超出裁决字面的改动与发现逐项列明）
+
+- **own-writer load 分支**：`load` 对外来写者探测即拒；**本实例为写者时不探测**——否则正常续写路径会撞上自己的锁，把既有 6+ 撕裂尾/对账测试全部假拒。改为 `synchronized (own) { 修复撕裂尾; 读; }`：在写者 monitor 内修复+读，既不与在写者并发，也不自撞。相对裁决字面「load 先试锁」这是更严而非放宽（假拒被消除，真有外来写者仍拒）。
+- **R2 架构断言白名单**：`ToolDispatchArchitectureTest` 的「只有 `ToolExecutorImpl` 构造 `ToolResultEvent`」扩为 `ONLY_EXECUTOR_AND_RECOVERY_...`——恢复收口是 tool/result 的第二产出者（「结果未知」事实，非执行，裁决④要求）。白名单**显式点名** `SessionRecovery`（`ruleTargetsExist` 同步纳入），第三产出者仍红。
+- **值守卫为纵深防御**：`SessionStore.create` 的 `putIfAbsent` 之后，「旧 owner `onClose` 移除新会话」经公共 API 已不可达（重复 id 创建即 fail loud）；`store.remove(id, session)` 值守卫保留（it22 会话操作可能引入合法同 id 重建路径）。测试 `recreateUnderNewOwnerDisposesEachOwnInstance` 覆盖**顺序重建**形态；MUT I 证明重复创建守卫由 `createRejectsDuplicateIdWithoutClobbering` 单独钉住。
+- **`sourceEventSeqs` 不随 `tool/result` 落盘**（既有 wire 口径：仅 Replace 事件携带 seq 引用；`assistant/message` 亦然）。故恢复事实的 `sourceEventSeqs` 锚点是**进程内契约**，由 `SessionRecoveryTest` 钉住（`containsExactly(2L)` 且 < seed 长 + 1）；跨重载的归属仍可核——结果块 `toolUseId` = 悬空调用 id，且位于 resume 侧 end-seed 之后。headless e2e 只断言盘上序关系（崩溃消息落在两个 end-seed 之间、恢复事实在最后一个 end-seed 之后、step/turn 收口递增）。
+- **只报告不修（既有缺陷，不在四确认范围）**：`SessionInvariants` 的 turn 校验是 **0-based**（`expect(e.turn() == nextTurn)`，`nextTurn` 从 0 起），而生产 loop 是 **1-based**（`AgentLoopImpl` 的 nextTurn = TurnStart 计数、`int turn = ++nextTurn`），docs/design/04:238 规格明写「turn 号 = TurnStart 个数 + 1」——`validate` 现状会拒绝一切真实日志（现仅测试夹具调用，未接 load/resume 路径）。修法一行（`nextTurn + 1`）+ 夹具更新；本迭代不动。
+- **文档面补课**：04 §13 伪码补两处派发前屏障行（S-a 遗留，非 S-b 新增）；03 §6 布局行 `log.jsonl.lock` → `.writer.lock`（原文件名与实际实现不符）。
+
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
 - **ADDED**：03 持久化语义（派发前屏障口径与失败语义、写者锁占用/释放/平台注记、恢复收口口径与「不重放」承诺、**恢复事实事件序：end-seed 后追加 + `sourceEventSeqs` 引 seed 前 seq**）；04 派发前屏障调用点与失败收敛；09 并发（单写者保护 + `SessionStore.create` fail loud）；12 §6 exit 3 词表扩「写者锁冲突」；`--help` / README ×2 同步；`FailureKind.DISK` 分类说明；恢复文案「结果未知，可自行核验」＝模型可见文本（钉进测试）；测试 rig 伪 writer/FLUSH 钩子（记录屏障调用序 + 可注入失败）
@@ -80,26 +116,26 @@
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
 | `session/persistence-jsonl/.../JsonlPersistence.java:flushBarrier`（:219-227） | fsync + 对账（已写行数追平 seq，不足即抛） | ✅ S-a |
-| `.../JsonlPersistence.java:attach`（:59-70）/ `SessionWriter`（:183-245） | 写者锁获取（backfill/创建）与释放（DISPOSED/scope close）；同 JVM 重叠锁（`OverlappingFileLockException`）归 fail loud | S-b |
-| `.../JsonlPersistence.java:load`（:83-122） | 占用检查（先试锁，占用即抛，再做撕裂尾修复） | S-b |
+| `.../JsonlPersistence.java:attach`（:59-70）/ `SessionWriter`（:183-245） | 写者锁获取（backfill/创建）与释放（DISPOSED/scope close）；同 JVM 重叠锁（`OverlappingFileLockException`）归 fail loud | ✅ S-b |
+| `.../JsonlPersistence.java:load`（:83-122） | 占用检查（先试锁，占用即抛，再做撕裂尾修复） | ✅ S-b（本实例为写者时在写者 monitor 内修复+读，见披露） |
 | `core/agent-loop/.../AgentLoopImpl.java:runStepLoop`（:344-428；请求派发 :364-372） | 请求派发前 flush；失败 → 不派发、turn Error | ✅ S-a |
 | `core/agent-loop/.../AgentLoopImpl.java:构造与字段`（:84 区、:110 区） | 注入 `SessionStore`；派发屏障的调用封装 | ✅ S-a |
 | `core/tools/.../ToolExecutorImpl.java:execute/executeOne`（:51-146） | **批前导重构**：`tool/call` 全部落账（重复 callId 检测搬家）→ flush → fork；屏障失败传播（按裁决 1/2 收口） | ✅ S-a |
 | `core/agent-loop/.../AgentLoopImpl.java:failureKind`（:436-448） | 非-llm 分支识别 DISK 通道专用异常（不进 `LlmCallException.Kind`） | ✅ S-a |
-| `core/session/.../SessionStore.java:create`（:41-55） | `putIfAbsent` + fail loud（修已存在 id 静默覆盖 / 旧 owner `onClose` 移除新会话） | S-b |
-| `core/agent-loop/.../AgentLoopPlugin.java:Factory.mount/resume`（:83-103） | 传 store；resume 装载后执行恢复收口（追加恢复事实） | mount/dispose ✅ S-a；resume 收口 S-b |
-| `core/session/...`（新：恢复尾形分析纯函数） | 未配对工具调用 / 开 turn 识别（配对口径复用 `SessionInvariants`）；恢复事实在 end-seed 后追加、`sourceEventSeqs` 引 seed 前 seq | S-b |
+| `core/session/.../SessionStore.java:create`（:41-55） | `putIfAbsent` + fail loud（修已存在 id 静默覆盖 / 旧 owner `onClose` 移除新会话） | ✅ S-b |
+| `core/agent-loop/.../AgentLoopPlugin.java:Factory.mount/resume`（:83-103） | 传 store；resume 装载后执行恢复收口（追加恢复事实） | ✅ S-b（mount/dispose S-a） |
+| `core/session/...`（新：恢复尾形分析纯函数） | 未配对工具调用 / 开 turn 识别（配对口径复用 `SessionInvariants`）；恢复事实在 end-seed 后追加、`sourceEventSeqs` 引 seed 前 seq | ✅ S-b（新类 `SessionRecovery`） |
 | `core/session/.../event/FailureKind.java` + `CoreCodecs`（:242/:247）+ `StreamRenderer.failureText`（:136-144） | +`DISK` 词表、wire 往返与渲染（未知→UNKNOWN 回退不回归） | ✅ S-a |
 | `examples/headless/.../HeadlessMain.java:run`（:355-374） | `--resume` 占用/恢复出口（文案 + 退出码） | S-c |
-| 测试：`JsonlPersistenceTest`（锁/对账/回归）、`AgentLoopTest`（屏障失败零副作用；**伪 writer/FLUSH 钩子进测试 rig**）、`HeadlessResumeTest`（恢复收口）、`examples/headless`（SIGKILL e2e + 占用 e2e） | 新用例（见验收 ①–⑤） | 屏障/对账 ✅ S-a；锁/恢复/SIGKILL S-b/S-c |
-| 文档：03 / 04 / 09 / 12 §6 / `--help` / README ×2 | 同步 | S-a 触及面（01/09 屏障语义 + 03 seam 摘录）✅；其余收尾 |
+| 测试：`JsonlPersistenceTest`（锁/对账/回归）、`AgentLoopTest`（屏障失败零副作用；**伪 writer/FLUSH 钩子进测试 rig**）、`HeadlessResumeTest`（恢复收口）、`examples/headless`（SIGKILL e2e + 占用 e2e）、`SessionRecoveryTest` / `SessionStoreTest`（S-b 新增） | 新用例（见验收 ①–⑤） | 屏障/对账 ✅ S-a；锁/恢复 ✅ S-b；SIGKILL/占用 S-c |
+| 文档：03 / 04 / 09 / 12 §6 / `--help` / README ×2 | 同步 | S-a 触及面（01/09 屏障语义 + 03 seam 摘录）✅；03/04/09 ✅ S-b；12 §6 / `--help` / README S-c |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | **S-a 派发前屏障**：`AgentLoopImpl` 派发段 + `ToolExecutorImpl` 批派发段（承载类全文）+ `flushBarrier` 对账口径 + **DISK 词表落地**（enum + codec + 渲染 + `failureKind` 通道）+ **隐含重构 #3/#4 披露** | 锚点 1、4、5、6、7、11 | 编辑与取证（聚焦 + 突变 + 复绿）完成——packet 已出，待放行 |
-| **S-b 单写者锁 + 恢复收口**（跨模块 + 新词表：锁异常/占用行为、恢复追加事实的文案与 reason、分析纯函数） | 锚点 2、3、8、9、10 | 待开工 |
+| **S-b 单写者锁 + 恢复收口**（跨模块 + 新词表：锁异常/占用行为、恢复追加事实的文案与 reason、分析纯函数） | 锚点 2、3、8、9、10 | 编辑与取证（聚焦 + 突变 F–J + 还原复绿）完成——packet 已出，待放行 |
 | **S-c CLI 出口与 SIGKILL e2e**：`--resume` 占用拒绝（文案 + 退出码）+ 子进程 SIGKILL 测试形态与夹具 + 12 §6 / `--help` | 锚点 12、13（+ 12 §6 / `--help` 文档面） | 待开工 |
 
 （停点↔提交一一对应；证据约定延续：mutation 日志名带变体、日志内回显退出码、冒烟退出码持久化 `-result.log`。）

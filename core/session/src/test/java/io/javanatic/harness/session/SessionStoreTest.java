@@ -11,6 +11,7 @@ import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.UserMessage;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CountDownLatch;
@@ -81,6 +82,46 @@ class SessionStoreTest {
             assertThatThrownBy(() -> store.get(Session.newId("ghost")))
                 .isInstanceOf(NoSuchElementException.class)
                 .hasMessageContaining("ghost");
+        }
+    }
+
+    @Test
+    void createRejectsDuplicateIdWithoutClobbering() {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(new SessionStorePlugin()));
+            SessionStore store = rt.root().require(SessionStore.KEY);
+            Session first = store.create(rt.root(), Session.newId("s1"), CreateOptions.empty());
+            // 重复 id fail loud（it19）：静默覆盖会让两个 owner 的 onClose 交叉移除
+            assertThatThrownBy(() ->
+                store.create(rt.root(), Session.newId("s1"), CreateOptions.empty()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("session already exists in store: s1");
+            assertThat(store.get(Session.newId("s1"))).isSameAs(first);
+            assertThat(store.list()).hasSize(1);
+        }
+    }
+
+    @Test
+    void recreateUnderNewOwnerDisposesEachOwnInstance() {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(new SessionStorePlugin()));
+            SessionStore store = rt.root().require(SessionStore.KEY);
+            List<Session> disposed = new ArrayList<>();
+            rt.root().events().onGlobal(SessionEvents.DISPOSED,
+                (carrier, session) -> disposed.add(session));
+            Scope ownerA = rt.root().child();
+            Scope ownerB = rt.root().child();
+            Session first = store.create(ownerA, Session.newId("s1"), CreateOptions.empty());
+            ownerA.close();
+            assertThat(store.list()).isEmpty();
+            assertThat(disposed).containsExactly(first);
+
+            // 同 id 重建（旧实例已回收）：新 owner 关闭只移除自己的实例
+            Session second = store.create(ownerB, Session.newId("s1"), CreateOptions.empty());
+            assertThat(second).isNotSameAs(first);
+            ownerB.close();
+            assertThat(disposed).containsExactly(first, second);
+            assertThat(store.list()).isEmpty();
         }
     }
 

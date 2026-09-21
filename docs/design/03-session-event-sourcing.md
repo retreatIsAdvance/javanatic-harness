@@ -443,7 +443,7 @@ public final class SessionEventCodecs {
 ```text
 ~/.harness/sessions/<sessionId>/header.json   ← SessionHeader（含组合清单）
 ~/.harness/sessions/<sessionId>/log.jsonl     ← 逐行信封
-~/.harness/sessions/<sessionId>/log.jsonl.lock ← 进程锁
+~/.harness/sessions/<sessionId>/.writer.lock  ← 写者锁（FileChannel.tryLock，it19）
 
 行格式（信封字段 + data；ignorable 在信封层，未知类型可不解码即决策）：
 {"seq":12,"type":"tool/result","ignorable":false,"data":{...}}
@@ -470,6 +470,9 @@ public final class JsonlPersistence implements SessionPersistence {
 - **（it10）compaction 词表**:`compaction/start`(日志锁)+ `compaction/summary`(审计:摘要文本 + provider/model/usage——维护调用 R1 可重建 + shadowed 区间)+ `compaction/end`(解锁,error 记失败),全部 log-only ignorable;摘要本体走 `user/message` + `Replace` + `MessageSource.Compaction`——surface 事件类型不扩展(dsh 形状)。切点按 tool 配对边界(非整轮);估价 chars/2.5 + 结构开销(agentscope 校准);触发用末次 inputTokens 实数;阈值 = `contextWindow × thresholdRatio(默认 0.8)` 或绝对 `maxContextTokens` 覆盖,容量未知 apply 即 fail loud(不猜窗口大小,base 行默认 disabled);溢出恢复在 loop 的 request-error catch(错误串匹配 + 强制压缩 + 同 step 有界重试)。`request/header`(cwd+ISO 日期)轮首落账,提示词组装读最新值追加上下文 section。
 - **（it10）user/message codec 持久化 Replace 语义**:surfaceOp Replace + sourceEventSeqs 进盘(此前只写 Append)——压缩 checkpoint 重载后投影不丢,R1 补洞。
 - **（it14）chunk 落账与 Error kind**:`assistant/chunk` 边消费边落(折叠装配语义不变,渲染/TTFT 消费);`turn/end` 的 `Error` 增 `kind` 编解码——**旧日志缺 kind → 回放缺省 `UNKNOWN`**(message 保留、渲染回退 message-only,durable resume 不断)。
+- **（it19）单写者保护**:会话目录级 `.writer.lock`(`FileChannel.tryLock`,不等待)——第二写者(另一进程或同 JVM 另一实例)占用即 `WriterLockException` fail loud,拒绝而非合并;写者随 CREATED backfill 创建,随 DISPOSED 或持久化插件 scope 收拢释放(幂等双路径);`load` 对外来写者先试锁(占用即拒——撕裂尾修复是写操作,不得与在写者并发),本实例为写者时在写者 monitor 内修复+读。`SessionStore.create` 对已存在 id 改 `putIfAbsent` + fail loud(静默覆盖会让两个 owner 的 `onClose` 交叉移除)。
+- **（it19）屏障对账口径**:`flushBarrier(expectedSeq)` 先对账(已写行数必须追平 `session.seq()`,不符即抛)再 fsync——append 观察者异常按契约 contained 吞掉的写失败只在此显形;`writeEnvelope` 跳号护栏(信封 seq > 已写行数即拒),洞不被后续写假性追平。派发前调用点见 04 §13;`SessionStore.flush` 把 listener 失败包成 `DurabilityException`(收敛为 `FailureKind.DISK`)。
+- **（it19）恢复收口**:resume 装载后由 `SessionRecovery` 分析未完成尾形(悬空调用 = 消息级 tool_use ∪ 审计级 tool/call − 已配对 tool/result;开着的 turn/step),以恢复事实闭合:**不自动重放**——error `tool/result`(文案「结果未知,可自行核验」,`sourceEventSeqs` 引悬空调用/消息 seq)+ `step/end` + `turn/end(Aborted("interrupted"))`;事实在 end-seed **之后**追加(`firstLiveSeq` 语义内)、分析纯函数、收口幂等。理由:悬空 tool_use 使 resume 后首个真实请求违反 OpenAI 配对契约(400)。
 
 - **load 重建**:逐行信封,seq == 行号校验(跳号/重复拒绝);未知 type 按信封 ignorable 跳过或拒绝;header 往返含 FORMAT_VERSION。
 

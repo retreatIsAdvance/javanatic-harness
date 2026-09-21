@@ -14,9 +14,12 @@ import io.javanatic.harness.session.persistence.JsonValue;
 import io.javanatic.harness.session.persistence.SessionCodecRegistry;
 import io.javanatic.harness.session.persistence.SessionEventCodec;
 import io.javanatic.harness.session.persistence.SessionPersistence;
+import io.javanatic.harness.session.persistence.WriterLockException;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,8 +34,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * JSONL 后端:订阅 session 域事件(CREATED 开写、APPENDED 增量、DISPOSED 收笔)。
  * 布局:{@code <root>/<sessionId>/header.json + log.jsonl};行 = 信封
  * {@code {"seq":N,"type":"...","ignorable":b,"data":{...}}}。写侧无 codec 的
- * 类型 fail loud;读侧未知 type 按 ignorable 跳过或拒绝。单进程追加
- * (多进程锁挂账 persistence 后续)。写入是同步逐事件的——SessionStore 的
+ * 类型 fail loud;读侧未知 type 按 ignorable 跳过或拒绝。**单写者保护**:
+ * 会话目录级 {@code .writer.lock}({@code FileChannel.tryLock})由写者持有,
+ * 第二写者(第二进程或同 JVM 第二实例)占用即 {@link WriterLockException}
+ * fail loud——拒绝而非合并;{@code load} 对外来写者先试锁(占用即拒),
+ * 本实例为写者时在写者 monitor 内修复+读。写入是同步逐事件的——SessionStore 的
  * APPENDED 派发为 notifyOrdered 保序。耐久:flush barrier = 对账(已写行数
  * 追平 session seq,不符即抛——写失败被 contained 吞后由此显形)+ fsync
  * ({@code FileChannel.force});管辖限于本实例 backfill 过的会话(无写者 =
@@ -65,8 +71,12 @@ public final class JsonlPersistence implements SessionPersistence {
             writer(session).backfill(session)));
         handles.add(owner.events().onGlobal(SessionEvents.APPENDED, (carrier, entry) ->
             writer((Session) carrier).append((LoggedEvent<?>) entry)));
-        handles.add(owner.events().onGlobal(SessionEvents.DISPOSED, (carrier, session) ->
-            writers.remove(session.id())));
+        handles.add(owner.events().onGlobal(SessionEvents.DISPOSED, (carrier, session) -> {
+            SessionWriter writer = writers.remove(session.id());
+            if (writer != null) {
+                writer.close(); // 收笔即释放写者锁(单写者保护的生命周期终点)
+            }
+        }));
         handles.add(owner.events().onGlobal(SessionEvents.FLUSH, (carrier, session) -> {
             SessionWriter writer = writers.get(session.id());
             if (writer == null) {
@@ -79,7 +89,12 @@ public final class JsonlPersistence implements SessionPersistence {
             }
             writer.flushBarrier(session.seq());
         }));
-        return Disposable.of(() -> handles.forEach(Disposable::close));
+        return Disposable.of(() -> {
+            handles.forEach(Disposable::close);
+            // scope 收拢即释放全部写者锁(未走 DISPOSED 的会话也不留占用)
+            writers.values().forEach(SessionWriter::close);
+            writers.clear();
+        });
     }
 
     @Override
@@ -99,7 +114,24 @@ public final class JsonlPersistence implements SessionPersistence {
         if (!Files.isRegularFile(headerFile)) {
             throw new NoSuchElementException("session not on disk: " + id.value());
         }
-        repairTornTail(dir.resolve("log.jsonl"));
+        SessionWriter own = writers.get(id);
+        if (own != null) {
+            // 本实例就是写者:在自己的写者 monitor 内修复+读——不与 append 交错,
+            // 也不去探测只会撞上自己的锁(单写者保护针对的是「另一个写者」)
+            synchronized (own) {
+                repairTornTail(dir.resolve("log.jsonl"));
+                return readLoaded(dir, headerFile, id);
+            }
+        }
+        // 外来写者占用检查先于撕裂尾修复:修复是写操作,不得与在写者并发
+        // (占用即拒,不等待);本次 load 只用探测锁,写者锁在 backfill 创建时重新获取
+        try (WriterLock probe = WriterLock.acquire(dir)) {
+            repairTornTail(dir.resolve("log.jsonl"));
+            return readLoaded(dir, headerFile, id);
+        }
+    }
+
+    private Loaded readLoaded(Path dir, Path headerFile, Id<Session> id) throws IOException {
         SessionHeader header = HeaderCodec.read(JacksonBridge.read(Files.readString(headerFile)));
         List<SessionEvent> events = new ArrayList<>();
         for (String line : Files.readAllLines(dir.resolve("log.jsonl"))) {
@@ -188,19 +220,100 @@ public final class JsonlPersistence implements SessionPersistence {
         }
     }
 
-    private SessionWriter writer(Session session) {
-        return writers.computeIfAbsent(session.id(), id -> new SessionWriter(root.resolve(id.value()), codecs));
+    private SessionWriter writer(Session session) throws IOException {
+        SessionWriter existing = writers.get(session.id());
+        if (existing != null) {
+            return existing;
+        }
+        synchronized (writers) {
+            existing = writers.get(session.id());
+            if (existing != null) {
+                return existing;
+            }
+            SessionWriter created = new SessionWriter(root.resolve(session.id().value()), codecs);
+            writers.put(session.id(), created);
+            return created;
+        }
+    }
+
+    /**
+     * 会话目录写者锁({@code .writer.lock}):tryLock 立即占用,不等待。
+     * 第二写者(另一进程或同 JVM 另一实例的 {@code FileChannel})一律
+     * {@link WriterLockException} fail loud——单写者保护 = 拒绝而非合并。
+     */
+    private static final class WriterLock implements AutoCloseable {
+        private static final String LOCK_FILE = ".writer.lock";
+
+        private final FileChannel channel;
+        private final FileLock lock;
+
+        private WriterLock(FileChannel channel, FileLock lock) {
+            this.channel = channel;
+            this.lock = lock;
+        }
+
+        static WriterLock acquire(Path dir) throws IOException {
+            Files.createDirectories(dir);
+            Path lockFile = dir.resolve(LOCK_FILE);
+            FileChannel channel = FileChannel.open(lockFile, StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE);
+            FileLock lock;
+            try {
+                lock = channel.tryLock();
+            } catch (OverlappingFileLockException overlapped) {
+                closeQuietly(channel);
+                throw new WriterLockException("session writer lock held by another writer"
+                    + " in this JVM: " + lockFile, overlapped);
+            }
+            if (lock == null) {
+                closeQuietly(channel);
+                throw new WriterLockException("session writer lock held by another process: "
+                    + lockFile);
+            }
+            return new WriterLock(channel, lock);
+        }
+
+        @Override
+        public void close() {
+            try {
+                lock.release();
+            } catch (IOException e) {
+                LOG.log(System.Logger.Level.WARNING, "writer lock release failed", e);
+            } finally {
+                closeQuietly(channel);
+            }
+        }
+
+        private static void closeQuietly(FileChannel channel) {
+            try {
+                channel.close();
+            } catch (IOException e) {
+                LOG.log(System.Logger.Level.WARNING, "writer lock channel close failed", e);
+            }
+        }
     }
 
     /** 单会话写入器:逐行追加;断点续写(文件行数即已写 seq+1;续写前先修复撕裂尾)。 */
-    private static final class SessionWriter {
+    private static final class SessionWriter implements AutoCloseable {
         private final Path dir;
         private final SessionCodecRegistry codecs;
+        private final WriterLock lock;
         private long writtenLines = -1;
+        private boolean closed;
 
-        SessionWriter(Path dir, SessionCodecRegistry codecs) {
+        SessionWriter(Path dir, SessionCodecRegistry codecs) throws IOException {
             this.dir = dir;
             this.codecs = codecs;
+            this.lock = WriterLock.acquire(dir);
+        }
+
+        /** 释放写者锁;幂等(DISPOSED 与 scope close 双路径都可能到达)。 */
+        @Override
+        public synchronized void close() {
+            if (!closed) {
+                closed = true;
+                lock.close();
+            }
         }
 
         void backfill(Session session) throws IOException {

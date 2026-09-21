@@ -14,6 +14,7 @@ import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.llm.LlmService;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionRecovery;
 import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ToolExecutor;
@@ -83,7 +84,11 @@ public final class AgentLoopPlugin implements Plugin {
         public AgentHandle resume(Scope owner, ResumeAgentOptions options) {
             SessionStore store = owner.require(SessionStore.KEY);
             // get 对缺失会话本身 fail loud（NoSuchElementException）
-            return mount(owner, store.get(options.sessionId()), options.options(), null);
+            Session session = store.get(options.sessionId());
+            // 恢复收口(it19):未完成尾形以恢复事实闭合(不自动重放)——挂载前
+            // 收口,首个请求的消息投影即合法(悬空 tool_use 不闭合违反配对契约)
+            SessionRecovery.closeInterrupted(session, clock);
+            return mount(owner, session, options.options(), null);
         }
 
         private AgentHandle mount(Scope owner, Session session, AgentOptions agentOptions,

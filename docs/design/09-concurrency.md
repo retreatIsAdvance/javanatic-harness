@@ -180,6 +180,18 @@ handle.dispose = awaitQuiescence()
     .thenRun(() -> agentScope.close());
 ```
 
+### 跨进程单写者保护（it19）
+
+进程内的 append 契约（03 §2）管同一 Session 的多线程写者；跨进程的写者由会话目录级文件锁**拒绝**（不是合并）：
+
+| 动作 | 形态 | 失败语义 |
+|---|---|---|
+| 创建写者 | `<sessionId>/.writer.lock` 上 `FileChannel.tryLock`（不等待） | 第二写者（另一进程 / 同 JVM 第二实例）占用 ⇒ `WriterLockException` fail loud |
+| 释放 | DISPOSED 或持久化插件 scope 收拢 | 幂等（双路径都可能到达） |
+| `load` | 对外来写者先试锁（占用即拒）；本实例为写者时在写者 monitor 内修复+读 | 撕裂尾修复是写操作，不得与在写者并发 |
+
+同 JVM 重叠锁（`OverlappingFileLockException`）与跨进程 `tryLock` 返回 null 都归 fail loud；`--resume` 命中占用同样被拒（先试锁，再做撕裂尾修复）。`SessionStore.create` 对已存在 id 的重复创建 fail loud（`putIfAbsent`）——静默覆盖会让两个 owner 的 `onClose` 交叉移除。
+
 ## 9. 背压与限流
 
 ### LLM 流式背压 —— 有界阻塞队列（不是 Flow.Publisher）

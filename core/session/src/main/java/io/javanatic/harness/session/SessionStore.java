@@ -45,11 +45,14 @@ public final class SessionStore {
         List<Session.Observer> observers = List.of((session, entry) ->
             bus.notifyOrdered(SessionEvents.APPENDED, owner, session, entry));
         Session session = new Session(id, options.seed(), options.header(), manifest, observers);
-        store.put(id, session);
+        // 重复 id fail loud(it19):静默覆盖会让两个 owner 的 onClose 交叉移除
+        if (store.putIfAbsent(id, session) != null) {
+            throw new IllegalStateException("session already exists in store: " + id.value());
+        }
         owner.onClose(() -> {
-            Session removed = store.remove(id);
-            if (removed != null) {
-                bus.notifyOrdered(SessionEvents.DISPOSED, owner, owner, removed);
+            // 值守卫:只移除本 owner 创建的实例,不误伤同 id 的后继会话
+            if (store.remove(id, session)) {
+                bus.notifyOrdered(SessionEvents.DISPOSED, owner, owner, session);
             }
         });
         bus.notifyOrdered(SessionEvents.CREATED, owner, owner, session);

@@ -2,6 +2,7 @@ package io.javanatic.harness.session.persistence.jsonl;
 
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
+import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.DurabilityException;
 import io.javanatic.harness.session.Session;
@@ -34,6 +35,7 @@ import io.javanatic.harness.session.message.TokenUsage;
 import io.javanatic.harness.session.message.ToolResultBlock;
 import io.javanatic.harness.session.message.ToolUseBlock;
 import io.javanatic.harness.session.persistence.SessionPersistence;
+import io.javanatic.harness.session.persistence.WriterLockException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -431,6 +433,89 @@ class JsonlPersistenceTest {
             assertThatThrownBy(() -> store.flush(rt.root(), live))
                 .isInstanceOf(DurabilityException.class)
                 .hasMessageContaining("durability barrier mismatch");
+        }
+    }
+
+    @Test
+    void secondWriterOnSameSessionFailsLoudAndFirstWriterUnaffected() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+
+            try (Runtime rt2 = new Runtime()) {
+                new PluginLoader().loadAll(rt2, List.of(
+                    new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+                // 第二实例（同 JVM）争写：占用即拒（OverlappingFileLockException → fail loud）
+                Session detached = Session.create(Session.newId("s1"), null, null);
+                assertThatThrownBy(() -> rt2.root().require(SessionPersistence.KEY).save(detached))
+                    .isInstanceOf(WriterLockException.class)
+                    .hasMessageContaining("writer lock held");
+            }
+
+            // 首写者不受扰：照常追加，barrier 追平
+            live.append(new TurnEnd(2, 1, new TurnEndReason.Completed()));
+            rt.root().require(SessionStore.KEY).flush(rt.root(), live);
+            assertThat(Files.readAllLines(root.resolve("s1/log.jsonl"))).hasSize(2);
+        }
+    }
+
+    @Test
+    void foreignLoadRefusedWhileWriterActive() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+
+            try (Runtime rt2 = new Runtime()) {
+                new PluginLoader().loadAll(rt2, List.of(
+                    new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+                // 探测锁被首写者占用：load 拒绝（不等待、不修复、不读取）
+                assertThatThrownBy(() ->
+                    rt2.root().require(SessionPersistence.KEY).load(Session.newId("s1")))
+                    .isInstanceOf(WriterLockException.class)
+                    .hasMessageContaining("writer lock held");
+            }
+            assertThat(Files.exists(root.resolve("s1/.writer.lock"))).isTrue();
+        }
+    }
+
+    @Test
+    void disposedWriterReleasesLockAndProbeDoesNotLinger() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Scope owner = rt.root().child();
+            Session live = rt.root().require(SessionStore.KEY)
+                .create(owner, Session.newId("s1"), CreateOptions.empty());
+            live.append(new TurnStart(1, 1));
+
+            owner.close(); // DISPOSED → writer.close() → 写者锁释放
+
+            SessionPersistence persistence = rt.root().require(SessionPersistence.KEY);
+            assertThat(persistence.load(Session.newId("s1")).events()).hasSize(1);
+            // 探测锁随 load 归还：可重复 load
+            assertThat(persistence.load(Session.newId("s1")).events()).hasSize(1);
+        }
+    }
+
+    @Test
+    void runtimeCloseReleasesWriterLockForNextProcess() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+        }
+        // scope 收拢即释放（此后的「下一进程」可 load——无 DISPOSED 也需释放）
+        try (Runtime rt2 = new Runtime()) {
+            new PluginLoader().loadAll(rt2, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            SessionPersistence.Loaded loaded =
+                rt2.root().require(SessionPersistence.KEY).load(Session.newId("s1"));
+            assertThat(loaded.events()).hasSize(1);
         }
     }
 }
