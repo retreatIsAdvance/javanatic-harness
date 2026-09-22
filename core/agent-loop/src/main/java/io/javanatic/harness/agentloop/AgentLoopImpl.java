@@ -27,6 +27,7 @@ import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.session.event.AssistantMessageEvent;
 import io.javanatic.harness.session.event.FailureKind;
 import io.javanatic.harness.session.event.LlmRequestEvent;
+import io.javanatic.harness.session.event.ProjectInstructions;
 import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.StepEnd;
@@ -47,7 +48,10 @@ import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ToolExecutor;
 import io.javanatic.harness.tools.ToolRegistry;
 
+import java.io.IOException;
 import java.lang.System.Logger;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -81,6 +85,7 @@ public final class AgentLoopImpl implements Agent {
     private final AgentRegistry registry;
     private final Clock clock;
     private final String cwd;
+    private final String instructionsFile;
     private final AgentOptions options;
     private final Events events;
     private final Inbox inbox = new Inbox();
@@ -99,7 +104,7 @@ public final class AgentLoopImpl implements Agent {
     AgentLoopImpl(Scope agentScope, Session session, SessionStore store, LlmService llm,
                   ToolRegistry tools, ToolExecutor executor, SystemPromptService prompts,
                   LoopGuard guard, AgentRegistry registry, Clock clock, String cwd,
-                  AgentOptions options, CompactionService compaction) {
+                  String instructionsFile, AgentOptions options, CompactionService compaction) {
         this.agentScope = Objects.requireNonNull(agentScope, "agentScope");
         this.session = Objects.requireNonNull(session, "session");
         this.store = Objects.requireNonNull(store, "store");
@@ -111,6 +116,7 @@ public final class AgentLoopImpl implements Agent {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.cwd = Objects.requireNonNull(cwd, "cwd");
+        this.instructionsFile = Objects.requireNonNull(instructionsFile, "instructionsFile");
         this.options = Objects.requireNonNull(options, "options");
         this.compaction = compaction;
         this.events = agentScope.require(Runtime.KEY).events();
@@ -287,6 +293,7 @@ public final class AgentLoopImpl implements Agent {
             // cwd 来自组合配置(agent-loop.cwd),与 fs/shell/sandbox 围栏同源(it21)
             session.append(new RequestHeader(clock.millis(), cwd,
                 clock.instant().atZone(ZoneOffset.UTC).toLocalDate().toString()));
+            appendProjectInstructions();
 
             List<UserMessage> claimed = inbox.claim(InboxTarget.NEXT_TURN);
             if (claimed.isEmpty()) {
@@ -330,6 +337,43 @@ public final class AgentLoopImpl implements Agent {
             session.append(new TurnEnd(clock.millis(), turn, reason));
         } finally {
             activeAbort = null;
+        }
+    }
+
+    /**
+     * 轮首项目说明装载（it21，同 request/header 节奏）：读 cwd 下说明文件落账
+     * {@link ProjectInstructions}，提示词组装的说明段读它（R1：内容在事件里）。
+     * 变化检测：sha256 与上一条相同即不追加（日志有界）；空文件视为无说明。
+     * 不存在 = 静默无说明；读失败 = WARN + 无说明（不杀轮）。装载只读文件，
+     * 不触碰工具注册 / 沙箱模式 / 审批模式——说明进入提示词但不提升任何权限。
+     */
+    private void appendProjectInstructions() {
+        Path configured = Path.of(instructionsFile);
+        Path file = configured.isAbsolute() ? configured : Path.of(cwd).resolve(configured);
+        InstructionsFile.Loaded loaded;
+        try {
+            loaded = InstructionsFile.read(file);
+        } catch (NoSuchFileException e) {
+            return;
+        } catch (IOException e) {
+            LOG.log(Logger.Level.WARNING, "project instructions unreadable: " + file, e);
+            return;
+        }
+        if (loaded.content().isEmpty()) {
+            return;
+        }
+        String sha = InstructionsFile.sha256(loaded.content());
+        String path = file.toString();
+        boolean unchanged = session.events().stream()
+            .map(entry -> entry.event())
+            .filter(ProjectInstructions.class::isInstance)
+            .map(ProjectInstructions.class::cast)
+            .reduce((first, second) -> second)   // 最新
+            .filter(latest -> latest.path().equals(path) && latest.sha256().equals(sha))
+            .isPresent();
+        if (!unchanged) {
+            session.append(new ProjectInstructions(clock.millis(), path, sha,
+                loaded.truncated(), loaded.content()));
         }
     }
 

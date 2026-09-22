@@ -8,6 +8,7 @@ import io.javanatic.harness.session.event.CompactionEnd;
 import io.javanatic.harness.session.event.CompactionStart;
 import io.javanatic.harness.session.event.CompactionSummary;
 import io.javanatic.harness.session.event.FailureKind;
+import io.javanatic.harness.session.event.ProjectInstructions;
 import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.StepEnd;
 import io.javanatic.harness.session.event.SurfaceOp;
@@ -168,6 +169,13 @@ final class CoreCodecs {
                     .set("date", e.date()).build(),
                 b -> new RequestHeader(
                     b.get("time").asLong(), b.get("cwd").asString(), b.get("date").asString())),
+            codec("project/instructions", ProjectInstructions.class,
+                e -> JsonValue.object().set("time", e.time()).set("path", e.path())
+                    .set("sha256", e.sha256()).set("truncated", e.truncated())
+                    .set("content", e.content()).build(),
+                b -> new ProjectInstructions(
+                    b.get("time").asLong(), b.get("path").asString(), b.get("sha256").asString(),
+                    b.get("truncated").asBool(), b.get("content").asString())),
             codec("session/end-seed", SessionEndSeedEvent.class,
                 e -> JsonValue.object().set("time", e.time()).build(),
                 b -> new SessionEndSeedEvent(b.get("time").asLong())));

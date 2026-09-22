@@ -39,7 +39,8 @@ class FsLocalConfigTest {
     void quotaKeysResolveFromConfig() throws Exception {
         try (Runtime rt = new Runtime()) {
             rt.root().provide(ConfigService.KEY, id -> "fs-local".equals(id)
-                ? Map.of("root", root.toString(), "maxReadBytes", 4L, "maxListEntries", 1L)
+                ? Map.of("root", root.toString(), "maxReadBytes", 4L, "maxListEntries", 1L,
+                    "searchMaxMatches", 1L)
                 : Map.of());
             new PluginLoader().loadAll(rt, List.of(new FsLocalPlugin()));
             FsService fs = rt.root().require(FsService.KEY);
@@ -50,6 +51,14 @@ class FsLocalConfigTest {
             FsService.Listing listing = fs.list(Path.of("."));
             assertThat(listing.truncated()).isTrue();
             assertThat(listing.entries()).hasSize(1);
+
+            // searchMaxMatches=1：两个命中只留序最小者，截断位显形
+            fs.write(Path.of("a.txt"), "hi");
+            fs.write(Path.of("b.txt"), "hi");
+            FsService.SearchResult found = fs.search("hi", Path.of("."));
+            assertThat(found.truncated()).isTrue();
+            assertThat(found.matches()).extracting(FsService.Match::path)
+                .containsExactly("a.txt");
         }
     }
 

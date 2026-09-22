@@ -1,0 +1,35 @@
+# 突变 L：核心事件 wire 拼写漂移（ProjectInstructions.type() "project/instructions" → "project/instruction"）
+# 期望：词汇表腿与落盘往返腿各自必红（类型拼写是两测试的共同事实源）
+# 基线 commit: 30698c5（S-c 在工作树）
+$ mvn -B -pl core/session,session/persistence-jsonl -am -Dtest=SessionEventTypesTest,JsonlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test
+
+[INFO]  T E S T S
+[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.053 s <<< FAILURE! -- in io.javanatic.harness.session.SessionEventTypesTest
+[ERROR] io.javanatic.harness.session.SessionEventTypesTest.typeVocabularyMatchesDshNames -- Time elapsed: 0.004 s <<< FAILURE!
+org.opentest4j.AssertionFailedError:
+
+expected: "project/instructions"
+ but was: "project/instruction"
+	at io.javanatic.harness.session.SessionEventTypesTest.typeVocabularyMatchesDshNames(SessionEventTypesTest.java:41)
+[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0
+
+# 首轮 reactor 在 harness-core-session 失败即停（test 阶段无 --fail-at-end），jsonl 腿单独补跑
+$ mvn -B -pl session/persistence-jsonl -am -Dtest=JsonlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test
+
+[INFO]  T E S T S
+[ERROR] Tests run: 23, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.325 s <<< FAILURE! -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest
+[ERROR] io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest.projectInstructionsRoundTripWithWireSpelling -- Time elapsed: 0.008 s <<< FAILURE!
+java.lang.AssertionError:
+
+Expecting actual:
+  "{"data":{"time":1,"turn":1},"type":"turn/start","seq":0,"ignorable":false}
+"
+to contain:
+  ""type":"project/instructions""
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest.projectInstructionsRoundTripWithWireSpelling(JsonlPersistenceTest.java:137)
+[ERROR] io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest.fullHistoryRoundTripsThroughDisk -- Time elapsed: 0.029 s <<< FAILURE!
+org.opentest4j.AssertionFailedError:
+（载盘逐事件比对：漂移类型的条目在写入侧即偏离词汇表，往返重建不等）
+[ERROR] Tests run: 23, Failures: 2, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+EXIT=1

@@ -205,6 +205,11 @@ class AgentLoopImpl implements Agent {
         session.append(new RequestHeader(clock.millis(), cwd,
             clock.instant().atZone(ZoneOffset.UTC).toLocalDate().toString()));
 
+        // 项目说明装载（it21）：轮首读 cwd 下说明文件（行配置 agent-loop.instructionsFile，
+        // 缺省 AGENTS.md），内容+指纹落 project/instructions——装载是 loop 的动作，
+        // 但值仍只在事件里：提示词组装的说明段读日志（R1 不破）。
+        appendProjectInstructions();
+
         // claim 输入：turn 边界优先普通排队，steering 兜底
         List<UserMessage> claimed = inbox.claim(InboxTarget.NEXT_TURN);
         if (claimed.isEmpty()) claimed = inbox.claim(InboxTarget.NEXT_STEP);
@@ -246,7 +251,9 @@ class AgentLoopImpl implements Agent {
 
 **turn ≠ seq**（修正前版缺陷）：turn 号是 TurnStart 事件的计数语义，与日志序号无关——中间穿插的 chunk/tool 事件不会推高 turn 号。step 号同理由 loop 在 turn 内自增（从 0 起）。
 
-**工作区单源（it21）**：`request/header.cwd` 的值来自组合行配置 `agent-loop.cwd`（缺省 `user.dir`），不是 loop 自己读进程状态——与 `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 四处同源，四处漂移由 AppBoot 装配期断言拒绝（[07 §5](07-profile-bundle.md)）。提示词组装的上下文段读最新 `request/header`（R1：值在事件里，同日志必同提示词），loop 不隐式读文件系统。
+**工作区单源（it21）**：`request/header.cwd` 的值来自组合行配置 `agent-loop.cwd`（缺省 `user.dir`），不是 loop 自己读进程状态——与 `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 四处同源，四处漂移由 AppBoot 装配期断言拒绝（[07 §5](07-profile-bundle.md)）。提示词组装的上下文段读最新 `request/header`（R1：值在事件里，同日志必同提示词）。
+
+**项目说明装载（it21，P3 改判）**：装载职责在 **agent-loop**（初稿一度考虑放 system-prompt/组合层；改判理由：轮首时机只有 loop 有，装配层无法在「每次 turn 前」动作，且事件落账需要 turn 上下文）。轮首、`request/header` 之后读 `cwd` 下的说明文件：行配置 `agent-loop.instructionsFile`（缺省 `AGENTS.md`，`DEFAULT_INSTRUCTIONS_FILE`）——相对名按 `cwd` 解析，也可写绝对路径。**装载通道**是**直接 NIO**（`InstructionsFile.read` → `Files.newInputStream`）：不经 `FsService`/realpath 围栏、不设 `NOFOLLOW`（符号链接被跟随），绝对路径可绕出 `cwd`——这是对四确认 ②「经 `java.base` 读」通道粒度的**实施改判**，理由与两条边界见 [plan/iteration-21.md](../plan/iteration-21.md) 设计偏离表第 5 行（loop 环境快照先例 / 组合定向输入非模型定向 / 读平权——`bash` 本可 `cat` 任意路径，符号链接通道无新读能力；与 `fs_search` 的 `NOFOLLOW` 姿态有意不一致）。装载**有界**：超 64 KiB（`InstructionsFile.MAX_BYTES`）截断到最后一个换行、置 `truncated` 位（通篇无换行则保留字节前缀）。**sha 去重增强**：事件带内容 SHA-256，loop 比「最新 `project/instructions` 的 path+sha256」与本次装载——相同则不追加（长会话逐轮装载同一文件只有一条事件，日志有界）；不同或不存在则追加新事件（文件变了，提示词随之变，指纹进 R1 链）。失败面：文件不存在静默跳过（无说明文件是常态）；其余 `IOException` WARN 降级、不炸 turn——说明文件读不到不该让会话起不来。提示词组装的说明段由 `SystemPromptImpl` 硬编码在**上下文段之后、priority 排序的注册段之前**（说明段不参与 priority 排序），读**最新事件**（`instructionsSection`），渲染为 `Project instructions (<path>):\n<content>`，截断时尾附 `\n… (truncated)`。
 
 ## 7. Step loop — 请求指纹（R1）与流式消费
 

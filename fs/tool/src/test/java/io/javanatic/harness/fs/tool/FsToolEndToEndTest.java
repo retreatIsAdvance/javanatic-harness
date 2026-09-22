@@ -54,7 +54,8 @@ class FsToolEndToEndTest {
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             ToolRegistry registry = rt.root().require(ToolRegistry.KEY);
             assertThat(registry.schemas(rt.root())).extracting(s -> s.name())
-                .containsExactly("exit_plan_mode", "fs_delete", "fs_edit", "fs_list", "fs_read", "fs_write");
+                .containsExactly("exit_plan_mode", "fs_delete", "fs_edit", "fs_list", "fs_read",
+                    "fs_search", "fs_write");
 
             Path file = dir.resolve("note.txt");
             Session session = Session.create(Session.newId("e2e"), null, null);
@@ -261,6 +262,51 @@ class FsToolEndToEndTest {
 
             assertThat(rejected.isError()).isTrue();
             assertThat(rejected.content()).contains("file changed since read");
+        }
+    }
+
+    /** it21 搜索：结果行 `路径:行号:行文本` 经 pipeline 显形，截断以尾行标注（只读工具，计划模式亦放行）。 */
+    @Test
+    void searchSurfacesPathLineTextAndTruncationThroughPipeline() throws Exception {
+        try (Runtime rt = boot(dir)) {
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+            Files.writeString(dir.resolve("a.txt"), "needle one\nplain");
+            Files.writeString(dir.resolve("sub.txt"), "x\nneedle two");
+            Session session = Session.create(Session.newId("search"), null, null);
+            session.append(new PlanModeEvent(1, true));   // 只读面：计划模式不拦
+
+            ToolResultBlock result = run(executor, session, rt,
+                new ToolUseBlock(CallId.of("s1"), "fs_search",
+                    "{\"pattern\":\"needle\",\"path\":\".\"}"));
+
+            assertThat(result.isError()).isFalse();
+            assertThat(result.content()).isEqualTo("a.txt:1:needle one\nsub.txt:2:needle two");
+        }
+    }
+
+    /** it21 搜索有界：匹配上限经行配置生效，超出以尾行标注（不静默丢）。 */
+    @Test
+    void cappedSearchAppendsTruncationTail() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(ConfigService.KEY, id -> "fs-local".equals(id)
+                ? Map.of("root", dir.toString(), "searchMaxMatches", 1L) : Map.of());
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+                new SystemPromptPlugin(),
+                new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
+                new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, dir)),
+                new FsLocalPlugin(), new FsToolPlugin()));
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+            Files.writeString(dir.resolve("a.txt"), "needle");
+            Files.writeString(dir.resolve("b.txt"), "needle");
+            Session session = Session.create(Session.newId("capped-search"), null, null);
+
+            ToolResultBlock result = run(executor, session, rt,
+                new ToolUseBlock(CallId.of("s1"), "fs_search",
+                    "{\"pattern\":\"needle\",\"path\":\".\"}"));
+
+            assertThat(result.isError()).isFalse();
+            assertThat(result.content()).isEqualTo("a.txt:1:needle\n… (search truncated)");
         }
     }
 

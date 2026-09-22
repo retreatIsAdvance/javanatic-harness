@@ -58,9 +58,9 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 | 模块 | 角色 | 职责 |
 |---|---|---|
-| `harness-fs-fs` | Definition | `FsService` 接口（read/write/edit/delete）|
+| `harness-fs-fs` | Definition | `FsService` 接口（read/write/edit/delete/list/search）|
 | `harness-fs-local` | Provider | 本地文件系统实现（插件 id `fs-local`）|
-| `harness-fs-tool` | Consumer | `fs_read`/`fs_write`/`fs_edit` 工具 |
+| `harness-fs-tool` | Consumer | `fs_read`/`fs_write`/`fs_edit`/`fs_delete`/`fs_list`/`fs_search` 工具 |
 
 #### Shell（命令执行）
 

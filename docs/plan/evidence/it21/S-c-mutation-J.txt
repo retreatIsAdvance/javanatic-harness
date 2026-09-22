@@ -1,0 +1,26 @@
+# 突变 J：有界收集失效（LocalFs.MatchCollector.offer 不再挤出、不再置 truncated）
+# 期望：searchKeepsOrderSmallestMatchesAtCapAndFlagsTruncation 必红；同跑 searchFindsLiteralLinesInPathLineOrder 应绿（判别性：坏的是上限不是命中本身）
+# 基线 commit: 30698c5（S-c 在工作树）
+$ mvn -B -pl fs/local -am -Dtest=LocalFsTest#searchKeepsOrderSmallestMatchesAtCapAndFlagsTruncation+searchFindsLiteralLinesInPathLineOrder -Dsurefire.failIfNoSpecifiedTests=false test
+
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.065 s <<< FAILURE! -- in io.javanatic.harness.fs.local.LocalFsTest
+[ERROR] io.javanatic.harness.fs.local.LocalFsTest.searchKeepsOrderSmallestMatchesAtCapAndFlagsTruncation -- Time elapsed: 0.008 s <<< FAILURE!
+[ERROR] Failures:
+[ERROR]   LocalFsTest.searchKeepsOrderSmallestMatchesAtCapAndFlagsTruncation:243
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-fs-local: There are test failures.
+[ERROR]
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/fs/local/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR]
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-fs-local
+EXIT=1

@@ -1,0 +1,25 @@
+# 突变 H 补课：headless 腿（首轮 reactor 在 harness-core-agent-loop 早停，未到 examples/headless）
+# 期望：HostileInstructionsTest 必红（其‘敌意内容确已进提示词’前提断言）
+$ mvn -B -pl examples/headless -am -Dtest=HostileInstructionsTest -Dsurefire.failIfNoSpecifiedTests=false test
+
+[approval] allow fs_write fs_write {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit17138774700793423267/escaped.txt","content":"escaped"}? [y/N] [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.338 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.HostileInstructionsTest
+[ERROR] io.javanatic.harness.examples.headless.HostileInstructionsTest.hostileInstructionsCannotElevateToolSandboxOrApprovalBits -- Time elapsed: 0.323 s <<< FAILURE!
+[ERROR] Failures:
+[ERROR]   HostileInstructionsTest.hostileInstructionsCannotElevateToolSandboxOrApprovalBits:108
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-examples-headless: There are test failures.
+[ERROR]
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR]
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-examples-headless
+EXIT=1

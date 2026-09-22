@@ -1,0 +1,26 @@
+# 突变 I：sha 去重失效（AgentLoopImpl 最新事件比对恒为‘变了’→ 每轮必追加）
+# 期望：unchangedInstructionsAppendOnlyOnceAcrossTurns 必红；同跑 changedInstructions… 应绿（判别性：坏的是去重不是装载）
+# 基线 commit: 30698c5（S-c 在工作树）
+$ mvn -B -pl core/agent-loop -am -Dtest=AgentLoopTest#unchangedInstructionsAppendOnlyOnceAcrossTurns+changedInstructionsAppendNewEventWithNewFingerprint -Dsurefire.failIfNoSpecifiedTests=false test
+
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.163 s <<< FAILURE! -- in io.javanatic.harness.agentloop.AgentLoopTest
+[ERROR] io.javanatic.harness.agentloop.AgentLoopTest.unchangedInstructionsAppendOnlyOnceAcrossTurns -- Time elapsed: 0.146 s <<< FAILURE!
+[ERROR] Failures:
+[ERROR]   AgentLoopTest.unchangedInstructionsAppendOnlyOnceAcrossTurns:772
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-core-agent-loop: There are test failures.
+[ERROR]
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/core/agent-loop/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR]
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-core-agent-loop
+EXIT=1

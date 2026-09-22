@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -191,6 +192,103 @@ class LocalFsTest {
     void deleteMissingFileFailsLoud() {
         assertThatThrownBy(() -> fs().delete(dir.resolve("ghost")))
             .isInstanceOf(IOException.class);
+    }
+
+    // ===== 有界搜索（it21）：字面逐行 + 有界收集 + 围栏/跳过纪律 =====
+
+    @Test
+    void searchFindsLiteralLinesInPathLineOrder() throws IOException {
+        fs().write(Path.of("b/one.txt"), "alpha\nbeta needle\ngamma");
+        fs().write(Path.of("a.txt"), "needle\nno\nneedle again");
+        fs().write(Path.of("plain.txt"), "nothing here");
+
+        FsService.SearchResult found = fs().search("needle", Path.of("."));
+
+        assertThat(found.truncated()).isFalse();
+        assertThat(found.matches()).containsExactly(
+            new FsService.Match("a.txt", 1, "needle"),
+            new FsService.Match("a.txt", 3, "needle again"),
+            new FsService.Match("b/one.txt", 2, "beta needle"));
+    }
+
+    @Test
+    void searchMatchesLiterallyNotAsRegex() throws IOException {
+        fs().write(Path.of("f.txt"), "a.c\nabc\n");
+
+        // 字面量：a.c 不匹配 abc；单文件起点也只搜该文件
+        assertThat(fs().search("a.c", Path.of("f.txt")).matches())
+            .containsExactly(new FsService.Match("f.txt", 1, "a.c"));
+    }
+
+    @Test
+    void searchAbbreviatesLongLinesAndStripsCarriageReturn() throws IOException {
+        fs().write(Path.of("f.txt"), "x".repeat(250) + "needle\r\nneedle\r\n");
+
+        FsService.SearchResult found = fs().search("needle", Path.of("f.txt"));
+
+        assertThat(found.matches().getFirst().text()).hasSize(201).endsWith("…");
+        assertThat(found.matches().get(1).text()).isEqualTo("needle");   // \r 不残留、不把空尾行当匹配
+        assertThat(found.matches()).hasSize(2);
+    }
+
+    @Test
+    void searchKeepsOrderSmallestMatchesAtCapAndFlagsTruncation() throws IOException {
+        // 建序与字典序相反：按走查序截断会留下 z.txt，按序截断才确定
+        fs().write(Path.of("z.txt"), "needle");
+        fs().write(Path.of("a.txt"), "needle");
+        fs().write(Path.of("m.txt"), "needle");
+
+        FsService.SearchResult capped = withSearchCap(2).search("needle", Path.of("."));
+
+        assertThat(capped.truncated()).isTrue();
+        assertThat(capped.matches()).extracting(FsService.Match::path)
+            .containsExactly("a.txt", "m.txt");
+        assertThat(withSearchCap(3).search("needle", Path.of(".")).truncated()).isFalse();
+    }
+
+    @Test
+    void searchSkipsBinaryAndOversizeFiles() throws IOException {
+        Files.write(dir.resolve("bin.dat"), new byte[] {'n', 'e', 'e', 'd', 'l', 'e', 0, 1});
+        Files.writeString(dir.resolve("big.txt"), "needle everywhere");
+        Files.writeString(dir.resolve("small.txt"), "needle");
+
+        // maxReadBytes=8：big.txt(21 字节)跳过；bin.dat 探测窗含 NUL 跳过；small.txt 命中
+        FsService.SearchResult found = new LocalFs(dir, 8, LocalFs.DEFAULT_MAX_LIST_ENTRIES,
+            LocalFs.DEFAULT_MAX_SEARCH_MATCHES).search("needle", Path.of("."));
+
+        assertThat(found.matches()).extracting(FsService.Match::path).containsExactly("small.txt");
+    }
+
+    @Test
+    void searchDoesNotFollowSymlinks() throws IOException {
+        Files.writeString(outside.resolve("secret.txt"), "needle");
+        fs().write(Path.of("real.txt"), "needle");
+        fs().write(Path.of("sub/inner.txt"), "needle");
+        Files.createSymbolicLink(dir.resolve("link-file"), dir.resolve("real.txt"));
+        Files.createSymbolicLink(dir.resolve("link-out"), outside.resolve("secret.txt"));
+        Files.createSymbolicLink(dir.resolve("link-dir"), dir.resolve("sub"));
+
+        FsService.SearchResult found = fs().search("needle", Path.of("."));
+
+        // 链接条目不进结果（文件链接不读、目录链接不深入），真实文件各出一条
+        assertThat(found.matches()).extracting(FsService.Match::path)
+            .containsExactly("real.txt", "sub/inner.txt");
+    }
+
+    @Test
+    void searchFailLoudContract() {
+        assertThatThrownBy(() -> fs().search("", Path.of(".")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("pattern must not be empty");
+        assertThatThrownBy(() -> fs().search("x", Path.of("nope")))
+            .isInstanceOf(NoSuchFileException.class);
+        assertThatThrownBy(() -> fs().search("x", Path.of("../outside")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("escapes workspace root");
+    }
+
+    private LocalFs withSearchCap(int cap) {
+        return new LocalFs(dir, LocalFs.DEFAULT_MAX_READ_BYTES, LocalFs.DEFAULT_MAX_LIST_ENTRIES, cap);
     }
 
     // ===== 真实路径围栏（it12.6）：符号链接在判定前被展开 =====

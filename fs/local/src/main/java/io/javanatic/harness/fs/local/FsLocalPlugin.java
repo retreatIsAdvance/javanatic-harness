@@ -38,7 +38,9 @@ public final class FsLocalPlugin implements Plugin {
             fs = new LocalFs(Path.of(root),
                 ConfigValues.longValue(config, id(), "maxReadBytes", LocalFs.DEFAULT_MAX_READ_BYTES),
                 (int) ConfigValues.longValue(config, id(), "maxListEntries",
-                    LocalFs.DEFAULT_MAX_LIST_ENTRIES));
+                    LocalFs.DEFAULT_MAX_LIST_ENTRIES),
+                (int) ConfigValues.longValue(config, id(), "searchMaxMatches",
+                    LocalFs.DEFAULT_MAX_SEARCH_MATCHES));
         }
         scope.provide(FsService.KEY, fs);
     }

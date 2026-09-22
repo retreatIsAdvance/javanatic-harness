@@ -2,6 +2,7 @@ package io.javanatic.harness.systemprompt;
 
 import io.javanatic.harness.kernel.scope.Disposable;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.event.ProjectInstructions;
 import io.javanatic.harness.session.event.RequestHeader;
 
 import java.util.ArrayList;
@@ -30,6 +31,10 @@ final class SystemPromptImpl implements SystemPromptService {
         if (!context.isEmpty()) {
             parts.add(context);
         }
+        String instructions = instructionsSection(session);
+        if (!instructions.isEmpty()) {
+            parts.add(instructions);
+        }
         List<PromptSection> ordered = new ArrayList<>(sections);
         ordered.sort(Comparator.comparingInt(PromptSection::priority));
         for (PromptSection section : ordered) {
@@ -43,6 +48,23 @@ final class SystemPromptImpl implements SystemPromptService {
             }
         }
         return String.join("\n\n", parts);
+    }
+
+    /**
+     * 说明 section:最新 project/instructions 事件的内容(it21,R1:内容落账在事件里,
+     * 同日志必同提示词;无事件返回空串)。段首给出来源路径,截断以尾部标记标明。
+     */
+    private static String instructionsSection(Session session) {
+        return session.events().stream()
+            .map(entry -> entry.event())
+            .filter(ProjectInstructions.class::isInstance)
+            .map(ProjectInstructions.class::cast)
+            .reduce((first, second) -> second)   // 最新
+            .map(event -> {
+                String text = "Project instructions (" + event.path() + "):\n" + event.content();
+                return event.truncated() ? text + "\n… (truncated)" : text;
+            })
+            .orElse("");
     }
 
     /**

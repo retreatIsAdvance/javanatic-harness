@@ -2,6 +2,7 @@ package io.javanatic.harness.session;
 
 import io.javanatic.harness.session.event.AssistantMessageEvent;
 import io.javanatic.harness.session.event.LlmRequestEvent;
+import io.javanatic.harness.session.event.ProjectInstructions;
 import io.javanatic.harness.session.event.SessionEndSeedEvent;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.SurfaceOp;
@@ -36,6 +37,8 @@ class SessionEventTypesTest {
         assertThat(new SessionEndSeedEvent(0).type()).isEqualTo("session/end-seed");
         assertThat(llmRequest().type()).isEqualTo("llm/request");
         assertThat(userEvent().type()).isEqualTo("user/message");
+        assertThat(new ProjectInstructions(0, "/w/AGENTS.md", "sha", false, "text").type())
+            .isEqualTo("project/instructions");
     }
 
     @Test
@@ -44,6 +47,9 @@ class SessionEventTypesTest {
         assertThat(userEvent().ignorable()).isFalse();
         assertThat(new SessionEndSeedEvent(0).ignorable()).isFalse();
         assertThat(llmRequest().ignorable()).isTrue();
+        // 项目说明是提示词可丢弃的附加事实（旧读取器跳过而非拒绝）
+        assertThat(new ProjectInstructions(0, "/w/AGENTS.md", "sha", false, "text").ignorable())
+            .isTrue();
     }
 
     @Test

@@ -27,7 +27,7 @@ rows:
     config:
       section: |
         Plan mode is active: research and plan only, do not execute yet. Investigate
-        with read-only tools (fs_read, fs_list; shell for inspection only) and think
+        with read-only tools (fs_read, fs_list, fs_search; shell for inspection only) and think
         the task through. When the plan is complete, present it with exit_plan_mode
         as markdown starting with a # heading; on approval, carry it out step by step.
         File-effect restriction is enforced by the sandbox layer (read-only while

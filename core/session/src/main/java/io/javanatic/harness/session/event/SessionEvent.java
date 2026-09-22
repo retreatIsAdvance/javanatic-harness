@@ -15,7 +15,7 @@ public sealed interface SessionEvent permits
     UserMessageEvent, AssistantMessageEvent, LlmRequestEvent,
     ToolCallEvent, ToolResultEvent,
     CompactionStart, CompactionSummary, CompactionEnd, RequestHeader,
-    SessionEndSeedEvent, ExtensionEvent {
+    ProjectInstructions, SessionEndSeedEvent, ExtensionEvent {
 
     /** Unix epoch 毫秒。 */
     long time();

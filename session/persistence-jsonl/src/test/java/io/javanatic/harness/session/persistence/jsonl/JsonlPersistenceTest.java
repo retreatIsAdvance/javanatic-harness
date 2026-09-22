@@ -15,6 +15,7 @@ import io.javanatic.harness.session.event.CompactionSummary;
 import io.javanatic.harness.session.event.ExtensionEvent;
 import io.javanatic.harness.session.event.FailureKind;
 import io.javanatic.harness.session.event.LlmRequestEvent;
+import io.javanatic.harness.session.event.ProjectInstructions;
 import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.StepEnd;
@@ -97,7 +98,10 @@ class JsonlPersistenceTest {
                 new SurfaceOp.Replace(1, 6),
                 List.of(1L, 2L, 3L, 4L, 5L, 6L)),
             new CompactionEnd(17, 1, null),
-            new RequestHeader(18, "/w", "2026-09-09"));
+            new RequestHeader(18, "/w", "2026-09-09"),
+            new ProjectInstructions(19, "/w/AGENTS.md",
+                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", false,
+                "# 项目说明\n构建用 mvn。"));
     }
 
     @Test
@@ -116,6 +120,30 @@ class JsonlPersistenceTest {
             assertThat(loaded.header().id()).isEqualTo(live.id());
             assertThat(live.deriveMessages()).isEqualTo(
                 Session.create(live.id(), loaded.events(), loaded.header()).deriveMessages());
+        }
+    }
+
+    /** it21 项目说明：线格式钉住（type/ignorable/五字段），含截断位与多行内容。 */
+    @Test
+    void projectInstructionsRoundTripWithWireSpelling() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+            live.append(new ProjectInstructions(2, "/w/AGENTS.md", "abc123", true, "行一\n行二"));
+
+            String log = Files.readString(root.resolve("s1/log.jsonl"));
+            assertThat(log).contains("\"type\":\"project/instructions\"")
+                .contains("\"ignorable\":true")
+                .contains("\"sha256\":\"abc123\"")
+                .contains("\"truncated\":true")
+                .contains("行一\\n行二");
+            SessionPersistence.Loaded loaded =
+                rt.root().require(SessionPersistence.KEY).load(live.id());
+            assertThat(loaded.events()).containsExactly(
+                new TurnStart(1, 1),
+                new ProjectInstructions(2, "/w/AGENTS.md", "abc123", true, "行一\n行二"));
         }
     }
 

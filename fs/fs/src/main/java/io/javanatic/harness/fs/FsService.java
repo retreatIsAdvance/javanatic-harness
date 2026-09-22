@@ -58,4 +58,25 @@ public interface FsService {
 
     /** 列举结果：按名排序的条目 + 是否因条目上限截断。 */
     record Listing(List<DirEntry> entries, boolean truncated) {}
+
+    /**
+     * 字面搜索（it21）：在 {@code path} 下递归查找含 {@code pattern} 字面串的行
+     * （不做正则/glob——留待独立 seam）。
+     *
+     * <p><b>有界</b>：实现方按匹配上限停收（{@link SearchResult#truncated()} 承载）、
+     * 逐条行文本截断；二进制与超读取上限的文件跳过；不跟随符号链接（目录不进、
+     * 文件不读），候选按真实路径校验围栏。
+     *
+     * @return 匹配（实现定义的稳定坐标系：LocalFs 为相对工作区根、{@code /} 分隔，
+     *         按路径与行号排序）+ 是否因匹配上限截断
+     * @throws IOException 起始路径不可用（不存在、不是目录）
+     * @throws IllegalArgumentException pattern 为空或起始路径越出工作区根时
+     */
+    SearchResult search(String pattern, Path path) throws IOException;
+
+    /** 一条搜索匹配：相对路径、1 起行号、行文本（超上限时截断）。 */
+    record Match(String path, int line, String text) {}
+
+    /** 搜索结果：匹配 + 是否因匹配上限截断（不静默丢数据）。 */
+    record SearchResult(List<Match> matches, boolean truncated) {}
 }

@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 /**
  * fs Consumer（id "fs-tool"，requires "tools" + "sandbox-policy"）：把 FsService 的
- * 五个操作注册为工具，全部经 ToolExecutor 执行（审批/落账是 executor 的 stage，
+ * 六个操作注册为工具，全部经 ToolExecutor 执行（审批/落账是 executor 的 stage，
  * 不是工具的自觉）。进程内文件围栏：READ_ONLY（如计划模式）下变异工具直接拒——
  * 与 Seatbelt 共用 WritableRoots 语义的「模式级」消费端强制；WORKSPACE_WRITE 的
  * 路径边界由 fs-local root 与 sandbox workspace 对齐保证，漂移在装配期 fail loud
@@ -29,6 +29,9 @@ import java.util.stream.Collectors;
  * <p>编辑面可靠性（it21）：编辑须唯一匹配（多处即拒，见 FsService.edit）；
  * 编辑/写入前经 {@link ReadLedger} 折叠的读后事实与磁盘比对，外部修改即拒；
  * 删除不设读后守卫（已记录边界，见 05 §4）。
+ *
+ * <p>搜索（it21）：{@code fs_search} 为只读发现面——字面逐行匹配（非正则），
+ * 结果有界（实现上限截断以尾行标注），二进制与超读取上限的文件不进结果。
  */
 public final class FsToolPlugin implements Plugin {
 
@@ -36,6 +39,8 @@ public final class FsToolPlugin implements Plugin {
     private static final ValueSchema.Str CONTENT = new ValueSchema.Str("写入内容");
     private static final ValueSchema.Str OLD = new ValueSchema.Str("被替换的原文（须唯一匹配：0 或 ≥2 处即拒绝）");
     private static final ValueSchema.Str NEW = new ValueSchema.Str("替换后的新文");
+    private static final ValueSchema.Str PATTERN = new ValueSchema.Str("字面量文本（非正则；逐行匹配）");
+    private static final ValueSchema.Str SEARCH_PATH = new ValueSchema.Str("起始路径：目录或单个文件；\".\" 表示工作区根");
 
     // 实参 schema：工具注册与 ReadLedger 的历史实参解析共用（同一事实两处消费，
     // 常量同源——schema 漂移会让折叠解析错位）
@@ -45,9 +50,15 @@ public final class FsToolPlugin implements Plugin {
         new ValueSchema.Object("参数", Map.of("path", PATH, "content", CONTENT));
     static final ValueSchema EDIT_ARGS =
         new ValueSchema.Object("参数", Map.of("path", PATH, "old_string", OLD, "new_string", NEW));
+    // schema 无「可选字段」语义，故 path 必填：工作区根由调用方显式传 "."
+    static final ValueSchema SEARCH_ARGS =
+        new ValueSchema.Object("参数", Map.of("pattern", PATTERN, "path", SEARCH_PATH));
 
     /** 列举截断尾行（it20）：条目达到上限时追加，模型面可见。 */
     private static final String LIST_TRUNCATED_TAIL = "… (list truncated)";
+
+    /** 搜索截断尾行（it21）：匹配达到上限时追加，模型面可见。 */
+    private static final String SEARCH_TRUNCATED_TAIL = "… (search truncated)";
 
     @Override
     public String id() {
@@ -69,6 +80,7 @@ public final class FsToolPlugin implements Plugin {
         scope.onClose(registry.register(scope, editTool(fs, policies)));
         scope.onClose(registry.register(scope, deleteTool(fs, policies)));
         scope.onClose(registry.register(scope, listTool(fs)));
+        scope.onClose(registry.register(scope, searchTool(fs)));
     }
 
     /** 变异操作体（fs 服务抛 IOException——executor 转 error result）。 */
@@ -158,6 +170,21 @@ public final class FsToolPlugin implements Plugin {
                     .collect(Collectors.joining("\n"));
                 return ToolExecutionResult.success(
                     listing.truncated() ? entries + "\n" + LIST_TRUNCATED_TAIL : entries);
+            });
+    }
+
+    /** 只读发现面：结果逐行 {@code 路径:行号:行文本}（路径为工作区根相对、{@code /} 分隔，可直接回喂 fs_read）。 */
+    private static ToolDefinition searchTool(FsService fs) {
+        return ToolDefinition.of("fs_search", "按字面量逐行搜索工作区（非正则；结果有界）",
+            SEARCH_ARGS,
+            (args, ctx) -> {
+                FsService.SearchResult result =
+                    fs.search(args.readString("pattern"), Path.of(args.readString("path")));
+                String matches = result.matches().stream()
+                    .map(m -> m.path() + ":" + m.line() + ":" + m.text())
+                    .collect(Collectors.joining("\n"));
+                return ToolExecutionResult.success(
+                    result.truncated() ? matches + "\n" + SEARCH_TRUNCATED_TAIL : matches);
             });
     }
 }

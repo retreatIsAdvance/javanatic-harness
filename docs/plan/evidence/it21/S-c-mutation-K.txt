@@ -1,0 +1,22 @@
+# 突变 K：搜索跟随符号链接（LocalFs.search 走查改 Files.walkFileTree(..., Set.of(FOLLOW_LINKS), MAX_VALUE, ...)）
+# 期望：searchDoesNotFollowSymlinks 必红；同跑 searchFindsLiteralLinesInPathLineOrder 应绿（判别性：坏的是链接跟随，不是命中/排序本身）
+# 基线 commit: 30698c5（S-c 在工作树）
+$ mvn -B -pl fs/local -am -Dtest=LocalFsTest#searchDoesNotFollowSymlinks+searchFindsLiteralLinesInPathLineOrder -Dsurefire.failIfNoSpecifiedTests=false test
+
+[INFO] Running io.javanatic.harness.fs.local.LocalFsTest
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.073 s <<< FAILURE! -- in io.javanatic.harness.fs.local.LocalFsTest
+[ERROR] io.javanatic.harness.fs.local.LocalFsTest.searchDoesNotFollowSymlinks -- Time elapsed: 0.010 s <<< FAILURE!
+org.opentest4j.AssertionFailedError:
+
+Expecting actual:
+  ["link-dir/inner.txt", "link-file", "link-out", "real.txt", "sub/inner.txt"]
+to contain exactly (and in same order):
+  ["real.txt", "sub/inner.txt"]
+but some elements were not expected:
+  ["link-dir/inner.txt", "link-file", "link-out"]
+
+	at io.javanatic.harness.fs.local.LocalFsTest.searchDoesNotFollowSymlinks(LocalFsTest.java:275)
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-fs-local: There are test failures.
+EXIT=1

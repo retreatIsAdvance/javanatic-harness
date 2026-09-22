@@ -41,23 +41,37 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class AgentLoopPlugin implements Plugin {
 
+    /** 项目说明文件名缺省（行配置 {@code agent-loop.instructionsFile} 未声明时）。 */
+    public static final String DEFAULT_INSTRUCTIONS_FILE = "AGENTS.md";
+
     private final Clock clock;
     private final String cwd;
+    private final String instructionsFile;
 
-    /** 数据组合路径：cwd 从行配置解析（缺省 {@code user.dir}）。 */
+    /** 数据组合路径：cwd/instructionsFile 从行配置解析（cwd 缺省 {@code user.dir}）。 */
     public AgentLoopPlugin() {
-        this(Clock.systemUTC(), null);
+        this(Clock.systemUTC(), null, null);
     }
 
     /** @param clock 事件时间来源（R1：测试注入冻结钟）；cwd 走行配置/缺省 */
     public AgentLoopPlugin(Clock clock) {
-        this(clock, System.getProperty("user.dir"));
+        this(clock, System.getProperty("user.dir"), null);
     }
 
     /** @param clock 事件时间来源；@param cwd 提示词工作目录（程序化组合的显式选择） */
     public AgentLoopPlugin(Clock clock, String cwd) {
+        this(clock, cwd, null);
+    }
+
+    /**
+     * @param clock            事件时间来源
+     * @param cwd              提示词工作目录（程序化组合的显式选择）
+     * @param instructionsFile 项目说明文件名或路径（null 走行配置/缺省 {@code AGENTS.md}）
+     */
+    public AgentLoopPlugin(Clock clock, String cwd, String instructionsFile) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.cwd = cwd;
+        this.instructionsFile = instructionsFile;
     }
 
     @Override
@@ -79,7 +93,7 @@ public final class AgentLoopPlugin implements Plugin {
             scope.require(ToolExecutor.KEY),
             scope.require(SystemPromptService.KEY),
             scope.require(LoopGuard.KEY),
-            clock, resolveCwd(scope))));
+            clock, resolveCwd(scope), resolveInstructionsFile(scope))));
     }
 
     /** 行配置 cwd；缺省进程工作目录（与 it21 前 RequestHeader 的来源逐字等价）。 */
@@ -93,10 +107,21 @@ public final class AgentLoopPlugin implements Plugin {
             ? System.getProperty("user.dir") : configured;
     }
 
+    /** 行配置 instructionsFile；未声明/无 ConfigService（程序化组合）时用缺省名。 */
+    private String resolveInstructionsFile(Scope scope) {
+        if (instructionsFile != null) {
+            return instructionsFile;
+        }
+        return scope.resolve(ConfigService.KEY)
+            .map(config -> ConfigValues.stringValue(config.configFor(id()), id(), "instructionsFile", null))
+            .filter(configured -> configured != null && !configured.isEmpty())
+            .orElse(DEFAULT_INSTRUCTIONS_FILE);
+    }
+
     /** 工厂本体：不可变依赖束（record）+ create/resume。 */
     private record Factory(AgentRegistry registry, LlmService llm, ToolRegistry tools,
                            ToolExecutor executor, SystemPromptService prompts, LoopGuard guard,
-                           Clock clock, String cwd) implements AgentFactory {
+                           Clock clock, String cwd, String instructionsFile) implements AgentFactory {
 
         @Override
         public AgentHandle create(Scope owner, CreateAgentOptions options) {
@@ -130,7 +155,8 @@ public final class AgentLoopPlugin implements Plugin {
                 }
             }
             AgentLoopImpl agent = new AgentLoopImpl(agentScope, session, owner.require(SessionStore.KEY),
-                llm(), tools(), executor(), prompts(), guard(), registry(), clock(), cwd(), agentOptions,
+                llm(), tools(), executor(), prompts(), guard(), registry(), clock(), cwd(),
+                instructionsFile(), agentOptions,
                 agentScope.resolve(CompactionService.KEY).orElse(null));
             agentScope.require(Runtime.KEY).events()
                 .notify(AgentEvents.CREATED, agentScope, agent, agent);

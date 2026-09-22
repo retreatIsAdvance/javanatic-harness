@@ -225,7 +225,14 @@ public interface FsService {
     String edit(Path path, String oldString, String newString) throws IOException;  // 唯一匹配(it21);超上限 fail loud
     void delete(Path path) throws IOException;
     Listing list(Path path) throws IOException;      // 超 maxListEntries 截断,truncated 标志承载
+    SearchResult search(String pattern, Path path) throws IOException;  // 字面搜索(it21);超 maxSearchMatches 截断
 }
+
+/** 搜索命中:path 为相对工作区根的路径("/" 分隔)。 */
+public record Match(String path, int line, String text) {}
+
+/** 搜索结果:按 (path, line) 升序 + 是否因命中上限截断。 */
+public record SearchResult(List<Match> matches, boolean truncated) {}
 ```
 
 ### Provider（`harness.fs.local`，plugin id `fs-local`）
@@ -237,6 +244,14 @@ public interface FsService {
 编辑语义（it21）：`oldString` 须唯一匹配——0 次 = `not found`；≥2 次 fail loud，
 消息含出现次数与有界行号列表（补上下文消歧后重试）；空串直接拒。不再静默改第一处。
 多处按**非重叠**计（`"aa"` 在 `"aaa"` 中算 1 处 = 唯一，续搜自 `at + len`）。
+搜索语义（it21）：`pattern` 按**字面**串逐行匹配（非正则；空串拒）；`path` 可为文件或目录，
+不存在走 `NoSuchFileException`；**不跟随符号链接**（`walkFileTree` 无 `FOLLOW_LINKS`，
+`isRegularFile()` 对链接为假）、符号链接不产生结果。跳过两类文件：超 `maxReadBytes`
+（读不动，与读上限同源）与二进制（前 8 KiB 含 NUL）。单行文本超 200 字符尾部 `…` 缩略，
+尾随 `\r` 剥除。有界收集（it21 实现偏离，见 iteration-21）：走查序依文件系统而异，按收集序
+截断会不确定——改为维持 **(相对路径, 行号)** 序最小的 `maxSearchMatches`（默认 200，行配置
+`fs-local.searchMaxMatches`）条，被挤出者置 `SearchResult.truncated`。**确定性**：同一棵树
+同一上限，输出恒定；内存占用 O(上限)。
 
 ### Consumer（`harness.fs.tool`，plugin id `fs-tool`）
 
@@ -252,6 +267,12 @@ tools.register(ToolDefinition.builder("fs_read")
 ```
 
 注意 Consumer **不做审批**：审批是 ToolExecutor 的固定 stage（§8、R4），不是各工具的自觉。
+
+**搜索工具（it21）**：`fs_search` 是第六个操作（`fs_read` / `fs_write` / `fs_edit` /
+`fs_delete` / `fs_list` / `fs_search`），搜索是只读操作，plan 模式下放行。输出逐行
+`相对路径:行号:行文本`（`\n` 连接），命中被上限挤出时尾附 `… (search truncated)`。
+`path` 在 schema 中**必填**（`ValueSchema` 无「可选字段」语义，缺省值无处安放）——搜工作区根
+由调用方显式传 `"."`，schema 描述里写明这一点，与实现同文本。
 
 **读后修改保护（it21）**：`fs_edit` / `fs_write` 执行前，消费端把会话日志折叠成
 「路径 → 最新内容事实」（`fs_read` 未截断结果 / `fs_edit` 返回的编辑后全文 /

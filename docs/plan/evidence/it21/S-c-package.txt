@@ -1,0 +1,37 @@
+# 全量构建（验收 ⑦，v2＝必办 ②/偏离表第 5 行落地后重跑）：突变全部还原后的工作树，全 reactor package（含测试与 dist/jh jlink 镜像）
+# 基线 commit: 30698c5（S-c 编辑在工作树，未提交）
+$ mvn -B package
+
+# Reactor 计数法（替代首版的 Summary 省略号）：reactor 末项进度标记 [45/45]；
+#   SUCCESS 行计数 grep -c "^\[INFO\] .* SUCCESS \[" = 45；FAILURE/SKIPPED 行计数 = 0
+$ grep -o "\[[0-9]*/[0-9]*\]" <log> | tail -1
+[45/45]
+$ grep -c "^\[INFO\] .* SUCCESS \[" <log>
+45
+$ grep -cE "^\[INFO\] .* (FAILURE|SKIPPED)" <log>
+0
+[INFO] BUILD SUCCESS
+[INFO] Total time:  48.631 s
+EXIT=0
+
+# S-c 相关模块逐模块用例数（决策性行）
+harness-core-session -> Tests run: 41, Failures: 0, Errors: 0, Skipped: 0
+harness-core-system-prompt -> Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+harness-session-persistence-jsonl -> Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+harness-core-agent-loop -> Tests run: 57, Failures: 0, Errors: 0, Skipped: 0
+harness-fs-local -> Tests run: 33, Failures: 0, Errors: 0, Skipped: 0
+harness-fs-tool -> Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+harness-bundle-base -> Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+harness-examples-agent-spine -> Tests run: 6, Failures: 0, Errors: 0, Skipped: 1
+harness-examples-headless -> Tests run: 63, Failures: 0, Errors: 0, Skipped: 0
+（唯一 skip = agent-spine `RealModelAgentE2ETest`，keyless 常态）
+
+# dist/jh 产物（jlink 镜像 + 归档包）
+$ ls dist/jh/target/
+harness-dist-jh-0.2.0-SNAPSHOT.jar
+javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.tar.gz
+javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.zip
+jlink-image
+modules
+$ ls dist/jh/target/jlink-image/bin/
+java  jh  keytool

@@ -34,7 +34,7 @@ package io.javanatic.harness.session.event;
 /**
  * Session 日志的一个不可变事件。
  *
- * sealed：核心事件编译期穷尽；permits 含 14 个核心 record + 1 个 ExtensionEvent。
+ * sealed：核心事件编译期穷尽；permits 含 15 个核心 record + 1 个 ExtensionEvent。
  * switch(SessionEvent) 配合 ExtensionEvent 分支处理扩展。
  *
  * 注意：seq 不在此（在 LoggedEvent 信封上）；time 在此——
@@ -45,7 +45,7 @@ public sealed interface SessionEvent permits
     UserMessageEvent, AssistantMessageEvent, LlmRequestEvent,
     ToolCallEvent, ToolResultEvent,
     CompactionStart, CompactionSummary, CompactionEnd, RequestHeader,
-    SessionEndSeedEvent, ExtensionEvent {
+    ProjectInstructions, SessionEndSeedEvent, ExtensionEvent {
 
     /** Unix epoch 毫秒。 */
     long time();
@@ -62,7 +62,7 @@ public sealed interface SessionEvent permits
 }
 ```
 
-**核心事件**（14 个 record；均无 seq）：
+**核心事件**（15 个 record；均无 seq）：
 
 ```java
 public record TurnStart(long time, int turn) implements SessionEvent {
@@ -135,6 +135,17 @@ public record ToolResultEvent(
 
 public record RequestHeader(long time, String cwd, String date) implements SessionEvent {
     @Override public String type() { return "request/header"; }
+    @Override public boolean ignorable() { return true; }  // 遥测性：旧读取方可跳过
+}
+
+/**
+ * 项目说明装载事实（it21）：轮首装载 cwd 下的说明文件（行配置
+ * agent-loop.instructionsFile，缺省 AGENTS.md），内容随事件落账。
+ * R1：提示词组装读日志不读文件系统——同日志必同提示词。
+ */
+public record ProjectInstructions(long time, String path, String sha256,
+                                  boolean truncated, String content) implements SessionEvent {
+    @Override public String type() { return "project/instructions"; }
     @Override public boolean ignorable() { return true; }  // 遥测性：旧读取方可跳过
 }
 public record SessionEndSeedEvent(long time) implements SessionEvent {
@@ -474,6 +485,7 @@ public final class JsonlPersistence implements SessionPersistence {
 - **（it19）屏障对账口径**:`flushBarrier(expectedSeq)` 先对账(已写行数必须追平 `session.seq()`,不符即抛)再 fsync——append 观察者异常按契约 contained 吞掉的写失败只在此显形;`writeEnvelope` 跳号护栏(信封 seq > 已写行数即拒),洞不被后续写假性追平。派发前调用点见 04 §13;`SessionStore.flush` 把 listener 失败包成 `DurabilityException`(收敛为 `FailureKind.DISK`)。
 - **（it19）恢复收口**:resume 装载后由 `SessionRecovery` 分析未完成尾形(悬空调用 = 消息级 tool_use ∪ 审计级 tool/call − 已配对 tool/result;开着的 turn/step),以恢复事实闭合:**不自动重放**——error `tool/result`(文案「结果未知,可自行核验」,`sourceEventSeqs` 引悬空调用/消息 seq)+ `step/end` + `turn/end(Aborted("interrupted"))`;事实在 end-seed **之后**追加(`firstLiveSeq` 语义内)、分析纯函数、收口幂等。理由:悬空 tool_use 使 resume 后首个真实请求违反 OpenAI 配对契约(400)。
 - **（it19.1）surface codec 的 provenance 落盘口径**:写侧 `sourceEventSeqs` **非 null 即写**(与 `Replace` 分支解耦——Append 亦然),读侧按 key 存在即回(此前仅 Replace 落盘,Append——含 it19 恢复事实——重载丢来源,provenance 只是进程内契约);旧日志缺键读为 null(v0 口径,无兼容垫片)。往返矩阵与旧格式读侧用例在 `JsonlPersistenceTest`。
+- **（it21）项目说明装载**:`project/instructions`(time/path/sha256/truncated/content)**进核心 permits**(占位在 `RequestHeader` 与 `SessionEndSeedEvent` 之间)——它是核心事实而非插件扩展,理由同 `request/header`(提示词组装读日志,值须落账);`ignorable=true`(遥测性:跳过不改变消息重建语义,旧读取方可跳过;读它的是提示词组装的说明段)。装载在轮首、`request/header` 之后:内容与指纹进事件,loop 只做「最新事件 path+sha256 与本次装载相同则不追加」的去重(日志有界);文件不存在静默跳过(多数会话无说明文件,不落账不报错)、读取失败 WARN 降级不炸 turn、内容为空不落账。段渲染见 04 §4。
 
 - **load 重建**:逐行信封,seq == 行号校验(跳号/重复拒绝);未知 type 按信封 ignorable 跳过或拒绝;header 往返含 FORMAT_VERSION。
 

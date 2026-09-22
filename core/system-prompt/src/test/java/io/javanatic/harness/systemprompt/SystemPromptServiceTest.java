@@ -4,6 +4,8 @@ import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Disposable;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.event.ProjectInstructions;
+import io.javanatic.harness.session.event.RequestHeader;
 
 import org.junit.jupiter.api.Test;
 
@@ -48,5 +50,38 @@ class SystemPromptServiceTest {
             SystemPromptService prompts = rt.root().require(SystemPromptService.KEY);
             assertThat(prompts.assemble(SESSION)).isEmpty();
         }
+    }
+
+    /** it21 项目说明：位置在上下文段之后、注册段之前；内容与事件逐字一致。 */
+    @Test
+    void projectInstructionsRenderAfterContextBeforeRegisteredSections() {
+        Session session = Session.create(Session.newId("sp2"), null, null);
+        session.append(new RequestHeader(1, "/ws", "2026-09-22"));
+        session.append(new ProjectInstructions(2, "/ws/AGENTS.md", "sha-1", false,
+            "# 规则\n用 mvn 构建"));
+        SystemPromptImpl prompts = new SystemPromptImpl();
+        prompts.register(new PromptSection.Static(100, "tail"));
+
+        assertThat(prompts.assemble(session)).isEqualTo("""
+            Current context:
+            - working directory: /ws
+            - date: 2026-09-22
+
+            Project instructions (/ws/AGENTS.md):
+            # 规则
+            用 mvn 构建
+
+            tail""");
+    }
+
+    /** 最新事件胜出（改过说明文件即换内容）；截断在提示词里显形。 */
+    @Test
+    void latestInstructionsWinAndTruncationIsMarked() {
+        Session session = Session.create(Session.newId("sp3"), null, null);
+        session.append(new ProjectInstructions(1, "/ws/AGENTS.md", "sha-1", false, "旧的"));
+        session.append(new ProjectInstructions(2, "/ws/AGENTS.md", "sha-2", true, "新的"));
+
+        assertThat(new SystemPromptImpl().assemble(session))
+            .isEqualTo("Project instructions (/ws/AGENTS.md):\n新的\n… (truncated)");
     }
 }

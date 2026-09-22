@@ -1,0 +1,82 @@
+# S-c 还原复绿（v2＝必办 ②/偏离表第 5 行落地后的最终状态）：
+#   突变 H/H2/I（AgentLoopImpl）、J/K（LocalFs）、L（ProjectInstructions）、M（InstructionsFile）全部还原后
+# 四承载文件逐字节核验（vs /tmp/s-c-mutation-baseline-sha.txt，各突变施加前记录）
+$ cat /tmp/s-c-mutation-baseline-sha.txt
+# 突变基线 sha256（各突变施加前记录于工作树）
+a4dccd934a717a8a0f63aa0cb17e301c1eccb1bc43860ed63e94c7807ca67c6e  core/agent-loop/src/main/java/io/javanatic/harness/agentloop/InstructionsFile.java
+
+0365cad0dd15d1af24937e5cbb7df4493b5719f22342e8f2bdf5999658c014b6  core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java
+a8813f2c40c3168a84e3fa4d23c42d34a72199dff75299c9a791bf5042702f1e  fs/local/src/main/java/io/javanatic/harness/fs/local/LocalFs.java
+f4581afa6d80e12e0211315ccc797ac1b0b81262e1c64df3204c231dfe6aff37  core/session/src/main/java/io/javanatic/harness/session/event/ProjectInstructions.java
+
+$ shasum -a 256 core/agent-loop/src/main/java/io/javanatic/harness/agentloop/InstructionsFile.java core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java fs/local/src/main/java/io/javanatic/harness/fs/local/LocalFs.java core/session/src/main/java/io/javanatic/harness/session/event/ProjectInstructions.java
+a4dccd934a717a8a0f63aa0cb17e301c1eccb1bc43860ed63e94c7807ca67c6e  core/agent-loop/src/main/java/io/javanatic/harness/agentloop/InstructionsFile.java
+0365cad0dd15d1af24937e5cbb7df4493b5719f22342e8f2bdf5999658c014b6  core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java
+a8813f2c40c3168a84e3fa4d23c42d34a72199dff75299c9a791bf5042702f1e  fs/local/src/main/java/io/javanatic/harness/fs/local/LocalFs.java
+f4581afa6d80e12e0211315ccc797ac1b0b81262e1c64df3204c231dfe6aff37  core/session/src/main/java/io/javanatic/harness/session/event/ProjectInstructions.java
+
+# 复绿命令 = S-c-focus.txt 同款模块集（-am 闭包，reactor 日志 [43/43]；本轮含符号链接腿的新测试）
+$ mvn -B -pl core/session,core/system-prompt,core/agent-loop,session/persistence-jsonl,fs/local,fs/tool,bundle/base,core/preset,examples/agent-spine,examples/headless -am test
+
+[INFO] Building harness-core-session 0.2.0-SNAPSHOT                      [7/43]
+[INFO] Tests run: 41, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-system-prompt 0.2.0-SNAPSHOT                [8/43]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-session-persistence-jsonl 0.2.0-SNAPSHOT        [14/43]
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-agent-loop 0.2.0-SNAPSHOT                  [18/43]
+[INFO] Tests run: 57, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-fs-local 0.2.0-SNAPSHOT                         [22/43]
+[INFO] Tests run: 33, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-fs-tool 0.2.0-SNAPSHOT                          [30/43]
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-preset 0.2.0-SNAPSHOT                      [31/43]
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-bundle-base 0.2.0-SNAPSHOT                      [40/43]
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-examples-agent-spine 0.2.0-SNAPSHOT             [42/43]
+[WARNING] Tests run: 6, Failures: 0, Errors: 0, Skipped: 1   （skip = RealModelAgentE2ETest，keyless 常态）
+[INFO] Building harness-examples-headless 0.2.0-SNAPSHOT                [43/43]
+[INFO] Tests run: 63, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+EXIT=0
+
+# 工作树（复绿时点，git status --short；全部为 S-c 预定改动 + S-c 证据，无突变残留）
+ M bundle/base/src/main/resources/META-INF/harness/bundle.yml
+ M core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java
+ M core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopPlugin.java
+ M core/agent-loop/src/test/java/io/javanatic/harness/agentloop/AgentLoopTest.java
+ M core/session/src/main/java/io/javanatic/harness/session/event/SessionEvent.java
+ M core/session/src/test/java/io/javanatic/harness/session/SessionEventTypesTest.java
+ M core/system-prompt/src/main/java/io/javanatic/harness/systemprompt/SystemPromptImpl.java
+ M core/system-prompt/src/test/java/io/javanatic/harness/systemprompt/SystemPromptServiceTest.java
+ M docs/design/02-module-layout.md
+ M docs/design/03-session-event-sourcing.md
+ M docs/design/04-agent-loop.md
+ M docs/design/05-capability-seam.md
+ M docs/design/12-api-stability.md
+ M docs/plan/iteration-21.md
+ M fs/fs/src/main/java/io/javanatic/harness/fs/FsService.java
+ M fs/local/src/main/java/io/javanatic/harness/fs/local/FsLocalPlugin.java
+ M fs/local/src/main/java/io/javanatic/harness/fs/local/LocalFs.java
+ M fs/local/src/test/java/io/javanatic/harness/fs/local/FsLocalConfigTest.java
+ M fs/local/src/test/java/io/javanatic/harness/fs/local/LocalFsTest.java
+ M fs/tool/src/main/java/io/javanatic/harness/fs/tool/FsToolPlugin.java
+ M fs/tool/src/test/java/io/javanatic/harness/fs/tool/FsToolEndToEndTest.java
+ M session/persistence-jsonl/src/main/java/io/javanatic/harness/session/persistence/jsonl/CoreCodecs.java
+ M session/persistence-jsonl/src/test/java/io/javanatic/harness/session/persistence/jsonl/JsonlPersistenceTest.java
+?? core/agent-loop/src/main/java/io/javanatic/harness/agentloop/InstructionsFile.java
+?? core/agent-loop/src/test/java/io/javanatic/harness/agentloop/InstructionsFileTest.java
+?? core/session/src/main/java/io/javanatic/harness/session/event/ProjectInstructions.java
+?? docs/plan/evidence/it21/S-c-focus.txt
+?? docs/plan/evidence/it21/S-c-hostile-leg.txt
+?? docs/plan/evidence/it21/S-c-mutation-H.txt
+?? docs/plan/evidence/it21/S-c-mutation-H2.txt
+?? docs/plan/evidence/it21/S-c-mutation-I.txt
+?? docs/plan/evidence/it21/S-c-mutation-J.txt
+?? docs/plan/evidence/it21/S-c-mutation-K.txt
+?? docs/plan/evidence/it21/S-c-mutation-L.txt
+?? docs/plan/evidence/it21/S-c-mutation-M.txt
+?? docs/plan/evidence/it21/S-c-package.txt
+?? docs/plan/evidence/it21/S-c-regreen.txt
+?? examples/headless/src/test/java/io/javanatic/harness/examples/headless/HostileInstructionsTest.java

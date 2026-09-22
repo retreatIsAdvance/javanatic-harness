@@ -5,14 +5,19 @@ import io.javanatic.harness.fs.FsService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.TreeSet;
 
-/** Files.* 的直接包装：阻塞语义、fail loud。根目录限制在此强制(生产策略,05 §4)：真实路径围栏,符号链接不豁免。有界读取/列举防大输出撑爆内存与上下文(it20)。 */
+/** Files.* 的直接包装：阻塞语义、fail loud。根目录限制在此强制(生产策略,05 §4)：真实路径围栏,符号链接不豁免。有界读取/列举/搜索防大输出撑爆内存与上下文(it20/it21)。 */
 public final class LocalFs implements FsService {
 
     /** 单次读取/编辑的字节上限（文档化默认：256 KiB，与 shell-bash-local `maxOutputBytes` 对称）。 */
@@ -21,16 +26,26 @@ public final class LocalFs implements FsService {
     /** 单次列举的条目上限（文档化默认）。 */
     public static final int DEFAULT_MAX_LIST_ENTRIES = 1000;
 
+    /** 单次搜索的匹配上限（文档化默认；超限以 SearchResult.truncated 承载）。 */
+    public static final int DEFAULT_MAX_SEARCH_MATCHES = 200;
+
     /** 多处匹配拒绝消息里最多列出的行号数（消息进模型上下文，须有界）。 */
     private static final int MAX_REPORTED_LINES = 10;
+
+    /** 单条搜索匹配的行文本上限（字符；超出截断加省略号——结果进模型上下文）。 */
+    private static final int MAX_MATCH_TEXT = 200;
+
+    /** 二进制探测窗口（字节）：窗口内含 NUL 即视为二进制跳过（不猜编码）。 */
+    private static final int BINARY_PROBE_BYTES = 8 * 1024;
 
     private final Path root;
     private final long maxReadBytes;
     private final int maxListEntries;
+    private final int maxSearchMatches;
 
     /** @param root 工作区根(绝对且须已存在);构造期取 realpath 归一,作围栏基准 */
     public LocalFs(Path root) {
-        this(root, DEFAULT_MAX_READ_BYTES, DEFAULT_MAX_LIST_ENTRIES);
+        this(root, DEFAULT_MAX_READ_BYTES, DEFAULT_MAX_LIST_ENTRIES, DEFAULT_MAX_SEARCH_MATCHES);
     }
 
     /**
@@ -39,6 +54,16 @@ public final class LocalFs implements FsService {
      * @param maxListEntries 单次列举的条目上限(正数;超限截断以 Listing.truncated 承载)
      */
     public LocalFs(Path root, long maxReadBytes, int maxListEntries) {
+        this(root, maxReadBytes, maxListEntries, DEFAULT_MAX_SEARCH_MATCHES);
+    }
+
+    /**
+     * @param root             工作区根(绝对且须已存在)
+     * @param maxReadBytes     单次读取/编辑的字节上限(正数;超限读取截断、编辑 fail loud)
+     * @param maxListEntries   单次列举的条目上限(正数;超限截断以 Listing.truncated 承载)
+     * @param maxSearchMatches 单次搜索的匹配上限(正数;超限截断以 SearchResult.truncated 承载)
+     */
+    public LocalFs(Path root, long maxReadBytes, int maxListEntries, int maxSearchMatches) {
         Objects.requireNonNull(root, "root");
         if (maxReadBytes <= 0 || maxReadBytes > Integer.MAX_VALUE) {
             throw new IllegalArgumentException(
@@ -46,6 +71,9 @@ public final class LocalFs implements FsService {
         }
         if (maxListEntries <= 0) {
             throw new IllegalArgumentException("maxListEntries must be positive: " + maxListEntries);
+        }
+        if (maxSearchMatches <= 0) {
+            throw new IllegalArgumentException("maxSearchMatches must be positive: " + maxSearchMatches);
         }
         if (!root.isAbsolute()) {
             throw new IllegalArgumentException("root must be absolute: " + root);
@@ -57,6 +85,7 @@ public final class LocalFs implements FsService {
         }
         this.maxReadBytes = maxReadBytes;
         this.maxListEntries = maxListEntries;
+        this.maxSearchMatches = maxSearchMatches;
     }
 
     /**
@@ -217,6 +246,111 @@ public final class LocalFs implements FsService {
                 .map(child -> new DirEntry(child.getFileName().toString(), Files.isDirectory(child)))
                 .toList();
             return new Listing(entries, truncated);
+        }
+    }
+
+    /**
+     * 字面逐行搜索:起始路径经围栏解析后走查(不跟随符号链接——目录不进、文件不读,
+     * 符号链接条目的属性按 NOFOLLOW 读取,故被 {@code isRegularFile()} 滤掉);
+     * 二进制(探测窗内含 NUL)与超读取上限的文件跳过;结果路径相对 root、以 {@code /} 分隔。
+     */
+    @Override
+    public SearchResult search(String pattern, Path path) throws IOException {
+        Objects.requireNonNull(pattern, "pattern");
+        if (pattern.isEmpty()) {
+            throw new IllegalArgumentException("pattern must not be empty");
+        }
+        Path base = resolve(path);
+        if (!Files.exists(base)) {
+            throw new NoSuchFileException(base.toString());
+        }
+        MatchCollector collector = new MatchCollector(pattern);
+        Files.walkFileTree(base, collector);
+        return new SearchResult(List.copyOf(collector.matches), collector.truncated);
+    }
+
+    /**
+     * 有界收集:走查序依文件系统而异,按收集序截断会不确定——维持 (路径,行号) 序最小的
+     * maxSearchMatches 条,被挤出者置 truncated(结果集确定:同一棵树同一上限,输出恒定)。
+     */
+    private final class MatchCollector extends SimpleFileVisitor<Path> {
+
+        private final String pattern;
+        private final TreeSet<Match> matches =
+            new TreeSet<>(Comparator.comparing(Match::path).thenComparingInt(Match::line));
+        private boolean truncated;
+
+        private MatchCollector(String pattern) {
+            this.pattern = pattern;
+        }
+
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            if (attrs.isRegularFile() && attrs.size() <= maxReadBytes) {
+                scan(file);
+            }
+            return FileVisitResult.CONTINUE;
+        }
+
+        /** 不可读条目跳过:搜索是尽力而为的发现面,单个文件不可读不中断整树。 */
+        @Override
+        public FileVisitResult visitFileFailed(Path file, IOException exc) {
+            return FileVisitResult.CONTINUE;
+        }
+
+        private void scan(Path file) throws IOException {
+            byte[] bytes = Files.readAllBytes(file);
+            if (isBinary(bytes)) {
+                return;
+            }
+            String content = new String(bytes, StandardCharsets.UTF_8);
+            String relative = root.relativize(file).toString();
+            int line = 1;
+            int start = 0;
+            while (true) {
+                int end = content.indexOf('\n', start);
+                String text = end < 0 ? content.substring(start) : content.substring(start, end);
+                if (text.endsWith("\r")) {
+                    text = text.substring(0, text.length() - 1);
+                }
+                if (text.contains(pattern)) {
+                    offer(new Match(relative, line, abbreviate(text)));
+                }
+                if (end < 0) {
+                    return;
+                }
+                start = end + 1;
+                line++;
+            }
+        }
+
+        private void offer(Match match) {
+            if (matches.size() < maxSearchMatches) {
+                matches.add(match);
+                return;
+            }
+            truncated = true;
+            if (matches.comparator().compare(match, matches.last()) < 0) {
+                matches.pollLast();
+                matches.add(match);
+            }
+        }
+
+        /** 二进制探测:窗口内含 NUL 即视为二进制(不猜编码)。 */
+        private static boolean isBinary(byte[] bytes) {
+            int probe = Math.min(bytes.length, BINARY_PROBE_BYTES);
+            for (int i = 0; i < probe; i++) {
+                if (bytes[i] == 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** 行文本超上限即截断加省略号(结果进模型上下文,须有界)。 */
+        private static String abbreviate(String text) {
+            return text.length() <= MAX_MATCH_TEXT ? text
+                : text.substring(0, MAX_MATCH_TEXT) + "…";
         }
     }
 }

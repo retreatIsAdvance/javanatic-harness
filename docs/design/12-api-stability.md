@@ -96,13 +96,13 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | compaction | `contextWindow` / `maxContextTokens` / `thresholdRatio` / `retainTokens` / `retries` / `summarizationProvider` / `summarizationModel` | 长跑压缩（窗口是模型属性，base 不猜数）|
 | plan | `section` | 计划模式提示段 |
 | sandbox-policy | `mode` / `workspace` | 沙箱档与围栏根 |
-| fs-local | `root` / `maxReadBytes` / `maxListEntries` | fs 围栏根（安全边界值）；读取/编辑上限与列举上限（默认 256 KiB / 1000，超限截断标记 / fail loud）|
+| fs-local | `root` / `maxReadBytes` / `maxListEntries` / `searchMaxMatches` | fs 围栏根（安全边界值）；读取/编辑上限、列举上限与搜索命中上限（默认 256 KiB / 1000 / 200，超限截断标记 / fail loud）|
 | shell-tool | `workspace` / `timeoutSeconds` | shell 围栏与超时 |
 | shell-bash-local | `maxOutputBytes` | 输出截断 |
 | shell-docker | `image` / `maxOutputBytes` | 镜像须本机在场（不自动拉取）|
 | todo | `allowParallelInProgress` | 并行 in_progress 开关 |
 | presets | `root` / `presets` | preset 组合 |
-| agent-loop | `cwd` | 提示词上下文工作目录（`request/header` 落账值；缺省 `user.dir`）。与 `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 同源——四处漂移装配期拒绝（[07 §5](07-profile-bundle.md)）|
+| agent-loop | `cwd` / `instructionsFile` | 提示词上下文工作目录（`request/header` 落账值；缺省 `user.dir`）。与 `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 同源——四处漂移装配期拒绝（[07 §5](07-profile-bundle.md)）；项目说明文件名或路径（it21，缺省 `AGENTS.md`）|
 
 无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-ask` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`commands`（24 个 base 行 id = 13 可配 + 11 无配）。
 
