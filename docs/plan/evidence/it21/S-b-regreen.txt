@@ -1,0 +1,126 @@
+# S-b 复绿（三处突变全部还原后重跑聚焦）
+# 基线 commit: 2c1ce04 （S-b 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD SUCCESS|BUILD FAILURE|<<<|file changed since read|oldString is not unique|\[it21\]|\[ERROR\]'）
+$ mvn -B -pl fs/local,fs/tool,bundle/base,core/preset,examples/agent-spine,examples/headless -am test
+
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.038 s -- in io.javanatic.harness.kernel.brand.IdTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.059 s -- in io.javanatic.harness.kernel.plugin.PluginLoaderTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in io.javanatic.harness.kernel.scope.ScopeTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.036 s -- in io.javanatic.harness.kernel.events.EventsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.112 s -- in io.javanatic.harness.kernel.scope.ScopeTest
+[INFO] Tests run: 36, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.044 s -- in io.javanatic.harness.kernel.config.ConfigRowSpecTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in io.javanatic.harness.kernel.config.ExpressionResolverTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.069 s -- in io.javanatic.harness.session.SessionRecoveryTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in io.javanatic.harness.session.SessionStoreTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in io.javanatic.harness.session.SessionEventTypesTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.session.SessionInvariantsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.060 s -- in io.javanatic.harness.session.SessionConcurrencyTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in io.javanatic.harness.session.SessionTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.164 s -- in io.javanatic.harness.session.SessionPropertiesTest
+[INFO] Tests run: 41, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.050 s -- in io.javanatic.harness.systemprompt.SystemPromptServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.034 s -- in io.javanatic.harness.llm.LlmCallExceptionTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in io.javanatic.harness.llm.ChunkAssemblyTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in io.javanatic.harness.llm.LlmServiceTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.134 s -- in io.javanatic.harness.tools.ScopedRegistryTest
+[INFO] Tests run: 17, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.318 s -- in io.javanatic.harness.tools.ToolExecutorTest
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.312 s -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.183 s -- in io.javanatic.harness.todo.TodoPluginTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.049 s -- in io.javanatic.harness.agent.AgentRegistryTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in io.javanatic.harness.agent.InboxTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.053 s -- in io.javanatic.harness.llm.replay.ReplayTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.173 s -- in io.javanatic.harness.agentloop.CompactionTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.031 s -- in io.javanatic.harness.agentloop.AssistantChunkLedgerTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.agentloop.BudgetGuardTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in io.javanatic.harness.agentloop.LoopGuardConfigTest
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.235 s -- in io.javanatic.harness.agentloop.AgentLoopTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.agentloop.AbortControllerTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.316 s -- in io.javanatic.harness.agentloop.SetupWindowTest
+[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.191 s -- in io.javanatic.harness.plan.PlanModePluginTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.064 s -- in io.javanatic.harness.fs.local.FsLocalConfigTest
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.052 s -- in io.javanatic.harness.fs.local.LocalFsTest
+[INFO] Tests run: 26, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.048 s -- in io.javanatic.harness.sandbox.sandbox.WritableRootsTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.242 s -- in io.javanatic.harness.shell.bash.local.LocalBashExecutorTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[WARNING] Tests run: 16, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.160 s -- in io.javanatic.harness.sandbox.local.SandboxLocalTest
+[WARNING] Tests run: 16, Failures: 0, Errors: 0, Skipped: 2
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.129 s -- in io.javanatic.harness.sandbox.policy.SandboxPolicyTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[it21] ReadLedger.fold over 20002 events: 4 ms
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.154 s -- in io.javanatic.harness.fs.tool.ReadLedgerTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.054 s -- in io.javanatic.harness.fs.tool.FsToolEndToEndTest
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.158 s -- in io.javanatic.harness.preset.PresetServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.45 s -- in io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapterTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in io.javanatic.harness.llm.openai.compat.OpenAiCompatConfigTest
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.001 s -- in io.javanatic.harness.llm.deepseek.DeepSeekE2ETest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.272 s -- in io.javanatic.harness.llm.deepseek.DeepSeekPluginTest
+[WARNING] Tests run: 2, Failures: 0, Errors: 0, Skipped: 1
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.243 s -- in io.javanatic.harness.shell.tool.ShellToolEndToEndTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.23 s -- in io.javanatic.harness.shell.docker.DockerShellTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+[approval] allow bash rm -rf /? [y/N] [approval] allow bash rm -rf /? [y/N] [approval] allow bash rm -rf /? [y/N] [INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.218 s -- in io.javanatic.harness.interaction.approval.ApprovalModesTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.192 s -- in io.javanatic.harness.interaction.commands.CommandsPluginTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in io.javanatic.harness.interaction.commands.CommandRegistryTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.072 s -- in io.javanatic.harness.boot.RowComposerTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.271 s -- in io.javanatic.harness.boot.AppBootTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.boot.YamlRowsTest
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.170 s -- in io.javanatic.harness.examples.agent.spine.SpineMainTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.065 s -- in io.javanatic.harness.examples.agent.spine.R1ReplayHashTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0 s -- in io.javanatic.harness.examples.agent.spine.RealModelAgentE2ETest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.470 s -- in io.javanatic.harness.examples.agent.spine.ToolDispatchArchitectureTest
+[WARNING] Tests run: 6, Failures: 0, Errors: 0, Skipped: 1
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.266 s -- in io.javanatic.harness.examples.headless.HeadlessVerifyTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in io.javanatic.harness.examples.headless.HeadlessApprovalTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.044 s -- in io.javanatic.harness.examples.headless.HeadlessOptionsTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.290 s -- in io.javanatic.harness.examples.headless.HeadlessOneShotResultTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.056 s -- in io.javanatic.harness.examples.headless.HeadlessReplTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.100 s -- in io.javanatic.harness.examples.headless.HeadlessResumeTest
+[approval] allow echo echo {}? [y/N] [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s -- in io.javanatic.harness.examples.headless.ReplApprovalWiringTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.823 s -- in io.javanatic.harness.examples.headless.HeadlessCrashResumeE2ETest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.517 s -- in io.javanatic.harness.examples.headless.HeadlessSigintTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in io.javanatic.harness.examples.headless.StreamRendererTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.030 s -- in io.javanatic.harness.examples.headless.HeadlessFakeServerE2ETest
+[approval] allow fs_read fs_read {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit5048149359263873466/note.txt"}? [y/N] [approval] allow fs_write fs_write {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit5048149359263873466/written.txt","content":"written by scenario"}? [y/N] [approval] allow fs_read fs_read {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit5048149359263873466/written.txt"}? [y/N] [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.106 s -- in io.javanatic.harness.examples.headless.ProductionScenarioTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.examples.headless.HeadlessProfileTest
+[INFO] Tests run: 62, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+EXIT=0
+
+$ git status --short
+ M AGENTS.md
+ M docs/design/05-capability-seam.md
+ M docs/plan/iteration-21.md
+ M fs/fs/src/main/java/io/javanatic/harness/fs/FsService.java
+ M fs/local/src/main/java/io/javanatic/harness/fs/local/LocalFs.java
+ M fs/local/src/test/java/io/javanatic/harness/fs/local/LocalFsTest.java
+ M fs/tool/src/main/java/io/javanatic/harness/fs/tool/FsToolPlugin.java
+ M fs/tool/src/main/java/module-info.java
+ M fs/tool/src/test/java/io/javanatic/harness/fs/tool/FsToolEndToEndTest.java
+?? docs/plan/evidence/it21/S-b-focus.txt
+?? docs/plan/evidence/it21/S-b-mutation-D.txt
+?? docs/plan/evidence/it21/S-b-mutation-E.txt
+?? docs/plan/evidence/it21/S-b-mutation-G.txt
+?? docs/plan/evidence/it21/S-b-regreen.txt
+?? fs/tool/src/main/java/io/javanatic/harness/fs/tool/ReadLedger.java
+?? fs/tool/src/test/java/io/javanatic/harness/fs/tool/ReadLedgerTest.java

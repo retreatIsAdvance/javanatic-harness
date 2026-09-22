@@ -29,9 +29,14 @@ public interface FsService {
     void write(Path path, String content) throws IOException;
 
     /**
-     * 精确替换第一处 {@code oldString}。
+     * 精确替换 {@code oldString}：须唯一匹配（it21）——出现 0 次或 ≥2 次均拒绝，
+     * 不静默改第一处；≥2 次时消息含出现次数与行号（多处按非重叠计，如
+     * {@code "aa"} 在 {@code "aaa"} 中算 1 处），补足上下文消歧后重试。
+     *
+     * @return 编辑后的文件全文
      * @throws IOException 读取/写入失败
-     * @throws IllegalArgumentException oldString 不存在时；文件超过实现配置的读取上限时（fail loud，消息含实际大小与上限）
+     * @throws IllegalArgumentException oldString 为空或不存在时；出现多次时（消息含计数与行号）；
+     *         文件超过实现配置的读取上限时（fail loud，消息含实际大小与上限）
      */
     String edit(Path path, String oldString, String newString) throws IOException;
 

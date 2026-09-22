@@ -21,6 +21,9 @@ public final class LocalFs implements FsService {
     /** 单次列举的条目上限（文档化默认）。 */
     public static final int DEFAULT_MAX_LIST_ENTRIES = 1000;
 
+    /** 多处匹配拒绝消息里最多列出的行号数（消息进模型上下文，须有界）。 */
+    private static final int MAX_REPORTED_LINES = 10;
+
     private final Path root;
     private final long maxReadBytes;
     private final int maxListEntries;
@@ -141,6 +144,10 @@ public final class LocalFs implements FsService {
     @Override
     public String edit(Path path, String oldString, String newString) throws IOException {
         Path resolved = resolve(path);
+        // 空串在任意位置都「匹配」:无消歧语义,拒绝而非插入到位置 0
+        if (oldString.isEmpty()) {
+            throw new IllegalArgumentException("oldString must not be empty: " + path);
+        }
         // 编辑是整文件读+写+返回:超限即拒(fail loud,不静默截断写入)
         long size = Files.size(resolved);
         if (size > maxReadBytes) {
@@ -152,10 +159,45 @@ public final class LocalFs implements FsService {
         if (at < 0) {
             throw new IllegalArgumentException("oldString not found in " + path);
         }
+        if (content.indexOf(oldString, at + oldString.length()) >= 0) {
+            throw new IllegalArgumentException(notUniqueMessage(content, oldString, path));
+        }
         String edited = content.substring(0, at) + newString
             + content.substring(at + oldString.length());
         Files.writeString(resolved, edited);
         return edited;
+    }
+
+    /** 多处匹配的拒绝消息(it21):总处数(非重叠计数) + 有界行号列表(1 起,同行只报一次)。 */
+    private static String notUniqueMessage(String content, String oldString, Path path) {
+        int count = 0;
+        int reported = 0;
+        long line = 1;
+        int scanned = 0;
+        long lastReported = -1;
+        boolean more = false;
+        StringBuilder lines = new StringBuilder();
+        for (int at = content.indexOf(oldString); at >= 0;
+                at = content.indexOf(oldString, at + oldString.length())) {
+            count++;
+            for (int i = scanned; i < at; i++) {
+                if (content.charAt(i) == '\n') {
+                    line++;
+                }
+            }
+            scanned = at;
+            if (line != lastReported) {
+                if (reported < MAX_REPORTED_LINES) {
+                    reported++;
+                    lastReported = line;
+                    lines.append(lines.isEmpty() ? "" : ", ").append(line);
+                } else {
+                    more = true;
+                }
+            }
+        }
+        return "oldString is not unique in " + path + ": " + count + " occurrences (lines "
+            + lines + (more ? ", …" : "") + ") — add surrounding context to disambiguate";
     }
 
     @Override

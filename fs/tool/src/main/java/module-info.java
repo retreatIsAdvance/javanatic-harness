@@ -5,6 +5,7 @@
  */
 module io.javanatic.harness.fs.tool {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.fs.fs;
     requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.sandbox.sandbox;

@@ -60,12 +60,56 @@ class LocalFsTest {
     }
 
     @Test
-    void editReplacesFirstOccurrenceOnly() throws IOException {
+    void editReplacesUniqueMatch() throws IOException {
         Path file = dir.resolve("f.txt");
-        fs().write(file, "x old x old");
+        fs().write(file, "x old z");
         String edited = fs().edit(file, "old", "new");
-        assertThat(edited).isEqualTo("x new x old");
-        assertThat(fs().read(file)).isEqualTo("x new x old");
+        assertThat(edited).isEqualTo("x new z");
+        assertThat(fs().read(file)).isEqualTo("x new z");
+    }
+
+    // ===== 唯一匹配（it21）：多处即拒，不静默改第一处 =====
+
+    @Test
+    void editRejectsAmbiguousMatchWithCountAndLines() throws IOException {
+        Path file = dir.resolve("dup.txt");
+        fs().write(file, "old a\nb\nold c\nold");
+        assertThatThrownBy(() -> fs().edit(file, "old", "new"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("oldString is not unique")
+            .hasMessageContaining("3 occurrences")
+            .hasMessageContaining("lines 1, 3, 4");
+        assertThat(Files.readString(file)).isEqualTo("old a\nb\nold c\nold");   // 拒而未写
+    }
+
+    @Test
+    void editAmbiguityReportsSameLineOnce() throws IOException {
+        Path file = dir.resolve("same-line.txt");
+        fs().write(file, "old old");
+        assertThatThrownBy(() -> fs().edit(file, "old", "new"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("2 occurrences")
+            .hasMessageContaining("lines 1)");
+    }
+
+    @Test
+    void editAmbiguityLineListIsBounded() throws IOException {
+        Path file = dir.resolve("many.txt");
+        fs().write(file, "same\n".repeat(25));
+        assertThatThrownBy(() -> fs().edit(file, "same", "x"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("25 occurrences")
+            .hasMessageContaining("lines 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, …");
+    }
+
+    @Test
+    void editEmptyOldStringFailsLoud() throws IOException {
+        Path file = dir.resolve("f.txt");
+        fs().write(file, "content");
+        assertThatThrownBy(() -> fs().edit(file, "", "x"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("oldString must not be empty");
+        assertThat(Files.readString(file)).isEqualTo("content");   // 拒而未写
     }
 
     @Test

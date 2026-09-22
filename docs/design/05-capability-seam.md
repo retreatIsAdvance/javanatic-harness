@@ -222,7 +222,7 @@ public interface FsService {
 
     String read(Path path) throws IOException;       // 有界:超 maxReadBytes 截断,尾附 " (output truncated)"
     void write(Path path, String content) throws IOException;
-    String edit(Path path, String oldString, String newString) throws IOException;  // 超上限 fail loud
+    String edit(Path path, String oldString, String newString) throws IOException;  // 唯一匹配(it21);超上限 fail loud
     void delete(Path path) throws IOException;
     Listing list(Path path) throws IOException;      // 超 maxListEntries 截断,truncated 标志承载
 }
@@ -234,6 +234,9 @@ public interface FsService {
 读取/编辑以 `maxReadBytes`（默认 256 KiB，与 shell-bash-local `maxOutputBytes` 对称）、
 列举以 `maxListEntries`（默认 1000）为界——读截断在文内标记、编辑超限 fail loud、
 列举截断以 `Listing.truncated` 标志承载，不静默丢数据；同一组上限经行配置可调（12 §5）。
+编辑语义（it21）：`oldString` 须唯一匹配——0 次 = `not found`；≥2 次 fail loud，
+消息含出现次数与有界行号列表（补上下文消歧后重试）；空串直接拒。不再静默改第一处。
+多处按**非重叠**计（`"aa"` 在 `"aaa"` 中算 1 处 = 唯一，续搜自 `at + len`）。
 
 ### Consumer（`harness.fs.tool`，plugin id `fs-tool`）
 
@@ -249,6 +252,17 @@ tools.register(ToolDefinition.builder("fs_read")
 ```
 
 注意 Consumer **不做审批**：审批是 ToolExecutor 的固定 stage（§8、R4），不是各工具的自觉。
+
+**读后修改保护（it21）**：`fs_edit` / `fs_write` 执行前，消费端把会话日志折叠成
+「路径 → 最新内容事实」（`fs_read` 未截断结果 / `fs_edit` 返回的编辑后全文 /
+`fs_write` 的 content 实参；只认成功结果，按 seq 末值胜，配对靠 callId 不靠相邻性），
+与磁盘当前内容比对——不一致即 error result「file changed since read」，提示重读后重试。
+事实全在日志：resume/fork 无内存镜像即恢复（纯 fold，同 `PlanModeService.foldActive`）。
+边界（漏报方向，不产生误报）：从未成功读过 / 只读到截断内容 / 路径写法不同源
+（相对与绝对、不同基准）→ 无事实即无保护；文件读不到时交底层操作给原生错误。
+`fs_delete` **不设守卫**（P5 裁 edit/write 覆盖面）：删除读后被外部改动的文件仍是静默
+销毁——已记录边界，实撞补 guard + 一测即成。
+工具 schema/描述与实现同文本：`old_string` 描述与 `fs_edit` 描述同写「须唯一匹配」。
 
 ---
 
@@ -450,7 +464,7 @@ Ubuntu 24.04 默认态）的主机受限档 fail-closed；denial 标记以 `exit
 spawn；`ShellResult.sandboxDenied` 标记「沙箱拒了文件效果」（stderr 命中本后端方言 +
 非零退出）——模型能分辨拒绝与命令失败。fs——fs-tool 变异工具在 READ_ONLY（含计划
 模式）下直接拒（进程内围栏，模式级；WORKSPACE_WRITE 的路径边界由 fs-local root 与
-sandbox workspace 对齐保证，漂移=交集生效）。容器隔离已由 shell-docker 提供（§5）；
+sandbox workspace 对齐保证，漂移由装配期四键断言 fail loud——it21，见 07 §5）。容器隔离已由 shell-docker 提供（§5）；
 后续 Provider 扩展按[总体迭代计划](README.md#phased-evolution-plan) 的生产场景、能力依赖
 与验收闸门自主排期；microVM/云 Provider 未列入当前阶段范围。
 

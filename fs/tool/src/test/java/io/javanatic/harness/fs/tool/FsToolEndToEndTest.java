@@ -10,8 +10,10 @@ import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.LoggedEvent;
+import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.message.CallId;
+import io.javanatic.harness.session.message.ToolResultBlock;
 import io.javanatic.harness.session.message.ToolUseBlock;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
 import io.javanatic.harness.plan.PlanModePlugin;
@@ -146,5 +148,145 @@ class FsToolEndToEndTest {
                 .containsExactlyInAnyOrder("plan/mode", "tool/call", "tool/call",
                     "tool/result", "tool/result");
         }
+    }
+
+    // ===== 唯一匹配 + 读后修改保护（it21）=====
+
+    /** it21 唯一匹配：多处匹配经 pipeline 拒绝（error result 含计数与行号），文件不动。 */
+    @Test
+    void ambiguousEditIsRejectedThroughPipeline() throws Exception {
+        try (Runtime rt = boot(dir)) {
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+            Path file = dir.resolve("dup.txt");
+            Files.writeString(file, "same\nsame\n");
+            Session session = Session.create(Session.newId("dup"), null, null);
+
+            ToolResultBlock result = run(executor, session, rt, new ToolUseBlock(CallId.of("e1"),
+                "fs_edit", json(file, "old_string", "same", "new_string", "x")));
+
+            assertThat(result.isError()).isTrue();
+            assertThat(result.content())
+                .contains("oldString is not unique").contains("2 occurrences").contains("lines 1, 2");
+            assertThat(Files.readString(file)).isEqualTo("same\nsame\n");   // 拒而未写
+        }
+    }
+
+    /** it21 读后修改保护：读过 → 外部改写 → 编辑被拒；重读后放行。 */
+    @Test
+    void externallyModifiedFileIsRejectedUntilReread() throws Exception {
+        try (Runtime rt = boot(dir)) {
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+            Path file = dir.resolve("note.txt");
+            Session session = Session.create(Session.newId("stale"), null, null);
+            run(executor, session, rt, new ToolUseBlock(CallId.of("w1"), "fs_write",
+                json(file, "content", "v1")));
+            run(executor, session, rt, new ToolUseBlock(CallId.of("r1"), "fs_read",
+                "{\"path\":\"" + file + "\"}"));
+
+            Files.writeString(file, "external");   // 模型视角之外的外部修改
+
+            ToolResultBlock rejected = run(executor, session, rt, new ToolUseBlock(CallId.of("e1"),
+                "fs_edit", json(file, "old_string", "v1", "new_string", "v2")));
+            assertThat(rejected.isError()).isTrue();
+            assertThat(rejected.content()).contains("file changed since read");
+            assertThat(Files.readString(file)).isEqualTo("external");   // 拒而未写
+
+            run(executor, session, rt, new ToolUseBlock(CallId.of("r2"), "fs_read",
+                "{\"path\":\"" + file + "\"}"));
+            ToolResultBlock edited = run(executor, session, rt, new ToolUseBlock(CallId.of("e2"),
+                "fs_edit", json(file, "old_string", "external", "new_string", "v3")));
+            assertThat(edited.isError()).isFalse();
+            assertThat(Files.readString(file)).isEqualTo("v3");
+        }
+    }
+
+    /** it21 P5：写入面同样受保护（写过 → 外部改写 → 再写被拒）。 */
+    @Test
+    void staleReadAlsoRejectsWrite() throws Exception {
+        try (Runtime rt = boot(dir)) {
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+            Path file = dir.resolve("note.txt");
+            Session session = Session.create(Session.newId("stale-write"), null, null);
+            run(executor, session, rt, new ToolUseBlock(CallId.of("w1"), "fs_write",
+                json(file, "content", "v1")));
+
+            Files.writeString(file, "external");
+
+            ToolResultBlock rejected = run(executor, session, rt, new ToolUseBlock(CallId.of("w2"),
+                "fs_write", json(file, "content", "v2")));
+            assertThat(rejected.isError()).isTrue();
+            assertThat(rejected.content()).contains("file changed since read");
+            assertThat(Files.readString(file)).isEqualTo("external");
+        }
+    }
+
+    /** it21 边界：从未经 fs 工具读过/写过的文件 → 维持现行为（无事实即无保护）。 */
+    @Test
+    void editOfNeverTouchedFileKeepsCurrentBehaviour() throws Exception {
+        try (Runtime rt = boot(dir)) {
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+            Path file = dir.resolve("plain.txt");
+            Files.writeString(file, "x old z");
+            Session session = Session.create(Session.newId("plain"), null, null);
+
+            ToolResultBlock edited = run(executor, session, rt, new ToolUseBlock(CallId.of("e1"),
+                "fs_edit", json(file, "old_string", "old", "new_string", "new")));
+
+            assertThat(edited.isError()).isFalse();
+            assertThat(Files.readString(file)).isEqualTo("x new z");
+        }
+    }
+
+    /** it21 跨进程：事实在日志——新进程只有重放的事件，无任何进程内状态，保护仍在。 */
+    @Test
+    void protectionSurvivesResumeFromLogSeed() throws Exception {
+        Path file = dir.resolve("note.txt");
+        List<SessionEvent> seed;
+        try (Runtime rt = boot(dir)) {
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+            Session session = Session.create(Session.newId("resume"), null, null);
+            run(executor, session, rt, new ToolUseBlock(CallId.of("w1"), "fs_write",
+                json(file, "content", "v1")));
+            run(executor, session, rt, new ToolUseBlock(CallId.of("r1"), "fs_read",
+                "{\"path\":\"" + file + "\"}"));
+            seed = session.events().stream().map(entry -> (SessionEvent) entry.event()).toList();
+        }
+        Files.writeString(file, "external");
+
+        try (Runtime resumed = boot(dir)) {
+            ToolExecutor executor = resumed.root().require(ToolExecutor.KEY);
+            Session session = Session.create(Session.newId("resume"), seed, null);
+            ToolResultBlock rejected = run(executor, session, resumed, new ToolUseBlock(
+                CallId.of("e1"), "fs_edit", json(file, "old_string", "external", "new_string", "x")));
+
+            assertThat(rejected.isError()).isTrue();
+            assertThat(rejected.content()).contains("file changed since read");
+        }
+    }
+
+    /** 标准组合（含 fs 工具）与执行单次调用。 */
+    private static Runtime boot(Path root) {
+        Runtime rt = new Runtime();
+        new PluginLoader().loadAll(rt, List.of(
+            new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
+            new SystemPromptPlugin(),
+            new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
+            new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, root)),
+            new FsLocalPlugin(root), new FsToolPlugin()));
+        return rt;
+    }
+
+    private static ToolResultBlock run(ToolExecutor executor, Session session, Runtime rt,
+                                       ToolUseBlock call) {
+        return executor.execute(List.of(call), session, 0, 0, rt.root(), AbortSignal.never())
+            .getFirst().event().block();
+    }
+
+    private static String json(Path path, String... keyValues) {
+        StringBuilder json = new StringBuilder("{\"path\":\"").append(path).append('"');
+        for (int i = 0; i < keyValues.length; i += 2) {
+            json.append(",\"").append(keyValues[i]).append("\":\"").append(keyValues[i + 1]).append('"');
+        }
+        return json.append('}').toString();
     }
 }

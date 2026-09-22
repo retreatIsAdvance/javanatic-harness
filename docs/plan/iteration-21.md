@@ -65,7 +65,7 @@
   - `FsService.SearchResult`（record：`matches`（path/line/text）+ `truncated`）与 `FsService.search(pattern, path)`（字面串，05 §4 摘录同步）
   - 配置键：`fs-local.searchMaxMatches`（默认 200）/ `agent-loop.cwd`（缺省回落 `user.dir`；base 显式 `${cwd}`）/ `agent-loop.instructionsFile`（默认 `AGENTS.md`）
   - 核心事件 `project/instructions`（path/sha256/truncated/content，ignorable log-only；CoreCodecs 注册）
-  - fs-tool 内部 log-fold 折叠器（路径最新内容事实；不新增导出面）
+  - fs-tool 内部 log-fold 折叠器（路径最新内容事实；不新增导出面）；`fs/tool` module-info 增 `requires io.javanatic.harness.kernel.brand`（折叠器配对需 `Id<CallId>` 类型）
   - 测试：workspace 一致性断言（正/拒路径）、edit 唯一匹配拒绝（含行号）、log-fold 读后修改拒绝 + resume 存活、search 有界（截断/二进制/围栏/排序）、说明装载（渲染/变化不追加/不存在静默/敌意文件权限不变）、headless 四 pin 集成
 - **MODIFIED**：
   - `FsService.edit` 契约：唯一匹配或拒绝（javadoc + 拒绝消息含计数与行号）
@@ -91,20 +91,21 @@
 | `core/session/.../event/ProjectInstructions.java`（新） | 事件记录（ignorable，type `project/instructions`） | |
 | `session/persistence-jsonl/.../CoreCodecs.java:53-175` | 注册 `project/instructions` codec（`:166` request/header 邻位） | |
 | `core/system-prompt/.../SystemPromptImpl.java:48-69` | 原生说明段（读最新 `project/instructions`，与 contextSection 同形） | |
-| `fs/fs/.../FsService.java:31-36` + `:49-55` | edit 唯一匹配契约 javadoc；`search` + `SearchResult`（05 §4 摘录同步） | |
-| `fs/local/.../LocalFs.java:141-159` + `FsLocalPlugin.java:36-41` | edit 唯一匹配（计数+行号）；search 实现；`searchMaxMatches` 键解析 | |
-| `fs/tool/.../FsToolPlugin.java:31` + `:92-96` + `:99-106` | schema/描述双文本对齐；log-fold guard 接入 write/edit；`fs_search` 注册 | |
-| `fs/tool/.../` 新类（log-fold 折叠器） | 从 `ToolCallEvent`/`ToolResultEvent` 折叠目标路径最新内容事实（复用 `ToolArgs.parse`） | |
-| `fs/local/src/test/.../LocalFsTest.java`、`FsLocalConfigTest.java`、`fs/tool/src/test/.../FsToolEndToEndTest.java` | 唯一匹配拒绝/行号、search 有界、log-fold 拒绝 + resume 存活 | |
+| `fs/fs/.../FsService.java:31-36` + `:49-55` | edit 唯一匹配契约 javadoc；`search` + `SearchResult`（05 §4 摘录同步） | ✅ S-b（edit 契约；search 待 S-c）|
+| `fs/local/.../LocalFs.java:141-159` + `FsLocalPlugin.java:36-41` | edit 唯一匹配（计数+行号）；search 实现；`searchMaxMatches` 键解析 | ✅ S-b（唯一匹配 + 空串拒绝；search 待 S-c）|
+| `fs/tool/.../FsToolPlugin.java:31` + `:92-96` + `:99-106` | schema/描述双文本对齐；log-fold guard 接入 write/edit；`fs_search` 注册 | ✅ S-b（对齐 + guard；`fs_search` 待 S-c）|
+| `fs/tool/.../` 新类（log-fold 折叠器） | 从 `ToolCallEvent`/`ToolResultEvent` 折叠目标路径最新内容事实（复用 `ToolArgs.parse`） | ✅ S-b（`ReadLedger`；schema 常量与工具注册同源）|
+| `fs/tool/.../module-info.java` | 施工中新增：`requires io.javanatic.harness.kernel.brand`（折叠器按 `Id<CallId>` 配对） | ✅ S-b |
+| `fs/local/src/test/.../LocalFsTest.java`、`FsLocalConfigTest.java`、`fs/tool/src/test/.../FsToolEndToEndTest.java`、`fs/tool/src/test/.../ReadLedgerTest.java`（新） | 唯一匹配拒绝/行号、search 有界、log-fold 拒绝 + resume 存活 | ✅ S-b（唯一匹配/log-fold/resume/折叠器边界；search 待 S-c）|
 | `core/agent-loop/src/test/.../AgentLoopTest.java`、`core/system-prompt/src/test/.../SystemPromptServiceTest.java`、`core/session/src/test/.../SessionEventTypesTest.java` | 轮首装载落账/变化不追加/渲染/敌意文件权限不变/事件 codec 往返 | ✅ S-a 部分（`configuredCwdReachesRequestHeaderAndPrompt`）|
-| 文档 `docs/design/{03,04,05,07,12}` | 事件表、轮首节奏、§4 摘录、配置键与一致性口径 | ✅ S-a（04 §6 / 07 §5 / 12 §5；03/05 待 S-c）|
+| 文档 `docs/design/{03,04,05,07,12}` | 事件表、轮首节奏、§4 摘录、配置键与一致性口径 | ✅ S-a（04 §6 / 07 §5 / 12 §5）+ S-b（05 §4 edit 语义与读后保护段、§6 旧措辞订正；03 与 05 search 摘录待 S-c）|
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| **S-a 组合面统一（workspace）**：`bundle.yml` / `AppBoot` 断言 + `AppBootTest` 补 pin / `buildOverlays` 四 pin / `AgentLoopPlugin`+`AgentLoopImpl` cwd 源 / 04+07+12 文档 | 锚点 1–6 | **已放行（2026-09-22，有条件——取证重跑落盘 + 勾 ①⑥ 组合面腿 + 41 模块口径；三项随本提交办结）**。取证：`docs/plan/evidence/it21/`（聚焦 `S-a-focus.txt` EXIT=0：AppBootTest 16 / AgentLoopTest 22 / HeadlessOptionsTest 16 / headless 合计 62；突变 A `S-a-mutation-A.txt` EXIT=1 恰红 `workspaceDriftFailsLoudNamingEveryDeclaredValue`；突变 B `S-a-mutation-B.txt` EXIT=1 恰红 `configuredCwdReachesRequestHeaderAndPrompt`；突变 C `S-a-mutation-C.txt` EXIT=1 headless 1 失败 + 9 错误点名漂移键值；三处还原逐字节一致，`S-a-regreen.txt` EXIT=0 复绿）|
-| **S-b fs 编辑面（唯一匹配 + log-fold 读后保护）**：`FsService` 契约（承载）/ `LocalFs.edit` / `FsToolPlugin` 双文本对齐 + guard + 用例 | 锚点 10–12 | 待处理 |
+| **S-a 组合面统一（workspace）**：`bundle.yml` / `AppBoot` 断言 + `AppBootTest` 补 pin / `buildOverlays` 四 pin / `AgentLoopPlugin`+`AgentLoopImpl` cwd 源 / 04+07+12 文档 | 锚点 1–6 | **已放行（2026-09-22，有条件——取证重跑落盘 + 勾 ①⑥ 组合面腿 + 41 模块口径；三项均已办结：证据见下表、①⑥ 已勾、口径见下）**。取证：`docs/plan/evidence/it21/`（聚焦 `S-a-focus.txt` EXIT=0：AppBootTest 16 / AgentLoopTest 22 / HeadlessOptionsTest 16 / headless 合计 62；突变 A `S-a-mutation-A.txt` EXIT=1 恰红 `workspaceDriftFailsLoudNamingEveryDeclaredValue`；突变 B `S-a-mutation-B.txt` EXIT=1 恰红 `configuredCwdReachesRequestHeaderAndPrompt`；突变 C `S-a-mutation-C.txt` EXIT=1 headless 1 失败 + 9 错误点名漂移键值；三处还原逐字节一致，`S-a-regreen.txt` EXIT=0 复绿）|
+| **S-b fs 编辑面（唯一匹配 + log-fold 读后保护）**：`FsService` 契约（承载）/ `LocalFs.edit` / `FsToolPlugin` 双文本对齐 + guard + 用例 | 锚点 10–12 | **已放行（2026-09-22）**——两条注记随提交：重叠匹配按**非重叠**计数（`FsService.edit` javadoc + 05 §4）；`fs_delete` 不设读后守卫的边界入 05 §4 清单（P5 裁 edit/write，实撞补 guard + 一测）。取证：`docs/plan/evidence/it21/`（聚焦 `S-b-focus.txt` EXIT=0：fs/local 26 / fs/tool 19（ReadLedgerTest 11 + FsToolEndToEndTest 8）/ bundle/base 23 / core/preset 4 / agent-spine 6 / headless 62；证重 `[it21] ReadLedger.fold over 20002 events: 3 ms` → 保留 log-fold；突变 D `S-b-mutation-D.txt` + `S-b-mutation-D2.txt` EXIT=1 唯一匹配三用例与管线腿 `ambiguousEditIsRejectedThroughPipeline` 恰红；突变 E `S-b-mutation-E.txt` EXIT=1 guard 三用例红而 ReadLedgerTest 11 绿（判别性成立）；突变 G `S-b-mutation-G.txt` EXIT=1 `interleavedCallsPairByCallIdNotAdjacency` + `latestFactWins` 红；三处还原逐字节一致，`S-b-regreen.txt` EXIT=0 复绿；`S-b-package.txt` EXIT=0 全 42 模块含 jlink 镜像）|
 | **S-c 项目说明 + 有界搜索**：`project/instructions` 事件 + codec（新词表）/ agent-loop 装载 / system-prompt 渲染 / search seam+provider+tool / 03+05 文档 | 锚点 7–9、13 | 待处理 |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-N/）
@@ -116,17 +117,24 @@
 | `docs/plan/evidence/it21/S-a-mutation-B.txt` | 突变 B：轮首 cwd 回退 `user.dir` → `configuredCwdReachesRequestHeaderAndPrompt` 必红（①⑥ 组合面腿）|
 | `docs/plan/evidence/it21/S-a-mutation-C.txt` | 突变 C：CLI 扇出漏 `agent-loop` pin → headless 用例红 + 消息点名漂移键值（①⑥ 组合面腿）|
 | `docs/plan/evidence/it21/S-a-regreen.txt` | 三处突变还原后复绿（含 `git status --short`）|
+| `docs/plan/evidence/it21/S-b-focus.txt` | S-b 聚焦（②③⑥ 唯一匹配/读后保护腿；EXIT=0，含证重行 `[it21] ReadLedger.fold over 20002 events`）|
+| `docs/plan/evidence/it21/S-b-mutation-D.txt` | 突变 D：唯一匹配判定失效 → `LocalFsTest` 三用例必红（②⑥）|
+| `docs/plan/evidence/it21/S-b-mutation-D2.txt` | 突变 D 管线腿补课（首轮 reactor 在 `harness-fs-local` 早停）→ `ambiguousEditIsRejectedThroughPipeline` 必红（②⑥）|
+| `docs/plan/evidence/it21/S-b-mutation-E.txt` | 突变 E：guard 失效 → 读后保护三用例必红而 `ReadLedgerTest` 11 绿（③⑥ 判别性）|
+| `docs/plan/evidence/it21/S-b-mutation-G.txt` | 突变 G：配对不按 callId → `interleavedCallsPairByCallIdNotAdjacency` + `latestFactWins` 必红（③⑥ 折叠器腿）|
+| `docs/plan/evidence/it21/S-b-regreen.txt` | S-b 三处突变还原后复绿（EXIT=0）|
+| `docs/plan/evidence/it21/S-b-package.txt` | `-pl dist/jh -am package` 全 42 模块 + jlink 镜像绿（module-info 新 requires 解析；⑦ 半腿）|
 
 口径：「41 模块」= `-pl bundle/base,core/agent-loop,examples/headless -am` 的 reactor 闭包构成（3 个目标模块 + 其全部上游依赖模块 = 41 个 reactor 项目，构建日志 `[41/41]`）。
 
 ## 验收（证据 = 实际执行的命令与结果）
 
 - [x] ① workspace 一致：`--workspace=` 场景提示词 cwd 与三处围栏同值；四键不一致的组合启动即 fail loud（`AppBootTest` 拒绝用例 + headless 集成）—— **S-a 取证**：`evidence/it21/S-a-focus.txt`（AppBootTest 16 / AgentLoopTest 22 / HeadlessOptionsTest 16 / headless 合计 62）+ `S-a-mutation-A/C.txt`（断言与 CLI 扇出各自必红）
-- [ ] ② 唯一匹配：重复匹配 edit 被拒（消息含计数与行号），工具 schema/描述与实现同口径（`LocalFsTest` + `FsToolEndToEndTest`）
-- [ ] ③ 读后外部修改：读→外部改写→edit/write 被拒；未读过的文件维持现行为；跨进程 resume 后保护仍在（log-fold；`FsToolEndToEndTest`）
+- [x] ② 唯一匹配：重复匹配 edit 被拒（消息含计数与行号），工具 schema/描述与实现同口径（`LocalFsTest` + `FsToolEndToEndTest`）—— **S-b 取证**：`evidence/it21/S-b-focus.txt`（fs/local 26 / fs/tool 19；`ReadLedger.fold over 20002 events: 3 ms` 证重行）+ `S-b-mutation-D.txt`/`S-b-mutation-D2.txt`（唯一匹配判定失效 → 三用例 + 管线腿各必红）
+- [x] ③ 读后外部修改：读→外部改写→edit/write 被拒；未读过的文件维持现行为；跨进程 resume 后保护仍在（log-fold；`FsToolEndToEndTest`）—— **S-b 取证**：`evidence/it21/S-b-focus.txt`（`externallyModifiedFileIsRejectedUntilReread` / `staleReadAlsoRejectsWrite` / `editOfNeverTouchedFileKeepsCurrentBehaviour` / `protectionSurvivesResumeFromLogSeed` 绿）+ `S-b-mutation-E.txt`（guard 失效 → 三用例红而 `ReadLedgerTest` 11 绿，判别性成立）+ `S-b-mutation-G.txt`（配对不按 callId → 折叠器两用例红）
 - [ ] ④ 说明：工作区 `AGENTS.md` 进入系统提示词且来源落账（路径+sha256）；内容不变不追加事件；不存在静默；敌意说明不改变工具/沙箱/审批权限位（`AgentLoopTest` + `SystemPromptServiceTest`）
 - [ ] ⑤ 搜索：`fs_search` 一次定位命中；输出有界（上限+截断位）；不越围栏、不跟符号链接目录、跳二进制/超限（`LocalFsTest` + `FsToolEndToEndTest`）
-- [ ] ⑥ 突变检查：唯一匹配、log-fold 拒绝、说明装载、四键断言各自破坏必红、还原复绿 —— **四键断言腿 ✅ S-a**（`evidence/it21/S-a-mutation-A/B/C.txt`）；其余三腿待 S-b/S-c
+- [ ] ⑥ 突变检查：唯一匹配、log-fold 拒绝、说明装载、四键断言各自破坏必红、还原复绿 —— **四键断言腿 ✅ S-a**（`evidence/it21/S-a-mutation-A/B/C.txt`）；**S-b 两腿 ✅**（唯一匹配 `S-b-mutation-D.txt`/`D2.txt`；log-fold 拒绝与折叠器配对 `S-b-mutation-E.txt`/`G.txt`；三处还原逐字节一致 + `S-b-regreen.txt` EXIT=0）；说明装载腿待 S-c
 - [ ] ⑦ 全量 `mvn -B -q package` 绿
 - [ ] ⑧ 真跑：jlink 镜像 `--workspace=` 真任务观测提示词 cwd/`AGENTS.md` 生效/搜索命中；文档同步（03/04/05/07/12）在案
 
@@ -134,6 +142,7 @@
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| S-b（随停点提交） | S-a 语义反转后的同步面缺口：四键断言落地（「漂移=交集生效」已死）后，`FsToolPlugin` 类 javadoc 与 `docs/design/05-capability-seam.md` §6 仍存活旧措辞——首轮只按「本次改到的文件」划同步面 | S-b 同改两处旧措辞；`AGENTS.md`「文档即事实源」回填规则：**语义移除 / 口径反转**类改动须全局 `grep -rn 旧结论`，同步面按语义覆盖范围划 |
 
 ## 设计偏离（如有）
 

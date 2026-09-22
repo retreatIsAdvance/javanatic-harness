@@ -1,0 +1,30 @@
+# 突变 G：配对不再靠 callId（交错日志错配），期望 interleavedCallsPairByCallIdNotAdjacency 必红
+# 基线 commit: 2c1ce04 （S-b 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD SUCCESS|BUILD FAILURE|<<<|file changed since read|oldString is not unique|\[it21\]|\[ERROR\]'）
+$ mvn -B -pl fs/tool -am test -Dtest=ReadLedgerTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[it21] ReadLedger.fold over 20002 events: 4 ms
+[ERROR] Tests run: 11, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.144 s <<< FAILURE! -- in io.javanatic.harness.fs.tool.ReadLedgerTest
+[ERROR] io.javanatic.harness.fs.tool.ReadLedgerTest.latestFactWins -- Time elapsed: 0.005 s <<< FAILURE!
+[ERROR] io.javanatic.harness.fs.tool.ReadLedgerTest.interleavedCallsPairByCallIdNotAdjacency -- Time elapsed: 0.001 s <<< FAILURE!
+[ERROR] Failures:
+[ERROR]   ReadLedgerTest.interleavedCallsPairByCallIdNotAdjacency:94
+[ERROR]   ReadLedgerTest.latestFactWins:84
+[ERROR] Tests run: 11, Failures: 2, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-fs-tool: There are test failures.
+[ERROR]
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/fs/tool/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR]
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-fs-tool
+EXIT=1
+# 还原: ReadLedger.java 与备份逐字节一致
