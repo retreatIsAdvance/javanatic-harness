@@ -1,4 +1,4 @@
-# 迭代 21 — 工作区理解与可靠编辑（状态：进行中——四确认与裁决 2026-09-22 裁定；锚点/停点已补齐）
+# 迭代 21 — 工作区理解与可靠编辑（状态：已完成——四确认与裁决 2026-09-22 裁定；S-a 2c1ce04 / S-b 30698c5 / S-c 1202f9a 全部放行（S-c 带两项必办：偏离表第 5 行 + 符号链接敌意腿）；收尾 2026-09-22：全量 package 45/45 绿 + jlink 镜像 PRODUCTION 真跑三项观测；待 push 授权）
 
 模块：`bundle/base`（workspace 一致性断言 + 行声明）· `examples/headless`（扇出四 pin）· `fs/fs` / `fs/local` / `fs/tool`（edit 唯一匹配 + search + 读后修改保护）· `core/session`（说明事实事件 + codec 归 jsonl）· `core/agent-loop`（轮首装载 + `RequestHeader.cwd` 源）· `core/system-prompt`（说明段原生渲染）· 文档（03/04/05/07/12）
 
@@ -139,6 +139,7 @@
 | `docs/plan/evidence/it21/S-c-hostile-leg.txt` | 敌意符号链接腿：三回合剧本（越界写被人闸放行仍被围栏拒 → `bash` 建链 → 下轮装载读靶进提示词，再写仍拒），人闸恰好三次放行，EXIT=0（④ 读平权断言）|
 | `docs/plan/evidence/it21/S-c-regreen.txt` | 四承载体（`InstructionsFile`/`AgentLoopImpl`/`LocalFs`/`ProjectInstructions`）逐字节还原 + 聚焦模块集复绿（v2＝必办落地后，含 `git status --short`）|
 | `docs/plan/evidence/it21/S-c-package.txt` | 全量 `mvn -B package` 绿（v2＝必办落地后重跑；45/45 计数法写明；⑦）|
+| `docs/plan/evidence/it21/it21-real-run.txt` | 验收 ⑧ 真跑：jlink 镜像 PRODUCTION 档一次性任务（`request/header.cwd` ≡ `--workspace=`、`project/instructions` 落账且答案带 `[AGENTS-EFFECT-7]`、`fs_search` 命中 `src/alpha.md:4:…`，exit 0）|
 
 口径：「41 模块」= `-pl bundle/base,core/agent-loop,examples/headless -am` 的 reactor 闭包构成（3 个目标模块 + 其全部上游依赖模块 = 41 个 reactor 项目，构建日志 `[41/41]`）。「43 模块」= S-c 聚焦集（上表十模块 `-am`）的 reactor 闭包（日志 `[43/43]`）；全量 `mvn -B package` 为 45 个 reactor 项目（`[45/45]`）。
 
@@ -151,7 +152,7 @@
 - [x] ⑤ 搜索：`fs_search` 一次定位命中；输出有界（上限+截断位）；不越围栏、不跟符号链接目录、跳二进制/超限（`LocalFsTest` + `FsToolEndToEndTest`）—— **S-c 取证**：`evidence/it21/S-c-focus.txt`（`LocalFsTest` 30（含顺序/上限截断/链接/二进制/超限/围栏）/ `FsToolEndToEndTest` 10（管线内命中与截断尾））+ `S-c-mutation-J.txt`（有界收集失效 → 上限用例必红）、`S-c-mutation-K.txt`（跟随符号链接 → 链接用例必红）
 - [x] ⑥ 突变检查：唯一匹配、log-fold 拒绝、说明装载、四键断言各自破坏必红、还原复绿 —— **四键断言腿 ✅ S-a**（`evidence/it21/S-a-mutation-A/B/C.txt`）；**S-b 两腿 ✅**（唯一匹配 `S-b-mutation-D.txt`/`D2.txt`；log-fold 拒绝与折叠器配对 `S-b-mutation-E.txt`/`G.txt`；三处还原逐字节一致 + `S-b-regreen.txt` EXIT=0）；**S-c 四腿 ✅**（装载/去重 `S-c-mutation-H.txt`/`H2.txt`/`I.txt`；搜索 `S-c-mutation-J.txt`/`K.txt`；新词表 `S-c-mutation-L.txt`；读平权 `S-c-mutation-M.txt`；四承载体逐字节还原 + `S-c-regreen.txt` EXIT=0）
 - [x] ⑦ 全量 `mvn -B package` 绿 —— **S-c 取证**：`evidence/it21/S-c-package.txt` v2（reactor `[45/45]` + SUCCESS 行计数 45 / FAILURE·SKIPPED 计数 0，含 dist/jh jlink 镜像与归档包；必办落地后重跑）
-- [ ] ⑧ 真跑：jlink 镜像 `--workspace=` 真任务观测提示词 cwd/`AGENTS.md` 生效/搜索命中；文档同步（03/04/05/07/12）在案 —— 文档同步 S-c 已在案（02+03+04+05+12 + `bundle.yml`；07 有意不动）；真跑留待收尾
+- [x] ⑧ 真跑：jlink 镜像 `--workspace=` 真任务观测提示词 cwd/`AGENTS.md` 生效/搜索命中；文档同步（03/04/05/07/12）在案 —— **取证**：`evidence/it21/it21-real-run.txt`（PRODUCTION + `--approval=ask` + `--budget=20000`，exit 0；`request/header.cwd=/tmp/it21-realrun/workspace` 与 `--workspace=` 同值、`project/instructions` 落账 path+sha256 且答案带纪律标记 `[AGENTS-EFFECT-7]`、`fs_search` 命中 `src/alpha.md:4:…`，三项观测逐条在案）；文档同步 S-c 已在案（02+03+04+05+12 + `bundle.yml`；07 有意不动——键目录以 12 §6 为准）
 
 ## 修正（如有）
 

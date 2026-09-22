@@ -1,0 +1,35 @@
+# it21 验收 ⑧ 真跑（jlink 镜像 + PRODUCTION 档）：观测提示词 cwd / AGENTS.md 生效 / fs_search 命中
+# 样本工作区 /tmp/it21-realrun/workspace：AGENTS.md（纪律：回答末尾须附 [AGENTS-EFFECT-7]；cwd 报绝对路径）
+#   + src/alpha.md 第 4 行含唯一字面量 it21-realrun-token + notes/beta.md（无命中）
+# 命令（key 经登录 shell 的 DEEPSEEK_API_KEY，值不进对话；stdin 供人闸放行）
+$ printf 'y\ny\ny\ny\ny\n' | /Users/abel_yang/study/deepseek/javanatic-harness/dist/jh/target/jlink-image/bin/jh "在工作区里用 fs_search 搜索字面量 it21-realrun-token，告诉我命中的相对路径和行号；并给出你当前工作目录的绝对路径。" --workspace=/tmp/it21-realrun/workspace --policy=PRODUCTION --approval=ask --budget=20000
+
+--- stdout（任务答案，退出码契约：成功有结果）:
+
+命中：`src/alpha.md` 第 4 行。
+
+工作目录绝对路径：`/tmp/it21-realrun/workspace`
+
+[AGENTS-EFFECT-7]
+
+--- stderr（轮末统计与人闸/事件清单，节选）:
+信息: session=headless-1790059842817-59c4
+[approval] allow fs_search fs_search {"path": ".", "pattern": "it21-realrun-token"}? [y/N] Sep 22, 2026 2:50:44 PM io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+stats: turn=1 steps=2 tokens_in=2641 tokens_out=96 elapsed=1.6s
+EXIT=0
+
+--- 会话日志事实（~/.harness/sessions/headless-1790059842817-59c4/log.jsonl，逐事件抽取）:
+seq 1 request/header {"cwd": "/tmp/it21-realrun/workspace", "date": "2026-09-22"}
+seq 2 project/instructions {"path": "/tmp/it21-realrun/workspace/AGENTS.md", "sha256": "3f908a999654fc9f3932d89333c1fa993f43e1bbb17eb24acc22137927ba751f", "truncated": false}
+   content head: # 本工作区说明（it21 真跑样本）||1. 所有回答的末尾必须附上标记 [AGE
+seq 32 tool/call: {"name": "fs_search", "arguments": "{\"path\": \".\", \"pattern\": \"it21-realrun-token\"}"}
+seq 33 tool/result: {"content": "src/alpha.md:4:it21-realrun-token 只出现在本文件的这一行。", "isError": false}
+
+# 三项观测逐条：
+# ① 提示词 cwd ≡ 工作区：request/header.cwd = /tmp/it21-realrun/workspace（与 --workspace= 四处同源），
+#    模型答案给出的也是该绝对路径
+# ② AGENTS.md 生效：project/instructions 落账（path + sha256 + truncated=false，seq 2，紧随 request/header），
+#    模型答案末尾带纪律标记 [AGENTS-EFFECT-7]
+# ③ fs_search 命中：tool/call {"path": ".", "pattern": "it21-realrun-token"}（人闸放行一次），
+#    tool/result = "src/alpha.md:4:it21-realrun-token 只出现在本文件的这一行。"（相对路径:行号:行文本，
+#    与 notes/beta.md 无命中一致）
