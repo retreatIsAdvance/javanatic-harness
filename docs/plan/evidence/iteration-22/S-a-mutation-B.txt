@@ -1,0 +1,14 @@
+# 突变 B：列举忽略 max（有界切片退化为全量），期望 HeadlessSessionsTest 截断面必红
+# 基线 commit: 2b625e1（S-a 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD|but was|<<<'）
+$ mvn -B -pl examples/headless -am test -Dtest=HeadlessSessionsTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.678 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.HeadlessSessionsTest
+[ERROR] io.javanatic.harness.examples.headless.HeadlessSessionsTest.sessionsLimitTruncatesWithTailHint -- Time elapsed: 0.036 s <<< FAILURE!
+ but was: "sessions: 3/3   root=/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit7177455398112746253"
+ but was: "sessions: 3/3   root=/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit7177455398112746253"
+[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 还原: 突变 B 撤销后源文件与突变前快照逐字节一致（diff 空）

@@ -14,21 +14,28 @@ import io.javanatic.harness.session.persistence.JsonValue;
 import io.javanatic.harness.session.persistence.SessionCodecRegistry;
 import io.javanatic.harness.session.persistence.SessionEventCodec;
 import io.javanatic.harness.session.persistence.SessionPersistence;
+import io.javanatic.harness.session.persistence.SessionSummary;
 import io.javanatic.harness.session.persistence.WriterLockException;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * JSONL 后端:订阅 session 域事件(CREATED 开写、APPENDED 增量、DISPOSED 收笔)。
@@ -49,6 +56,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class JsonlPersistence implements SessionPersistence {
 
     private static final System.Logger LOG = System.getLogger(JsonlPersistence.class.getName());
+
+    /** 列举摘要的首/尾有界读窗口(字节):header 事实与尾行 seq 都在窗口内,成本与日志体积解耦。 */
+    private static final int SCAN_BYTES = 8 * 1024;
+
+    /** 尾窗放大上限:末条事件行(长工具结果)超初始窗口时按倍率重读,到此仍不可解析即 fail loud。 */
+    private static final int MAX_SCAN_BYTES = 32 * 1024 * 1024;
 
     private final Path root;
     private final SessionCodecRegistry codecs;
@@ -128,6 +141,127 @@ public final class JsonlPersistence implements SessionPersistence {
         try (WriterLock probe = WriterLock.acquire(dir)) {
             repairTornTail(dir.resolve("log.jsonl"));
             return readLoaded(dir, headerFile, id);
+        }
+    }
+
+    @Override
+    public Catalog list(int max) throws IOException {
+        if (max <= 0) {
+            throw new IllegalArgumentException("list limit must be positive: " + max);
+        }
+        if (!Files.isDirectory(root)) {
+            return new Catalog(List.of(), 0);
+        }
+        List<SessionSummary> all = new ArrayList<>();
+        try (Stream<Path> children = Files.list(root)) {
+            for (Path child : children.toList()) {
+                Path headerFile = child.resolve("header.json");
+                if (Files.isDirectory(child) && Files.isRegularFile(headerFile)) {
+                    all.add(summarize(child, headerFile));
+                }
+            }
+        }
+        all.sort(Comparator.comparingLong(SessionSummary::lastActivityMillis).reversed()
+            .thenComparing(summary -> summary.id().value()));
+        List<SessionSummary> bounded = all.size() <= max
+            ? List.copyOf(all)
+            : List.copyOf(all.subList(0, max));
+        return new Catalog(bounded, all.size());
+    }
+
+    /** 单会话摘要:header 全读 + 日志首尾有界读 + 锁探针——不解码全量日志。 */
+    private static SessionSummary summarize(Path dir, Path headerFile) throws IOException {
+        SessionHeader header = HeaderCodec.read(JacksonBridge.read(Files.readString(headerFile)));
+        Path log = dir.resolve("log.jsonl");
+        boolean hasLog = Files.isRegularFile(log);
+        long lastActivity = Files.getLastModifiedTime(hasLog ? log : headerFile).toMillis();
+        return new SessionSummary(header.id(), header.createdAt(), lastActivity,
+            hasLog ? eventCount(log) : 0, hasLog ? cwd(log) : Optional.empty(), busy(dir));
+    }
+
+    /**
+     * 尾部有界读:从末尾窗口里取最后一条可解析事件的 seq + 1。撕裂尾(崩溃在写中)
+     * 天然只取完整行;末条事件行可能大于初始窗口(长工具结果),此时按倍率放大重读,
+     * 覆盖全文件或触上限仍无一可解析行 = 日志破损,fail loud(不报假数)。
+     */
+    private static long eventCount(Path log) throws IOException {
+        for (int window = SCAN_BYTES; ; window = Math.min(window * 8, MAX_SCAN_BYTES)) {
+            List<String> lines = tailLines(log, window);
+            for (int i = lines.size() - 1; i >= 0; i--) {
+                JsonValue.Obj envelope = parseOrNull(lines.get(i));
+                if (envelope != null && envelope.get("seq") instanceof JsonValue.Num seq) {
+                    return seq.value() + 1;
+                }
+            }
+            if (window >= MAX_SCAN_BYTES || Files.size(log) <= window) {
+                throw new IllegalStateException("session log tail unreadable: " + log);
+            }
+        }
+    }
+
+    /** 头部有界读:首个 request/header 事实的 cwd(种子/异常日志 → 空)。 */
+    private static Optional<String> cwd(Path log) throws IOException {
+        for (String line : headLines(log)) {
+            JsonValue.Obj envelope = parseOrNull(line);
+            if (envelope == null) {
+                break; // 半行截断:窗口内已无完整事件
+            }
+            if ("request/header".equals(envelope.get("type").asString())) {
+                String value = envelope.get("data").get("cwd").asString();
+                return value == null ? Optional.empty() : Optional.of(value);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** @return 解析后的事件信封;空行/撕裂行(非完整 JSON 对象)→ null */
+    private static JsonValue.Obj parseOrNull(String line) {
+        if (line.isBlank()) {
+            return null;
+        }
+        try {
+            return JacksonBridge.read(line);
+        } catch (IllegalStateException torn) {
+            return null;
+        }
+    }
+
+    /** 写者锁探针:只探不改——锁文件不存在即空闲(不创建);占用即 busy;空闲立即释放。 */
+    private static boolean busy(Path dir) {
+        Path lockFile = dir.resolve(WriterLock.LOCK_FILE);
+        if (!Files.isRegularFile(lockFile)) {
+            return false;
+        }
+        try (FileChannel channel = FileChannel.open(lockFile, StandardOpenOption.WRITE);
+             FileLock lock = channel.tryLock()) {
+            return lock == null;
+        } catch (OverlappingFileLockException heldByThisJvm) {
+            return true; // 本 JVM 已有写者(同进程第二实例)
+        } catch (IOException e) {
+            throw new IllegalStateException("writer lock probe failed: " + lockFile, e);
+        }
+    }
+
+    /** @return 文件头部至多 {@link #SCAN_BYTES} 字节(按行切;半行由调用方跳过) */
+    private static List<String> headLines(Path file) throws IOException {
+        try (InputStream in = Files.newInputStream(file)) {
+            return List.of(new String(in.readNBytes(SCAN_BYTES), StandardCharsets.UTF_8)
+                .split("\n"));
+        }
+    }
+
+    /** @return 文件尾部的行(窗口起点可能落在半行上,该半行由调用方跳过) */
+    private static List<String> tailLines(Path file, int window) throws IOException {
+        try (SeekableByteChannel channel = Files.newByteChannel(file, StandardOpenOption.READ)) {
+            long size = channel.size();
+            int want = (int) Math.min(size, window);
+            ByteBuffer buffer = ByteBuffer.allocate(want);
+            channel.position(size - want);
+            while (buffer.hasRemaining() && channel.read(buffer) != -1) {
+                // 读到窗口填满或文件尽头
+            }
+            return List.of(new String(buffer.array(), 0, buffer.position(),
+                StandardCharsets.UTF_8).split("\n"));
         }
     }
 

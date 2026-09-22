@@ -1,0 +1,12 @@
+# 突变 E：互斥校验缺失（--sessions 与任务文本可同用）,期望 sessionsMutuallyExclusiveWithRunFlagsAndLimitMustBePositive 必红
+# 基线 commit: 2b625e1（S-a 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD|<<<'）
+$ mvn -B -pl examples/headless -am test -Dtest=HeadlessSessionsTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.527 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.HeadlessSessionsTest
+[ERROR] io.javanatic.harness.examples.headless.HeadlessSessionsTest.sessionsMutuallyExclusiveWithRunFlagsAndLimitMustBePositive -- Time elapsed: 0.005 s <<< FAILURE!
+[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 还原: 突变 E 撤销后源文件与突变前快照逐字节一致（diff 空）

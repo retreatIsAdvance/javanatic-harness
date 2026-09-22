@@ -1,0 +1,16 @@
+# 突变 A：列举排序口径失效（lastActivityMillis 降序 → 升序），期望 JsonlPersistenceListTest 必红
+# 基线 commit: 2b625e1（S-a 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD|element at|<<<|ERROR\]'）
+$ mvn -B -pl session/persistence-jsonl -am test -Dtest=JsonlPersistenceListTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 7, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.214 s <<< FAILURE! -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest
+[ERROR] io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest.listsByLastActivityDescendingWithEventsCwdAndLimit -- Time elapsed: 0.015 s <<< FAILURE!
+  - element at index 0: expected "gamma" but was "beta"
+  - element at index 2: expected "beta" but was "gamma"
+  - element at index 0: expected "gamma" but was "beta"
+  - element at index 2: expected "beta" but was "gamma"
+[ERROR] Tests run: 7, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 还原: 突变 A 撤销后源文件与突变前快照逐字节一致（diff 空）

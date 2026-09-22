@@ -40,7 +40,22 @@ public interface SessionPersistence {
      */
     Loaded load(Id<Session> id) throws IOException;
 
+    /**
+     * 会话列举(只读,it22):按最后活动降序、id 升序兜底,取前 {@code max} 条。
+     * 摘要折叠不解码全量日志——每会话至多 header 全读 + 日志首尾各一次有界读
+     * (+ 写者锁探针),列举成本与会话体积解耦。
+     *
+     * @param max 条数上限(正整数)
+     * @return 有界切片与总数(sessions.size() &lt; total 即被截断)
+     * @throws IllegalArgumentException max 非正
+     */
+    Catalog list(int max) throws IOException;
+
     /** load 结果。 */
     record Loaded(SessionHeader header, List<SessionEvent> events) {
+    }
+
+    /** 列举结果:有界切片 + 总数(截断标记由消费方按 total 渲染)。 */
+    record Catalog(List<SessionSummary> sessions, int total) {
     }
 }

@@ -1,0 +1,14 @@
+# 突变 C：锁探针失去只读前置（CREATE 打开 → 为从未写过的会话凭空建锁文件），期望 busyFlagFollowsWriterLockAndProbeNeverCreatesLock 必红
+# 基线 commit: 2b625e1（S-a 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD|but was|<<<'）
+$ mvn -B -pl session/persistence-jsonl -am test -Dtest=JsonlPersistenceListTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 7, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.210 s <<< FAILURE! -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest
+[ERROR] io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest.busyFlagFollowsWriterLockAndProbeNeverCreatesLock -- Time elapsed: 0.008 s <<< FAILURE!
+Expecting value to be false but was true
+Expecting value to be false but was true
+[ERROR] Tests run: 7, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 还原: 突变 C 撤销后源文件与突变前快照逐字节一致（diff 空）

@@ -1,0 +1,34 @@
+# S-a 聚焦回归：jsonl 列举面（新 JsonlPersistenceListTest）+ headless CLI 面（--sessions / 恢复指引 / banner）+ 上游闭包
+# 基线 commit: 2b625e1（S-a 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: 模块边界行 + "-- in io." 类级行 + 模块级 Tests run 汇总 + BUILD）；
+#   个别类级行前黏连被测试打印的 [approval] 提示，此处截到 "[INFO] Tests run:" 尾段（机械截取，不改内容）
+# 命令复跑核验：同命令重跑，模块集合与计数逐项一致（40 模块 / 962 tests / 0 failures / 0 errors）
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl session/persistence-jsonl,examples/headless -am test
+
+[INFO] Building harness-session-persistence-jsonl 0.2.0-SNAPSHOT        [14/41]
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.190 s -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.116 s -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest
+[INFO] Tests run: 30, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] Building harness-examples-headless 0.2.0-SNAPSHOT                [41/41]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.349 s -- in io.javanatic.harness.examples.headless.HeadlessSessionsTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.083 s -- in io.javanatic.harness.examples.headless.HeadlessVerifyTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in io.javanatic.harness.examples.headless.HeadlessApprovalTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.043 s -- in io.javanatic.harness.examples.headless.HeadlessOptionsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.133 s -- in io.javanatic.harness.examples.headless.HostileInstructionsTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.160 s -- in io.javanatic.harness.examples.headless.HeadlessOneShotResultTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.055 s -- in io.javanatic.harness.examples.headless.HeadlessReplTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.096 s -- in io.javanatic.harness.examples.headless.HeadlessResumeTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in io.javanatic.harness.examples.headless.ReplApprovalWiringTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.892 s -- in io.javanatic.harness.examples.headless.HeadlessCrashResumeE2ETest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.518 s -- in io.javanatic.harness.examples.headless.HeadlessSigintTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in io.javanatic.harness.examples.headless.StreamRendererTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in io.javanatic.harness.examples.headless.HeadlessFakeServerE2ETest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.088 s -- in io.javanatic.harness.examples.headless.ProductionScenarioTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in io.javanatic.harness.examples.headless.HeadlessProfileTest
+[INFO] Tests run: 69, Failures: 0, Errors: 0, Skipped: 0
+
+全 reactor 合计: tests=962 failures=0 errors=0
+[INFO] BUILD SUCCESS
+EXIT=0

@@ -35,6 +35,7 @@ import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.TextBlock;
 import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.persistence.SessionPersistence;
+import io.javanatic.harness.session.persistence.SessionSummary;
 import io.javanatic.harness.session.persistence.WriterLockException;
 import io.javanatic.harness.systemprompt.PromptSection;
 import io.javanatic.harness.systemprompt.SystemPromptService;
@@ -49,11 +50,16 @@ import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -84,6 +90,9 @@ public final class HeadlessMain {
     /** `--approval` 词表：与 interaction/approval 三个 Provider id 的 "approval-" 后缀一致。 */
     private static final List<String> APPROVAL_MODES = List.of("auto", "ask", "deny");
 
+    /** 会话列举时间戳：本地时区 ISO-8601（带偏移；同一次运行内 created/last 可比）。 */
+    private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+
     /** `--help` 文本。 */
     static final String USAGE = """
         Javanatic Harness headless runner —— 一次性任务与交互模式(REPL)
@@ -94,6 +103,8 @@ public final class HeadlessMain {
                                                 空闲 Ctrl-C 退出;进行中的轮 Ctrl-C 取消,以
                                                 aborted 落账,可 --resume 续)
           jh --resume=<sessionId> [flags]       在既有会话上进入交互模式(带任务文本则一次性续跑)
+          jh --sessions[=<N>]                  列举会话(id/活动时间/事件数/写者状态/cwd;
+                                                无 key 可跑;续跑用行内 id)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1;
                                                 通过时 stdout 打印 07 §6 治理摘要)
           jh --help                            显示本说明
@@ -113,7 +124,11 @@ public final class HeadlessMain {
                                      同用,生产组合才可达
           --docker [--image=<镜像>]  容器级隔离执行(镜像须本机在场,不自动拉取)
           --resume=<sessionId>       恢复既有会话(load → seed → 续轮号;会话被另一写者
-                                     占用时拒绝,写者锁冲突 → exit 3)
+                                     占用时拒绝,写者锁冲突 → exit 3;id 不存在 → exit 3 +
+                                     指引,用 --sessions 查可用 id)
+          --sessions[=<N>]           列举会话:每行 <id> created=… last=… events=… <busy|idle>
+                                     cwd=…,按最后活动降序(缺省 20 条;截断时尾行提示
+                                     --sessions=<N> 放大上限);与任务文本 / --resume / --verify 互斥
           --provider=<名>            厂商名(缺省 deepseek)
           --model=<名>               模型(缺省 deepseek-chat)
           --base-url=<url>           OpenAI 兼容端点(缺省 https://api.deepseek.com)
@@ -138,10 +153,10 @@ public final class HeadlessMain {
           stderr         成功时另打一行轮末统计,与 REPL 同形:
                          stats: turn=… steps=… tokens_in=… tokens_out=… elapsed=…s
         退出码:
-          0  任务完成(或 --verify 通过 / --help)
+          0  任务完成(或 --verify 通过 / --sessions 成功 / --help)
           1  --verify 违规
           2  用法错误 / 缺少 API key
-          3  任务失败(厂商错误 / 守卫或预算超限 / --resume 写者锁冲突;原因在 stderr)
+          3  任务失败(厂商错误 / 守卫或预算超限 / --resume 会话不存在或写者锁冲突;原因在 stderr)
           4  任务被取消(REPL 路径不适用:退出码 0)
         契约:成功有结果 / 失败为空——失败的 stdout 为空,诊断(会话 id、事件清单、失败
         文案、模型遗言)全部走 stderr;`out=$(jh "任务")` 取答案、按退出码判成败。
@@ -160,12 +175,15 @@ public final class HeadlessMain {
     record RunnerOptions(String task, boolean verify, Policy policy, String provider, String model,
                          String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile,
                          String resume, boolean docker, String image, Path workspace, String approval,
-                         long budget, boolean help) {
+                         long budget, boolean help, OptionalInt sessions) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
         static final String DEFAULT_BASE_URL = "https://api.deepseek.com";
         static final String DEFAULT_API_KEY_ENV = "DEEPSEEK_API_KEY";
+
+        /** --sessions 缺省条数（有界列举;截断时尾行提示放大上限）。 */
+        static final int DEFAULT_SESSIONS_LIMIT = 20;
 
         /** 字面量优先于环境变量;均缺省时为 null(verify 路径可用,任务路径报缺 key)。 */
         String resolvedApiKey() {
@@ -224,6 +242,7 @@ public final class HeadlessMain {
         Path workspace = null;
         String approval = null;
         long budget = 0;
+        OptionalInt sessions = OptionalInt.empty();
         for (String arg : args) {
             if ("--help".equals(arg) || "-h".equals(arg)) {
                 help = true;
@@ -259,6 +278,10 @@ public final class HeadlessMain {
                 image = valueOf(arg);
             } else if (arg.startsWith("--resume=")) {
                 resume = valueOf(arg);
+            } else if ("--sessions".equals(arg)) {
+                sessions = OptionalInt.of(RunnerOptions.DEFAULT_SESSIONS_LIMIT);
+            } else if (arg.startsWith("--sessions=")) {
+                sessions = OptionalInt.of(positiveInt(valueOf(arg)));
             } else if (arg.startsWith("--")) {
                 throw new IllegalArgumentException("未知参数: " + arg);
             } else if (task == null) {
@@ -270,12 +293,24 @@ public final class HeadlessMain {
         if (image != null && !docker) {
             throw new IllegalArgumentException("--image 需与 --docker 同用");
         }
+        if (sessions.isPresent()) {
+            // 列举是只读旁路:与"要跑什么"的参数同用即为用法错误(不猜意图)
+            if (task != null) {
+                throw new IllegalArgumentException("--sessions 与任务文本互斥（列举不执行任务）");
+            }
+            if (resume != null) {
+                throw new IllegalArgumentException("--sessions 与 --resume 互斥（列举请另开一次运行）");
+            }
+            if (verify) {
+                throw new IllegalArgumentException("--sessions 与 --verify 互斥（一次只做一件事）");
+            }
+        }
         return new RunnerOptions(task, verify, policy,
             provider == null ? RunnerOptions.DEFAULT_PROVIDER : provider,
             model == null ? RunnerOptions.DEFAULT_MODEL : model,
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
-            apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help);
+            apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, sessions);
     }
 
     private static String valueOf(String flag) {
@@ -296,6 +331,20 @@ public final class HeadlessMain {
         }
         if (parsed <= 0) {
             throw new IllegalArgumentException("--budget 必须是正整数,收到: " + value);
+        }
+        return parsed;
+    }
+
+    /** --sessions=<N> 契约:正整数(条数上限,截断时有提示,不存在"无限列举")。 */
+    private static int positiveInt(String value) {
+        int parsed;
+        try {
+            parsed = Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("--sessions 必须是正整数,收到: " + value, e);
+        }
+        if (parsed <= 0) {
+            throw new IllegalArgumentException("--sessions 必须是正整数,收到: " + value);
         }
         return parsed;
     }
@@ -371,6 +420,11 @@ public final class HeadlessMain {
                 governanceSummary(booted, options, rt.root()).forEach(out::println);
                 return 0;
             }
+            if (options.sessions().isPresent()) {
+                // 只读旁路:不进 API key 检查、不建 agent——列举的是落盘事实
+                sessionListing(rt.root(), options.sessions().getAsInt()).forEach(out::println);
+                return 0;
+            }
             String apiKey = options.resolvedApiKey();
             if (apiKey == null) {
                 LOG.log(Level.ERROR, "API key 未提供（--api-key=… 或环境变量 {0}；--verify 可无 key 运行）",
@@ -390,6 +444,10 @@ public final class HeadlessMain {
                     loaded = rt.root().require(SessionPersistence.KEY).load(Session.newId(sessionId));
                     rt.root().require(SessionStore.KEY).create(rt.root(), Session.newId(sessionId),
                         new CreateOptions(loaded.events(), loaded.header()));
+                } catch (NoSuchElementException e) {
+                    // 未知 id 不是崩溃面:给恢复指引(可用 id 在 --sessions),与写者锁同为 exit 3
+                    LOG.log(Level.ERROR, "{0}", unknownSessionText(sessionId));
+                    return 3;
                 } catch (IOException | CompletionException e) {
                     // 写者锁冲突:load 探测直抛 WriterLockException;CREATED-attach 获取锁失败
                     // 经 notifyOrdered 包装成 CompletionException——两形归一,fail loud 出口一致
@@ -421,7 +479,7 @@ public final class HeadlessMain {
             int exit = 0;
             try {
                 if (options.task() == null) {
-                    runRepl(rt, agent, in, out, sigint); // 裸 jh / --resume 无任务:交互循环
+                    runRepl(rt, agent, sessionId, in, out, sigint); // 裸 jh / --resume 无任务:交互循环
                 } else {
                     agent.followup(UserMessage.of(options.task(), new MessageSource.User()));
                     agent.whenIdle().join();
@@ -564,25 +622,62 @@ public final class HeadlessMain {
                 + " budget=" + (budget > 0 ? Long.toString(budget) : "unlimited"));
     }
 
-    /** 清单中首个前缀挂载行（摘要按插件 id 定位挂的是哪个实现；缺失 fail loud）。 */
+    /**
+     * it22 会话列举（--sessions;只读旁路,无 key 可跑）:头行 = 列出/总数 + 落盘根
+     * （根读组合自述,与治理摘要同一来源;列举的是落盘事实而非文档口径）,每会话一行
+     * （id / 创建 / 末次活动 / 事件数 / 写者状态 / cwd）,按最后活动降序;截断时尾行
+     * 给放大口径。行内 id 原样可喂 --resume——不需手工翻 JSONL 找会话。
+     */
+    static List<String> sessionListing(Scope root, int limit) throws IOException {
+        CompositionManifest.Row audit = mountedRow(root.require(CompositionManifest.KEY), "persistence-");
+        SessionPersistence.Catalog catalog = root.require(SessionPersistence.KEY).list(limit);
+        List<String> lines = new ArrayList<>();
+        lines.add("sessions: " + catalog.sessions().size() + "/" + catalog.total()
+            + "   root=" + configText(audit, "root"));
+        for (SessionSummary summary : catalog.sessions()) {
+            lines.add("  " + summary.id().value()
+                + "  created=" + timestamp(summary.createdAt())
+                + "  last=" + timestamp(summary.lastActivityMillis())
+                + "  events=" + summary.eventCount()
+                + "  " + (summary.busy() ? "busy" : "idle")
+                + "  cwd=" + summary.cwd().orElse("-"));
+        }
+        if (catalog.sessions().size() < catalog.total()) {
+            lines.add("  截断: 仅列前 " + catalog.sessions().size() + " 条（共 " + catalog.total()
+                + "）—— --sessions=<N> 放大上限");
+        }
+        return lines;
+    }
+
+    /** epoch millis → 本地时区 ISO-8601（带偏移）。 */
+    private static String timestamp(long millis) {
+        return TIMESTAMP.format(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()));
+    }
+
+    /** 未知 --resume id 的诊断 + 恢复指引（stderr;id 原样回显,可用 id 在 --sessions）。 */
+    static String unknownSessionText(String sessionId) {
+        return "会话不存在: " + sessionId + "；用 jh --sessions 查看可用会话，再 --resume=<id>";
+    }
+
+    /** 清单中首个前缀挂载行（治理摘要 / 会话列举按插件 id 定位挂的是哪个实现；缺失 fail loud）。 */
     private static CompositionManifest.Row mountedRow(CompositionManifest manifest, String prefix) {
         return manifest.rows().stream()
             .filter(row -> row.plugin().startsWith(prefix))
             .findFirst()
-            .orElseThrow(() -> new IllegalStateException("治理摘要无法自述:组合清单无 " + prefix + "* 行"));
+            .orElseThrow(() -> new IllegalStateException("组合自述失败:组合清单无 " + prefix + "* 行"));
     }
 
-    /** 行 config 的字符串值（缺失 fail loud——摘要不猜）。 */
+    /** 行 config 的字符串值（缺失 fail loud——摘要/列举不猜）。 */
     private static String configText(CompositionManifest.Row row, String key) {
         Object value = row.config().get(key);
         if (value == null) {
-            throw new IllegalStateException("治理摘要无法自述:行 " + row.plugin() + " 缺 config " + key);
+            throw new IllegalStateException("组合自述失败:行 " + row.plugin() + " 缺 config " + key);
         }
         return value.toString();
     }
 
     /** REPL:注册内置命令 + 渲染订阅接线 + 行循环;返回后走 run 的既有 dispose/save 尾。 */
-    private static void runRepl(Runtime rt, Agent agent, BufferedReader in, PrintStream out,
+    private static void runRepl(Runtime rt, Agent agent, String sessionId, BufferedReader in, PrintStream out,
                                 SigintPolicy sigint) {
         CommandRegistry registry = rt.root().require(CommandRegistry.KEY);
         registry.register(new Command("help", "显示命令一览", invocation ->
@@ -601,6 +696,8 @@ public final class HeadlessMain {
             // 真 stdin 唯一读者 = 行循环;审批问句经 System.in 代理流读裁决行(补充 6)
             System.setIn(approvalIn);
             renderer.println("jh 交互模式 —— 输入消息回车提交;/help 命令;/exit 或 Ctrl-D 退出");
+            // 会话身份印在首屏:退出后可原样 --resume（it22 恢复指引;--sessions 复核 id）
+            renderer.println("session=" + sessionId + "（续跑: jh --resume=" + sessionId + "）");
             try {
                 replLoop(agent, registry, renderer, approvalIn, in, sigint);
             } finally {

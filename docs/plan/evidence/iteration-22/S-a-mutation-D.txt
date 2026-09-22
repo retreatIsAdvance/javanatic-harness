@@ -1,0 +1,14 @@
+# 突变 D：尾窗放大失效（上限压回初始窗口 → 末条事件行超 8 KiB 即不可折叠），期望 tornTailAndOversizedFinalEventBothStillCounted 必红
+# 基线 commit: 2b625e1（S-a 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD|tail unreadable|<<<'）
+$ mvn -B -pl session/persistence-jsonl -am test -Dtest=JsonlPersistenceListTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 7, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.214 s <<< FAILURE! -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest
+[ERROR] io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest.tornTailAndOversizedFinalEventBothStillCounted -- Time elapsed: 0.007 s <<< ERROR!
+java.lang.IllegalStateException: session log tail unreadable: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit16386984251991952642/big/log.jsonl
+[ERROR]   JsonlPersistenceListTest.tornTailAndOversizedFinalEventBothStillCounted:115 » IllegalState session log tail unreadable: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit16386984251991952642/big/log.jsonl
+[ERROR] Tests run: 7, Failures: 0, Errors: 1, Skipped: 0
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 还原: 突变 D 撤销后源文件与突变前快照逐字节一致（diff 空）
