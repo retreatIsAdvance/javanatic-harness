@@ -2,6 +2,7 @@ package io.javanatic.harness.boot;
 
 import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.kernel.config.ConfigRowSpec;
+import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.sandbox.sandbox.BackendStatus;
@@ -25,6 +26,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +58,10 @@ class AppBootTest {
             new ConfigRowSpec.Replace("fs-local", Map.of("root", ws.toString()), null),
             new ConfigRowSpec.Replace("shell-tool",
                 Map.of("workspace", ws.toString(), "timeoutSeconds", 30), null),
+            // it21 单源断言:四处 workspace 承载键须同值,独立 overlay 也须逐个 pin
+            new ConfigRowSpec.Replace("sandbox-policy",
+                Map.of("mode", "workspace-write", "workspace", ws.toString()), null),
+            new ConfigRowSpec.Replace("agent-loop", Map.of("cwd", ws.toString()), null),
             new ConfigRowSpec.Replace("persistence-jsonl", Map.of("root", sess.toString()), null));
     }
 
@@ -128,6 +134,35 @@ class AppBootTest {
         assertThatThrownBy(() -> AppBoot.boot(new AppBoot.BootOptions(file, List.of(), false, null)))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("未被任何行引用");
+    }
+
+    @Test
+    void workspaceDriftFailsLoudNamingEveryDeclaredValue() throws Exception {
+        Path profile = profile("");
+        Path other = dir.resolve("other-ws");
+        other.toFile().mkdir();
+        List<ConfigRowSpec> drifting = new ArrayList<>(rootOverlays());
+        // 只把 shell 围栏挪走:四处承载键不再同源
+        drifting.add(new ConfigRowSpec.Replace("shell-tool",
+            Map.of("workspace", other.toString(), "timeoutSeconds", 30), null));
+        assertThatThrownBy(() -> AppBoot.boot(new AppBoot.BootOptions(profile, drifting, false, null)))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("workspace drift")
+            .hasMessageContaining("fs-local.root=" + dir.resolve("ws"))
+            .hasMessageContaining("shell-tool.workspace=" + other);
+    }
+
+    @Test
+    void workspaceTrailingSlashIsNotDrift() throws Exception {
+        Path profile = profile("");
+        Path ws = dir.resolve("ws");
+        List<ConfigRowSpec> equivalent = new ArrayList<>(rootOverlays());
+        equivalent.add(new ConfigRowSpec.Replace("agent-loop",
+            Map.of("cwd", ws + "/"), null));
+        try (Runtime rt = AppBoot.boot(new AppBoot.BootOptions(profile, equivalent, false, null))) {
+            assertThat(rt.root().require(ConfigService.KEY).configFor("agent-loop"))
+                .containsEntry("cwd", ws + "/");
+        }
     }
 
     @Test

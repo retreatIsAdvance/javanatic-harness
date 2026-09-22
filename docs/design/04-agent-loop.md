@@ -200,6 +200,11 @@ class AgentLoopImpl implements Agent {
         // turn/start（时间来自注入的 clock，不直接调系统时钟——R1 可测）
         session.append(new TurnStart(clock.millis(), turn));
 
+        // request-context：工作区快照落账，提示词组装读它（R1：值在事件里）。
+        // cwd 来自组合行配置 agent-loop.cwd（it21：与 fs/shell/sandbox 围栏同源）
+        session.append(new RequestHeader(clock.millis(), cwd,
+            clock.instant().atZone(ZoneOffset.UTC).toLocalDate().toString()));
+
         // claim 输入：turn 边界优先普通排队，steering 兜底
         List<UserMessage> claimed = inbox.claim(InboxTarget.NEXT_TURN);
         if (claimed.isEmpty()) claimed = inbox.claim(InboxTarget.NEXT_STEP);
@@ -240,6 +245,8 @@ class AgentLoopImpl implements Agent {
 ```
 
 **turn ≠ seq**（修正前版缺陷）：turn 号是 TurnStart 事件的计数语义，与日志序号无关——中间穿插的 chunk/tool 事件不会推高 turn 号。step 号同理由 loop 在 turn 内自增（从 0 起）。
+
+**工作区单源（it21）**：`request/header.cwd` 的值来自组合行配置 `agent-loop.cwd`（缺省 `user.dir`），不是 loop 自己读进程状态——与 `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 四处同源，四处漂移由 AppBoot 装配期断言拒绝（[07 §5](07-profile-bundle.md)）。提示词组装的上下文段读最新 `request/header`（R1：值在事件里，同日志必同提示词），loop 不隐式读文件系统。
 
 ## 7. Step loop — 请求指纹（R1）与流式消费
 

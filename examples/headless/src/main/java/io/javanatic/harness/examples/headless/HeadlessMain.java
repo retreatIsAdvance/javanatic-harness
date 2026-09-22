@@ -72,8 +72,8 @@ import sun.misc.SignalHandler;
  * 命令行 runner：带任务文本一次性执行，裸 `jh`（无任务、非 --verify）进入 REPL
  * 交互循环；`--resume` 无任务时在既有会话上进 REPL。完整用法见 {@link #USAGE}
  * （`--help` 打印到 stdout，exit 0）：默认 deepseek（需 DEEPSEEK_API_KEY）；
- * `--verify` 无 key 可跑治理断言；`--workspace=` 显式工作区（fs 围栏 / shell
- * workspace / 沙箱授予面同钉一处）；`--approval=` 切审批 Provider；
+ * `--verify` 无 key 可跑治理断言；`--workspace=` 显式工作区（提示词 cwd / fs 围栏 /
+ * shell workspace / 沙箱授予面四处同源）；`--approval=` 切审批 Provider；
  * `--docker/--image=` 容器级隔离。组合为数据（it8 bundle/ConfigService）：
  * CLI 只把参数翻译成组合行 overlay。
  */
@@ -100,8 +100,8 @@ public final class HeadlessMain {
 
         flags:
           -h, --help                 显示本说明(exit 0)
-          --workspace=<dir>          工作区:须为已存在目录;fs 围栏 / shell workspace /
-                                     沙箱授予面三处都钉到此目录。缺省:新建临时目录
+          --workspace=<dir>          工作区:须为已存在目录;提示词 cwd / fs 围栏 / shell
+                                     workspace / 沙箱授予面四处都钉到此目录。缺省:新建临时目录
           --verify                   只跑组合期断言,不创建 agent、不需要 API key
           --policy=STANDARD|PRODUCTION
                                      治理档;PRODUCTION 拒 AUTO 审批 / 非耐久持久化 /
@@ -774,6 +774,8 @@ public final class HeadlessMain {
             // 沙箱授予面与 fs/shell 围栏钉到同一工作区—— Seatbelt 不比围栏宽
             new ConfigRowSpec.Replace("sandbox-policy",
                 Map.of("mode", "workspace-write", "workspace", workspace.toString()), null),
+            // 提示词工作目录与三处围栏同一次扇出(it21):四处同源,AppBoot 装配期断言兜底
+            new ConfigRowSpec.Replace("agent-loop", Map.of("cwd", workspace.toString()), null),
             new ConfigRowSpec.Replace("persistence-jsonl",
                 Map.of("root", sessions.toString()), null)));
         if (options.docker()) {

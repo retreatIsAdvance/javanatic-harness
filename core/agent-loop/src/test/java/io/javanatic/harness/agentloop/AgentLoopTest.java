@@ -24,6 +24,7 @@ import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.SessionEvents;
 import io.javanatic.harness.session.event.FailureKind;
 import io.javanatic.harness.session.event.LoggedEvent;
+import io.javanatic.harness.session.event.RequestHeader;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.StepStart;
 import io.javanatic.harness.session.event.ToolResultEvent;
@@ -37,6 +38,7 @@ import io.javanatic.harness.session.message.TextBlock;
 import io.javanatic.harness.session.message.ToolResultBlock;
 import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.systemprompt.SystemPromptPlugin;
+import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
 import io.javanatic.harness.tools.ToolDefinition;
 import io.javanatic.harness.tools.ToolExecutionResult;
@@ -78,19 +80,27 @@ class AgentLoopTest {
         final Runtime rt;
         final AgentRegistry agents;
         final ToolRegistry tools;
+        final SystemPromptService prompts;
 
         Rig(List<List<StreamChunk>> scripts) {
-            this(scripts, DEFAULT_LIMITS);
+            this(scripts, DEFAULT_LIMITS, null);
         }
 
         Rig(List<List<StreamChunk>> scripts, LoopGuard.Limits limits) {
+            this(scripts, limits, null);
+        }
+
+        /** @param cwd 提示词工作目录；null 走 AgentLoopPlugin 缺省（user.dir） */
+        Rig(List<List<StreamChunk>> scripts, LoopGuard.Limits limits, String cwd) {
             rt = new Runtime();
             new PluginLoader().loadAll(rt, List.of(
                 new SessionStorePlugin(), new AgentPlugin(), new LoopGuardPlugin(limits),
                 new SystemPromptPlugin(), new LlmPlugin(), new ReplayPlugin(scripts),
-                new ApprovalAutoPlugin(), new ToolsPlugin(), new AgentLoopPlugin(FIXED_CLOCK)));
+                new ApprovalAutoPlugin(), new ToolsPlugin(),
+                cwd == null ? new AgentLoopPlugin(FIXED_CLOCK) : new AgentLoopPlugin(FIXED_CLOCK, cwd)));
             agents = rt.root().require(AgentRegistry.KEY);
             tools = rt.root().require(ToolRegistry.KEY);
+            prompts = rt.root().require(SystemPromptService.KEY);
         }
 
         AgentHandle agent(String rawId) {
@@ -194,6 +204,27 @@ class AgentLoopTest {
             assertThat(first.event()).isEqualTo(new TurnStart(FIXED_MILLIS, 1));
             assertThat(agent.status()).isEqualTo(AgentStatus.IDLE);
             assertThat(reasons(agent.session())).containsExactly(new TurnEndReason.Completed());
+        }
+    }
+
+    /** it21 单源：组合配置的 cwd 经 request/header 落账，提示词上下文段随后读它（R1）。 */
+    @Test
+    void configuredCwdReachesRequestHeaderAndPrompt() {
+        try (Rig rig = new Rig(List.of(say("ok")), DEFAULT_LIMITS, "/ws/configured")) {
+            Agent agent = rig.agent("a1").agent();
+            agent.followup(text("hi"));
+            agent.whenIdle().join();
+
+            List<RequestHeader> headers = agent.session().events().stream()
+                .map(LoggedEvent::event)
+                .filter(RequestHeader.class::isInstance)
+                .map(RequestHeader.class::cast)
+                .toList();
+            assertThat(headers).singleElement().satisfies(header ->
+                assertThat(header.cwd()).isEqualTo("/ws/configured"));
+            assertThat(rig.prompts.assemble(agent.session()))
+                .contains("Current context:")
+                .contains("- working directory: /ws/configured");
         }
     }
 

@@ -1,0 +1,27 @@
+# 突变 B：轮首 cwd 回退进程工作目录，期望 configuredCwdReachesRequestHeaderAndPrompt 必红
+# 基线 commit: 722c82f （S-a 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD SUCCESS|BUILD FAILURE|<<<|workspace drift|\[ERROR\]'）
+$ mvn -B -pl core/agent-loop -am test -Dtest=AgentLoopTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 22, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.433 s <<< FAILURE! -- in io.javanatic.harness.agentloop.AgentLoopTest
+[ERROR] io.javanatic.harness.agentloop.AgentLoopTest.configuredCwdReachesRequestHeaderAndPrompt -- Time elapsed: 0.009 s <<< FAILURE!
+[ERROR] Failures:
+[ERROR]   AgentLoopTest.configuredCwdReachesRequestHeaderAndPrompt:223
+[ERROR] Tests run: 22, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-core-agent-loop: There are test failures.
+[ERROR]
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/core/agent-loop/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR]
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-core-agent-loop
+EXIT=1
+# 还原: AgentLoopImpl.java 与备份逐字节一致

@@ -15,6 +15,7 @@ import io.javanatic.harness.sandbox.sandbox.SandboxProvider;
 import io.javanatic.harness.session.Session;
 
 import java.io.IOException;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -192,6 +193,7 @@ public final class AppBoot {
         // 双向校验对照全量行(禁用行也算引用——它在组合里,只是不加载)
         verifyComposition(discovered, rows);
         List<ConfigRowSpec> enabled = resolve(rows);
+        verifyWorkspaceAlignment(enabled);
 
         Runtime runtime = new Runtime();
         Scope root = runtime.root();
@@ -248,6 +250,50 @@ public final class AppBoot {
                 + " Options: install bubblewrap, or overlay mode: danger-full-access"
                 + " (explicit bypass).");
         };
+    }
+
+    /** workspace 承载键(it21 单源):四处围栏/提示词源——同组合必须同值。 */
+    private static final Map<String, String> WORKSPACE_KEYS = Map.of(
+        "agent-loop", "cwd",
+        "fs-local", "root",
+        "sandbox-policy", "workspace",
+        "shell-tool", "workspace");
+
+    /**
+     * workspace 单源断言(it21):已加载行里出现的 workspace 承载键必须同值——
+     * 漂移是组合错误,不是「交集生效」的静默语义(装配期 fail loud)。
+     *
+     * @throws IllegalStateException 出现两个及以上不同值,或值不是字符串时
+     */
+    private static void verifyWorkspaceAlignment(List<ConfigRowSpec> enabled) {
+        Map<String, String> declared = new LinkedHashMap<>();
+        for (ConfigRowSpec row : enabled) {
+            String key = WORKSPACE_KEYS.get(row.plugin());
+            Object value = key == null ? null : row.config().get(key);
+            if (value == null) {
+                continue;
+            }
+            if (!(value instanceof String text)) {
+                throw new IllegalStateException("workspace key " + row.plugin() + "." + key
+                    + " must be a string, got: " + value.getClass().getSimpleName());
+            }
+            declared.put(row.plugin() + "." + key, text);
+        }
+        Set<String> normalized = new HashSet<>();
+        declared.values().forEach(value -> normalized.add(normalizedPath(value)));
+        if (normalized.size() > 1) {
+            throw new IllegalStateException("workspace drift: " + declared
+                + " —— 提示词 cwd 与 fs/shell/sandbox 围栏必须同源(it21)");
+        }
+    }
+
+    /** 比较用归一(尾斜杠/./..);非法路径原样参与比较,不放宽相等性判定。 */
+    private static String normalizedPath(String value) {
+        try {
+            return Path.of(value).normalize().toString();
+        } catch (InvalidPathException e) {
+            return value;
+        }
     }
 
     /** 双向显式:行引用必须存在;发现的插件必须被引用(disabled 行也算引用)。 */

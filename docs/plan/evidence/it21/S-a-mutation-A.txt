@@ -1,0 +1,27 @@
+# 突变 A：workspace 漂移断言失效（size()>1 → >99），期望 workspaceDriftFailsLoudNamingEveryDeclaredValue 必红
+# 基线 commit: 722c82f （S-a 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器: grep -E 'Tests run:|BUILD SUCCESS|BUILD FAILURE|<<<|workspace drift|\[ERROR\]'）
+$ mvn -B -pl bundle/base -am test -Dtest=AppBootTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 16, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.322 s <<< FAILURE! -- in io.javanatic.harness.boot.AppBootTest
+[ERROR] io.javanatic.harness.boot.AppBootTest.workspaceDriftFailsLoudNamingEveryDeclaredValue -- Time elapsed: 0.180 s <<< FAILURE!
+[ERROR] Failures:
+[ERROR]   AppBootTest.workspaceDriftFailsLoudNamingEveryDeclaredValue:148
+[ERROR] Tests run: 16, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-bundle-base: There are test failures.
+[ERROR]
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/bundle/base/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR]
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-bundle-base
+EXIT=1
+# 还原: AppBoot.java 与备份逐字节一致

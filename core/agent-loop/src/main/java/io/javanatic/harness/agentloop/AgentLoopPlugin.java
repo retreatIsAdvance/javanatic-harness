@@ -8,6 +8,8 @@ import io.javanatic.harness.agent.AgentRegistry;
 import io.javanatic.harness.agent.CancelOptions;
 import io.javanatic.harness.agent.CreateAgentOptions;
 import io.javanatic.harness.agent.ResumeAgentOptions;
+import io.javanatic.harness.kernel.config.ConfigService;
+import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
@@ -21,6 +23,7 @@ import io.javanatic.harness.tools.ToolExecutor;
 import io.javanatic.harness.tools.ToolRegistry;
 
 import java.time.Clock;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.Objects;
 import java.util.Set;
@@ -30,19 +33,31 @@ import java.util.concurrent.CompletableFuture;
  * 注册 agent 工厂（id "agent-loop"）。全部治理依赖在 apply 期解析——
  * 组合缺任一（agents/llm/tools/loop-guard/system-prompt/session-store 未装载）
  * 即装载失败（R4：装配期 fail loud，不是首 turn 裸奔）。
+ *
+ * <p>两条装配路径等价（同 loop-guard 先例）：显式构造器（程序化组合）或无参 +
+ * ConfigService 行配置（数据组合，07 §4）。行配置 {@code cwd}（缺省进程工作目录）
+ * 是轮首 {@link io.javanatic.harness.session.event.RequestHeader} 的工作目录来源——
+ * 与 fs/shell/sandbox 围栏同源（it21 单源断言在 AppBoot 装配期强制）。
  */
 public final class AgentLoopPlugin implements Plugin {
 
     private final Clock clock;
+    private final String cwd;
 
-    /** 数据组合路径：系统时钟（测试注入冻结钟用显式构造器）。 */
+    /** 数据组合路径：cwd 从行配置解析（缺省 {@code user.dir}）。 */
     public AgentLoopPlugin() {
-        this(Clock.systemUTC());
+        this(Clock.systemUTC(), null);
     }
 
-    /** @param clock 事件时间来源（R1：测试注入冻结钟） */
+    /** @param clock 事件时间来源（R1：测试注入冻结钟）；cwd 走行配置/缺省 */
     public AgentLoopPlugin(Clock clock) {
+        this(clock, System.getProperty("user.dir"));
+    }
+
+    /** @param clock 事件时间来源；@param cwd 提示词工作目录（程序化组合的显式选择） */
+    public AgentLoopPlugin(Clock clock, String cwd) {
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.cwd = cwd;
     }
 
     @Override
@@ -64,13 +79,24 @@ public final class AgentLoopPlugin implements Plugin {
             scope.require(ToolExecutor.KEY),
             scope.require(SystemPromptService.KEY),
             scope.require(LoopGuard.KEY),
-            clock)));
+            clock, resolveCwd(scope))));
+    }
+
+    /** 行配置 cwd；缺省进程工作目录（与 it21 前 RequestHeader 的来源逐字等价）。 */
+    private String resolveCwd(Scope scope) {
+        if (cwd != null) {
+            return cwd;
+        }
+        Map<String, Object> config = scope.require(ConfigService.KEY).configFor(id());
+        String configured = ConfigValues.stringValue(config, id(), "cwd", null);
+        return configured == null || configured.isEmpty()
+            ? System.getProperty("user.dir") : configured;
     }
 
     /** 工厂本体：不可变依赖束（record）+ create/resume。 */
     private record Factory(AgentRegistry registry, LlmService llm, ToolRegistry tools,
                            ToolExecutor executor, SystemPromptService prompts, LoopGuard guard,
-                           Clock clock) implements AgentFactory {
+                           Clock clock, String cwd) implements AgentFactory {
 
         @Override
         public AgentHandle create(Scope owner, CreateAgentOptions options) {
@@ -104,7 +130,7 @@ public final class AgentLoopPlugin implements Plugin {
                 }
             }
             AgentLoopImpl agent = new AgentLoopImpl(agentScope, session, owner.require(SessionStore.KEY),
-                llm(), tools(), executor(), prompts(), guard(), registry(), clock(), agentOptions,
+                llm(), tools(), executor(), prompts(), guard(), registry(), clock(), cwd(), agentOptions,
                 agentScope.resolve(CompactionService.KEY).orElse(null));
             agentScope.require(Runtime.KEY).events()
                 .notify(AgentEvents.CREATED, agentScope, agent, agent);

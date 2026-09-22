@@ -65,3 +65,7 @@ rows:
     # 上下文窗口是模型属性,base 不猜数——启用需 overlay 给 contextWindow(或 maxContextTokens)
     disabled: true
   - plugin: agent-loop
+    config:
+      # 工作区单源(it21):与 fs-local.root / shell-tool.workspace / sandbox-policy.workspace
+      # 同值——提示词 cwd 与三处围栏由 AppBoot 装配期断言绑定,漂移 fail loud
+      cwd: ${cwd}

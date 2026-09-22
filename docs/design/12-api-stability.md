@@ -102,8 +102,9 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | shell-docker | `image` / `maxOutputBytes` | 镜像须本机在场（不自动拉取）|
 | todo | `allowParallelInProgress` | 并行 in_progress 开关 |
 | presets | `root` / `presets` | preset 组合 |
+| agent-loop | `cwd` | 提示词上下文工作目录（`request/header` 落账值；缺省 `user.dir`）。与 `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 同源——四处漂移装配期拒绝（[07 §5](07-profile-bundle.md)）|
 
-无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-ask` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`commands`、`agent-loop`（24 个 base 行 id = 12 可配 + 12 无配）。
+无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-ask` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`commands`（24 个 base 行 id = 13 可配 + 11 无配）。
 
 - **插值白名单**（[07](07-profile-bundle.md)）：`${env:NAME}` / `${props:NAME}` / `${cwd}` / `${home}` / `:-默认值`；比较式 `==` / `!=`（右操作数 `null` 或 `'literal'`）——无任意代码；源不在白名单 fail loud。
 - **三层叠加**：bundle 行 → profile 行 → CLI flag overlay（AppBoot 装配序）；行动作为互斥 sealed 联合（include / replace / remove / insert）。

@@ -80,6 +80,7 @@ public final class AgentLoopImpl implements Agent {
     private final LoopGuard guard;
     private final AgentRegistry registry;
     private final Clock clock;
+    private final String cwd;
     private final AgentOptions options;
     private final Events events;
     private final Inbox inbox = new Inbox();
@@ -97,8 +98,8 @@ public final class AgentLoopImpl implements Agent {
     // CHECKSTYLE:OFF ParameterNumber —— R4 构造器强制:治理依赖全显式注入(04 §4),拆分即弱化证明
     AgentLoopImpl(Scope agentScope, Session session, SessionStore store, LlmService llm,
                   ToolRegistry tools, ToolExecutor executor, SystemPromptService prompts,
-                  LoopGuard guard, AgentRegistry registry, Clock clock, AgentOptions options,
-                  CompactionService compaction) {
+                  LoopGuard guard, AgentRegistry registry, Clock clock, String cwd,
+                  AgentOptions options, CompactionService compaction) {
         this.agentScope = Objects.requireNonNull(agentScope, "agentScope");
         this.session = Objects.requireNonNull(session, "session");
         this.store = Objects.requireNonNull(store, "store");
@@ -109,6 +110,7 @@ public final class AgentLoopImpl implements Agent {
         this.guard = Objects.requireNonNull(guard, "guard");
         this.registry = Objects.requireNonNull(registry, "registry");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.cwd = Objects.requireNonNull(cwd, "cwd");
         this.options = Objects.requireNonNull(options, "options");
         this.compaction = compaction;
         this.events = agentScope.require(Runtime.KEY).events();
@@ -281,9 +283,9 @@ public final class AgentLoopImpl implements Agent {
             int turn = ++nextTurn;
             overflowRetries = 0;
             session.append(new TurnStart(clock.millis(), turn));
-            // request-context:进程环境快照落账,提示词组装读它(R1:值在事件里)
-            session.append(new RequestHeader(clock.millis(),
-                System.getProperty("user.dir"),
+            // request-context:工作区快照落账,提示词组装读它(R1:值在事件里)。
+            // cwd 来自组合配置(agent-loop.cwd),与 fs/shell/sandbox 围栏同源(it21)
+            session.append(new RequestHeader(clock.millis(), cwd,
                 clock.instant().atZone(ZoneOffset.UTC).toLocalDate().toString()));
 
             List<UserMessage> claimed = inbox.claim(InboxTarget.NEXT_TURN);

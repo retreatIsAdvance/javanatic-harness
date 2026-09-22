@@ -174,6 +174,8 @@ public final class AppBoot {
 
 **为什么双向校验**：只查 (a) 会留下"jar 在 classpath 上就悄悄挂载"的隐式行为——这正是 dsh "never silently skip a missing referent" 的反面（never silently mount an unreferenced plugin）。显式组合 = 行之外无挂载，行之内无缺失。
 
+**工作区单源（it21）**：工作区是四个键的同一事实——`agent-loop.cwd`（提示词上下文）、`fs-local.root`（文件围栏）、`shell-tool.workspace`（shell 起点）、`sandbox-policy.workspace`（沙箱授予面）。装配在 `resolve` 之后、加载之前逐键取 enabled 行的 config：声明值归一化（`Path.normalize`，尾斜杠不算漂移）后多于一个不同值即 `IllegalStateException`（点名每个声明键与值），非字符串值同拒。缺键视为未声明——不参与比对，由各插件自己的文档化缺省兜底（如 `agent-loop` 缺省 `user.dir`）。去掉的是"漂移 = 交集生效"的静默语义：不写断言时四处可以各指一处目录而无人报错。
+
 **CompositionManifest**（R1，03 §8）：boot 从行序 + 插件版本（module descriptor）+ 影响模型可见输出的 config 值生成清单，注册为服务；`session-store` 创建 SessionHeader 时消费它。清单 + 日志 = 可重建性的全部持久化事实。
 
 ## 6. `--verify` 与 policy 档位（R4）

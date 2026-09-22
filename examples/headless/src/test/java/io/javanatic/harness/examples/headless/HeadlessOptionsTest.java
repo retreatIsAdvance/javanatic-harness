@@ -1,9 +1,13 @@
 package io.javanatic.harness.examples.headless;
 
+import io.javanatic.harness.kernel.config.ConfigRowSpec;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -79,6 +83,22 @@ class HeadlessOptionsTest {
             new String[] {"t", "--workspace=" + workspace.resolve("missing")}))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("--workspace");
+    }
+
+    /** it21 单源:一次扇出钉四处(it21 前漏 agent-loop → 提示词 cwd 与围栏漂移)。 */
+    @Test
+    void overlaysPinAllWorkspaceKeysToTheSameDirectory() {
+        HeadlessMain.RunnerOptions options = HeadlessMain.parse(new String[] {"t"});
+        Map<String, Map<String, Object>> byPlugin = new HashMap<>();
+        for (ConfigRowSpec row : HeadlessMain.buildOverlays(options, workspace, sessions)) {
+            if (row instanceof ConfigRowSpec.Replace replace) {
+                byPlugin.put(replace.plugin(), replace.config());
+            }
+        }
+        assertThat(byPlugin.get("fs-local")).containsEntry("root", workspace.toString());
+        assertThat(byPlugin.get("shell-tool")).containsEntry("workspace", workspace.toString());
+        assertThat(byPlugin.get("sandbox-policy")).containsEntry("workspace", workspace.toString());
+        assertThat(byPlugin.get("agent-loop")).containsEntry("cwd", workspace.toString());
     }
 
     @Test
