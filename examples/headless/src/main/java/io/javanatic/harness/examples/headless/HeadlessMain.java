@@ -40,6 +40,8 @@ import io.javanatic.harness.session.persistence.WriterLockException;
 import io.javanatic.harness.systemprompt.PromptSection;
 import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ApprovalService;
+import io.javanatic.harness.tools.ToolDefinition;
+import io.javanatic.harness.tools.ToolRegistry;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -600,8 +602,9 @@ public final class HeadlessMain {
 
     /**
      * 07 §6 治理摘要（--verify 成功路径 stdout；承诺「来自实现自述」）：组合计数 +
-     * 审批模式 / 审计耐久 / 停止上限——模式、耐久与 limits 全部读实现
-     * （{@code ApprovalService.mode()} 等），行数/发现数读 boot 与清单；不印文档常量。
+     * 审批模式 / 审计耐久 / 停止上限——模式、耐久、limits 与免审批工具名单全部读实现
+     * （{@code ApprovalService.mode()}、{@code ToolRegistry.definitions} 等），行数/发现数
+     * 读 boot 与清单；不印文档常量。
      * 走到这里 Policy.check 已过——治理服务缺失在 boot 期即违规（exit 1）。
      */
     static List<String> governanceSummary(AppBoot.Booted booted, RunnerOptions options, Scope root) {
@@ -615,11 +618,26 @@ public final class HeadlessMain {
             "Profile: " + booted.profileName() + "   policy: " + options.policy(),
             "  composition: " + manifest.rows().size() + " rows, " + booted.discovered()
                 + " discovered, " + booted.unreferenced() + " unreferenced",
-            "  approval: " + approval.mode() + " (" + mountedRow(manifest, "approval-").plugin() + ")",
+            "  approval: " + approval.mode() + " (" + mountedRow(manifest, "approval-").plugin()
+                + "; exempt=" + exemptText(root) + ")",
             "  audit: " + audit.plugin().replaceFirst("^persistence-", "") + " "
                 + configText(audit, "root") + (persistence.durable() ? " (durable)" : " (non-durable)"),
             "  stop: max-turns=" + limits.maxTurns() + " max-steps=" + limits.maxStepsPerTurn()
                 + " budget=" + (budget > 0 ? Long.toString(budget) : "unlimited"));
+    }
+
+    /**
+     * 免审批工具点名（R4 声明面自述）：approvalExempt 声明的工具名,名称序;无声明
+     * 或未挂工具面印 `-`——摘要只说组合里的事实。
+     */
+    private static String exemptText(Scope root) {
+        List<String> names = root.resolve(ToolRegistry.KEY)
+            .map(registry -> registry.definitions(root).stream()
+                .filter(ToolDefinition::approvalExempt)
+                .map(ToolDefinition::name)
+                .toList())
+            .orElseGet(List::of);
+        return names.isEmpty() ? "-" : String.join(",", names);
     }
 
     /**

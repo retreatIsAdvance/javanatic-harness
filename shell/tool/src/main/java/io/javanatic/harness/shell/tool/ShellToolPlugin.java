@@ -101,7 +101,8 @@ public final class ShellToolPlugin implements Plugin {
                 return result.exitCode() == 0
                     ? ToolExecutionResult.success(format(result))
                     : ToolExecutionResult.error(format(result));
-            });
+            },
+            false);
         scope.onClose(registry.register(scope, bash));
     }
 

@@ -2,7 +2,12 @@
 # 基线 commit: 2b625e1（S-a 编辑在工作树，未提交）
 # 输出 = 决定性行（过滤器: 模块边界行 + "-- in io." 类级行 + 模块级 Tests run 汇总 + BUILD）；
 #   个别类级行前黏连被测试打印的 [approval] 提示，此处截到 "[INFO] Tests run:" 尾段（机械截取，不改内容）
-# 命令复跑核验：同命令重跑，模块集合与计数逐项一致（40 模块 / 962 tests / 0 failures / 0 errors）
+# 命令复跑核验：同命令重跑，模块集合与计数逐项一致
+# 计数订正（2026-09-22，it22 S-b 期发现本行 962 为双计）：正确口径 = 只加模块级 "Tests run:" 汇总行
+#   （锚在行尾、无 "Time elapsed"），并交叉核对类级行之和；两者独立求和相等。本条命令真实计数 490。
+#   复算命令（模块级行数 28 / 类级行数 70 / 两者之和均 490 / 0 failures / 0 errors）：
+#   python3 -c "import re;t=open('<log>').read();m=re.findall(r'Tests run: (\d+), Failures: (\d+), Errors: (\d+), Skipped: (\d+)\s*$',t,re.M);print(len(m),sum(int(r[0]) for r in m))"
+# 模块集合：41 个（含 10 个 packaging=pom 聚合器）；其中 28 个有测试，类级测试类 70 个。
 $ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
 $ mvn -B -pl session/persistence-jsonl,examples/headless -am test
 
@@ -29,6 +34,6 @@ $ mvn -B -pl session/persistence-jsonl,examples/headless -am test
 [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in io.javanatic.harness.examples.headless.HeadlessProfileTest
 [INFO] Tests run: 69, Failures: 0, Errors: 0, Skipped: 0
 
-全 reactor 合计: tests=962 failures=0 errors=0
+全 reactor 合计: tests=490 failures=0 errors=0（计数订正见头部注；同日志复跑于 it22 S-b 期核验一致）
 [INFO] BUILD SUCCESS
 EXIT=0

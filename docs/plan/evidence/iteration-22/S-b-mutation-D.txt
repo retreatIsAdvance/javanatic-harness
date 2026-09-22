@@ -1,0 +1,26 @@
+# 突变 D：wire 真值丢失（codec 读回时 `concludesTurn` 恒 false——写侧仍写 true），期望必红
+# 基线 commit: 291ad22（S-b 编辑在工作树，未提交）
+# 突变点: session/persistence-jsonl/.../CoreCodecs.java:146  `b.get("concludesTurn").asBool()` → `false`
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言详情 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl session/persistence-jsonl -am test -Dtest=JsonlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 24, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.378 s <<< FAILURE! -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest
+[ERROR] io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest.concludingToolResultRoundTripsTrueFlag -- Time elapsed: 0.016 s <<< FAILURE!
+Expecting actual:
+  [ToolCallEvent[... callId=q1, name=ask_user, arguments={}],
+    ToolResultEvent[..., block=ToolResultBlock[toolUseId=q1, content=哪个目录?, isError=false], concludesTurn=false, ...]]
+to contain exactly (and in same order):
+  [ToolCallEvent[...],
+    ToolResultEvent[..., concludesTurn=true, ...]]
+but some elements were not found:
+  [ToolResultEvent[..., concludesTurn=true, ...]]
+and others were not expected:
+  [ToolResultEvent[..., concludesTurn=false, ...]]
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 腿义：S-b 新增的往返用例首次把 true 值钉进 wire 契约（此前仅有 false 值覆盖）；突变下读回丢真值即红。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-b-regreen.txt

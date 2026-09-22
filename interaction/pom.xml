@@ -16,6 +16,7 @@
 
     <modules>
         <module>approval</module>
+        <module>ask</module>
         <module>commands</module>
     </modules>
 </project>

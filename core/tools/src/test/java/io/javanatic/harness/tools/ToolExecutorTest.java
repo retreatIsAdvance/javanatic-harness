@@ -18,6 +18,7 @@ import io.javanatic.harness.session.message.ToolUseBlock;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -393,6 +394,73 @@ class ToolExecutorTest {
                 .containsExactly("aaa", "echo"); // 名称排序，确定性
             assertThat(rig.registry.schemas(rig.rt.root()).get(1).parametersJson()).contains("\"path\"");
             assertThat(rig.registry.resolve(rig.rt.root(), "ghost")).isEmpty();
+        }
+    }
+
+    @Test
+    void exemptToolSkipsApprovalAndConcludesTurn() {
+        RecordingApproval approval = new RecordingApproval();
+        ToolDefinition ask = ToolDefinition.ofExempt("ask", "问", ARGS,
+            (args, ctx) -> ToolExecutionResult.concluding(args.readString("path")));
+        try (Rig rig = Rig.with(approval)) {
+            rig.registry.register(rig.rt.root(), ask);
+            rig.registry.register(rig.rt.root(), echo());
+            Session session = Session.create(Session.newId("t"), null, null);
+            List<LoggedEvent<ToolResultEvent>> out = rig.executor.execute(List.of(
+                    new ToolUseBlock(CallId.of("a"), "ask", "{\"path\":\"继续吗\"}"),
+                    call("b", "{\"path\":\"x\"}")),
+                session, 0, 0, rig.rt.root(), AbortSignal.never());
+            assertThat(approval.requested).containsExactly("echo"); // 免审批声明:审批 stage 不被惊动
+            assertThat(out.getFirst().event().block())
+                .isEqualTo(new ToolResultBlock(CallId.of("a"), "继续吗", false));
+            assertThat(out.getFirst().event().concludesTurn()).isTrue(); // 停轮位随结果落账(R2)
+            assertThat(out.get(1).event().concludesTurn()).isFalse();
+        }
+    }
+
+    @Test
+    void unknownToolIsNotAnApprovalQuestion() {
+        RecordingApproval approval = new RecordingApproval();
+        try (Rig rig = Rig.with(approval)) {
+            rig.registry.register(rig.rt.root(), echo());
+            Session session = Session.create(Session.newId("t"), null, null);
+            List<LoggedEvent<ToolResultEvent>> out = rig.executor
+                .execute(List.of(new ToolUseBlock(CallId.of("c1"), "ghost", "{}")),
+                    session, 0, 0, rig.rt.root(), AbortSignal.never());
+            assertThat(out.getFirst().event().block().content()).contains("Unknown tool");
+            assertThat(approval.requested).isEmpty(); // 解析先于审批:未知工具不是审批问题
+        }
+    }
+
+    @Test
+    void definitionsExposeApprovalExemptionFaceSorted() {
+        try (Rig rig = Rig.with(Approvals.auto())) {
+            rig.registry.register(rig.rt.root(), echo());
+            rig.registry.register(rig.rt.root(), ToolDefinition.ofExempt("ask", "问", ARGS,
+                (a, c) -> ToolExecutionResult.concluding("x")));
+            assertThat(rig.registry.definitions(rig.rt.root())).extracting(ToolDefinition::name)
+                .containsExactly("ask", "echo"); // 治理自述面:名称序,全量
+            assertThat(rig.registry.definitions(rig.rt.root()).stream()
+                .filter(ToolDefinition::approvalExempt).map(ToolDefinition::name))
+                .containsExactly("ask");
+            assertThat(rig.registry.definitions(rig.rt.root()).stream()
+                .filter(definition -> !definition.approvalExempt()).map(ToolDefinition::name))
+                .containsExactly("echo");
+        }
+    }
+
+    /** 记录审批面的测试替身:免审批声明是否真的跳过 stage,由它证。 */
+    private static final class RecordingApproval implements ApprovalService {
+        private final List<String> requested = new CopyOnWriteArrayList<>();
+
+        @Override
+        public Mode mode() {
+            return Mode.HUMAN_GATE;
+        }
+
+        @Override
+        public void require(ApprovalRequest request, AbortSignal signal) {
+            requested.add(request.toolName());
         }
     }
 

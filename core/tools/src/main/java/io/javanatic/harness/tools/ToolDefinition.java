@@ -4,12 +4,16 @@ package io.javanatic.harness.tools;
 import java.util.Objects;
 
 /**
- * 一个工具：schema、渲染意图与执行函数。审计对（tool/call + tool/result）
+ * 一个工具：schema、渲染意图、执行函数与审批声明。审计对（tool/call + tool/result）
  * 归 ToolExecutor 无条件落账（R2/R4），工具在结构上无法「执行了但不留痕」；
  * 工具可经 {@link ToolExecutionContext#session()} 追加领域事件（非审计）。
+ *
+ * <p>approvalExempt 是声明面（R4）：true 的工具调用不经审批 stage——只给无副作用
+ * 的交互工具（ask_user 提问本身不是动作，批准它等于双重交互）；缺省 false，审批
+ * 是常态。声明在组合期可枚举（{@link ToolRegistry#definitions}），治理摘要点名。
  */
 public record ToolDefinition(String name, String description, ValueSchema parameters,
-                             RenderIntent render, Tool tool) {
+                             RenderIntent render, Tool tool, boolean approvalExempt) {
 
     /** @throws NullPointerException 任一字段为 null 或 name 为空时 */
     public ToolDefinition {
@@ -30,8 +34,14 @@ public record ToolDefinition(String name, String description, ValueSchema parame
         ToolExecutionResult execute(ToolArgs args, ToolExecutionContext context) throws Exception;
     }
 
-    /** 便捷工厂（渲染 GENERIC）。 */
+    /** 便捷工厂（渲染 GENERIC；要求审批）。 */
     public static ToolDefinition of(String name, String description, ValueSchema parameters, Tool tool) {
-        return new ToolDefinition(name, description, parameters, RenderIntent.GENERIC, tool);
+        return new ToolDefinition(name, description, parameters, RenderIntent.GENERIC, tool, false);
+    }
+
+    /** 免审批工厂（渲染 GENERIC）：仅限无副作用的交互工具（见类 javadoc）。 */
+    public static ToolDefinition ofExempt(String name, String description,
+                                          ValueSchema parameters, Tool tool) {
+        return new ToolDefinition(name, description, parameters, RenderIntent.GENERIC, tool, true);
     }
 }

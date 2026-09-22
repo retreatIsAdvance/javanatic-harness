@@ -1,4 +1,4 @@
-# 迭代 22 — 会话操作与人工协作（状态：进行中——S-a 到点，packet 已出待放行；S-b/S-c 待开工）
+# 迭代 22 — 会话操作与人工协作（状态：进行中——S-a 已放行提交 291ad22；S-b 到点，packet 待放行；S-c 待开工）
 
 模块：`session/persistence` + `session/persistence-jsonl`（会话目录只读列举面）· `interaction/ask`（新：`ask_user` 工具）· `core/tools`（`concludesTurn` 通道实装 + 免审批声明）· `interaction/approval`（空闲上限）· `examples/headless`（`--sessions` / `--approval-timeout` / `/cancel` / 提问出口）· 文档（02/03/04/05/07/12 + USAGE + README 双语 + AGENTS）
 
@@ -73,9 +73,10 @@
   - CLI：`--sessions[=<N>]`、`--approval-timeout=<秒>`（0=不设限）、REPL `/cancel`、退出码 5（等待人工答复）
   - 测试：`SessionSummary` 列举（有界/缺目录/坏 header/seed-only/锁占用探针）、`--sessions` CLI（排序/上限/互斥用法错误）、`ask_user` 全链（停轮落账 / `approval=ask|deny` 下不产审批 / resume 答复闭环 / 回放不重放）、`ApprovalPrompt` 空闲上限（超时拒绝 + 文案 + EOF 仍即时）、`/cancel` 收敛
 - **MODIFIED**：
-  - `ToolExecutorImpl.appendResult`：`concludesTurn` 取 `result.concludesTurn()`（不再硬编码 `false`，`:171`）；stage 3 审批对免审批工具不触发（`:140-143`）
+  - `ToolExecutorImpl.appendResult`：`concludesTurn` 取 `result.concludesTurn()`（不再硬编码 `false`，`:171`）；stage 3 审批对免审批工具不触发（`:140-143`→`:147-151`）；**工具解析前置到审批之前**（未知工具不再先惊动审批——S-b 期偏离，见偏离表）
+  - `ToolRegistry` / `ScopedRegistry`：增 `definitions(Scope)`（名称序的声明面枚举——R4 治理可见性；`merged` 之上的只读投影）
   - `ApprovalPrompt.stdin()` → `stdin(Duration idleTimeout)`（空闲上限；调用方 headless 计算有效值：交互终端 0 / 非交互 300s / flag 覆盖）
-  - `HeadlessMain`：USAGE（flags/退出码/REPL 命令 + ask_user 出口契约）；`Options` 增 `sessions`/`approvalTimeout`；`finishOneShot` 增「等待答复」分支（stdout=提问 + stderr 指引 + exit 5）；`runRepl` 注册 `/cancel`；横幅带 session id；`--resume` 未知 id 归一到 exit 3 + 指引；治理摘要 `approval:` 行点名免审批工具
+  - `HeadlessMain`：USAGE（flags/退出码/REPL 命令 + ask_user 出口契约）；`Options` 增 `sessions`/`approvalTimeout`；`finishOneShot` 增「等待答复」分支（stdout=提问 + stderr 指引 + exit 5）；`runRepl` 注册 `/cancel`；横幅带 session id；`--resume` 未知 id 归一到 exit 3 + 指引；治理摘要 `approval:` 行点名免审批工具（`exemptText`，S-b）
   - `bundle/base bundle.yml`：`ask-user` 行（工具面）；plan 档工具清单文本补 `ask_user`（`bundle.yml:30`——提问无副作用，只读期允许）
   - 文档：02（模块表 + 新模块）、03（`ToolResultEvent` javadoc「ask_user 类工具为 true」→ 实况）、04（§「数据驱动停 turn」补 ask_user 实装）、05（工具契约：停轮位与免审批声明）、07（治理摘要口径）、12（§5 配置键 `approval` 等待界 + §6 CLI/退出码/命令面）、README 双语（快速开始补 `--sessions` 与问答闭环）、AGENTS「现状」
 - **REMOVED**：无
@@ -86,29 +87,30 @@
 |---|---|---|
 | `session/persistence/.../SessionPersistence.java:41-45` | 增 `list` + `SessionSummary`（seam 契约；05 同步） | ✓ S-a（代码；05 文档待收尾） |
 | `session/persistence-jsonl/.../JsonlPersistence.java:112-115`（dir 解析 / not-on-disk）、`:245-274`（WriterLock）、`:321` / `:390-395`（header 写） | 列举实现：目录扫描 + header 读 + log 首尾有界读 + 锁探针（不创建文件） | ✓ S-a |
-| `core/tools/.../ToolDefinition.java:11-12` + `:34-36` | 免审批声明 + `ofExempt`（`of` 缺省要求审批，36 调用点不动） | |
-| `core/tools/.../ToolExecutionResult.java:7-25` | `concludesTurn` 位 + `concluding(...)` 工厂（`new ToolExecutionResult(` 仅 2 处：记录自身工厂） | |
-| `core/tools/.../ToolExecutorImpl.java:140-143`（审批 stage）+ `:167-172`（appendResult） | 免审批跳过 + `concludesTurn` 贯通 | |
-| `interaction/ask/**`（新） | `ask_user` 工具 + 插件（`concludesTurn=true` 结果） | |
+| `core/tools/.../ToolDefinition.java:11-12` + `:34-36` | 免审批声明 + `ofExempt`（`of` 缺省要求审批，36 调用点不动） | ✓ S-b（`of(...)` 签名不变、既有调用点全不动；直接 `new ToolDefinition(...)` 仅 `shell/tool` 一处补末参 `false`） |
+| `core/tools/.../ToolExecutionResult.java:7-25` | `concludesTurn` 位 + `concluding(...)` 工厂（`new ToolExecutionResult(` 仅 2 处：记录自身工厂） | ✓ S-b |
+| `core/tools/.../ToolExecutorImpl.java:140-143`（审批 stage）+ `:167-172`（appendResult） | 免审批跳过 + `concludesTurn` 贯通 | ✓ S-b（另按 S-b 口径把工具解析前置到审批之前——未知工具不再先惊动审批） |
+| `interaction/ask/**`（新） | `ask_user` 工具 + 插件（`concludesTurn=true` 结果） | ✓ S-b |
+| 治理摘要 `exempt=` 行（R4 输出面；`ToolRegistry.definitions(Scope)` + `HeadlessMain.exemptText`） | 免审批声明在组合期可枚举并在摘要点名 | ✓ S-b |
 | `interaction/approval/.../ApprovalPrompt.java:39-71` | `stdin(Duration)` 空闲上限（超时=拒绝 + 文案） | |
 | `examples/headless/.../HeadlessMain.java:88-154`（USAGE）、`:158-180`（Options）、`:223-278`（parse）、`:380-407`（session id / resume）、`:443-512`（finishOneShot / 退出码 / finalAnswerText）、`:555-564`（治理摘要）、`:586-605`（runRepl 命令注册 / 横幅） | 全链出口：`--sessions` / `--approval-timeout` / `/cancel` / 横幅 / exit 5 / 未知 id 指引 | S-a 部分完成（`--sessions` / 横幅 / 未知 id 指引）；`--approval-timeout` / `/cancel` / exit 5 属 S-c |
-| `bundle/base/.../bundle.yml:24-32`（工具与 plan 行）+ `:62`（命令面行） | `ask-user` 行；plan 工具清单文本补 `ask_user` | |
-| 测试：`JsonlPersistenceTest` / 新 `JsonlPersistenceListTest`（计划名 `SessionListTest`，落在实现模块故改从同模块命名）、`ToolExecutorTest`、新 `AskUserPluginTest`、`ApprovalPromptTest`（新）、`HeadlessMain` 侧 `HeadlessSessionsTest`（新）/ `HeadlessReplTest` / `HeadlessOneShotResultTest` | ①–⑥ 各腿 | S-a 部分完成（`JsonlPersistenceListTest` 7 + `HeadlessSessionsTest` 6 已就位） |
-| 文档 `docs/design/{02,03,04,05,07,12}` + `README.md` / `README.zh-CN.md` + `AGENTS.md` | 增量同步面（设计同步触发规则 1/2/3/4） | |
+| `bundle/base/.../bundle.yml:24-32`（工具与 plan 行）+ `:62`（命令面行） | `ask-user` 行；plan 工具清单文本补 `ask_user` | ✓ S-b（`ask-user` 行 + plan 文本；`:62` 命令面行属 S-c） |
+| 测试：`JsonlPersistenceTest` / 新 `JsonlPersistenceListTest`（计划名 `SessionListTest`，落在实现模块故改从同模块命名）、`ToolExecutorTest`、新 `AskUserPluginTest`、`ApprovalPromptTest`（新）、`HeadlessMain` 侧 `HeadlessSessionsTest`（新）/ `HeadlessReplTest` / `HeadlessOneShotResultTest` | ①–⑥ 各腿 | S-a（`JsonlPersistenceListTest` 7 + `HeadlessSessionsTest` 6）+ S-b（`ToolExecutorTest` +3=20、新 `AskUserPluginTest` 5、`JsonlPersistenceTest` +1=24 true 值往返、`HeadlessVerifyTest` / `HostileInstructionsTest` 断言随动）；`ApprovalPromptTest` / `/cancel` 腿属 S-c |
+| 文档 `docs/design/{02,03,04,05,07,12}` + `README.md` / `README.zh-CN.md` + `AGENTS.md` | 增量同步面（设计同步触发规则 1/2/3/4） | S-b：02/04/05/07 已同步；03 为代码 javadoc 面（`ToolResultEvent` 已改）；12 + USAGE + README 双语 + AGENTS 属 S-c/验收 |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| **S-a 会话查看面**：seam 契约（`SessionPersistence.list` / `SessionSummary`）+ jsonl 有界列举与锁探针 + `--sessions` CLI + **失败面反转**（未知 id 裸栈 → exit 3 + 指引） | 锚点 1–2、8 前半 | **到点（packet 已出，待放行；证据 S-a-focus / S-a-regreen / S-a-mutation-A…F）** |
-| **S-b 工具契约**：`concludesTurn` 通道实装（`ToolExecutionResult` → executor → 事件）+ 免审批声明（`ToolDefinition`/executor）+ `ask_user` 工具与插件 + **R4 面**（免审批的治理可见性） | 锚点 3–6 | 待开工 |
+| **S-a 会话查看面**：seam 契约（`SessionPersistence.list` / `SessionSummary`）+ jsonl 有界列举与锁探针 + `--sessions` CLI + **失败面反转**（未知 id 裸栈 → exit 3 + 指引） | 锚点 1–2、8 前半 | **已放行（2026-09-22 裸「放行」，单动作待放）→ 提交 291ad22**（证据 S-a-focus / S-a-regreen / S-a-mutation-A…F 随提交入仓） |
+| **S-b 工具契约**：`concludesTurn` 通道实装（`ToolExecutionResult` → executor → 事件）+ 免审批声明（`ToolDefinition`/executor）+ `ask_user` 工具与插件 + **R4 面**（免审批的治理可见性） | 锚点 3–6 | **到点待放行（2026-09-22）**：packet 已出，证据（S-b-focus / S-b-regreen / S-b-mutation-A…F）已落盘 |
 | **S-c 等待界与出口契约**：`ApprovalPrompt` 空闲上限 + 非交互缺省 + `--approval-timeout` + exit 5 + `/cancel` + 12 §6 出口面 | 锚点 7–8、9 | 待开工 |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-22/）
 
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
-| `S-a-focus.txt` | S-a 聚焦回归：jsonl 模块 30（新 `JsonlPersistenceListTest` 7 + 既有 23）/ headless 模块 69（新 `HeadlessSessionsTest` 6）/ 全 reactor 962 tests、0 failures、0 errors、BUILD SUCCESS、EXIT=0；命令经复跑核验（同命令重跑计数逐项一致） |
+| `S-a-focus.txt` | S-a 聚焦回归：jsonl 模块 30（新 `JsonlPersistenceListTest` 7 + 既有 23）/ headless 模块 69（新 `HeadlessSessionsTest` 6）/ 全 reactor **490** tests、0 failures、0 errors、BUILD SUCCESS、EXIT=0；命令经复跑核验（同命令重跑计数逐项一致）。**计数订正（S-b 期发现）**：原记 962 系双计（类级行与模块级行混加），正确口径 = 只加模块级汇总行并与类级行之和交叉相等；两处证据文本已就地订正 |
 | `S-a-regreen.txt` | 六突变逐一撤销后同命令复跑：同计数全绿，证明还原干净无残留 |
 | `S-a-mutation-A.txt` | 突变：列举排序口径失效（`lastActivity` 降序 → 升序）→ `JsonlPersistenceListTest` 必红（element at index 0/2 错位）；EXIT=1 |
 | `S-a-mutation-B.txt` | 突变：列举忽略 `max`（有界切片退化全量）→ `HeadlessSessionsTest` 截断面必红（`sessions: 3/3` 而非 `2/3`）；EXIT=1 |
@@ -116,7 +118,15 @@
 | `S-a-mutation-D.txt` | 突变：尾窗放大失效（上限压回初始 8 KiB）→ 末条事件行超 8 KiB 时折叠失败必红（`tail unreadable`，Errors=1）；EXIT=1 |
 | `S-a-mutation-E.txt` | 突变：互斥校验缺失（`--sessions` 与任务文本可同用）→ 互斥用例必红；EXIT=1 |
 | `S-a-mutation-F.txt` | 突变：未知 `--resume` id 出口码失效（3 → 0）→ 恢复指引用例必红；EXIT=1 |
-| （待 S-b/S-c 补：工具契约/免审批/空闲上限的聚焦、突变、package、真跑） | |
+| `S-b-focus.txt` | S-b 聚焦回归（突变前基线）：core/tools 25（新 3 腿：免审批跳过+停轮 / 未知工具不问审批 / 声明面名称序）、interaction/ask 5（新模块）、jsonl 31（新 `concludingToolResultRoundTripsTrueFlag`）、headless 69（含 `HeadlessVerifyTest` / `HostileInstructionsTest` 断言随动）、bundle/base 23；全 reactor **490** tests、0 failures、0 errors、BUILD SUCCESS、EXIT=0（模块级行之和 = 类级行之和，两法独立相等） |
+| `S-b-regreen.txt` | 六突变逐一撤销后同命令复跑：计数与突变前基线逐项一致（490 / 42 模块 / 28 有测试模块 / 70 测试类），证明还原干净无残留 |
+| `S-b-mutation-A.txt` | 突变：`concludesTurn` 贯通断裂（`appendResult` 回退硬编码 `false`）→ executor 腿 + ask 端到端腿必红（`Expecting value to be true but was false`）；EXIT=1 |
+| `S-b-mutation-B.txt` | 突变：免审批跳过失效（审批恒 require）→ `approval.requested` 多出 `ask`（executor 腿）+ deny 档下提问被拒、参数校验到不了（ask 腿）；EXIT=1 |
+| `S-b-mutation-C.txt` | 突变：解析/审批次序回退（未知工具也先惊动审批）→ `unknownToolIsNotAnApprovalQuestion` 必红（`Expecting empty but was: ["ghost"]`）；EXIT=1 |
+| `S-b-mutation-D.txt` | 突变：codec 读回 `concludesTurn` 恒 false（写侧仍写 true）→ true 值往返用例必红；EXIT=1 |
+| `S-b-mutation-E.txt` | 突变：`ofExempt` 声明面失效（传 false）→ 声明面枚举为空（tools 腿）+ 4/5 ask 用例转红；EXIT=1 |
+| `S-b-mutation-F.txt` | 突变：治理摘要 `exemptText` 恒 `-` → `HeadlessVerifyTest` 两档（STANDARD/PRODUCTION）必红，实际摘要行 `exempt=-` 入证；EXIT=1 |
+| （待 S-c 补：空闲上限/`/cancel`/exit 5 的聚焦、突变、package、真跑） | |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -143,3 +153,4 @@
 |---|---|---|---|
 | 四确认 1「`log.jsonl` **首尾各一次有界读**（尾部取最后一行 seq → 事件数）」（本 plan 四确认节） | 尾部窗口**有界成长**：单次 8 KiB 起，逐次 ×8 至上限 32 MiB；窗口已覆盖全文件仍无一行可解析才 fail loud（`MAX_SCAN_BYTES`） | 单事件行可超 8 KiB（长 `fs_read` 结果就是一条 `tool/result` 行）——固定 8 KiB 会把**正常会话**判成「尾不可读」而报错；成长只在必要时发生，成本仍与「尾事件体积」成比例而非与日志体积成比例 | 迭代内已同步（本行；停点 packet 点名） |
 | 锚点 8 只列 `HeadlessMain` 的 USAGE/Options/parse/run/finishOneShot/摘要/runRepl 面 | 既有诊断文案泛化：`mountedRow` 的「组合清单无 persistence-* 行」→「组合清单无 <prefix>* 行」、`configText` 的「行 <plugin> 缺 config …」→「组合自述失败: 行 <plugin> 缺 config <key>」 | `sessionListing` 复用 `mountedRow` 取 `persistence-*` 行以显示 root；原文案把模块名前缀硬编码在消息里，复用时会印出与调用点不符的措辞 | 迭代内已同步（本行；`HeadlessVerifyTest` 断言同步） |
+| S-b 停点行「`concludesTurn` 通道实装 + 免审批声明 + `ask_user` 工具与插件」 | `ToolExecutorImpl` 增「**工具解析前置到审批之前**」：未知工具先落 `Unknown tool` error result，不再先惊动审批（审批 stage 只对**已解析**的工具提问） | 免审批声明使审批 stage 首次依赖解析结果（`tool.approvalExempt()`——之前 stage 只吃 call 名与实参）；继续维持「审批先于解析」会出现「未知工具弹出 y/N 提问、批准后照样报 Unknown tool」的噪声交互（问题本身无对象）。次序调整把「问不问」与「问什么」都对到解析结果上 | 迭代内已同步（本行 + 05 §工具管线草图 + 新用例 `unknownToolIsNotAnApprovalQuestion`；突变 C 承重） |

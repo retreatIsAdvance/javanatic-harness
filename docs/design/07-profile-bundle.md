@@ -188,13 +188,13 @@ jh --verify --policy=PRODUCTION --approval=ask --budget=2000000
 
 ```text
 Profile: headless   policy: PRODUCTION
-  composition: 19 rows, 24 discovered, 0 unreferenced
-  approval: HUMAN_GATE (approval-ask)
+  composition: 20 rows, 25 discovered, 0 unreferenced
+  approval: HUMAN_GATE (approval-ask; exempt=ask_user)
   audit: jsonl ~/.harness/sessions (durable)
   stop: max-turns=50 max-steps=40 budget=2000000
 ```
 
-（it20 起实况：摘要五行打 stdout、exit 0；`policy` 沿用 CLI 词表大写；rows = 加载行数、discovered = ServiceLoader 发现总数、unreferenced 校验通过后恒 0（非零即 boot 失败——计数与校验同一口径）；预算 0 显示 `unlimited`；违规路径逐项打 stderr 且 stdout 为空。）
+（it20 起实况：摘要五行打 stdout、exit 0；`policy` 沿用 CLI 词表大写；rows = 加载行数、discovered = ServiceLoader 发现总数、unreferenced 校验通过后恒 0（非零即 boot 失败——计数与校验同一口径）；预算 0 显示 `unlimited`；违规路径逐项打 stderr 且 stdout 为空。it22 起 `approval:` 行尾点名**免审批工具**（`exempt=`；读 `ToolRegistry.definitions(Scope)` 的 `approvalExempt` 声明面，名称序逗号分隔、无声明印 `-`）——审批面与它的例外在同一行自述；示例计数随 it22 的 `ask-user` 行 +1（20/25）。）
 
 | 档位 | 校验内容 |
 |---|---|
@@ -202,7 +202,7 @@ Profile: headless   policy: PRODUCTION
 | `production` | 另加三条：`ApprovalService.mode() != AUTO`；持久化实现存在且 durable；`LoopGuard.limits()` 的 max-turns / max-steps / budget 全部非零 |
 
 - `--verify` **不创建 agent、不需要 API key**，组合 + 断言后以 exit 0/1 退出——进 CI，机器可检查；通过时治理摘要五行打 stdout。
-- 治理摘要来自实现自述：`ApprovalService.mode()`（`AUTO` / `HUMAN_GATE` / `DENY_ALL`）、`SessionPersistence.durable()`、`LoopGuard.limits()`、`AppBoot.bootReported` 的组合计数（行/发现/未引用）——实现类如实报告，档位校验负责拒绝不合格组合（fail loud at boot）。
+- 治理摘要来自实现自述：`ApprovalService.mode()`（`AUTO` / `HUMAN_GATE` / `DENY_ALL`）、免审批工具名单（`ToolRegistry.definitions(Scope)` 的 `approvalExempt` 声明面，it22）、`SessionPersistence.durable()`、`LoopGuard.limits()`、`AppBoot.bootReported` 的组合计数（行/发现/未引用）——实现类如实报告，档位校验负责拒绝不合格组合（fail loud at boot）。
 
 实现落定（it8）：`ConfigService`/`ExpressionResolver`/行模型（sealed 动作联合 Include/Replace/Remove/Insert——互斥动作不落布尔字段）在 kernel/config（零第三方）；`AppBoot` + SnakeYAML 装载在 bundle/base（第三第三方，仅此模块）。it7 的程序化口径已迁移：headless 经内置 profile + CLI flag overlay 走同一 boot 路径；Policy 断言进 boot（VerifyFailedException 携带违规清单）。显式差异：profile 为显式文件路径（home 命名发现随 it9）；bundle 按 classpath 资源名解析（GAV 钉扎随发布切片）；CompositionManifest 含行序+已解析 config、进 SessionHeader（插件版本摘要随发布切片）；插件配置化——构造器注入（程序化组合）与无参 + `configFor(id())`（数据组合）两条显式路径等价，安全边界值（fs/persistence root）在 config 路径缺失即 fail loud。dump 对含 `apikey` 的键脱敏。
 

@@ -1,0 +1,34 @@
+# 突变 E：免审批声明面失效（`ToolDefinition.ofExempt` 传 false——工厂不再声明免审批），期望必红
+# 基线 commit: 291ad22（S-b 编辑在工作树，未提交）
+# 突变点: core/tools/.../ToolDefinition.java:45  ofExempt 末参 `true` → `false`
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言详情 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl core/tools -am test -Dtest=ToolExecutorTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 20, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.465 s <<< FAILURE! -- in io.javanatic.harness.tools.ToolExecutorTest
+[ERROR] io.javanatic.harness.tools.ToolExecutorTest.exemptToolSkipsApprovalAndConcludesTurn -- Time elapsed: 0.006 s <<< FAILURE!
+[ERROR] io.javanatic.harness.tools.ToolExecutorTest.definitionsExposeApprovalExemptionFaceSorted -- Time elapsed: 0.004 s <<< FAILURE!
+Expecting actual:
+  []
+to contain exactly (and in same order):
+  ["ask"]
+but could not find the following elements:
+  ["ask"]                                    ← 声明面枚举为空：治理摘要将无免审批工具可点名
+[INFO] BUILD FAILURE
+EXIT=1
+
+$ mvn -B -pl interaction/ask -am test -Dtest=AskUserPluginTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 5, Failures: 4, Errors: 0, Skipped: 0, Time elapsed: 0.151 s <<< FAILURE! -- in io.javanatic.harness.interaction.ask.AskUserPluginTest
+[ERROR] ...AskUserPluginTest.registryExposesExemptFaceForGovernance -- ... <<< FAILURE!
+  Expecting actual: [] to contain exactly (and in same order): ["ask_user"]
+[ERROR] ...AskUserPluginTest.asksUnderDenyAllAndEndsTurn -- ... <<< FAILURE!
+[ERROR] ...AskUserPluginTest.blankQuestionIsErrorResultAndDoesNotEndTurn -- ... <<< FAILURE!
+[ERROR] ...AskUserPluginTest.identityAndExemptionDeclaration -- ... <<< FAILURE!
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 腿义：声明面（R4）自工厂→注册表→治理摘要一路承重；突变下有 5 条用例转红（含身份声明与 deny 档端到端）。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-b-regreen.txt

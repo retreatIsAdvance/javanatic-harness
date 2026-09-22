@@ -94,6 +94,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 |---|---|---|
 | `harness-interaction-approval` | Definition + 默认 Provider | `ApprovalService`（`Mode.AUTO/HUMAN_GATE/DENY_ALL`）+ 三个默认实现插件 `approval-auto`/`approval-ask`/`approval-deny`（**真实非 stub**，[05 §6](05-capability-seam.md)；实现演进独立时再拆模块）|
 | `harness-interaction-commands` | Definition | `CommandRegistry`（slash 命令；register 即 effect、重复名 fail loud）+ `parseCommand` + `command/run`/`command/done` 事件对（it14 实装，[05 §9](05-capability-seam.md)）|
+| `harness-interaction-ask` | Consumer（工具面） | `ask_user(question)` 澄清问答（插件 id `ask-user`，it22）：**免审批声明**（提问不是副作用）+ **停轮结果**（`concludesTurn=true`，答复 = 下一轮 user message；[05 §8](05-capability-seam.md)、[04 §15](04-agent-loop.md)）|
 
 ### Bundle 层（组合发行）
 
@@ -370,6 +371,7 @@ harness/
 ├── interaction/
 │   ├── pom.xml
 │   ├── approval/pom.xml
+│   ├── ask/pom.xml                  ← ask_user（免审批 + 停轮结果，it22）
 │   └── commands/pom.xml
 ├── bundle/
 │   ├── pom.xml
@@ -776,6 +778,7 @@ java -jar examples/headless/target/jh.jar --profile headless --verify   # R4 治
 | `session/session-persistence` + `-jsonl` | `session.persistence`（+codec SPI）+ `persistence-jsonl` | ✅（JSONL only）|
 | `interaction/approval` | `interaction.approval` | ✅ **真实三模式**（非 stub）|
 | `interaction/commands` | `interaction.commands` | ✅（it14 实装；dsh `@deepseek-ai/dsh-commands` 形状）|
+| （dsh 无对应：问答走审批通道）| `interaction.ask` | ✅（it22；`ask_user` 免审批 + 停轮结果——与审批分离的澄清通道）|
 | `bundle/base` | `bundle.base` | ✅ |
 | `bundle/headless` | `bundle.headless` | ✅ |
 | `core/agent-default-model` | （合并进 agent-loop）| ✅ 简化 |

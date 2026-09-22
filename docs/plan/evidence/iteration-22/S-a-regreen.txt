@@ -1,6 +1,7 @@
 # S-a 还原复绿：六个突变逐一撤销后重跑同一聚焦回归，全绿证明还原干净（无残留突变）
 # 基线 commit: 2b625e1（S-a 编辑在工作树，未提交）
 # 输出 = 决定性行（过滤器同 S-a-focus.txt）；模块集合/计数与突变前基线逐项一致
+# 计数订正（2026-09-22，同 S-a-focus.txt）：原 962 为双计，正确口径 = 只加模块级汇总行；本条命令真实计数 490
 $ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
 $ mvn -B -pl session/persistence-jsonl,examples/headless -am test
 
@@ -27,6 +28,6 @@ $ mvn -B -pl session/persistence-jsonl,examples/headless -am test
 [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in io.javanatic.harness.examples.headless.HeadlessProfileTest
 [INFO] Tests run: 69, Failures: 0, Errors: 0, Skipped: 0
 
-全 reactor 合计: tests=962 failures=0 errors=0
+全 reactor 合计: tests=490 failures=0 errors=0（计数订正见头部注）
 [INFO] BUILD SUCCESS
 EXIT=0

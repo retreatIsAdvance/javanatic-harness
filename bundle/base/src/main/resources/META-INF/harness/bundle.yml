@@ -28,7 +28,8 @@ rows:
       section: |
         Plan mode is active: research and plan only, do not execute yet. Investigate
         with read-only tools (fs_read, fs_list, fs_search; shell for inspection only) and think
-        the task through. When the plan is complete, present it with exit_plan_mode
+        the task through. Use ask_user when a plan-blocking decision belongs to the user.
+        When the plan is complete, present it with exit_plan_mode
         as markdown starting with a # heading; on approval, carry it out step by step.
         File-effect restriction is enforced by the sandbox layer (read-only while
         planning); this section states the discipline, the sandbox guarantees it.
@@ -58,6 +59,9 @@ rows:
   - plugin: todo
     config:
       allowParallelInProgress: false
+  # 澄清问答（it22）：ask_user 免审批（提问不是副作用）+ 停轮结果（答复 = 下一轮
+  # user message）；行序无约束，就近工具面
+  - plugin: ask-user
   # 命令面注册表(it14,REPL 用):具体命令由交互适配器注册;requires 为空,顺序无约束
   - plugin: commands
   - plugin: presets

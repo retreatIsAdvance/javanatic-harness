@@ -591,6 +591,28 @@ class JsonlPersistenceTest {
     }
 
     @Test
+    void concludingToolResultRoundTripsTrueFlag() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            ToolResultEvent concluding = new ToolResultEvent(2, 1, 0,
+                new ToolResultBlock(CallId.of("q1"), "哪个目录?", false), true,
+                new SurfaceOp.Append(), null);
+            live.append(new ToolCallEvent(1, 1, 0, CallId.of("q1"), "ask_user", "{}"));
+            live.append(concluding);
+
+            // wire 面钉住布尔真值:停轮位是模型不可见、loop 可读的日志事实(it22)
+            String log = Files.readString(root.resolve("s1/log.jsonl"));
+            assertThat(log).contains("\"concludesTurn\":true");
+            SessionPersistence.Loaded loaded =
+                rt.root().require(SessionPersistence.KEY).load(live.id());
+            assertThat(loaded.events()).containsExactly(
+                new ToolCallEvent(1, 1, 0, CallId.of("q1"), "ask_user", "{}"), concluding);
+        }
+    }
+
+    @Test
     void oldLogWithoutSourceSeqsKeyReadsAsNull() throws Exception {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(

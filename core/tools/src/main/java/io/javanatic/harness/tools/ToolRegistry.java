@@ -28,6 +28,9 @@ public interface ToolRegistry {
     /** 该 scope 可见的工具 schema（层合并 shadowing，名称排序确定性；agent-loop 组装请求的唯一来源，R2）。 */
     List<ToolSchema> schemas(Scope scope);
 
+    /** 该 scope 可见的工具定义（名称排序，同 {@link #schemas} 的层合并口径；治理自述读它，R4）。 */
+    List<ToolDefinition> definitions(Scope scope);
+
     /** @return 该 scope 可见范围内按名解析的工具定义 */
     Optional<ToolDefinition> resolve(Scope scope, String name);
 }

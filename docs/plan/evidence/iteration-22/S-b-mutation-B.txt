@@ -1,0 +1,39 @@
+# 突变 B：免审批跳过失效（审批 stage 不再看 `approvalExempt` 声明，一律 require），期望必红
+# 基线 commit: 291ad22（S-b 编辑在工作树，未提交）
+# 突变点: ToolExecutorImpl.java:147-151  删除 `if (!tool.approvalExempt())` 包裹（审批恒被调用）
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言详情 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl core/tools -am test -Dtest=ToolExecutorTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 20, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.448 s <<< FAILURE! -- in io.javanatic.harness.tools.ToolExecutorTest
+[ERROR] io.javanatic.harness.tools.ToolExecutorTest.exemptToolSkipsApprovalAndConcludesTurn -- Time elapsed: 0.007 s <<< FAILURE!
+Expecting actual:
+  ["ask", "echo"]
+to contain exactly (and in same order):
+  ["echo"]
+but some elements were not expected:
+  ["ask"]
+	at ...ToolExecutorTest.exemptToolSkipsApprovalAndConcludesTurn(ToolExecutorTest.java:413)
+[INFO] BUILD FAILURE
+EXIT=1
+
+$ mvn -B -pl interaction/ask -am test -Dtest=AskUserPluginTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 5, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.148 s <<< FAILURE! -- in io.javanatic.harness.interaction.ask.AskUserPluginTest
+[ERROR] io.javanatic.harness.interaction.ask.AskUserPluginTest.asksUnderDenyAllAndEndsTurn -- Time elapsed: 0.015 s <<< FAILURE!
+Expecting value to be false but was true          ← deny 档下 ask_user 被拒（error result），不再是正常提问
+	at ...AskUserPluginTest.asksUnderDenyAllAndEndsTurn(AskUserPluginTest.java:84)
+[ERROR] io.javanatic.harness.interaction.ask.AskUserPluginTest.blankQuestionIsErrorResultAndDoesNotEndTurn -- Time elapsed: 0.003 s <<< FAILURE!
+Expecting actual:
+  "denied: denied by policy: ask_user"
+to contain:
+  "invalid question"                              ← 审批先于执行：deny 档下连参数校验都到不了
+	at ...AskUserPluginTest.blankQuestionIsErrorResultAndDoesNotEndTurn(AskUserPluginTest.java:103)
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 腿义：① 审批调用面（approval.requested 顺序与集合）钉死「免审批 = 不惊动审批」；② deny 档端到端钉死
+#   「问答与审批分离」（提问不是副作用，被判拒 = 语义反转）。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-b-regreen.txt

@@ -34,7 +34,7 @@ class HeadlessVerifyTest {
         assertThat(result.stdout())
             .contains("Profile: headless   policy: STANDARD")
             .containsPattern("  composition: \\d+ rows, \\d+ discovered, 0 unreferenced")
-            .contains("  approval: AUTO (approval-auto)")
+            .contains("  approval: AUTO (approval-auto; exempt=ask_user)")
             .contains("  audit: jsonl " + sessions + " (durable)")
             .contains("  stop: max-turns=50 max-steps=40 budget=unlimited");
     }
@@ -60,7 +60,7 @@ class HeadlessVerifyTest {
         assertThat(result.exit()).isZero();
         assertThat(result.stdout())
             .contains("policy: PRODUCTION")
-            .contains("  approval: HUMAN_GATE (approval-ask)")
+            .contains("  approval: HUMAN_GATE (approval-ask; exempt=ask_user)")
             .contains("  stop: max-turns=50 max-steps=40 budget=50000");
     }
 

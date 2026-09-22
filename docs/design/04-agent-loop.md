@@ -545,6 +545,7 @@ public record AgentHandle(Agent agent, Disposer disposer) {
 - **驱动线程**：每次唤醒 `Thread.ofVirtual().name("jh-agent-driver")` 直启（不经 Runtime executor，无池化语义）；driver 体异常经 whenComplete 记 ERROR 日志（fail loud，不静默吞 future）。
 - **turn 隔离**：模型侧非取消的意外 `RuntimeException` 收敛为 `turn/end(Error)` 关轮，驱动继续排空后续 work；`REQUEST_ERROR`（firstOf）返回 `RequestErrorDecision(maxRetries)` 时同 step 重试——每次尝试是新的 `step/start` + `llm/request`（R1：每次请求各自留指纹），无人拦截即重抛收敛。
 - **无条件续步**：`shouldContinue` 未实现——工具执行后只要未被取消、无 `concludesTurn`，一律进入下一步（失控由 LoopGuard 兜底；数据驱动停轮保留 `concludesTurn`）。
+- **`concludesTurn` 生产者落定（it22）**：数据驱动停轮的首个实装是 `ask_user`（`interaction/ask` 模块）——`ToolExecutionResult.concluding(content)` → executor 取 `result.concludesTurn()` 随 `tool/result` 落账 → 本循环 §13 断轮；答复 = 下一轮 `user/message`（REPL 下一行 / `--resume=<id> "答复"`），问答两半都是日志事实，回放不重放提问。
 - **LoopGuard 计数档先行**：max-turns / max-steps-per-turn（`LoopGuardPlugin` 构造注入 limits，组合期选择）；budget 档（token 计量）随 deepseek。guard 检查在关轮 try 内——超限以 `turn/end(Error)` 收口，不留下开着的 `turn/start`。
 - **user/message 落账位置**：admitted 批在 turn 层一次；steering/注入在认领它的 step 边界（认领后、下一 `step/start` 前），与 §7 一致。
 - **resume**：in-memory `SessionStore.get` 命中即恢复（turn 号从日志 TurnStart 计数派生）；缺失会话由 get 本身 fail loud（NoSuchElementException）。durable 重载路径 = `persistence.load` → `SessionStore.create(seed)` → `agents.resume`；挂载前执行恢复收口（03 §6「恢复收口」）——悬空 tool_use 不闭合会让首个请求违反 OpenAI 配对契约。

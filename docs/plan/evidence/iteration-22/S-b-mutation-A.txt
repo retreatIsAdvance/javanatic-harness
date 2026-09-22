@@ -1,0 +1,29 @@
+# 突变 A：`concludesTurn` 贯通斷裂（`ToolExecutorImpl.appendResult` 回退硬编码 false），期望必红
+# 基线 commit: 291ad22（S-b 编辑在工作树，未提交）
+# 突变点: ToolExecutorImpl.java:174  `result.concludesTurn()` → `false`
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言行 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl core/tools,interaction/ask -am test -Dtest='ToolExecutorTest,AskUserPluginTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 20, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.466 s <<< FAILURE! -- in io.javanatic.harness.tools.ToolExecutorTest
+[ERROR] io.javanatic.harness.tools.ToolExecutorTest.exemptToolSkipsApprovalAndConcludesTurn -- Time elapsed: 0.008 s <<< FAILURE!
+Expecting value to be true but was false
+Expecting value to be true but was false
+[INFO] harness-core-tools ................................. FAILURE [  0.854 s]
+[INFO] harness-interaction-ask ............................ SKIPPED      ← 依赖模块 FAILURE 被跳过（Maven 语义），另跑补证
+[INFO] BUILD FAILURE
+EXIT=1
+
+$ mvn -B -pl interaction/ask -am test -Dtest=AskUserPluginTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 5, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.161 s <<< FAILURE! -- in io.javanatic.harness.interaction.ask.AskUserPluginTest
+[ERROR] io.javanatic.harness.interaction.ask.AskUserPluginTest.asksUnderDenyAllAndEndsTurn -- Time elapsed: 0.030 s <<< FAILURE!
+Expecting value to be true but was false
+Expecting value to be true but was false
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 两腿同因：事件 `concludesTurn` 位不再承自结果声明（executor 层断言 + ask 工具端到端断言）
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-b-regreen.txt

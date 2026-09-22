@@ -24,11 +24,11 @@ import java.util.concurrent.CompletionException;
 
 /**
  * 五段 pipeline（R2 的落点）：批前导落账全部 tool/call（含批内去重定案）→ 派发前
- * 耐久屏障 → pre-execute waterfall（可否决）→ 审批（固定 stage，R4）→ 执行 →
- * post-execute waterfall → 审计落账 tool/result。成功/失败/否决/拒绝全部无条件
- * 成对落账——审计对归 executor，工具在结构上无法「执行了但不留痕」。工具可经
- * {@link ToolExecutionContext#session()} 追加<b>领域事件</b>（非审计）；
- * Session.append 的同步与 surface 校验是既有防线。
+ * 耐久屏障 → pre-execute waterfall（可否决）→ 工具解析 → 审批（固定 stage，R4；
+ * 免审批声明跳过）→ 执行 → post-execute waterfall → 审计落账 tool/result。成功/
+ * 失败/否决/拒绝全部无条件成对落账——审计对归 executor，工具在结构上无法
+ * 「执行了但不留痕」。工具可经 {@link ToolExecutionContext#session()} 追加
+ * <b>领域事件</b>（非审计）；Session.append 的同步与 surface 校验是既有防线。
  */
 final class ToolExecutorImpl implements ToolExecutor {
 
@@ -137,20 +137,23 @@ final class ToolExecutorImpl implements ToolExecutor {
                 return appendResult(call, session, turn, step,
                     ToolExecutionResult.error("vetoed: " + plan.vetoReason()));
             }
-            // 3. 审批（固定 stage；拒绝 → error result，不炸 turn；等待中取消 → AbortedException 收敛）
-            ApprovalService.ApprovalRequest request = new ApprovalService.ApprovalRequest(
-                call.name(), call.name() + " " + call.arguments(), call.arguments());
-            approval.require(request, signal);
-            // 4. 执行（未知工具与异常 → error result；错误即数据）
+            // 3. 工具解析（未知工具不再先惊动审批——批不改结果，问是噪声）
             ToolDefinition tool = registry.resolve(context.agentScope(), call.name()).orElse(null);
             if (tool == null) {
                 return appendResult(call, session, turn, step,
                     ToolExecutionResult.error("Unknown tool: " + call.name()));
             }
+            // 4. 审批（固定 stage；免审批声明跳过——声明面在 ToolDefinition）
+            if (!tool.approvalExempt()) {
+                ApprovalService.ApprovalRequest request = new ApprovalService.ApprovalRequest(
+                    call.name(), call.name() + " " + call.arguments(), call.arguments());
+                approval.require(request, signal);
+            }
+            // 5. 执行（工具自身异常 → error result；错误即数据）
             ToolExecutionResult result = tool.tool().execute(
                 ToolArgs.parse(call.arguments(), tool.parameters()),
                 new ToolExecutionContext(signal, session));
-            // 5. post-execute：观察/改写结果
+            // 6. post-execute：观察/改写结果
             ToolExecutionResult finalResult = events.waterfall(ToolEvents.POST_EXECUTE, origin, this,
                 List.of(call, result), none -> result);
             return appendResult(call, session, turn, step, finalResult);
@@ -168,6 +171,6 @@ final class ToolExecutorImpl implements ToolExecutor {
                                                       int turn, int step, ToolExecutionResult result) {
         return session.append(new ToolResultEvent(System.currentTimeMillis(), turn, step,
             new ToolResultBlock(call.id(), result.content(), result.isError()),
-            false, new SurfaceOp.Append(), null));
+            result.concludesTurn(), new SurfaceOp.Append(), null));
     }
 }

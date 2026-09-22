@@ -1,0 +1,53 @@
+# S-b 还原复绿：六个突变逐一撤销后重跑同一聚焦回归，全绿证明还原干净（无残留突变）
+# 基线 commit: 291ad22（S-b 编辑在工作树，未提交）
+# 输出 = 决定性行（过滤器同 S-b-focus.txt）；模块集合/计数与突变前基线逐项一致
+# 计数口径（S-a 订正后）：只加模块级汇总行并与类级行之和交叉核对
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl core/tools,core/session,session/persistence-jsonl,interaction/ask,examples/headless,bundle/base -am test
+
+[INFO] Building harness-core-session 0.2.0-SNAPSHOT                      [7/42]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.079 s -- in io.javanatic.harness.session.SessionRecoveryTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in io.javanatic.harness.session.SessionStoreTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in io.javanatic.harness.session.SessionEventTypesTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.session.SessionInvariantsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in io.javanatic.harness.session.SessionConcurrencyTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in io.javanatic.harness.session.SessionTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.203 s -- in io.javanatic.harness.session.SessionPropertiesTest
+[INFO] Tests run: 41, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-tools 0.2.0-SNAPSHOT                       [11/42]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.130 s -- in io.javanatic.harness.tools.ScopedRegistryTest
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.326 s -- in io.javanatic.harness.tools.ToolExecutorTest
+[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-session-persistence-jsonl 0.2.0-SNAPSHOT        [14/42]
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.196 s -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.109 s -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest
+[INFO] Tests run: 31, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-interaction-ask 0.2.0-SNAPSHOT                  [37/42]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.134 s -- in io.javanatic.harness.interaction.ask.AskUserPluginTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-bundle-base 0.2.0-SNAPSHOT                      [40/42]
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.054 s -- in io.javanatic.harness.boot.RowComposerTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.267 s -- in io.javanatic.harness.boot.AppBootTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.boot.YamlRowsTest
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-examples-headless 0.2.0-SNAPSHOT                [42/42]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.358 s -- in io.javanatic.harness.examples.headless.HeadlessSessionsTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.081 s -- in io.javanatic.harness.examples.headless.HeadlessVerifyTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in io.javanatic.harness.examples.headless.HeadlessApprovalTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.041 s -- in io.javanatic.harness.examples.headless.HeadlessOptionsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.107 s -- in io.javanatic.harness.examples.headless.HostileInstructionsTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.178 s -- in io.javanatic.harness.examples.headless.HeadlessOneShotResultTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.056 s -- in io.javanatic.harness.examples.headless.HeadlessReplTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.098 s -- in io.javanatic.harness.examples.headless.HeadlessResumeTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in io.javanatic.harness.examples.headless.ReplApprovalWiringTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.867 s -- in io.javanatic.harness.examples.headless.HeadlessCrashResumeE2ETest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.517 s -- in io.javanatic.harness.examples.headless.HeadlessSigintTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in io.javanatic.harness.examples.headless.StreamRendererTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in io.javanatic.harness.examples.headless.HeadlessFakeServerE2ETest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.137 s -- in io.javanatic.harness.examples.headless.ProductionScenarioTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in io.javanatic.harness.examples.headless.HeadlessProfileTest
+[INFO] Tests run: 69, Failures: 0, Errors: 0, Skipped: 0
+
+全 reactor 合计: tests=490 failures=0 errors=0（与 S-b-focus.txt 突变前基线逐项一致：42 模块 / 28 有测试模块 / 70 测试类）
+[INFO] BUILD SUCCESS
+EXIT=0

@@ -510,7 +510,7 @@ public record ApprovalRequest(
     Agent initiator, String toolName, String summary, JsonValue args) {}
 ```
 
-三个 Provider 齐备：`approval-auto`（AUTO，开发/测试档）、`approval-ask`（HUMAN_GATE，CLI 交互或 ACP 上报）、`approval-deny`（DENY_ALL，最小权限档）。`policy: production` 禁止 AUTO（07 §6）。**审批在 ToolExecutor 的固定 stage 调用**（§8），单个工具无法绕过。
+三个 Provider 齐备：`approval-auto`（AUTO，开发/测试档）、`approval-ask`（HUMAN_GATE，CLI 交互或 ACP 上报）、`approval-deny`（DENY_ALL，最小权限档）。`policy: production` 禁止 AUTO（07 §6）。**审批在 ToolExecutor 的固定 stage 调用**（§8），单个工具无法绕过；**免审批是工具属性声明**（`ToolDefinition.approvalExempt`，it22）——不是第四种模式，问答类工具据此在 deny 档下仍可澄清。
 
 ---
 
@@ -567,6 +567,10 @@ public interface ToolRegistry {
     Disposable register(ToolDefinition tool);
     /** 当前 scope 可见的 schema（agent-loop 组装请求的唯一来源）。 */
     List<ToolSchema> schemas(Scope scope);
+    /** 当前 scope 可见的定义（同 schemas 的层合并口径；治理自述读它，R4，it22）。 */
+    List<ToolDefinition> definitions(Scope scope);
+    /** 该 scope 可见范围内按名解析。 */
+    Optional<ToolDefinition> resolve(Scope scope, String name);
 }
 
 /** 唯一执行路径（R2）。 */
@@ -630,19 +634,22 @@ public final class ToolExecutorImpl implements ToolExecutor {
                 return appendResult(call, ToolExecutionResult.error(plan.vetoReason()), turn, step);
             }
 
-            // 3. 审批（固定 stage；拒绝 → error result，不炸 turn）
-            approval.require(new ApprovalRequest(initiator, call.name(),
-                summarize(call), call.arguments()));
-
-            // 4. 执行（异常 → error result，即错误是数据；AbortedException 传播）
+            // 3. 工具解析（先于审批：未知工具不改结果，问是噪声）
             ToolDefinition tool = registry.resolve(agentScope, call.name());
             if (tool == null) {
                 return appendResult(call, ToolExecutionResult.error("Unknown tool"), turn, step);
             }
-            ToolExecutionResult result = tool.executor()
+
+            // 4. 审批（固定 stage；免审批声明跳过——提问类工具不是副作用；拒绝 → error result，不炸 turn）
+            if (!tool.approvalExempt()) {
+                approval.require(new ApprovalRequest(summarize(call), call.arguments()), signal);
+            }
+
+            // 5. 执行（异常 → error result，即错误是数据；AbortedException 传播）
+            ToolExecutionResult result = tool.tool()
                 .execute(ToolArgs.parse(call.arguments(), tool.parameters()), execCtx(signal));
 
-            // 5. tools/post-execute（waterfall）：观察/改写结果（spill 大输出等）
+            // 6. tools/post-execute（waterfall）：观察/改写结果（spill 大输出等）
             ToolExecutionResult finalResult = events.waterfall(ToolEvents.POST_EXECUTE, agentScope,
                 this, List.of(call, result), () -> result);
 
@@ -659,9 +666,9 @@ public final class ToolExecutorImpl implements ToolExecutor {
     private LoggedEvent<ToolResultEvent> appendResult(
             ToolUseBlock call, ToolExecutionResult r, int turn, int step) {
         return session.append(new ToolResultEvent(clock.millis(), turn, step,
-            r.toMessage(call.id()), r.error(), r.meta(), r.concludesTurn(),
-            SurfaceOpAppend, List.of()));             // 无条件落账
-    }
+            new ToolResultBlock(call.id(), r.content(), r.isError()),
+            r.concludesTurn(), new SurfaceOp.Append(), null));   // 停轮位随结果落账（it22）
+    }                                                            // 无条件落账
 }
 ```
 
@@ -674,10 +681,10 @@ public record ToolDefinition(
     String name,
     String description,
     ValueSchema parameters,
-    ToolExecutorFn executor,          // ToolExecutionResult execute(ToolArgs, ToolExecutionContext)
-    RenderIntent renderIntent,        // generic / terminal / diff / locations —— 设计期声明
-    Function<ToolExecutionResult, Optional<UiNode>> presenter   // args 的纯函数
-) { /* builder */ }
+    RenderIntent render,              // generic / terminal / diff / locations —— 设计期声明
+    Tool tool,                        // ToolExecutionResult execute(ToolArgs, ToolExecutionContext)
+    boolean approvalExempt            // 免审批声明（it22）：提问类工具不是副作用，审批 stage 跳过
+) { /* of(...) / ofExempt(...) 工厂 */ }
 ```
 
 渲染意图是工具设计的一部分（移植 dsh："a tool's UI render intent is part of its design, decided up front"）：作者定义时声明，UI 消费者据此选择渲染器。
@@ -691,6 +698,13 @@ public record ToolDefinition(
 - **kernel waterfall 语义异常裸抛**：AbortedException/IAE 等RuntimeException 不再裹 CompletionException（与 ScopeImpl.effect 同例）——executor 的取消传播依赖此契约。
 - **ValueSchema 极简词表**（object/string/number/boolean + description，properties 全必填）；presenter（UiNode）暂缓至 UI 切片。
 - **批内重复 callId 并行语义**：两路同 id 并发时占用者不确定，但恒有恰一个成功 + 恰一个 Duplicate 错误、双双留痕。
+
+### 实现落定（it22）：免审批声明与停轮结果
+
+- **pipeline 顺序定稿**：批前导落账全部 `tool/call` → 派发前耐久屏障 → pre-execute waterfall → **工具解析** → 审批 → 执行 → post-execute waterfall → 审计落账 `tool/result`。解析**先于**审批：未知工具不改结果（无副作用可言），先问人是噪声——`--approval=ask` 下模型编造的工具名不该弹 y/N。
+- **免审批是工具属性声明，不是第四种审批模式**：`ToolDefinition.ofExempt(...)` 置 `approvalExempt=true`（`of(...)` 缺省要求审批），executor 据此**跳过审批 stage**。名可从 `ToolRegistry.definitions(Scope)` 枚举——治理摘要的 `approval:` 行点名免审批工具（07 §6），`--approval=deny` 档下免审批工具仍可执行（提问不是副作用，拒批不该堵住澄清）。
+- **停轮位（`concludesTurn`）从声明到落账贯通**：`ToolExecutionResult.concluding(content)` 是第三种态（成功且停轮；`success`/`error` 恒 `false`），`appendResult` 取 `result.concludesTurn()` 落盘。消费侧（agent-loop）与 wire 侧（codec）在位已久——it22 前唯一缺环是 executor 硬编码 `false`（预留位空置无生产者）。
+- **`ask_user` 的答复通道 = 下一轮 user message**：提问是正常结果 + 停轮，答复是下一条 `user/message`——问答两半都是日志事实，回放不重放提问（R1），也不需要任何输入通道（非交互场景结构上不可能挂等）。
 
 ---
 

@@ -1,0 +1,20 @@
+# 突变 C：解析先于审批的顺序失效（审批回到解析之前——未知工具也先惊动审批），期望必红
+# 基线 commit: 291ad22（S-b 编辑在工作树，未提交）
+# 突变点: ToolExecutorImpl.java:140-151  stage 3/4 次序回退为「审批（含未知）→ 解析」
+#   即 `if (tool == null || !tool.approvalExempt()) { approval.require(...) }` 后接 null 分支
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言详情 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl core/tools -am test -Dtest=ToolExecutorTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 20, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.444 s <<< FAILURE! -- in io.javanatic.harness.tools.ToolExecutorTest
+[ERROR] io.javanatic.harness.tools.ToolExecutorTest.unknownToolIsNotAnApprovalQuestion -- Time elapsed: 0.005 s <<< FAILURE!
+Expecting empty but was: ["ghost"]      ← 未知工具 "ghost" 惊动了审批（可见性即证据）
+	at ...ToolExecutorTest.unknownToolIsNotAnApprovalQuestion(ToolExecutorTest.java:431)
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 腿义：解析前置是 S-b 的顺序改动；本腿钉死「未知工具不再先问审批」（批不改结果，问是噪声）。
+#   注：突变下 `exemptToolSkipsApprovalAndConcludesTurn` 仍绿——两条性质由不同用例各自承重。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-b-regreen.txt

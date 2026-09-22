@@ -1,0 +1,29 @@
+# 突变 F：治理摘要不再点名免审批工具（`HeadlessMain.exemptText` 恒返回 "-"），期望必红
+# 基线 commit: 291ad22（S-b 编辑在工作树，未提交）
+# 突变点: examples/headless/.../HeadlessMain.java:640  `names.isEmpty() ? "-" : String.join(",", names)`
+#   → `return "-";`（枚举路径仍在，输出面被摘掉）
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言详情 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl examples/headless -am test -Dtest=HeadlessVerifyTest -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 6, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.372 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.HeadlessVerifyTest
+[ERROR] ...HeadlessVerifyTest.verifyProductionReachableWithHumanGateAndBudget -- ... <<< FAILURE!
+  to contain:
+    "  approval: HUMAN_GATE (approval-ask; exempt=ask_user)"
+[ERROR] ...HeadlessVerifyTest.verifyStandardPassesWithoutKeyAndPrintsGovernanceSummary -- ... <<< FAILURE!
+Expecting actual:
+  "Profile: headless   policy: STANDARD
+  composition: 20 rows, 25 discovered, 0 unreferenced
+  approval: AUTO (approval-auto; exempt=-)          ← 免审批面被摘（应为 exempt=ask_user）
+  audit: jsonl /var/folders/... (durable)
+  stop: max-turns=50 max-steps=40 budget=unlimited
+"
+to contain:
+  "  approval: AUTO (approval-auto; exempt=ask_user)"
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 腿义：R4「声明在组合期可枚举且治理摘要点名」的输出面由 verify 两档（STANDARD/AUTO + PRODUCTION/HUMAN_GATE）承重。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-b-regreen.txt

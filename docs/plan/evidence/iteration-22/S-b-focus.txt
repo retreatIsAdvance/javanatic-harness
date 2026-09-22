@@ -1,0 +1,71 @@
+# S-b 聚焦回归：工具契约面（免审批声明 + concludesTurn 贯通 + ask_user 模块）+ 上游闭包
+# 基线 commit: 291ad22（S-b 编辑在工作树，未提交）
+# 命令: mvn -B -pl core/tools,core/session,session/persistence-jsonl,interaction/ask,examples/headless,bundle/base -am test
+# 输出 = 决定性行（目标模块的模块边界行 + "-- in io." 类级行 + 模块级 Tests run 汇总行 + BUILD）；
+#   模块/类级行前若黏连被测试打印的提示（如 [approval] ...），此处截到 "[INFO]" 起点（机械截取，不改内容）
+# 计数口径（S-a 订正后）：只加模块级汇总行（无 "Time elapsed"、锚行尾），并与类级行之和交叉核对
+# 模块集合：42 个（41 个 harness-* + 父聚合 pom）；其中 28 个有测试、类级测试类 70 个
+# 全 reactor 合计: tests=490 failures=0 errors=0（模块级行之和 = 类级行之和 = 490，两法独立相等）
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl core/tools,core/session,session/persistence-jsonl,interaction/ask,examples/headless,bundle/base -am test
+
+[INFO] Building harness-core-session 0.2.0-SNAPSHOT                      [7/42]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.069 s -- in io.javanatic.harness.session.SessionRecoveryTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in io.javanatic.harness.session.SessionStoreTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in io.javanatic.harness.session.SessionEventTypesTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in io.javanatic.harness.session.SessionInvariantsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in io.javanatic.harness.session.SessionConcurrencyTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in io.javanatic.harness.session.SessionTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.162 s -- in io.javanatic.harness.session.SessionPropertiesTest
+[INFO] Tests run: 41, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] Building harness-core-tools 0.2.0-SNAPSHOT                       [11/42]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.124 s -- in io.javanatic.harness.tools.ScopedRegistryTest
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.319 s -- in io.javanatic.harness.tools.ToolExecutorTest
+[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] Building harness-session-persistence-jsonl 0.2.0-SNAPSHOT        [14/42]
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.184 s -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceListTest
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.126 s -- in io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest
+[INFO] Tests run: 31, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] Building harness-interaction-ask 0.2.0-SNAPSHOT                  [37/42]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.137 s -- in io.javanatic.harness.interaction.ask.AskUserPluginTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] Building harness-bundle-base 0.2.0-SNAPSHOT                      [40/42]
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.058 s -- in io.javanatic.harness.boot.RowComposerTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.319 s -- in io.javanatic.harness.boot.AppBootTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in io.javanatic.harness.boot.YamlRowsTest
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] Building harness-examples-headless 0.2.0-SNAPSHOT                [42/42]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.361 s -- in io.javanatic.harness.examples.headless.HeadlessSessionsTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.087 s -- in io.javanatic.harness.examples.headless.HeadlessVerifyTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in io.javanatic.harness.examples.headless.HeadlessApprovalTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in io.javanatic.harness.examples.headless.HeadlessOptionsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.122 s -- in io.javanatic.harness.examples.headless.HostileInstructionsTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.167 s -- in io.javanatic.harness.examples.headless.HeadlessOneShotResultTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.054 s -- in io.javanatic.harness.examples.headless.HeadlessReplTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.101 s -- in io.javanatic.harness.examples.headless.HeadlessResumeTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in io.javanatic.harness.examples.headless.ReplApprovalWiringTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.888 s -- in io.javanatic.harness.examples.headless.HeadlessCrashResumeE2ETest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.530 s -- in io.javanatic.harness.examples.headless.HeadlessSigintTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in io.javanatic.harness.examples.headless.StreamRendererTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in io.javanatic.harness.examples.headless.HeadlessFakeServerE2ETest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.095 s -- in io.javanatic.harness.examples.headless.ProductionScenarioTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.examples.headless.HeadlessProfileTest
+[INFO] Tests run: 69, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] BUILD SUCCESS
+EXIT=0
+
+# 新用例点名（本切片新增）：
+#   core/tools: exemptToolSkipsApprovalAndConcludesTurn / unknownToolIsNotAnApprovalQuestion /
+#               definitionsExposeApprovalExemptionFaceSorted（ToolExecutorTest 17→20）
+#   interaction/ask（新模块）: AskUserPluginTest ×5（身份+免审批声明 / deny 档下提问+停轮 /
+#               空问题 error 且不停轮 / 缺 tools 面 fail loud 回滚 / 注册表免审批面）
+#   interaction/ask 的测试依赖面（test scope）: kernel-core, core-tools, core-session（SessionStorePlugin 夹具）
+#   session/persistence-jsonl: concludingToolResultRoundTripsTrueFlag（wire true 值首次入测；23→24）
+#   examples/headless: HeadlessVerifyTest 摘要行断言改含 "; exempt=ask_user"（HUMAN_GATE 与 AUTO 两档）
+#                     HostileInstructionsTest 工具面清单 9→10（含 ask_user）

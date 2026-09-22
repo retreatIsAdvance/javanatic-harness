@@ -54,6 +54,18 @@ final class ScopedRegistry implements ToolRegistry {
     }
 
     @Override
+    public List<ToolDefinition> definitions(Scope scope) {
+        Map<String, ToolDefinition> merged = merged(scope);
+        List<String> names = new ArrayList<>(merged.keySet());
+        names.sort(String::compareTo);
+        List<ToolDefinition> definitions = new ArrayList<>(names.size());
+        for (String name : names) {
+            definitions.add(merged.get(name));
+        }
+        return List.copyOf(definitions);
+    }
+
+    @Override
     public Optional<ToolDefinition> resolve(Scope scope, String name) {
         return Optional.ofNullable(merged(scope).get(name));
     }
