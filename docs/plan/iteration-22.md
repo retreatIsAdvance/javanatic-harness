@@ -1,4 +1,4 @@
-# 迭代 22 — 会话操作与人工协作（状态：进行中——S-a 已放行提交 291ad22；S-b 已放行提交 41a4fb3；S-c 到点，packet 待放行）
+# 迭代 22 — 会话操作与人工协作（状态：已完成——四确认与裁决 2026-09-22 裁定；S-a 291ad22 / S-b 41a4fb3 / S-c e1e6e81 全部放行（S-c 带竞态修复 (b)：真跑发现于 2026-09-23、修复 + 复观 + 突变 G 随该提交）；收尾 2026-09-24：全量 package 46/46 绿 + jlink 镜像真跑（列举 / 一问一答闭环 / 等待界 / 取消复观）；待 push 授权）
 
 模块：`session/persistence` + `session/persistence-jsonl`（会话目录只读列举面）· `interaction/ask`（新：`ask_user` 工具）· `core/tools`（`concludesTurn` 通道实装 + 免审批声明）· `interaction/approval`（空闲上限）· `examples/headless`（`--sessions` / `--approval-timeout` / `/cancel` / 提问出口）· 文档（02/03/04/05/07/12 + USAGE + README 双语 + AGENTS）
 
@@ -104,7 +104,7 @@
 |---|---|---|
 | **S-a 会话查看面**：seam 契约（`SessionPersistence.list` / `SessionSummary`）+ jsonl 有界列举与锁探针 + `--sessions` CLI + **失败面反转**（未知 id 裸栈 → exit 3 + 指引） | 锚点 1–2、8 前半 | **已放行（2026-09-22 裸「放行」，单动作待放）→ 提交 291ad22**（证据 S-a-focus / S-a-regreen / S-a-mutation-A…F 随提交入仓） |
 | **S-b 工具契约**：`concludesTurn` 通道实装（`ToolExecutionResult` → executor → 事件）+ 免审批声明（`ToolDefinition`/executor）+ `ask_user` 工具与插件 + **R4 面**（免审批的治理可见性） | 锚点 3–6 | **已放行（2026-09-22 无条件「裁决:放行」）→ 提交 41a4fb3**（证据 S-b-focus / S-b-regreen / S-b-mutation-A…F 随提交入仓） |
-| **S-c 等待界与出口契约**：`ApprovalPrompt` 空闲上限 + 非交互缺省 + `--approval-timeout` + exit 5 + `/cancel` + 12 §6 出口面 | 锚点 7–8、9 | **到点待放行（2026-09-22）**：packet 已出，证据（S-c-focus / S-c-regreen / S-c-mutation-A…F / S-c-package）已落盘；**⑨ 真跑已执行（2026-09-23，it22-real-run.txt）**——列举/问答闭环/等待界全绿，另发现一处竞态缺陷：`/cancel` 与 SIGINT 在 **LLM 流中期**取消时 5 次观测 3 次落 `turn/end(error)`（一次性路径 exit 3 而非 exit 4），违反 USAGE「取消…以 aborted 落账」契约，归因 `OpenAiCompatAdapter` 的 End-静默消费窗口。**裁决 A（S-c 内修）→ 修复 (b) 已落地**：`produce` 取消分支 `End` → `Failed(e)`（协议归真：End 只表干净 EOF）+「取消落在 poll 窗口内」确定性单测（线程判别信号 + 服务端闸门）+ 突变 G（证据 `S-c-fix-focus.txt` / `S-c-mutation-G.txt`）；同形态真跑复观 REPL `/cancel` **3/3**、一次性 SIGINT **4/4** 全落 `aborted(cause=user)`（一次性路径稳定 exit 4，`it22-real-run.txt` F 节）。**待放行单提交（S-c + ⑨ 证据 + 竞态修复 + 修正表一行）** |
+| **S-c 等待界与出口契约**：`ApprovalPrompt` 空闲上限 + 非交互缺省 + `--approval-timeout` + exit 5 + `/cancel` + 12 §6 出口面 | 锚点 7–8、9 | **已放行（2026-09-24「裁决:放行——两提交收口形态」）→ 提交 e1e6e81**（证据 S-c-focus / S-c-regreen / S-c-mutation-A…G / S-c-package / S-c-fix-focus / it22-real-run 随提交入仓；收口提交承载本表 ①–⑤⑦–⑩ 勾选与修正表 hash 回填）。**到点（2026-09-22）经过**：packet 已出，证据（S-c-focus / S-c-regreen / S-c-mutation-A…F / S-c-package）已落盘；**⑨ 真跑已执行（2026-09-23，it22-real-run.txt）**——列举/问答闭环/等待界全绿，另发现一处竞态缺陷：`/cancel` 与 SIGINT 在 **LLM 流中期**取消时 5 次观测 3 次落 `turn/end(error)`（一次性路径 exit 3 而非 exit 4），违反 USAGE「取消…以 aborted 落账」契约，归因 `OpenAiCompatAdapter` 的 End-静默消费窗口。**裁决 A（S-c 内修）→ 修复 (b) 已落地**：`produce` 取消分支 `End` → `Failed(e)`（协议归真：End 只表干净 EOF）+「取消落在 poll 窗口内」确定性单测（线程判别信号 + 服务端闸门）+ 突变 G（证据 `S-c-fix-focus.txt` / `S-c-mutation-G.txt`）；同形态真跑复观 REPL `/cancel` **3/3**、一次性 SIGINT **4/4** 全落 `aborted(cause=user)`（一次性路径稳定 exit 4，`it22-real-run.txt` F 节）。 |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-22/）
 
@@ -141,23 +141,23 @@
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] ① 列举：`jh --sessions`（keyless、不建会话）列出 id / 最后活动 / cwd / 事件数 / 状态，序稳定、缺省上限 20 且 `--sessions=<N>` 生效；会话目录不存在 → 空列表 + 提示不报错
-- [ ] ② 恢复指引：`--resume=<不存在>` → exit 3 + stderr 点名 `--sessions`（不再裸栈）；REPL 横幅含 session id
-- [ ] ③ 澄清问答与审批分离：`ask_user` 停轮落账；`--approval=ask` 下提问不产审批提示、`--approval=deny` 下仍可提问；审批拒绝（error `denied`）与回答（下一轮 user message）语义可辨
-- [ ] ④ 停轮与回放：`concludesTurn=true` 落账且 turn 在该 step 后收口；resume/回放不重放提问、R1 链不变
-- [ ] ⑤ 无交互等待界：非 TTY 无 EOF 无输入 → 有界等待后按拒绝 + 可行动文案（不挂死）；EOF 仍即时拒绝；`printf 'y\n' | …` 仍放行
+- [x] ① 列举：`jh --sessions`（keyless、不建会话）列出 id / 最后活动 / cwd / 事件数 / 状态，序稳定、缺省上限 20 且 `--sessions=<N>` 生效；会话目录不存在 → 空列表 + 提示不报错 —— **已核**：单测 `JsonlPersistenceListTest` 7（序/上限/cwd/事件数/锁探针）与 `HeadlessSessionsTest` 6（keyless/截断/互斥），突变 A（排序失效）与 B（上限失效）各自恰红（S-a-focus / S-a-mutation-A·B）；真跑 `--sessions` → `20/28`、`=3`/`=30` 生效、`-Duser.home` 指空目录 → `0/0` 非错误（it22-real-run.txt）
+- [x] ② 恢复指引：`--resume=<不存在>` → exit 3 + stderr 点名 `--sessions`（不再裸栈）；REPL 横幅含 session id —— **已核**：突变 F（exit 3→0）必红（S-a-mutation-F）；真跑 exit 3 + 点名 `--sessions`；横幅 `session=<id>` + 续跑命令（HeadlessSessionsTest / it22-real-run.txt）
+- [x] ③ 澄清问答与审批分离：`ask_user` 停轮落账；`--approval=ask` 下提问不产审批提示、`--approval=deny` 下仍可提问；审批拒绝（error `denied`）与回答（下一轮 user message）语义可辨 —— **已核**：`AskUserPluginTest` 5 + `ToolExecutorTest` 免审批/停轮腿（S-b-focus），突变 B（免审批跳过失效）与 E（声明面失效）必红；真跑一问一答：提问 exit 5、`[approval]` 行 0（免审批）、`--resume` 答复落下一轮 user message 且不重放提问（it22-real-run.txt）
+- [x] ④ 停轮与回放：`concludesTurn=true` 落账且 turn 在该 step 后收口；resume/回放不重放提问、R1 链不变 —— **已核**：突变 A（贯通断裂）与 D（codec 读回恒 false）必红（S-b-mutation-A·D）；真跑答复闭环后 R1 链与回放不重放提问（it22-real-run.txt）
+- [x] ⑤ 无交互等待界：非 TTY 无 EOF 无输入 → 有界等待后按拒绝 + 可行动文案（不挂死）；EOF 仍即时拒绝；`printf 'y\n' | …` 仍放行 —— **已核**：`ApprovalPromptTest` 5 + `ApprovalModesTest` 7（S-c-focus），突变 A（等待界失效）/ B（缺省抹平）/ C（行注入丢失）/ E（行配置读取失效）必红；真跑持开 stdin + `--approval-timeout=3` → 超时按拒 + 可行动文案（elapsed 4.7s 不挂死）、EOF 即时拒对照（it22-real-run.txt）
 - [x] ⑥ 取消入口：REPL `/cancel` 取消在途轮（aborted 落账、REPL 继续）、空闲明确提示；与 SIGINT 同收敛 —— **修复后勾选**（2026-09-23）：真跑复观 REPL `/cancel` 3/3 `turn/end(aborted,cause=user)` + REPL 继续（exit 0），一次性 SIGINT 4/4 exit 4 + 「任务被取消: user」（it22-real-run.txt F 节）；单元面 = poll 窗口确定性用例 + 突变 G（S-c-fix-focus / S-c-mutation-G）
-- [ ] ⑦ 突变检查：列举排序/上限、`concludesTurn` 贯通、免审批声明、空闲上限各自破坏必红、还原复绿
-- [ ] ⑧ 全量 `mvn -B package` 绿
-- [ ] ⑨ 真跑（jlink 镜像）：`--sessions` 列举 + 一问一答闭环（提问 → exit 5 → `--resume` 答复 → 完成）+ 非交互等待界观测
-- [ ] ⑩ 文档同步在案（02/03/04/05/07/12 + USAGE + README 双语 + AGENTS）
+- [x] ⑦ 突变检查：列举排序/上限、`concludesTurn` 贯通、免审批声明、空闲上限各自破坏必红、还原复绿 —— **已核**：19 项突变（S-a A–F 列举排序/上限/锁探针/尾窗/互斥/退出码；S-b A–F 贯通/免审批跳过/解析次序/codec/声明面/治理摘要；S-c A–G 等待界/非交互缺省/行注入/exit 5 映射/行配置/`/cancel`/取消伪装流尾）各自恰红并还原复绿，三个 regreen 与基线逐项一致（`S-a/S-b/S-c-mutation-*.txt` + `S-a/S-b/S-c-regreen.txt` + `S-c-mutation-G.txt`）
+- [x] ⑧ 全量 `mvn -B package` 绿 —— **已核**：`S-c-package.txt` v2（2026-09-23 20:14，竞态修复后的工作树）reactor `[46/46]`、SUCCESS 46、FAILURE/SKIPPED 0、tests=**513**（模块级行之和 = 类级行之和）、0 failures / 0 errors、EXIT=0；dist/jh 产物齐（jlink-image + tar.gz/zip）
+- [x] ⑨ 真跑（jlink 镜像）：`--sessions` 列举 + 一问一答闭环（提问 → exit 5 → `--resume` 答复 → 完成）+ 非交互等待界观测 —— **已核**：`it22-real-run.txt`（列举 `20/28` + 互斥用法错误 exit 2 + 未知 id exit 3；一问一答：提问 exit 5 → `--resume` 答复 exit 0 + 落盘 + 不重放提问；等待界超时按拒 + EOF 对照）；F 节 = 修复后复观 REPL `/cancel` 3/3、一次性 SIGINT 4/4 全落 `aborted`/exit 4
+- [x] ⑩ 文档同步在案（02/03/04/05/07/12 + USAGE + README 双语 + AGENTS） —— **已核**：02/04/05/07（S-b 期）+ 03（`ToolResultEvent` javadoc）+ 12（§3 模块表 / §5 配置键 / §6 flags·退出码·命令面）+ 09（等待必须有界段）+ 05（§工具管线草图：End 只表干净 EOF）+ USAGE（`--help` 出口面）+ README 双语（46 模块 / 513 项测试）+ AGENTS（macOS `user.home` 走 getpwuid 已知坑）；锚点表末行逐项勾注
 
 ## 修正（如有）
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
 | 41a4fb3 | README 双语「构建与验证」块的模块/测试计数陈旧（`45 reactor modules, 362 tests` / 「45 个 reactor 模块，362 项测试」，0.1.0 期写死） | S-c 期以全量 package 实测订正为 **46 模块 / 512 项测试**（it22 新增 interaction/ask 模块；数字口径 = `[46/46]` + 模块级汇总行之和，S-c-package.txt） |
-| S-c（随修复单提交，hash 待回填） | 取消在 LLM 流中期被伪装成「干净流尾」：`OpenAiCompatAdapter.produce` 的 `catch (AbortedException)` 送 `End`，消费者若正阻塞于 `next()` 的 poll 则静默收口 → 裸 `IllegalArgumentException: stream ended without a Finish chunk` → `turn/end(error)`；一次性路径 exit 3（应为 4）、REPL 渲染「turn 失败」（应为 aborted）。真跑 5 次观测命中 3 次（it22-real-run.txt E 节） | 修复 (b)：取消分支改送 `Failed(e)`——**End 只表干净 EOF**，取消经错误通道原样上浮（05 §草图同步；配「取消落在 poll 窗口内」确定性单测：线程判别信号 + 服务端闸门，5 连跑无 flake；突变 G 必红/复绿，S-c-fix-focus.txt / S-c-mutation-G.txt）；同形态真跑复观 REPL `/cancel` 3/3、SIGINT 4/4 全落 aborted/exit 4（it22-real-run.txt F 节）；计数随动 512 → **513**（README 双语同步，S-c-package.txt v2） |
+| e1e6e81 | 取消在 LLM 流中期被伪装成「干净流尾」：`OpenAiCompatAdapter.produce` 的 `catch (AbortedException)` 送 `End`，消费者若正阻塞于 `next()` 的 poll 则静默收口 → 裸 `IllegalArgumentException: stream ended without a Finish chunk` → `turn/end(error)`；一次性路径 exit 3（应为 4）、REPL 渲染「turn 失败」（应为 aborted）。真跑 5 次观测命中 3 次（it22-real-run.txt E 节） | 修复 (b)：取消分支改送 `Failed(e)`——**End 只表干净 EOF**，取消经错误通道原样上浮（05 §草图同步；配「取消落在 poll 窗口内」确定性单测：线程判别信号 + 服务端闸门，5 连跑无 flake；突变 G 必红/复绿，S-c-fix-focus.txt / S-c-mutation-G.txt）；同形态真跑复观 REPL `/cancel` 3/3、SIGINT 4/4 全落 aborted/exit 4（it22-real-run.txt F 节）；计数随动 512 → **513**（README 双语同步，S-c-package.txt v2） |
 
 ## 设计偏离（如有）
 
