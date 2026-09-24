@@ -1,4 +1,4 @@
-# 迭代 23 — 外部 Java 接入闭环（状态：已完成——四确认与 A–F 裁决 2026-09-24 落盘；S-a / S-b / S-c 三段全部放行（S-c 于 2026-09-24「裁决:放行,it23 关闭」）；三段随**单提交**收口——三停点改动交织（`embedding.md` / `iteration-23.md` / 脚本跨停点）无法回拆，偏离 it18–22 分段提交节奏；全量 package 46/46 绿 + 候选/发布两腿复验 + 文档从零走查；待 push 授权）
+# 迭代 23 — 外部 Java 接入闭环（状态：已完成——四确认与 A–F 裁决 2026-09-24 落盘；S-a / S-b / S-c 三段全部放行（S-c 于 2026-09-24「裁决:放行,it23 关闭」）；三段随**单提交**收口——三停点改动交织（`embedding.md` / `iteration-23.md` / 脚本跨停点）无法回拆，偏离 it18–22 分段提交节奏；全量 package 46/46 绿 + 候选/发布两腿复验 + 文档从零走查；已于 2026-09-24 推送 `722c82f..50ffd8b`（pre-push 全量构建绿），CI run `35961710129` 双 job 绿——ubuntu 候选腿步骤 43s `失败项：0`、四负例全「已拒」（本回填提交 1 笔待 push））
 
 模块：`integration/consumer-sample`（新：仓内**非 reactor** 独立 Maven 工程）· `bundle/base`（`YamlRows` 三层未知键 fail loud 实修）· **删除** `bundle/headless` 孤岛 · `docs/embedding.md`（新）· `docs/design/{02,05,07,12}` 漂移订正 · `AGENTS.md` · `.github/workflows/ci.yml`（候选腿）
 
@@ -138,13 +138,13 @@
 1. **从零走查抓出 1 处指南缺陷（已修）**：`docs/embedding.md §5` 示例用 `dump(enabled)`（`resolve` 后已滤掉禁用行）却写「禁用行附 `(disabled: <expr>)`」——按示例照做**永不出现**该注记。实证：`dump(compose)` 5 行带注记（`llm-openai-compat` / `approval-ask` / `approval-deny` / `shell-docker` / `compaction`）vs `dump(resolve)` 0 行；改文后注记的出现条件（dump **未 resolve** 的 `compose(...)` 结果）与示例对齐（`it23-real-run.txt`）。**教训**：文档里「某调用能产出 X」的断言，须与「能产出 X 的那次调用」同处一个片段，并用真实运行复现一次——S-b 按 §5 片段逐字跑过示例工程，但没跑「说明句」本身。
 2. **陌生视角的价值在「自写」而非「重跑示例」**：本次用**仓外新工程 + 自写插件/主类**（非示例拷贝）复跑 0.1.0 全链——若只重跑示例工程，§5 缺陷不会被看见（示例 `SelfCheck` 打印 dump 后接 boot，注意力在计数与 `SELF-CHECK OK`）。新工程另证「16 条显式依赖清单」对外部人可用（按 §2 指引取自示例 pom）。
 3. **锚点 12 的落形偏离（形态，非语义）**：锚点文字写「`mvn … install` 进隔离仓 → `integration/verify-consumer.sh candidate`」两步；实落为**一条脚本调用**——install 由脚本 `leg candidate` 自持（`integration/verify-consumer.sh:85-88`），CI 若另跑一次 install 只会二次全量构建（隔离仓路径在脚本内部 `repo-candidate`）。CI 步骤与本地/停点证据**同一入口**，漂移警报口径一致。
-4. **CI 步骤的代价与前置**：隔离仓每跑每新 ⇒ 该步骤真下载依赖闭包（本机 install 1:15 min；CI 冷速更慢），属 B 裁决接受的公网依赖代价；**执行位是硬前置**（`100755`——CI 直接以相对路径调用脚本），提交时勿丢（`git ls-files -s` 复核）。
+4. **CI 步骤的代价与前置**：隔离仓每跑每新 ⇒ 该步骤真下载依赖闭包（本机 install 1:15 min），属 B 裁决接受的公网依赖代价；首跑实测（`S-c-ci-real-run.txt`）runner 取件比本机快——install 32s、整步 43s（预判「CI 冷速更慢」不成立，如实订正）；**执行位是硬前置**（`100755`——CI 直接以相对路径调用脚本），提交时勿丢（`git ls-files -s` 复核）。
 5. **keyed 真跑腿跳过（如实）**：计划书标「可选」且不在验收 ①–⑨ 面内；it23 验证面为 keyless 嵌入与组合（`--verify`/`boot()` 均不需 key）。如需模型真跑，走 it17 基线口径（CLI 任务腿）更合适——本轮不做，非遗漏。
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-23/）
 
-（S-a 四份 + S-b 八份 + S-c 三份已落盘（下表 ✓）；`S-c-package.txt`/`S-c-ci-dryrun.txt` 为 S-c 新增行——
-计划书只列了 `it23-real-run.txt`，两份为取证必要补列，见 packet 披露）
+（S-a 四份 + S-b 八份 + S-c 四份已落盘（下表 ✓）；`S-c-package.txt`/`S-c-ci-dryrun.txt`/`S-c-ci-real-run.txt` 为 S-c 新增行——
+计划书只列了 `it23-real-run.txt`，三份为取证必要补列；前两份见 S-c packet 披露，末份为推送后 CI 首跑回填）
 
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
@@ -163,6 +163,7 @@
 | `it23-real-run.txt` ✓ | **文档从零走查（陌生视角）+ 真跑**：仓外新工程 `/tmp/it23-sc/fresh-consumer`（自写插件 + 自写主类，非示例拷贝）按 `docs/embedding.md` §2–§5 在 **0.1.0** 上跑通——compile 13.7s / 运行类路径 32 条 / `rows.composed=25 rows.enabled=20`、`tool.schemas=9 text_stats.visible=true`、`content=chars=31 words=5`、`FRESH WALKTHROUGH OK` EXIT=0；**发现 1 处文档缺陷并已修**（§5 `(disabled: <expr>)` 注记与示例代码矛盾：`dump(compose)` 5 行带注记 vs `dump(resolve)` 0 行）；keyed 腿**跳过**（可选面、不在验收 ①–⑨，理由见 S-c 实探发现 5）；环境适配两处（`-s settings-central.xml` + 隔离仓）已声明 |
 | `S-c-package.txt` ✓ | 全量 `mvn -B package`（S-c 终态树：CI yml + `embedding.md §5` 修复后）：46 模块全 SUCCESS、`BUILD SUCCESS` 57.4s、两法独立求和 **515 测试 / 0 失败 / 0 错误**（4 跳过＝环境面）、EXIT=0；冻结校验**内容级两命**（构建窗口 `find -newermt` 无输出；构建后 `find` 复核：仅 5 份文档落笔、构建输入零改动）；含后记（构建后落笔均为文档，非构建输入） |
 | `S-c-ci-dryrun.txt` ✓ | **CI 候选腿（锚点 12）**：ruby/psych 解析工作流（步骤名逐条列出；新步骤在 ubuntu job 末位，macos job 不动）+ 步骤命令本机干跑（`CONSUMER_WORK=<本机路径> integration/verify-consumer.sh candidate`）→ `失败项：0` EXIT=0、腿 79s、install `BUILD SUCCESS` 1:15 min、四负例逐条「已拒」；含执行位（`100755`）与 runner 前置核对、真实 CI 首跑需 push 的限制声明 |
+| `S-c-ci-real-run.txt` ✓ | **真实 CI 首跑（推送后回填）**：run `35961710129`（headSha `50ffd8b`）双 job success——`build`（ubuntu）3m18s / `macos` 1m22s；候选腿步骤 43s（05:52:50 → 05:53:33）——install 段 32s（隔离仓 `/home/runner/work/_temp/consumer-sample/repo-candidate` 空仓冷启动）→ 7 项 ok → 四负例全「已拒」→ `失败项：0`；环境 Temurin 25.0.4.1 / Maven 3.9.16 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -174,7 +175,7 @@
 - [x] ⑥ 负例控制：坏版本 / 去版本 / 坏治理配置 + **④生产档撞 AUTO 审批**（S-b 增强）四项各自必败或必抛，还原后复绿 —— `S-b-candidate.txt` 四「已拒」+ `S-a-regreen.txt` 复绿
 - [x] ⑦ 文档：`docs/embedding.md` 六节齐（含排错指引）+ README 双语指引行；**按文档从零走一遍**可完成嵌入与自证 —— 文档面 ✓ S-b（七节，含模块路与排错表）；**走查 ✓ S-c**（`it23-real-run.txt`：仓外新工程 + 自写插件在 0.1.0 上从零跑通 EXIT=0；走查发现并修 1 处文档缺陷）
 - [x] ⑧ 漂移收敛：`YamlRows` 三层 fail loud（含突变与 `07`/`12` 各一行）+ `07` 示例照实 + `05` 三处 builder + `02` 四处 + 孤岛删除 + `AGENTS.md:23` 软化 —— 突变 A/B/C 逐层红→复绿；全量 package 46 模块绿
-- [x] ⑨ CI 候选腿 + 全量 `mvn -B package` 绿 —— 全量 package ✓ S-b（`S-b-package.txt`）+ S-c 终态复跑（`S-c-package.txt`：515/0/0，冻结校验内容级两命）；**CI 步骤 ✓ S-c**（`S-c-ci-dryrun.txt`：YAML 校验 + 步骤命令干跑 `失败项：0`）；真实 CI 首跑随下次 push（另行授权）
+- [x] ⑨ CI 候选腿 + 全量 `mvn -B package` 绿 —— 全量 package ✓ S-b（`S-b-package.txt`）+ S-c 终态复跑（`S-c-package.txt`：515/0/0，冻结校验内容级两命）；**CI 步骤 ✓ S-c**（`S-c-ci-dryrun.txt`：YAML 校验 + 步骤命令干跑 `失败项：0`）；**真实 CI 首跑 ✓**（2026-09-24 推送后 run `35961710129`：双 job success——ubuntu `build` 3m18s / macos 1m22s；候选腿步骤 `Verify external consumer sample (candidate leg)` 43s：install 32s → 7 项 ok → 四负例全「已拒」→ `失败项：0`，隔离仓 `/home/runner/work/_temp/consumer-sample/repo-candidate` 每跑每新）
 
 ## 修正（如有）
 

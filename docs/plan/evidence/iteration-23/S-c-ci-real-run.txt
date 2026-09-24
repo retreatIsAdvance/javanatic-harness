@@ -1,0 +1,37 @@
+# S-c 证据（补）：真实 CI 首跑——候选腿步骤在 GitHub runner 上的首次运行
+
+- 时间：2026-09-24（push 05:50:16Z 触发；run 结束 05:53:37Z）
+- 触发：`722c82f..50ffd8b master -> master`（本地 9 提交一次推送，含 it23 单提交 `50ffd8b`；pre-push 全量构建绿后才传包）
+- 运行：run **35961710129**（headSha `50ffd8b`）——**双 job success**
+  - `build`（ubuntu，3m18s）：步骤 8/17 `Verify external consumer sample (candidate leg)` **success**（05:52:50 → 05:53:33，43s）
+  - `macos`（1m22s）：`Build and test` + `Smoke jlink image` success
+- 复核命令：`gh run view 35961710129`（结论与 job 用时）；`gh run view --job 107511501189 --log`（build job 原始日志，本次 job id `107511501189`）
+- 环境：Temurin JDK 25.0.4.1 / Maven 3.9.16（runner 自带）；`CONSUMER_WORK=$RUNNER_TEMP/consumer-sample`，隔离仓每跑每新
+
+## 候选腿步骤关键输出行（逐字，取自 run 日志，去 job 前缀与 ANSI 色码）
+
+```
+2026-09-24T05:52:51.0420650Z == 腿 candidate：harness.version=0.2.0-SNAPSHOT，隔离本地仓 /home/runner/work/_temp/consumer-sample/repo-candidate
+2026-09-24T05:53:23.0640015Z   ok   候选：工作树 install → 隔离仓（跳测试）
+2026-09-24T05:53:25.0279561Z   ok   candidate：示例编译
+2026-09-24T05:53:26.8316273Z   ok   candidate：运行类路径
+2026-09-24T05:53:27.2201265Z   ok   candidate：治理自证运行
+2026-09-24T05:53:27.2212328Z   ok   candidate：自证通过
+2026-09-24T05:53:27.2223912Z   ok   candidate：自有工具可见
+2026-09-24T05:53:27.2234708Z   ok   candidate：自有工具可执行
+2026-09-24T05:53:27.2235049Z   用时 36s
+2026-09-24T05:53:27.2235346Z == 四负例（候选仓 / 候选构建产物）==
+2026-09-24T05:53:31.8272837Z   ok   负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+2026-09-24T05:53:32.9236707Z   ok   负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+2026-09-24T05:53:33.1039583Z   ok   负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+2026-09-24T05:53:33.4267062Z   ok   负例④生产档撞 AUTO 审批必须 boot 抛错（已拒，文案含「policy=PRODUCTION 但审批为 AUTO」）
+2026-09-24T05:53:33.4267851Z == 汇总：candidate ==
+2026-09-24T05:53:33.4268236Z 失败项：0
+```
+
+- install 段 32s（05:52:51 → 05:53:23）：runner 网络直取 Central，隔离仓空仓冷启动完成依赖闭包下载——「每跑每新 ⇒ 只凭坐标真解析」的代价与预期一致（B 裁决接受）。
+- 步骤耗时与本地同命令（`S-c-ci-dryrun.txt`：腿 79s）同量级，差异来自 runner 取件更快。
+
+## 结论
+
+CI 候选腿（B 裁决：发布腿不进 CI）**首次真实运行即绿**：步骤 43s、`失败项：0`、7 项 ok、四负例全「已拒」；ubuntu 与 macos 双 job success。验收 ⑨ 的「真实 CI 首跑」一项已兑现（原「随下次 push 另行授权」的挂账随 2026-09-24 推送关闭）。
