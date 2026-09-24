@@ -18,6 +18,8 @@ rows:
     disabled: ${env:DEEPSEEK_API_KEY} == null
   - plugin: approval-auto
   - plugin: approval-ask
+    # 人闸等待界(it22):行配置 idleTimeoutSeconds(秒;0 = 不设限)覆盖;缺省按终端形态——
+    # 非交互终端 300s 后按拒绝,交互终端不设限。headless --approval=ask 时按同一口径显式注入
     disabled: true
   - plugin: approval-deny
     disabled: true
@@ -62,7 +64,7 @@ rows:
   # 澄清问答（it22）：ask_user 免审批（提问不是副作用）+ 停轮结果（答复 = 下一轮
   # user message）；行序无约束，就近工具面
   - plugin: ask-user
-  # 命令面注册表(it14,REPL 用):具体命令由交互适配器注册;requires 为空,顺序无约束
+  # 命令面注册表(it14,REPL 用):REPL 内置 /help、/exit、/cancel(it22);requires 为空,顺序无约束
   - plugin: commands
   - plugin: presets
   - plugin: compaction

@@ -96,14 +96,25 @@ final class StreamRenderer implements AutoCloseable {
                 breakLine();
                 write("→ " + call.name() + " " + preview(call.arguments()) + "\n");
             }
-            case ToolResultEvent result -> {
-                breakLine();
-                write("← " + (result.block().isError() ? "error: " : "")
-                    + preview(result.block().content()) + "\n");
-            }
+            case ToolResultEvent result -> renderToolResult(result);
             case TurnEnd end -> renderTurnEnd(end);
             default -> { }
         }
+    }
+
+    /**
+     * 工具结果一行摘要。停轮提问（concludesTurn，it22）加可辨前缀——提问行与普通
+     * 工具输出不混同,并点明答复通道（下一条消息即答复;问答两半都是日志事实）。
+     */
+    private void renderToolResult(ToolResultEvent result) {
+        breakLine();
+        if (result.concludesTurn()) {
+            write("← 提问: " + preview(result.block().content()) + "\n");
+            write("(下一行输入即答复)\n");
+            return;
+        }
+        write("← " + (result.block().isError() ? "error: " : "")
+            + preview(result.block().content()) + "\n");
     }
 
     /** 失败行先落（可行动文案），末了恒补一行轮末统计——同形见 {@link TurnStats#line()}。 */

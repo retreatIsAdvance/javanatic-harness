@@ -60,7 +60,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS
 ## 构建与验证
 
 ```sh
-mvn -B package              # 全量编译打包（45 个 reactor 模块，362 项测试；环境门控用例自跳过）
+mvn -B package              # 全量编译打包（46 个 reactor 模块，513 项测试；环境门控用例自跳过）
 mvn -B -pl :harness-kernel-core -am package   # 单模块及其依赖
 ```
 
@@ -71,17 +71,23 @@ dist/jh/target/jlink-image/bin/jh --help     # 全部 flag 与示例（exit 0）
 dist/jh/target/jlink-image/bin/jh --verify   # 组合 + 治理断言（无 key，exit 0/1）
 
 dist/jh/target/jlink-image/bin/jh            # 裸启动进 REPL（it14）：非 / 行成轮送模型并流式渲染，
-                                             # /help 列命令、/exit（或 EOF/Ctrl-D）退出；进行中轮以 aborted 落账
+                                             # /help 列命令、/exit（或 EOF/Ctrl-D）退出、/cancel 取消在途轮（it22）；
+                                             # 进行中轮以 aborted 落账；模型提问（← 提问: 行）后的下一行即答复
                                              # Ctrl-C（it18）取消进行中轮（以 aborted 落账）并留在 REPL；
                                              # 空闲 Ctrl-C 同 /exit 退出；取消未收敛时再按一次 → 强制退出 130
 
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
 # 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 续跑同一会话
+# --sessions[=<N>] 列会话（id/状态/cwd/最后活动/事件数；keyless 只读，缺省 20，与任务文本/--resume/--verify 互斥）
 # --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
 # --resume 命中占用（另一进程/实例持写者锁）fail loud：exit 3、stdout 为空
-# 任务结果契约（it17）：stdout = 成功给最终答案 / 失败为空（成功但无文本合法，exit 0）
-#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败（含 --resume 写者锁冲突） · 4 任务被取消
+# 任务结果契约（it17；it22 增「等待答复」）：
+#   stdout = 成功给最终答案 / 等待答复给提问文本（exit 5）/ 失败为空（成功但无文本合法，exit 0）
+#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败（含 --resume 写者锁冲突） · 4 任务被取消 · 5 等待人工答复
 #   诊断（失败文案、模型遗言）走 stderr；`out=$(bin/jh "任务")` 取答案、按退出码判成败
+#   一问一答（it22）：exit 5 的答复 = 下一轮 user message（bin/jh --resume=<id> "答复文本"）
+# --approval=ask 的等待界（it22）：非交互终端缺省 300 秒后按拒绝（fail-closed，绝不无限挂起）；
+#   --approval-timeout=<秒> 仅在 --approval=ask 下有效（0 = 不设限）
 # Ctrl-C（it18）：协作取消 → turn/end aborted("user")、exit 4、stdout 为空；
 #   取消未收敛时再按一次 = 强制退出（130）。取消只对协作面生效——
 #   整批工具无视取消并正常返回时仍以 Completed 收口（exit 0）

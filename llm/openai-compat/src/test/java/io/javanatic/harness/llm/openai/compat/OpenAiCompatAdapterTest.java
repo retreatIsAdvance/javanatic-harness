@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -48,12 +49,17 @@ class OpenAiCompatAdapterTest {
     private final List<ResponseScript> scripts = new CopyOnWriteArrayList<>();
     private final AtomicInteger hits = new AtomicInteger();
 
-    /** 非 200 时 rawBody 非空则原样写体(错误体分类);否则按 SSE 行写。 */
+    /** 非 200 时 rawBody 非空则原样写体(错误体分类);否则按 SSE 行写。gate 非空则写体前等闸门。 */
     private record ResponseScript(int status, String retryAfter, List<String> sseLines,
-                                  long stallAfterLinesMillis, String rawBody) {
+                                  long stallAfterLinesMillis, String rawBody, CountDownLatch gate) {
         ResponseScript(int status, String retryAfter, List<String> sseLines,
                        long stallAfterLinesMillis) {
-            this(status, retryAfter, sseLines, stallAfterLinesMillis, null);
+            this(status, retryAfter, sseLines, stallAfterLinesMillis, null, null);
+        }
+
+        ResponseScript(int status, String retryAfter, List<String> sseLines,
+                       long stallAfterLinesMillis, String rawBody) {
+            this(status, retryAfter, sseLines, stallAfterLinesMillis, rawBody, null);
         }
     }
 
@@ -102,6 +108,15 @@ class OpenAiCompatAdapterTest {
                 out.write(script.rawBody().getBytes(StandardCharsets.UTF_8));
                 out.flush();
                 return;
+            }
+            if (script.gate() != null) {
+                // 放行前一个字节都不写:生产侧停在阻塞 read、消费侧停在 queue.poll
+                try {
+                    script.gate().await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("test gate interrupted", e);
+                }
             }
             for (String line : script.sseLines()) {
                 out.write(("data: " + line + "\n\n").getBytes(StandardCharsets.UTF_8));
@@ -376,6 +391,29 @@ class OpenAiCompatAdapterTest {
         }
     }
 
+    /**
+     * 取消落在消费侧 poll 窗口内（生产侧读到取消后的第一个字节、消费侧正阻塞在
+     * next() 的 poll）时，取消必须经队列条目以 AbortedException 上浮——
+     * 静默收口（End 伪装流尾 → NoSuchElementException）即回归缺陷。
+     */
+    @Test
+    void cancelDuringPollWindowSurfacesAsAbortedNotCleanEnd() throws Exception {
+        CountDownLatch gate = new CountDownLatch(1);
+        scripts.add(new ResponseScript(200, null,
+            List.of("{\"choices\":[{\"delta\":{\"content\":\"a\"}}]}"), 0, null, gate));
+        ProducerOnlyCancel signal = new ProducerOnlyCancel(Thread.currentThread());
+        try (Stream<StreamChunk> chunks = adapter().stream(
+                new LlmCallConfig("vendor", "m"), request(), signal)) {
+            Iterator<StreamChunk> iterator = chunks.iterator();
+            Thread canceller = Thread.ofVirtual().start(() -> {
+                signal.cancel();
+                gate.countDown();
+            });
+            assertThatThrownBy(iterator::next).isInstanceOf(AbortedException.class);
+            canceller.join();
+        }
+    }
+
     @Test
     void transportOptionsToStringMasksApiKey() {
         String text = new TransportOptions("sk-secret-123", Duration.ofSeconds(1),
@@ -417,6 +455,30 @@ class OpenAiCompatAdapterTest {
         void cancel() {
             cancelled = true;
             actions.forEach(Runnable::run);
+        }
+    }
+
+    /**
+     * 线程判别信号：只对消费线程以外的线程（生产者）抛出。消费侧因此不可能
+     * 在自身 checkAbort 处提前收口，取消只能经队列条目抵达消费者。
+     */
+    private static final class ProducerOnlyCancel implements AbortSignal {
+        private final Thread consumer;
+        private volatile boolean cancelled;
+
+        ProducerOnlyCancel(Thread consumer) {
+            this.consumer = consumer;
+        }
+
+        @Override
+        public void checkAbort() {
+            if (cancelled && Thread.currentThread() != consumer) {
+                throw new AbortedException("test-cancel");
+            }
+        }
+
+        void cancel() {
+            cancelled = true;
         }
     }
 }

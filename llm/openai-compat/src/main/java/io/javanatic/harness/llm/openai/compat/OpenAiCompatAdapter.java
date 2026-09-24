@@ -82,7 +82,9 @@ public final class OpenAiCompatAdapter implements LlmAdapter {
             HttpResponse<InputStream> response = sendWithRetry(config, request, signal);
             pump(response.body(), signal, queue);
         } catch (AbortedException e) {
-            offer(queue, new End());
+            // 取消不得伪装成流尾（End 只表干净 EOF）——否则消费侧在 poll 窗口内会静默收口,
+            // 落成 "stream ended without a Finish chunk" 的假协议错误而非 aborted
+            offer(queue, new Failed(e));
         } catch (IllegalStateException e) {
             // wire 解析失败（畸形 SSE/未知 finish_reason 等）是 seam 词表的 PROTOCOL,
             // 不是内部不变量破损——types 化后经 ChunkIterator 原样surface

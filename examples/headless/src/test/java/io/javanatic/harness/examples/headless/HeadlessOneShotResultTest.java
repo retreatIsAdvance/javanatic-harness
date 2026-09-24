@@ -8,11 +8,14 @@ import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.SessionEndSeedEvent;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.SurfaceOp;
+import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.event.TurnEnd;
 import io.javanatic.harness.session.event.TurnEndReason;
 import io.javanatic.harness.session.event.TurnStart;
 import io.javanatic.harness.session.message.AssistantMessage;
+import io.javanatic.harness.session.message.CallId;
 import io.javanatic.harness.session.message.MessageSource;
+import io.javanatic.harness.session.message.ToolResultBlock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -149,6 +152,29 @@ class HeadlessOneShotResultTest {
             .doesNotContain("第一轮答案");
     }
 
+    @Test
+    void questionEndsTurnWithExitFiveAndAnswerResumesToZero() throws Exception {
+        // 第一轮:模型 ask_user 提问停轮——stdout = 提问文本,exit 5,stderr 给续跑指引
+        askUser("部署到哪台机器?");
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        assertThat(run(new String[] {"测试任务"}, stdout, stderr)).isEqualTo(5);
+        assertThat(stdout.toString(StandardCharsets.UTF_8))
+            .isEqualTo("部署到哪台机器?" + System.lineSeparator());
+        assertThat(stderr.toString(StandardCharsets.UTF_8))
+            .contains("stats: turn=1 steps=1")
+            .contains("等待人工答复")
+            .contains("--resume=");
+
+        // 第二轮:答复 = 下一轮 user message——经既有 resume 通道回到 exit 0
+        answerWith("明白,部署到第二台");
+        ByteArrayOutputStream resumedOut = new ByteArrayOutputStream();
+        assertThat(run(new String[] {"--resume=" + findSessionId(), "部署到第二台"}, resumedOut,
+            new ByteArrayOutputStream())).isZero();
+        assertThat(resumedOut.toString(StandardCharsets.UTF_8))
+            .isEqualTo("明白,部署到第二台" + System.lineSeparator());
+    }
+
     // ────────── 单元：映射与 seed 边界 ──────────
 
     @Test
@@ -162,6 +188,38 @@ class HeadlessOneShotResultTest {
         assertThat(HeadlessMain.oneShotExitCode(List.of())).isEqualTo(3);
         assertThat(HeadlessMain.oneShotExitCode(live(
             new TurnEnd(0, 1, new UnknownReason())))).isEqualTo(3);
+    }
+
+    @Test
+    void concludingResultMapsCompletedTurnToExitFiveOnlyForThatTurn() {
+        List<LoggedEvent<? extends SessionEvent>> concluding = List.of(
+            new LoggedEvent<SessionEvent>(0, new TurnStart(0, 1)),
+            new LoggedEvent<SessionEvent>(1, new ToolResultEvent(0, 1, 0,
+                new ToolResultBlock(CallId.of("q1"), "问一句", false), true,
+                new SurfaceOp.Append(), null)),
+            new LoggedEvent<SessionEvent>(2, new TurnEnd(0, 1, new TurnEndReason.Completed())));
+        assertThat(HeadlessMain.concludingQuestion(concluding)).contains("问一句");
+        assertThat(HeadlessMain.oneShotExitCode(concluding)).isEqualTo(5);
+
+        // 非 Completed 终局:停轮结果不顶替——Aborted 仍 4,提问不成立
+        List<LoggedEvent<? extends SessionEvent>> aborted = List.of(
+            new LoggedEvent<SessionEvent>(0, new ToolResultEvent(0, 1, 0,
+                new ToolResultBlock(CallId.of("q1"), "问一句", false), true,
+                new SurfaceOp.Append(), null)),
+            new LoggedEvent<SessionEvent>(1, new TurnEnd(0, 1, new TurnEndReason.Aborted("user"))));
+        assertThat(HeadlessMain.concludingQuestion(aborted)).isEmpty();
+        assertThat(HeadlessMain.oneShotExitCode(aborted)).isEqualTo(4);
+
+        // 旧轮的停轮结果不顶替本轮终局(同会话跨轮):末轮 Completed 但无停轮 → 0
+        List<LoggedEvent<? extends SessionEvent>> oldTurn = List.of(
+            new LoggedEvent<SessionEvent>(0, new ToolResultEvent(0, 1, 0,
+                new ToolResultBlock(CallId.of("q1"), "旧轮提问", false), true,
+                new SurfaceOp.Append(), null)),
+            new LoggedEvent<SessionEvent>(1, new TurnEnd(0, 1, new TurnEndReason.Completed())),
+            new LoggedEvent<SessionEvent>(2, new TurnStart(0, 2)),
+            new LoggedEvent<SessionEvent>(3, new TurnEnd(0, 2, new TurnEndReason.Completed())));
+        assertThat(HeadlessMain.concludingQuestion(oldTurn)).isEmpty();
+        assertThat(HeadlessMain.oneShotExitCode(oldTurn)).isZero();
     }
 
     @Test
@@ -251,6 +309,18 @@ class HeadlessOneShotResultTest {
             + "\"function\":{\"name\":\"fs_read\",\"arguments\":\"" + escaped + "\"}}]},"
             + "\"finish_reason\":\"tool_calls\"}],"
             + "\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":" + outputTokens + "}}\n\n"
+            + "data: [DONE]\n\n";
+    }
+
+    /** 200:一步 ask_user 停轮提问(concludesTurn → 轮收口为 Completed,出口 exit 5)。 */
+    private void askUser(String question) {
+        status = 200;
+        String arguments = "{\"question\":\"" + question + "\"}";
+        String escaped = arguments.replace("\\", "\\\\").replace("\"", "\\\"");
+        body = "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"q1\","
+            + "\"function\":{\"name\":\"ask_user\",\"arguments\":\"" + escaped + "\"}}]},"
+            + "\"finish_reason\":\"tool_calls\"}],"
+            + "\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5}}\n\n"
             + "data: [DONE]\n\n";
     }
 

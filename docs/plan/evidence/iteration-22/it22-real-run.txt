@@ -1,0 +1,171 @@
+# it22 验收 ⑨ 真跑（jlink 镜像 dist/jh/target/jlink-image/）：--sessions 列举 + 一问一答闭环 + 非交互等待界
+#   附 /cancel 与 SIGINT 真观测——E 节发现一处竞态缺陷（未改码,待裁）;F 节 = 修复 (b) 落地后的同形态复观
+# 镜像: A–E 节 = 工作树（S-c 未提交态）08:36 package 产物;F 节 = 竞态修复后 20:14 重建产物
+#       （两版 --help 均含 --sessions / --approval-timeout / exit 5 / /cancel）
+# key 经登录 shell 的 DEEPSEEK_API_KEY（代跑模式,值不进对话）；无 key 腿直接跑
+# 「E:「…」」= stderr 决定性行; EXIT 逐腿回显; 「日志事实」= ~/.harness/sessions/<id>/log.jsonl 逐事件抽取
+
+$ dist/jh/target/jlink-image/bin/jh --help | 决定性行
+  --sessions[=<N>]           列举会话:每行 <id> created=… last=… events=… <busy|idle> …
+  --approval-timeout=<秒>    人闸空闲上限(仅 --approval=ask;0 = 不设限)。缺省:非交互终端 300 秒后按拒绝;交互终端不设限
+  5  等待人工答复(模型提问停轮;stdout = 提问文本,答复 = --resume=<id> "答复文本")
+  REPL 说明:…模型提问(← 提问: 行)后的下一条消息即答复;/cancel 取消在途轮(同 Ctrl-C 收敛)
+
+## A. 治理面与列举（无 key;keyless 面）
+
+$ bin/jh --verify                                                                    EXIT=0
+  Profile: headless   policy: STANDARD
+    composition: 20 rows, 25 discovered, 0 unreferenced
+    approval: AUTO (approval-auto; exempt=ask_user)      ← R4 面点名免审批工具
+
+$ bin/jh --sessions                                                                  EXIT=0
+  sessions: 20/28   root=/Users/abel_yang/.harness/sessions
+    headless-1790059842817-59c4  created=2026-09-22T14:50:42.831+08:00  last=…14:50:44.441…  events=81  idle  cwd=/tmp/it21-realrun/workspace
+    headless-1789702472876-c2dd  created=…  last=…  events=10006  idle  cwd=/Users/abel_yang/jh-baseline/case09
+    …（共 20 行,按 last 降序）
+    截断: 仅列前 20 条（共 28）—— --sessions=<N> 放大上限
+  （首行 id/cwd 与 it21 真跑会话一致——列举读的是落盘事实；10006 事件会话尾窗有界读无碍）
+
+$ bin/jh --sessions=30                                                               EXIT=0
+  sessions: 28/28   root=…（无截断行;放大上限生效）
+$ bin/jh --sessions=3                                                                EXIT=0
+  sessions: 3/28 … + 「截断: 仅列前 3 条（共 28）—— --sessions=<N> 放大上限」
+$ bin/java -Duser.home=/tmp/it22/empty-home -m io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain --sessions
+                                                                                     EXIT=0
+  sessions: 0/0   root=/tmp/it22/empty-home/.harness/sessions
+  （目录不存在 = 空列表 + 计数行,非错误;macOS user.home 不随 $HOME,故以 -Duser.home 指空）
+
+$ bin/jh --sessions "任务文本"   EXIT=2  E:「严重: --sessions 与任务文本互斥（列举不执行任务）（用法见 --help）」
+$ bin/jh --sessions --resume=abc EXIT=2  E:「严重: --sessions 与 --resume 互斥（列举请另开一次运行）（用法见 --help）」
+$ bin/jh --sessions=0            EXIT=2  E:「严重: --sessions 必须是正整数,收到: 0（用法见 --help）」
+
+## B. 恢复指引与 busy 探针（有 key）
+
+$ bin/jh "随便说一句话" --resume=headless-no-such-id                                 EXIT=3
+  stdout 0 字节
+  E:「信息: resume session=headless-no-such-id」
+  E:「严重: 会话不存在: headless-no-such-id；用 jh --sessions 查看可用会话，再 --resume=<id>」   ← 不再裸栈,失败面反转
+
+$ （后台 REPL 持锁: sleep 30 | bin/jh --resume=headless-1790125132292-9ad6 --workspace=… --approval=ask &）
+$ bin/jh --sessions=3                                                                EXIT=0
+    headless-1790125132292-9ad6  …  events=127  busy  cwd=/tmp/it22-realrun/workspace
+  （锁探针真跑命中;后台 REPL 收到 EOF 正常退出 EXIT=0,再列即 idle）
+
+## C. 一问一答闭环（key）
+
+C1 提问半场（--approval=ask 下提问不弹人闸）
+$ bin/jh "我还定不下来说明文件写到哪个子目录。请先用 ask_user 工具向我提问:说明文件应该写到 workspace 下的哪个子目录?在拿到我的答复前不要动手。" \
+    --workspace=/tmp/it22-realrun/workspace --approval=ask --approval-timeout=5 --budget=20000 < /dev/null
+                                                                                     EXIT=5
+  stdout = 提问文本:「说明文件应该写到 workspace 下的哪个子目录?（请给出相对 workspace 的路径，例如 docs/、notes/ 等）」
+  E:「信息: session=headless-1790125132292-9ad6」
+  E:「信息: 46: tool/call」「信息: 47: tool/result」「信息: 48: step/end」「信息: 49: turn/end」
+  E:「stats: turn=1 steps=1 tokens_in=1350 tokens_out=65 elapsed=1.2s」
+  E:「等待人工答复:jh --resume=headless-1790125132292-9ad6 "答复文本"（答复即下一轮 user/message;REPL 下提问后的下一行即答复）」
+  stderr 中 [approval] 行计数 = 0    ← 免审批声明在真跑生效（提问不经审批通道）
+  日志事实:
+    seq 46  tool/call   {"name":"ask_user","arguments":"{\"question\": \"说明文件应该写到 …\"}","turn":1,"step":0}
+    seq 47  tool/result {"concludesTurn":true,"isError":false,"content":"说明文件应该写到 …","toolUseId":"call_00_OsS6KeZi7YCxNksr9FgF4295"}
+    seq 49  turn/end    {"reason":{"kind":"completed"},"turn":1}    ← 停轮收口 completed
+
+C2 答复半场（--resume=<id> "答复文本"；答复轮的写操作照走人闸）
+$ printf 'y\ny\ny\n' | bin/jh "答复:用 docs/ 子目录,请把说明文件写到 /tmp/it22-realrun/workspace/docs/note.md,内容一行即可。" \
+    --resume=headless-1790125132292-9ad6 --workspace=/tmp/it22-realrun/workspace --approval=ask --budget=20000
+                                                                                     EXIT=0
+  stdout:「已写入 `/tmp/it22-realrun/workspace/docs/note.md`。」
+  E:「信息: resume session=headless-1790125132292-9ad6」
+  E:「[approval] allow fs_write fs_write {"path": "…/docs/note.md", …}? [y/N]」   ← 有副作用工具仍走人闸
+  E:「stats: turn=2 steps=2 tokens_in=3064 tokens_out=92 elapsed=1.3s」
+  落盘: docs/note.md 50 字节 =「说明文件已按要求写入 docs/ 子目录。」
+  日志事实: user/message seq 53 = 答复原文;turn/end turn=2 {"kind":"completed"};全日志 ask_user 的 tool/call 计数 = 1
+            （回放不重放提问——提问只在 turn 1 发生过一次）
+
+## D. 非交互等待界（key）
+
+D1 超时→按拒绝（stdin 持开、无 EOF、无输入）
+$ sleep 20 | bin/jh "用工具在 workspace 下创建文件 bounded.txt,内容为 ok。" --workspace=… --approval=ask --approval-timeout=3 --budget=20000
+                                                                                     EXIT=0
+  E:「[approval] allow fs_write fs_write {"path": "…/bounded.txt", "content": "ok"}? [y/N] [approval] 等待超时（3s）:无人应答,按拒绝处理——非交互场景请用 --approval=auto|deny;需要人闸请调 --approval-timeout=<秒>（0 = 不设限）」
+  E:「stats: turn=1 steps=2 tokens_in=2740 tokens_out=90 elapsed=4.7s」   ← 3s 上限 + 两跳模型,有界不挂死
+  stdout = 模型对拒绝的收口:「写入被拒绝（人工门控拦截了 `fs_write`）。…」
+  日志事实: turn/end {"kind":"completed"}（拒绝是正常工具结果,不是轮失败）
+
+D2 EOF 仍即时拒绝（对照；同任务）
+$ bin/jh "用工具在 workspace 下创建文件 eof.txt,内容为 ok。" --workspace=… --approval=ask --budget=20000 < /dev/null
+                                                                                     EXIT=0
+  E:「[approval] allow fs_write …? [y/N]」×2（模型重试两次均即时拒绝）;「等待超时」行计数 = 0;stats elapsed=3.1s
+  （EOF 语义未变:无等待、无超时文案）
+
+## E. /cancel 真观测 —— 发现一处竞态缺陷（未改码,待裁）
+
+E1 REPL /cancel（任务 = 分 6 步写文件;开跑 8 秒后发 /cancel,取消落在 LLM 流中期;三次）
+  run1 session=headless-1790125262126-a1bc
+    turn/end {"reason":{"kind":"error","message":"IllegalArgumentException: stream ended without a Finish chunk","failureKind":"unknown"},"turn":1}
+  run2 session=headless-1790125344068-a062
+    turn/end {"reason":{"cause":"user","kind":"aborted"},"turn":1}
+  run3 session=headless-1790125379728-df4
+    turn/end {"reason":{"kind":"error","message":"IllegalArgumentException: stream ended without a Finish chunk",…},"turn":1}
+  三次共性: stdout「已请求取消，等待收敛」+ 轮末 stats;REPL 继续运行(随后 /exit 正常, EXIT=0)
+  即: /cancel 入口与 REPL 继续均成立,但 2/3 的轮以 error 收口而非 aborted
+
+E2 一次性 SIGINT（`kill -INT` 到 JVM;python 前台驱动器发放——非交互脚本的后台作业会被 shell 置
+    SIG_IGN 使信号腿无效,`set -m` 在非交互 zsh 不可用）
+  run1 session=headless-1790125559644-aa34  EXIT=3  stdout 0 字节
+    E:「已请求取消，等待收敛（再按一次 Ctrl-C 强制退出）」
+    E:「严重: turn 1 failed」+ 裸栈: java.lang.IllegalArgumentException: stream ended without a Finish chunk
+      at io.javanatic.harness.llm.ChunkAssembly.fold / at io.javanatic.harness.agentloop.AgentLoopImpl.runStepLoop
+  run2 session=headless-1790125566959-b08c  EXIT=4  stdout 0 字节
+    E:「任务被取消: user」
+  即: 同一动作两跑给出 3(失败) / 4(取消) 两种退出码
+
+  归因（读码,三层）:
+    ① llm/openai-compat/…/OpenAiCompatAdapter.produce: catch (AbortedException e) → offer(queue, new End())
+       —— 取消被收敛为队列里的「干净流尾」
+    ② 同文件 ChunkIterator.hasNext: checkAbort() 只在每轮循环顶调用（:306）;拿到 End 即 return false（:311-313）
+       —— 取消若落在消费者阻塞于 queue.poll(100ms) 的窗口内,End 先被消费,此后不再有 checkAbort
+    ③ core/agent-loop/…/AgentLoopImpl.runStepLoop: 流结束 → ChunkAssembly.fold(collected) 无 Finish → 裸 IAE
+       → catch (RuntimeException) 归失败 → turn/end(error) → 一次性路径 exit 3（REPL 路径渲染「turn 失败」）
+  影响: 违反 USAGE「取消…以 turn/end(aborted) 落账」与退出码 4 契约;脚本 `case $?` 判取消会读到 3。
+        本场景 5 次观测命中 3 次（流中期取消几乎必现两分其一）。
+  既测盲区: OpenAiCompatAdapterTest.cancelMidStreamThrowsAborted 是「先取消、后取件」——循环顶 checkAbort 必炸,
+        覆盖不到「End 已入队、消费者正在 poll」这条分支（HeadlessSigintTest 用进程内信号 + 桩模型,同样不经过该时序）。
+  修复方向（两处皆一行,未实施）:
+    (a) 消费端: End 分支补一次 signal.checkAbort()（无取消 → 原样 return false,正常流尾不受影响）
+    (b) 生产端: produce 的 AbortedException 分支改 offer(new Failed(e)) —— 显式承取消,由消费者原样抛出
+    建议 (a)+(b) 取 (a)（消费边界统一裁决「流尾是否可信」）,配套一条「取消落在 poll 窗口内」的适配器单测。
+
+## F. 竞态修复 (b) 后的真跑复观（2026-09-23 晚,同一 jlink 镜像路径;镜像 = 修复后 package 产物）
+
+裁决: 取 (b)（produce 的取消分支改送 Failed(e),End 只表干净 EOF）;配「取消落在 poll 窗口内」
+确定性单测 + 突变 G（单元面见 S-c-fix-focus.txt / S-c-mutation-G.txt）。镜像于 20:14 重建。
+
+F1 REPL /cancel（E1 同形态:E1 任务文本 + 开跑 8 秒 /cancel + 6 秒后 /exit;三次）
+$ zsh -lc 'python3 /tmp/it22-fix/repl-cancel.py'    # 子进程 = dist/jh/target/jlink-image/bin/java -m …HeadlessMain
+  run1 EXIT=0  session=headless-1790165757042-b89a
+  run2 EXIT=0  session=headless-1790165771399-3cf2
+  run3 EXIT=0  session=headless-1790165785761-8a15
+  三次共性: stdout「已请求取消，等待收敛」+ 轮末 stats（elapsed≈7.7s）;无「turn 失败」渲染;REPL 继续（/exit 正常）
+  日志事实（log.jsonl 尾 turn/end,三次逐字）:
+    {"reason":{"cause":"user","kind":"aborted"},"turn":1,…}  ×3   ← 3/3 落 aborted
+  对照 E1 同形态: 1/3 aborted（另 2 次为 "stream ended without a Finish chunk" 的 error + 渲染「turn 失败」）
+
+F2 一次性 SIGINT（E2 同形态:python 前台驱动器,开跑 7 秒后 SIGINT 到 JVM）
+  E2 原为 8 步任务。复观首轮照 8 步跑时,run1 任务在 5.2s 完成（turn/end completed、EXIT=0）——
+  信号落在完成之后,不构成取消观测（如实记录）。任务加长至 12 步后重跑四次:
+$ zsh -lc 'python3 /tmp/it22-fix/oneshot-sigint-12step.py'
+  run1 EXIT=4  session=headless-1790165866016-6c82
+  run2 EXIT=4  session=headless-1790165873497-52b0
+  run3 EXIT=4  session=headless-1790165880544-5645
+  run4 EXIT=4  session=headless-1790165887575-fcbd
+  四次共性: stdout 0 字节;E:「已请求取消，等待收敛（再按一次 Ctrl-C 强制退出）」;E:「任务被取消: user」;
+  无裸栈、无「严重: turn 1 failed」
+  日志事实（log.jsonl 尾 turn/end,四次逐字）:
+    {"reason":{"kind":"aborted","cause":"user"},"turn":1,…}  ×4   ← 4/4 落 aborted
+  对照 E2: 同一动作两跑给出 3(失败,裸 IAE 栈) / 4(取消) 两种退出码
+
+  F 节结论: 取消两入口（REPL /cancel 与 SIGINT）在 LLM 流中期均稳定收敛为 aborted(cause=user);
+  一次性路径退出码稳定 4（E2 期的 3/4 分裂与「turn 失败」渲染不再出现）。⑦ 面（突变 G）在单元层
+  给出同一断言的必红/复绿,真跑与单测两面互证。
+
+  （附一坑: 复观脚本首版只发 /cancel 不先提交任务文本,REPL 停空闲态答「无进行中的轮」——
+  取消观测必须先让轮在途;E1 期的驱动形状即「先送任务文本、再定时 /cancel」。）

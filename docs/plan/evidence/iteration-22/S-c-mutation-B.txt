@@ -1,0 +1,32 @@
+# 突变 B：非交互缺省上限被抹平（`effectiveIdleTimeout` 缺省分支恒 Duration.ZERO），期望必红
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+# 突变点: ApprovalPrompt.java:48  `return interactive ? Duration.ZERO : NON_INTERACTIVE_IDLE_TIMEOUT;` → `return Duration.ZERO;`
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言行 + 模块行 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl interaction/approval,examples/headless -am test -Dtest='ApprovalPromptTest,HeadlessOptionsTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] io.javanatic.harness.interaction.approval.ApprovalPromptTest.effectiveIdleTimeoutPrefersConfiguredThenTerminalShape -- Time elapsed: 0.041 s <<< FAILURE!
+[非交互缺省 300s]
+expected: 5M
+ but was: 0S
+[ERROR] Tests run: 5, Failures: 1, Errors: 0, Skipped: 0
+[INFO] harness-interaction-approval ....................... FAILURE [  1.872 s]
+[INFO] harness-examples-headless .......................... SKIPPED      ← 依赖模块 FAILURE 被跳过（Maven 语义），另跑补证
+[INFO] BUILD FAILURE
+EXIT=1
+
+$ mvn -B -fae -pl examples/headless -am test -Dtest='HeadlessOptionsTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] io.javanatic.harness.examples.headless.HeadlessOptionsTest.askIdleTimeoutPinsFlagThenTerminalShape -- Time elapsed: 0.007 s <<< FAILURE!
+expected: 300L
+ but was: 0L
+[ERROR] Tests run: 20, Failures: 1, Errors: 0, Skipped: 0
+[INFO] harness-examples-headless .......................... FAILURE [  1.347 s]
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 两腿同因：缺省口径单源在 `effectiveIdleTimeout`——接口直测（approval）与 CLI 换算
+# （headless 的 askIdleTimeoutSeconds 经同一入口）同时判红；显式秒数分支未触及，故仅缺省用例红。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-c-regreen.txt

@@ -169,9 +169,9 @@ final class DeepSeekAdapter implements LlmAdapter {
                     StreamChunk chunk = parseSseLine(line);
                     if (chunk != null) queue.put(chunk);
                 });
-                queue.put(FIN);                       // 哨兵：正常结束
+                queue.put(FIN);                       // 哨兵：正常结束（End 只表干净 EOF）
             } catch (AbortedException e) {
-                queue.put(FIN);                       // 取消 = 正常结束（consumer 侧自查）
+                queue.put(new ErrorMarker(e));        // 取消不伪装成流尾：经错误通道原样上浮
             } catch (Exception e) {
                 queue.put(new ErrorMarker(e));        // 错误经流传递，consumer 侧抛出
             }

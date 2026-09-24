@@ -1,5 +1,6 @@
 package io.javanatic.harness.interaction.approval;
 
+import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.tools.ApprovalService;
 import io.javanatic.harness.tools.ToolExecutor;
@@ -23,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -97,10 +99,10 @@ class ApprovalModesTest {
         InputStream original = System.in;
         System.setIn(new ByteArrayInputStream("n\n".getBytes(StandardCharsets.UTF_8)));
         try {
-            assertThat(ApprovalPrompt.stdin().ask(new ApprovalService.ApprovalRequest(
+            assertThat(ApprovalPrompt.stdin(Duration.ZERO).ask(new ApprovalService.ApprovalRequest(
                 "bash", "rm -rf /", "{}"), AbortSignal.never())).isFalse();
             System.setIn(new ByteArrayInputStream(new byte[0]));
-            assertThat(ApprovalPrompt.stdin().ask(new ApprovalService.ApprovalRequest(
+            assertThat(ApprovalPrompt.stdin(Duration.ZERO).ask(new ApprovalService.ApprovalRequest(
                 "bash", "rm -rf /", "{}"), AbortSignal.never())).isFalse();
         } finally {
             System.setIn(original);
@@ -151,6 +153,36 @@ class ApprovalModesTest {
         }
     }
 
+    /** 行配置 idleTimeoutSeconds 到插件:无参 ctor 的分支走数据组合路径（headless 注入的落点）。 */
+    @Test
+    void askPluginReadsIdleTimeoutFromRowConfig() throws Exception {
+        InputStream original = System.in;
+        System.setIn(new BlockingStdin());
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(ConfigService.KEY, pluginId -> "approval-ask".equals(pluginId)
+                ? Map.of("idleTimeoutSeconds", 1)
+                : Map.of());
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new ApprovalAskPlugin(), new ToolsPlugin()));
+            rt.root().require(ToolRegistry.KEY).register(rt.root(), echoTool());
+            ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
+            CompletableFuture<ToolResultEvent> outcome = new CompletableFuture<>();
+            Thread.ofVirtual().start(() -> {
+                try {
+                    outcome.complete(execute(executor, rt));
+                } catch (Throwable t) {
+                    outcome.completeExceptionally(t);
+                }
+            });
+            // 行配置 1s 生效(缺省非交互 300s 会卡到超时判红);超时按拒绝 → error result
+            ToolResultEvent result = outcome.get(10, TimeUnit.SECONDS);
+            assertThat(result.block().isError()).isTrue();
+            assertThat(result.block().content()).contains("denied by human gate");
+        } finally {
+            System.setIn(original);
+        }
+    }
+
     @Test
     void stdinPromptAbortsOnCancelWhileWaiting() throws Exception {
         InputStream original = System.in;
@@ -162,8 +194,8 @@ class ApprovalModesTest {
             }
         };
         try {
-            assertThatThrownBy(() -> ApprovalPrompt.stdin().ask(new ApprovalService.ApprovalRequest(
-                "bash", "rm -rf /", "{}"), signal))
+            assertThatThrownBy(() -> ApprovalPrompt.stdin(Duration.ZERO).ask(
+                new ApprovalService.ApprovalRequest("bash", "rm -rf /", "{}"), signal))
                 .isInstanceOf(AbortedException.class);
         } finally {
             System.setIn(original);

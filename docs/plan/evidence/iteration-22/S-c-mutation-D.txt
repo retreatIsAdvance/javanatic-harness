@@ -1,0 +1,23 @@
+# 突变 D：exit 5 映射断裂（`oneShotExitCode` 的 Completed 分支恒 0——提问停轮不再报「等待人工答复」），期望必红
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+# 突变点: HeadlessMain.java:587  `return concludingQuestion(live).isPresent() ? 5 : 0;` → `return 0;`
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言行 + 模块行 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl examples/headless -am test -Dtest='HeadlessOneShotResultTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 9, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.658 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.HeadlessOneShotResultTest
+[ERROR] io.javanatic.harness.examples.headless.HeadlessOneShotResultTest.concludingResultMapsCompletedTurnToExitFiveOnlyForThatTurn -- Time elapsed: 0.008 s <<< FAILURE!
+expected: 5
+ but was: 0
+[ERROR] io.javanatic.harness.examples.headless.HeadlessOneShotResultTest.questionEndsTurnWithExitFiveAndAnswerResumesToZero -- Time elapsed: 0.022 s <<< FAILURE!
+expected: 5
+ but was: 0
+[INFO] harness-examples-headless .......................... FAILURE [  3.106 s]
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 两腿同因：单测面（concluding 结果 → 码映射）与端到端面（假服务端 200 ask_user 一步停轮 →
+# 进程出口 5 + stdout 提问）同时判红；aborted/旧轮两断言未受影响（映射表其余格不动）。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-c-regreen.txt

@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * 补充 6「REPL 审批合流」的接线验收：组合出的 stdin 人闸（{@code ApprovalPrompt.stdin()}
+ * 补充 6「REPL 审批合流」的接线验收：组合出的 stdin 人闸（{@code ApprovalPrompt.stdin(...)}
  * 在 ask 时读 System.in）经 {@link ReplApprovalInput} 代理收到行循环转交的裁决行
  * ——forward("y") 放行；行循环退出（close → EOF）按既有拒绝语义；
  * 取消撤出等待中的裁决（AbortedException 收敛、不落 error result），撤出后的行归 REPL。

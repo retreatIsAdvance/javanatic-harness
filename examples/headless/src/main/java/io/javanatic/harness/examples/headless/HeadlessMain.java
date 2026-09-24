@@ -15,6 +15,7 @@ import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.boot.AppBoot;
 import io.javanatic.harness.boot.Policy;
+import io.javanatic.harness.interaction.approval.ApprovalPrompt;
 import io.javanatic.harness.interaction.commands.Command;
 import io.javanatic.harness.interaction.commands.CommandInvocation;
 import io.javanatic.harness.interaction.commands.CommandRegistry;
@@ -28,6 +29,7 @@ import io.javanatic.harness.session.SessionEvents;
 import io.javanatic.harness.session.event.AssistantMessageEvent;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.SessionEvent;
+import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.event.TurnEnd;
 import io.javanatic.harness.session.event.TurnEndReason;
 import io.javanatic.harness.session.message.ContentBlock;
@@ -120,7 +122,9 @@ public final class HeadlessMain {
                                      治理档;PRODUCTION 拒 AUTO 审批 / 非耐久持久化 /
                                      零限额组合,违规逐项报告(exit 1)
           --approval=auto|ask|deny   审批 Provider 三选一(缺省 auto);ask 走 stdin 人闸,
-                                     非交互环境(EOF)按拒绝
+                                     非交互环境(EOF)按拒绝,空闲超时按拒绝
+          --approval-timeout=<秒>    人闸空闲上限(仅 --approval=ask;0 = 不设限)。缺省:非交互
+                                     终端 300 秒后按拒绝;交互终端不设限
           --budget=<tokens>          累计 output token 预算上限(正整数;缺省不限)。
                                      PRODUCTION 档要求非零——与 --approval=ask|deny
                                      同用,生产组合才可达
@@ -140,6 +144,7 @@ public final class HeadlessMain {
 
         REPL 说明:非 / 行作为消息发送(各成其 turn,与模型运行并行排队);/ 行走命令面
         (未知命令只提示、不送模型);--approval=ask 的裁决行走同一输入通道(不另起 stdin 读者);
+        模型提问(← 提问: 行)后的下一条消息即答复;/cancel 取消在途轮(同 Ctrl-C 收敛);
         每轮结束渲染一行轮末统计(stats: 见下)。
 
         Ctrl-C(SIGINT) 语义:
@@ -151,7 +156,8 @@ public final class HeadlessMain {
           (退出码 0);不合作工具会拖住收敛,强制退出即为此备。
 
         任务结果(一次性路径;输出契约):
-          stdout         任务完成时输出最终答案文本(成功但无文本时为空)
+          stdout         任务完成时输出最终答案文本(成功但无文本时为空);等待答复时
+                         输出模型提问文本(exit 5)
           stderr         成功时另打一行轮末统计,与 REPL 同形:
                          stats: turn=… steps=… tokens_in=… tokens_out=… elapsed=…s
         退出码:
@@ -160,8 +166,9 @@ public final class HeadlessMain {
           2  用法错误 / 缺少 API key
           3  任务失败(厂商错误 / 守卫或预算超限 / --resume 会话不存在或写者锁冲突;原因在 stderr)
           4  任务被取消(REPL 路径不适用:退出码 0)
-        契约:成功有结果 / 失败为空——失败的 stdout 为空,诊断(会话 id、事件清单、失败
-        文案、模型遗言)全部走 stderr;`out=$(jh "任务")` 取答案、按退出码判成败。
+          5  等待人工答复(模型提问停轮;stdout = 提问文本,答复 = --resume=<id> "答复文本")
+        契约:成功有结果 / 失败为空 / 等待答复有提问——失败的 stdout 为空,诊断(会话 id、事件
+        清单、失败文案、模型遗言)全部走 stderr;`out=$(jh "任务")` 取答案、按退出码判成败。
 
         示例:
           jh "把 README 的快速开始改准"
@@ -177,7 +184,7 @@ public final class HeadlessMain {
     record RunnerOptions(String task, boolean verify, Policy policy, String provider, String model,
                          String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile,
                          String resume, boolean docker, String image, Path workspace, String approval,
-                         long budget, boolean help, OptionalInt sessions) {
+                         long budget, boolean help, OptionalInt sessions, OptionalInt approvalTimeout) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -245,6 +252,7 @@ public final class HeadlessMain {
         String approval = null;
         long budget = 0;
         OptionalInt sessions = OptionalInt.empty();
+        OptionalInt approvalTimeout = OptionalInt.empty();
         for (String arg : args) {
             if ("--help".equals(arg) || "-h".equals(arg)) {
                 help = true;
@@ -274,6 +282,8 @@ public final class HeadlessMain {
                 }
             } else if (arg.startsWith("--budget=")) {
                 budget = positiveLong(valueOf(arg));
+            } else if (arg.startsWith("--approval-timeout=")) {
+                approvalTimeout = OptionalInt.of(nonNegativeInt(valueOf(arg)));
             } else if ("--docker".equals(arg)) {
                 docker = true;
             } else if (arg.startsWith("--image=")) {
@@ -295,6 +305,10 @@ public final class HeadlessMain {
         if (image != null && !docker) {
             throw new IllegalArgumentException("--image 需与 --docker 同用");
         }
+        if (approvalTimeout.isPresent() && !"ask".equals(approval)) {
+            // 只有人闸有等待界;auto/deny 无问句,给了就是没说清意图(不猜)
+            throw new IllegalArgumentException("--approval-timeout 需与 --approval=ask 同用");
+        }
         if (sessions.isPresent()) {
             // 列举是只读旁路:与"要跑什么"的参数同用即为用法错误(不猜意图)
             if (task != null) {
@@ -312,7 +326,8 @@ public final class HeadlessMain {
             model == null ? RunnerOptions.DEFAULT_MODEL : model,
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
-            apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, sessions);
+            apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, sessions,
+            approvalTimeout);
     }
 
     private static String valueOf(String flag) {
@@ -347,6 +362,20 @@ public final class HeadlessMain {
         }
         if (parsed <= 0) {
             throw new IllegalArgumentException("--sessions 必须是正整数,收到: " + value);
+        }
+        return parsed;
+    }
+
+    /** --approval-timeout=<秒> 契约:非负整数(0 = 不设限,与 ApprovalPrompt 语义一致)。 */
+    private static int nonNegativeInt(String value) {
+        int parsed;
+        try {
+            parsed = Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("--approval-timeout 必须是非负整数(秒),收到: " + value, e);
+        }
+        if (parsed < 0) {
+            throw new IllegalArgumentException("--approval-timeout 必须是非负整数(秒),收到: " + value);
         }
         return parsed;
     }
@@ -490,7 +519,7 @@ public final class HeadlessMain {
                         .filter(entry -> !(entry.event() instanceof AssistantChunkEvent))
                         .forEach(entry ->
                             LOG.log(Level.INFO, "{0}: {1}", entry.seq(), entry.event().type()));
-                    exit = finishOneShot(agent, out, err);
+                    exit = finishOneShot(sessionId, agent, out, err);
                 }
             } finally {
                 restoreSigint.run();
@@ -504,11 +533,12 @@ public final class HeadlessMain {
     /**
      * one-shot 终局处理（run 尾段；package-private 供测试）：成功 → stdout 最终答案
      * （空答案合法，不打）+ stderr 一行轮末统计（与 REPL 同形，stdout 契约不动）;
+     * 等待人工答复（exit 5）→ stdout 提问文本 + stderr 统计与续跑指引;
      * 失败 → stdout 空 + stderr 诊断块（模型遗言 + 终局文案）。
      *
-     * @return 退出码 0/3/4（词表见 {@link #USAGE} 与 12 §6）
+     * @return 退出码 0/3/4/5（词表见 {@link #USAGE} 与 12 §6）
      */
-    static int finishOneShot(Agent agent, PrintStream out, PrintStream err) {
+    static int finishOneShot(String sessionId, Agent agent, PrintStream out, PrintStream err) {
         List<LoggedEvent<? extends SessionEvent>> live = liveEvents(agent.session());
         int exit = oneShotExitCode(live);
         if (exit == 0) {
@@ -518,6 +548,17 @@ public final class HeadlessMain {
             }
             err.println(TurnStats.of(live).line());
             return 0;
+        }
+        if (exit == 5) {
+            // 停轮提问（ask_user）:stdout = 提问文本;stderr = 轮末统计 + 答复指引——
+            // 答复即下一轮 user/message,无需任何常驻等待（R1:提问半场已在日志里）
+            String question = concludingQuestion(live).orElseThrow();
+            if (!question.isEmpty()) {
+                out.println(question);
+            }
+            err.println(TurnStats.of(live).line());
+            err.println(waitingAnswerText(sessionId));
+            return 5;
         }
         String lastWords = finalAnswerText(live);
         if (!lastWords.isEmpty()) {
@@ -536,19 +577,51 @@ public final class HeadlessMain {
             .toList();
     }
 
-    /** 终局 → 退出码：Completed→0;Error→3;Aborted→4;无 turn/end（含未知变体）→3,fail loud。 */
+    /** 终局 → 退出码：Completed→0（停轮提问→5）;Error→3;Aborted→4;无 turn/end（含未知变体）→3,fail loud。 */
     static int oneShotExitCode(List<LoggedEvent<? extends SessionEvent>> live) {
         TurnEndReason reason = lastTurnEndReason(live);
         if (reason == null) {
             return 3;
         }
         if (reason instanceof TurnEndReason.Completed) {
-            return 0;
+            return concludingQuestion(live).isPresent() ? 5 : 0;
         }
         if (reason instanceof TurnEndReason.Aborted) {
             return 4;
         }
         return 3;
+    }
+
+    /**
+     * 停轮提问（ask_user;it22 出口契约）:本进程新开轮的终局为 Completed、且该轮
+     * 存在 {@code concludesTurn} 的 tool/result 时,取最后一条的内容——一次性路径据此
+     * 判「等待人工答复」（exit 5;stdout = 提问文本;答复 = 下一轮 user message）。
+     * 终局非 Completed（Error/Aborted/no turn/end）恒 empty——提问停轮只走 Completed 关轮。
+     */
+    static Optional<String> concludingQuestion(List<LoggedEvent<? extends SessionEvent>> live) {
+        TurnEnd last = null;
+        for (LoggedEvent<? extends SessionEvent> entry : live) {
+            if (entry.event() instanceof TurnEnd end) {
+                last = end;
+            }
+        }
+        if (last == null || !(last.reason() instanceof TurnEndReason.Completed)) {
+            return Optional.empty();
+        }
+        String question = null;
+        for (LoggedEvent<? extends SessionEvent> entry : live) {
+            if (entry.event() instanceof ToolResultEvent result
+                    && result.turn() == last.turn() && result.concludesTurn()) {
+                question = result.block().content();
+            }
+        }
+        return Optional.ofNullable(question);
+    }
+
+    /** 停轮提问的答复指引（stderr）:问答两半都是日志事实,答复 = 既有通道的下一轮 user message。 */
+    static String waitingAnswerText(String sessionId) {
+        return "等待人工答复:jh --resume=" + sessionId + " \"答复文本\"（答复即下一轮 user/message;"
+            + "REPL 下提问后的下一行即答复）";
     }
 
     /** 失败诊断一行（stderr）：与 REPL 同源文案（复用 {@link StreamRenderer#failureText}）。 */
@@ -700,6 +773,13 @@ public final class HeadlessMain {
         CommandRegistry registry = rt.root().require(CommandRegistry.KEY);
         registry.register(new Command("help", "显示命令一览", invocation ->
             new CommandResult.Text(commandsText(registry))));
+        registry.register(new Command("cancel", "取消进行中的轮(同 Ctrl-C 收敛)", invocation -> {
+            if (agent.whenIdle().isDone()) {
+                return new CommandResult.Text("无进行中的轮");
+            }
+            sigint.requestCancel();
+            return new CommandResult.Text("已请求取消，等待收敛");
+        }));
         registry.register(new Command("exit", "结束交互(EOF 等效)", invocation ->
             new CommandResult.Quit()));
         ReplApprovalInput approvalIn = new ReplApprovalInput();
@@ -874,10 +954,30 @@ public final class HeadlessMain {
             cancelTurn.run();
         }
 
+        /** /cancel 命令面入口:复用与 Ctrl-C 首按同一收敛调用（记账是信号连按语义,命令面不参与）。 */
+        void requestCancel() {
+            cancelTurn.run();
+        }
+
         /** 行循环轮询:静止期的 Ctrl-C 请求退出。 */
         boolean exitRequested() {
             return exitRequested.get();
         }
+    }
+
+    /**
+     * 人闸行注入的等待界秒数（有效值单源在 {@link ApprovalPrompt#effectiveIdleTimeout}）：
+     * flag 显式覆盖（0 = 不设限）；缺省按终端形态（非交互 300s / 交互不设限）——
+     * CLI 只把事实翻成组合行，判定口径不复制。
+     */
+    static long askIdleTimeoutSeconds(OptionalInt flag, boolean interactive) {
+        return ApprovalPrompt.effectiveIdleTimeout(flag.isPresent() ? flag.getAsInt() : -1, interactive)
+            .toSeconds();
+    }
+
+    /** 终端形态探针：stdin 为 terminal（System.console() 非 null）= 交互终端。 */
+    static boolean interactiveTerminal() {
+        return System.console() != null;
     }
 
     /** CLI 参数 → 组合行 overlay（run 与验收测试共用;审批三 Provider 的互斥收口在此）。 */
@@ -902,9 +1002,15 @@ public final class HeadlessMain {
         }
         if (options.approval() != null) {
             // 审批三 Provider 互斥(同 scope 双 ApprovalService 由 kernel fail loud):
-            // 选中的整行替换启用,其余两行经 disabled="true" 表达式滤除
+            // 选中的整行替换启用,其余两行经 disabled="true" 表达式滤除。
+            // 人闸等待界(it22):把 CLI 事实(flag 覆盖 / 终端形态)翻成组合行——插件按行读
+            Map<String, Object> askConfig = "ask".equals(options.approval())
+                ? Map.of("idleTimeoutSeconds",
+                    askIdleTimeoutSeconds(options.approvalTimeout(), interactiveTerminal()))
+                : Map.of();
             for (String mode : APPROVAL_MODES) {
-                overlays.add(new ConfigRowSpec.Replace("approval-" + mode, Map.of(),
+                overlays.add(new ConfigRowSpec.Replace("approval-" + mode,
+                    "ask".equals(mode) ? askConfig : Map.of(),
                     mode.equals(options.approval()) ? null : "true"));
             }
         }

@@ -60,6 +60,20 @@ class HeadlessReplTest {
     }
 
     @Test
+    void helpListsCancelCommandAndIdleCancelSaysNothingInFlight() throws Exception {
+        HeadlessMain.RunnerOptions options = HeadlessMain.parse(new String[] {"--api-key=fake"});
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        int exit = HeadlessMain.run(options, workspace, sessions,
+            new BufferedReader(new StringReader("/help\n/cancel\n/exit\n")),
+            new PrintStream(bytes, true, StandardCharsets.UTF_8));
+        assertThat(exit).isZero();
+        String out = bytes.toString(StandardCharsets.UTF_8);
+        assertThat(out).contains("/cancel").contains("无进行中的轮");
+        assertThat(out).doesNotContain("已请求取消"); // 静止期不假称有轮
+        assertThat(onlySessionLog()).contains("command/run").contains("command/done");
+    }
+
+    @Test
     void messageLineStreamsThroughRendererAndLandsInLog() throws Exception {
         BlockingLineSource source = new BlockingLineSource();
         CountDownLatch streamed = new CountDownLatch(1);

@@ -1,0 +1,28 @@
+# 突变 A：等待界失效（`ApprovalPrompt.stdin` 的 bounded 判定恒 false——上限不再生效），期望必红
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+# 突变点: ApprovalPrompt.java:65  `boolean bounded = !idleTimeout.isZero() && !idleTimeout.isNegative();` → `boolean bounded = false;`
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言行 + 模块行 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl interaction/approval -am test -Dtest='ApprovalPromptTest,ApprovalModesTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 5, Failures: 1, Errors: 1, Skipped: 0, Time elapsed: 5.552 s <<< FAILURE! -- in io.javanatic.harness.interaction.approval.ApprovalPromptTest
+[ERROR] io.javanatic.harness.interaction.approval.ApprovalPromptTest.zeroAndNegativeIdleTimeoutMeanUnbounded -- Time elapsed: 0.420 s <<< FAILURE!
+[50ms 上限:迟到 200ms 的 y 已在超时按拒绝]
+Expecting value to be false but was true
+[ERROR] io.javanatic.harness.interaction.approval.ApprovalPromptTest.idleTimeoutDeniesWithActionableText -- Time elapsed: 5.011 s <<< ERROR!
+java.util.concurrent.TimeoutException
+[ERROR] Tests run: 7, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 10.20 s <<< FAILURE! -- in io.javanatic.harness.interaction.approval.ApprovalModesTest
+[ERROR] io.javanatic.harness.interaction.approval.ApprovalModesTest.askPluginReadsIdleTimeoutFromRowConfig -- Time elapsed: 10.01 s <<< ERROR!
+java.util.concurrent.TimeoutException
+[ERROR] Tests run: 12, Failures: 1, Errors: 2, Skipped: 0
+[INFO] harness-interaction-approval ....................... FAILURE [ 16.934 s]
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 三腿同因：上限不再生效 → 有界用例不再按时判拒（迟到 y 被放行 / 有界 get 超时判红），
+# 行配置 1s 也失去作用（插件缺省回落到非交互 300s，远超用例上限）。
+# 设计要点：等待用例一律经虚拟线程 + 有界 get 取结果——突变只让用例判红，不挂死测试进程
+# （虚拟线程守护形，JVM 不因挂起读存活；surefire 正常收尾并给出 TimeoutException）。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-c-regreen.txt

@@ -192,6 +192,26 @@ class HeadlessSigintTest {
     }
 
     @Test
+    void replCancelCommandCancelsInFlightTurnAndKeepsLoopRunning() throws Exception {
+        BlockingLineSource source = new BlockingLineSource();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        CompletableFuture<Integer> exit = runInBackground(options(null), source, out,
+            new ByteArrayOutputStream());
+        source.pushLine("第一轮");
+        assertThat(firstRequestSeen.await(20, TimeUnit.SECONDS)).as("首轮请求已到假服务端").isTrue();
+        source.pushLine("/cancel"); // 命令面:与 Ctrl-C 首按同一收敛调用
+        awaitLogContains("\"cause\":\"user\"");
+        assertThat(out.toString(StandardCharsets.UTF_8))
+            .contains("已请求取消，等待收敛")
+            .doesNotContain("再按一次 Ctrl-C"); // 命令面不经信号连按记账
+        source.pushLine("第二轮"); // 取消不退出:下一轮照跑
+        awaitLogContains("答复");
+        source.eof();
+        assertThat(exit.get(20, TimeUnit.SECONDS)).isZero();
+        assertThat(sessionLog()).contains("\"kind\":\"aborted\"").contains("第二轮");
+    }
+
+    @Test
     void replSigintAtIdleExitsCleanly() throws Exception {
         assumeSigint();
         BlockingLineSource source = new BlockingLineSource();

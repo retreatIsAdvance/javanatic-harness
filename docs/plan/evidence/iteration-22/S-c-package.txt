@@ -1,0 +1,73 @@
+# 全量构建（S-c 停点，验收 ⑧ 的前置）：突变全部还原后的工作树，全 reactor package（含测试与 dist/jh jlink 镜像）
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B package
+
+# Reactor 计数法（it21 起沿用）：reactor 末项进度标记 [46/46]；
+#   SUCCESS 行计数 grep -c "^\[INFO\] .* SUCCESS \[" = 46；FAILURE/SKIPPED 行计数 = 0
+$ grep -o "\[[0-9]*/[0-9]*\]" <log> | tail -1
+[46/46]
+$ grep -c "^\[INFO\] .* SUCCESS \[" <log>
+46
+$ grep -cE "^\[INFO\] .* (FAILURE|SKIPPED)" <log>
+0
+[INFO] BUILD SUCCESS
+[INFO] Total time:  54.787 s
+EXIT=0
+
+# 测试计数（两法独立相等）：30 个有测试模块 / 77 个测试类 / tests=512 failures=0 errors=0
+#   （模块级汇总行之和 = 类级行之和 = 512；Skipped 合计 4，全为环境门控自跳过）
+# S-c 相关模块逐模块用例数（决策性行）
+harness-interaction-approval -> Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+harness-interaction-ask -> Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+harness-bundle-base -> Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+harness-examples-headless -> Tests run: 77, Failures: 0, Errors: 0, Skipped: 0
+（对照 it21 基线：headless 63 → 77，+14 = S-c 新增用例；approval 5→12 见聚焦证据）
+# Skipped=4 明细（环境门控，非缺陷）
+harness-sandbox-local -> Tests run: 16, Failures: 0, Errors: 0, Skipped: 2   （平台探测）
+harness-llm-deepseek -> Tests run: 2, Failures: 0, Errors: 0, Skipped: 1   （DeepSeekE2ETest 需真 key）
+harness-examples-agent-spine -> Tests run: 6, Failures: 0, Errors: 0, Skipped: 1   （RealModelAgentE2ETest 需真 key）
+
+# dist/jh 产物（jlink 镜像 + 归档包）
+$ ls dist/jh/target/
+harness-dist-jh-0.2.0-SNAPSHOT.jar
+javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.tar.gz
+javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.zip
+jlink-image
+$ ls dist/jh/target/jlink-image/bin/
+java  jh  keytool
+
+# ────────────────────────────────────────────────────────────────────────────────
+# v2（2026-09-23 20:14）:竞态修复 (b) + 新单测 `cancelDuringPollWindowSurfacesAsAbortedNotCleanEnd`
+# 落地后同命令复跑（v1 的 512 → 513:唯一增量 = 新用例;其余计数口径与 v1 逐项一致）
+$ mvn -B package
+
+$ grep -o "\[[0-9]*/[0-9]*\]" <log> | tail -1
+[46/46]
+$ grep -c "^\[INFO\] .* SUCCESS \[" <log>
+46
+$ grep -cE "FAILURE \[|SKIPPED" <log>
+0
+[INFO] BUILD SUCCESS
+[INFO] Total time:  53.683 s
+[INFO] Finished at: 2026-09-23T20:14:07+08:00
+EXIT=0
+
+# 测试计数（两法独立相等，口径同 v1）:30 个有测试模块 / 77 个测试类 / tests=513 failures=0 errors=0
+#   注:v1 用行首锚定 grep 会漏掉与测试输出粘连的模块汇总行（本次实撞:锚定法得 489/27 模块，
+#   非锚定法得 513/30）——计数一律用无锚点 grep 过滤 "-- in "/"Time elapsed"（AGENTS.md 既有条目）
+harness-llm-openai-compat -> Tests run: 23, Failures: 0, Errors: 0, Skipped: 0   （v1 = 22;+1 = 新用例）
+harness-interaction-approval -> Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+harness-interaction-ask -> Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+harness-bundle-base -> Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+harness-examples-headless -> Tests run: 77, Failures: 0, Errors: 0, Skipped: 0
+# Skipped=4 明细（环境门控，非缺陷；同 v1）
+harness-sandbox-local -> Tests run: 16, Failures: 0, Errors: 0, Skipped: 2   （平台探测）
+harness-llm-deepseek -> Tests run: 2, Failures: 0, Errors: 0, Skipped: 1   （真 key E2E）
+harness-examples-agent-spine -> Tests run: 6, Failures: 0, Errors: 0, Skipped: 1   （真 key E2E）
+
+# dist/jh 产物（重建于 20:14——F 节真跑复观即用此镜像）
+$ ls -l dist/jh/target/jlink-image/bin/jh dist/jh/target/*.tar.gz dist/jh/target/*.zip
+-rwxr-xr-x@ 172      Sep 23 20:14  dist/jh/target/jlink-image/bin/jh
+-rw-r--r--@ 35461417 Sep 23 20:14  dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.tar.gz
+-rw-r--r--@ 35498785 Sep 23 20:14  dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.zip

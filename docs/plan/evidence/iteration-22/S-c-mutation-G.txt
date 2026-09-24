@@ -1,0 +1,34 @@
+# 突变 G：取消分支回退为伪装流尾（`new Failed(e)` → `new End()`），期望必红
+# 基线 commit: 41a4fb3（S-c + 竞态修复在工作树，未提交）
+# 突变点: OpenAiCompatAdapter.java:84-88  撤销修复——`catch (AbortedException e)` 分支改回
+#         `offer(queue, new End())`（取消被收敛成队列里的「干净流尾」）
+# 快照: /tmp/sc_mut/OpenAiCompatAdapter.java.snap（sha1 db77aad0ae86aa9ad92acefa6796de7bda832a42）
+# 输出 = 决定性行（过滤器: "Tests run:" + "<<<" + 断言块 + 模块行 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl llm/openai-compat -am test -Dtest='OpenAiCompatAdapterTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 21, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 10.53 s <<< FAILURE! -- in io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapterTest
+[ERROR] io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapterTest.cancelDuringPollWindowSurfacesAsAbortedNotCleanEnd -- Time elapsed: 0.013 s <<< FAILURE!
+java.lang.AssertionError:
+Expecting actual throwable to be an instance of:
+  io.javanatic.harness.llm.AbortedException
+but was:
+  java.util.NoSuchElementException
+[ERROR] Tests run: 21, Failures: 1, Errors: 0, Skipped: 0
+[INFO] harness-llm-openai-compat .......................... FAILURE [ 12.214 s]
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 断言行直指要害：`NoSuchElementException` 就是静默收口的签名——End 被 poll 窗口取走、
+# 迭代器「干净结束」，取消既不到达消费者也不以 aborted 落账（真跑 3/5 命中观察的单元复现）。
+# 用时 0.013 s 即判红：非时序侥幸，进程内闩锁把该分支变成必现。
+# 其余 20 个既有用例不受突变影响（取消前的旧路径本是 loop 顶自查，见 cancelMidStreamThrowsAborted）。
+
+# 还原: `cp /tmp/sc_mut/OpenAiCompatAdapter.java.snap <源文件>` 后 cmp 无输出（逐字节一致），
+#       sha1 与快照相符（db77aad0ae86aa9ad92acefa6796de7bda832a42）——还原干净无残留。
+
+# 还原复绿（同命令）:
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.60 s -- in io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapterTest
+[INFO] BUILD SUCCESS
+EXIT=0

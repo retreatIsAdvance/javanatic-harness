@@ -80,6 +80,8 @@ HTTP body 是阻塞读——虚拟线程挂起不占 platform thread；取消时
 
 **等待型协作点也必须可取消（it18）**：阻塞等待不能把取消挡在门外。审批等待（`ApprovalPrompt.stdin`）改为「伴生虚拟线程做阻塞读 + 调用线程轮询 `checkAbort()`（50ms）」的可轮询形状：取消即抛 `AbortedException`（按取消收敛，不落 error result），并经 `onCancel` 中断读线程撤回等待；不可中断的原流阻塞读留在原地直到自行返回（虚拟线程，不碍 JVM 退出）。REPL 行循环同形——静止期的 Ctrl-C 不必等下一行即可退出（`jh` 的 SIGINT 三件套，12 §6）。
 
+**等待必须有界（it22）**：同一可轮询形状再加时间上界——`ApprovalPrompt.stdin(Duration idleTimeout)` 超时后中断读线程、打印可行动文案并**按拒绝**返回（fail-closed，不抛异常）。有效值单源 `effectiveIdleTimeout(configuredSeconds, interactive)`：行 config `idleTimeoutSeconds`（0 = 不设限）优先，缺省非交互终端 300s / 交互终端不设限（人可能思考很久；无人应答的机器场景必须自证不会挂死）。取消仍优先于超时（等待中取消抛 `AbortedException`，EOF 即时拒绝语义不变）。
+
 ## 5. 工具并行 —— 错误即数据，join 即收敛（无需 preview）
 
 工具并行的语义在 R2 下发生了关键简化：**单个工具失败不是异常，是 error result**（04 §executeTools；executor 把每个工具的异常转成 `ToolResultEvent(error)`，只有 `AbortedException` 传播）。因此根本不需要 `ShutdownOnFailure` 的"任一失败取消其余"——失败已经是数据，全部跑完、逐个落账即可：

@@ -60,7 +60,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS
 ## Build & verify
 
 ```sh
-mvn -B package              # full build (45 reactor modules, 362 tests; environment-gated tests self-skip)
+mvn -B package              # full build (46 reactor modules, 513 tests; environment-gated tests self-skip)
 mvn -B -pl :harness-kernel-core -am package   # one module plus its dependencies
 ```
 
@@ -72,19 +72,28 @@ dist/jh/target/jlink-image/bin/jh --verify   # composition + governance assertio
 
 dist/jh/target/jlink-image/bin/jh            # bare start enters the REPL (it14): non-/ lines become turns
                                              # sent to the model and streamed back; /help lists commands,
-                                             # /exit (or EOF/Ctrl-D) quits; an in-flight turn is journaled as aborted
+                                             # /exit (or EOF/Ctrl-D) quits, /cancel cancels the in-flight turn (it22);
+                                             # a turn left open is journaled aborted; after the model asks a
+                                             # question (a "← 提问:" line) the next line is the answer
                                              # Ctrl-C (it18) cancels the in-flight turn (journaled aborted) and stays in the REPL;
                                              # idle Ctrl-C quits like /exit; a second Ctrl-C before the cancel converges → exit 130
 
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<existing-dir> "task text"
 # every run prints its session id (headless-<timestamp>-<short-random>); --resume=<id> continues the same session
+# --sessions[=<N>] lists sessions (id/state/cwd/last activity/event count; keyless read-only, default 20;
+#   mutually exclusive with task text / --resume / --verify)
 # --resume=<id> without task text → REPL on that existing session
 # --resume onto a session held by another writer (process/JVM) is refused fail-loud: exit 3, stdout empty
-# task-result contract (it17): stdout = final answer on success / empty on failure
+# task-result contract (it17; it22 adds the waiting-for-answer case):
+#   stdout = final answer on success / the question on exit 5 / empty on failure
 #   (success with no text is valid, exit 0); exit codes 0 done · 1 verify violation ·
-#   2 usage/missing key · 3 task failed (incl. --resume writer-lock conflict) · 4 cancelled;
+#   2 usage/missing key · 3 task failed (incl. --resume writer-lock conflict) · 4 cancelled · 5 waiting for a human answer;
 #   diagnostics (failure text, the model's last words) go to stderr —
 #   `out=$(bin/jh "task")` reads the answer, exit code judges success
+#   one-question-one-answer (it22): the answer to exit 5 is the next user message
+#   (bin/jh --resume=<id> "answer text")
+# --approval=ask wait bound (it22): a non-interactive terminal denies after 300s by default
+#   (fail-closed — never hangs forever); --approval-timeout=<seconds> only with --approval=ask (0 = unbounded)
 # Ctrl-C during a task (it18): cooperative cancel → turn/end aborted("user"), exit 4, stdout empty;
 #   a second Ctrl-C before the cancel converges force-quits (130). Cancellation governs cooperative
 #   operations only — a tool batch that ignores it and returns still closes Completed (exit 0)

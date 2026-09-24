@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalInt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -107,6 +108,70 @@ class HeadlessOptionsTest {
         assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--approval=wat"}))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("auto|ask|deny");
+    }
+
+    @Test
+    void approvalTimeoutOnlyValidWithAskMode() {
+        assertThat(HeadlessMain.parse(new String[] {"t", "--approval=ask", "--approval-timeout=30"})
+            .approvalTimeout()).hasValue(30);
+        assertThat(HeadlessMain.parse(new String[] {"t", "--approval=ask", "--approval-timeout=0"})
+            .approvalTimeout()).hasValue(0); // 0 = 显式不设限
+        assertThat(HeadlessMain.parse(new String[] {"t"}).approvalTimeout()).isEmpty();
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--approval-timeout=30"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--approval=ask");
+        assertThatThrownBy(() -> HeadlessMain.parse(
+            new String[] {"t", "--approval=auto", "--approval-timeout=30"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--approval=ask");
+        assertThatThrownBy(() -> HeadlessMain.parse(
+            new String[] {"t", "--approval=ask", "--approval-timeout=-1"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--approval-timeout");
+        assertThatThrownBy(() -> HeadlessMain.parse(
+            new String[] {"t", "--approval=ask", "--approval-timeout=wat"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--approval-timeout");
+    }
+
+    /** 等待界有效值:flag 显式优先(0 = 不设限);缺省按终端形态——非交互 300s 兜底,交互不设限。 */
+    @Test
+    void askIdleTimeoutPinsFlagThenTerminalShape() {
+        assertThat(HeadlessMain.askIdleTimeoutSeconds(OptionalInt.empty(), true)).isZero();
+        assertThat(HeadlessMain.askIdleTimeoutSeconds(OptionalInt.empty(), false)).isEqualTo(300);
+        assertThat(HeadlessMain.askIdleTimeoutSeconds(OptionalInt.of(0), false)).isZero();
+        assertThat(HeadlessMain.askIdleTimeoutSeconds(OptionalInt.of(45), true)).isEqualTo(45);
+    }
+
+    /** 人闸行等待界经 overlay 进组合(插件按行读):显式值原样注入,其余两行滤除。 */
+    @Test
+    void askOverlayCarriesIdleTimeoutSeconds() {
+        HeadlessMain.RunnerOptions options = HeadlessMain.parse(
+            new String[] {"t", "--approval=ask", "--approval-timeout=120"});
+        Map<String, ConfigRowSpec.Replace> byPlugin = new HashMap<>();
+        for (ConfigRowSpec row : HeadlessMain.buildOverlays(options, workspace, sessions)) {
+            if (row instanceof ConfigRowSpec.Replace replace) {
+                byPlugin.put(replace.plugin(), replace);
+            }
+        }
+        assertThat(byPlugin.get("approval-ask").config()).containsEntry("idleTimeoutSeconds", 120L);
+        assertThat(byPlugin.get("approval-ask").disabled()).isNull();
+        assertThat(byPlugin.get("approval-auto").disabled()).isEqualTo("true");
+        assertThat(byPlugin.get("approval-deny").disabled()).isEqualTo("true");
+    }
+
+    /** 非人闸档不打等待界(自动档无问句;注入即漂移)。 */
+    @Test
+    void nonAskApprovalOverlayCarriesNoWaitBound() {
+        HeadlessMain.RunnerOptions options = HeadlessMain.parse(new String[] {"t", "--approval=auto"});
+        Map<String, Map<String, Object>> byPlugin = new HashMap<>();
+        for (ConfigRowSpec row : HeadlessMain.buildOverlays(options, workspace, sessions)) {
+            if (row instanceof ConfigRowSpec.Replace replace) {
+                byPlugin.put(replace.plugin(), replace.config());
+            }
+        }
+        assertThat(byPlugin.get("approval-ask")).isEmpty();
+        assertThat(byPlugin.get("approval-auto")).isEmpty();
     }
 
     @Test

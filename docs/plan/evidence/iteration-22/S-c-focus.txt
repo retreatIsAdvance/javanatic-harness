@@ -1,0 +1,57 @@
+# S-c 聚焦回归：等待界（ApprovalPrompt 空闲上限 + approval-ask 行配置贯通）+ 提问停轮 exit 5 + REPL /cancel + 渲染器提问前缀
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+# 命令: mvn -B -pl interaction/approval,examples/headless,bundle/base -am test
+# 输出 = 决定性行（目标模块的模块边界行 + "-- in io." 类级行 + 模块级 Tests run 汇总行 + BUILD）；
+#   模块/类级行前若黏连被测试打印的提示（如 [approval] ...），此处截到 "[INFO]" 起点（机械截取，不改内容）
+# 计数口径（S-a 订正后）：只加模块级汇总行（无 "Time elapsed"、锚行尾），并与类级行之和交叉核对
+# 模块集合：42 个（41 个 harness-* + 父聚合 pom）；其中 28 个有测试、类级测试类 71 个
+# 全 reactor 合计: tests=504 failures=0 errors=0（模块级行之和 = 类级行之和 = 504，两法独立相等；Skipped=2，在 sandbox-local 平台探测）
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl interaction/approval,examples/headless,bundle/base -am test
+
+[INFO] Building harness-interaction-approval 0.2.0-SNAPSHOT             [36/42]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.733 s -- in io.javanatic.harness.interaction.approval.ApprovalPromptTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.203 s -- in io.javanatic.harness.interaction.approval.ApprovalModesTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] Building harness-bundle-base 0.2.0-SNAPSHOT                      [40/42]
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.060 s -- in io.javanatic.harness.boot.RowComposerTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.290 s -- in io.javanatic.harness.boot.AppBootTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in io.javanatic.harness.boot.YamlRowsTest
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] Building harness-examples-headless 0.2.0-SNAPSHOT                [42/42]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.361 s -- in io.javanatic.harness.examples.headless.HeadlessSessionsTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.092 s -- in io.javanatic.harness.examples.headless.HeadlessVerifyTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in io.javanatic.harness.examples.headless.HeadlessApprovalTest
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.049 s -- in io.javanatic.harness.examples.headless.HeadlessOptionsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.141 s -- in io.javanatic.harness.examples.headless.HostileInstructionsTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.204 s -- in io.javanatic.harness.examples.headless.HeadlessOneShotResultTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.067 s -- in io.javanatic.harness.examples.headless.HeadlessReplTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.100 s -- in io.javanatic.harness.examples.headless.HeadlessResumeTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in io.javanatic.harness.examples.headless.ReplApprovalWiringTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.917 s -- in io.javanatic.harness.examples.headless.HeadlessCrashResumeE2ETest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.648 s -- in io.javanatic.harness.examples.headless.HeadlessSigintTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.examples.headless.StreamRendererTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in io.javanatic.harness.examples.headless.HeadlessFakeServerE2ETest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.082 s -- in io.javanatic.harness.examples.headless.ProductionScenarioTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.examples.headless.HeadlessProfileTest
+[INFO] Tests run: 77, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO] BUILD SUCCESS
+EXIT=0
+
+# 新用例点名（本切片新增）：
+#   interaction/approval（新测试类）: ApprovalPromptTest ×5 —— idleTimeoutDeniesWithActionableText /
+#               zeroAndNegativeIdleTimeoutMeanUnbounded / eofDeniesImmediatelyEvenWithLongBound /
+#               cancelDuringBoundedWaitStillAborts / effectiveIdleTimeoutPrefersConfiguredThenTerminalShape
+#               （等待用例一律经虚拟线程 + get(5s) 取结果：实现若丢掉上限只会超时判红,不拖死测试进程）
+#   interaction/approval: ApprovalModesTest 6→7 —— askPluginReadsIdleTimeoutFromRowConfig
+#               （行配置 idleTimeoutSeconds=1 经无参 ctor 数据组合路径生效：1s 后按拒绝出 error result）
+#   examples/headless: HeadlessOptionsTest 16→20 —— approvalTimeoutOnlyValidWithAskMode /
+#               askIdleTimeoutPinsFlagThenTerminalShape / askOverlayCarriesIdleTimeoutSeconds /
+#               nonAskApprovalOverlayCarriesNoWaitBound
+#               HeadlessOneShotResultTest 7→9 —— questionEndsTurnWithExitFiveAndAnswerResumesToZero /
+#               concludingResultMapsCompletedTurnToExitFiveOnlyForThatTurn
+#               HeadlessReplTest 4→5 —— helpListsCancelCommandAndIdleCancelSaysNothingInFlight
+#               HeadlessSigintTest 7→8 —— replCancelCommandCancelsInFlightTurnAndKeepsLoopRunning

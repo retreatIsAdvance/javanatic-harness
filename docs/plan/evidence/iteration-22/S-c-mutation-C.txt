@@ -1,0 +1,24 @@
+# 突变 C：行注入丢失（`buildOverlays` 的 approval-ask 行不再携带 idleTimeoutSeconds），期望必红
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+# 突变点: HeadlessMain.java:1007  ask 档 `Map.of("idleTimeoutSeconds", askIdleTimeoutSeconds(...))` → `Map.of()`
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言行 + 模块行 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl examples/headless -am test -Dtest='HeadlessOptionsTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 20, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.333 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.HeadlessOptionsTest
+[ERROR] io.javanatic.harness.examples.headless.HeadlessOptionsTest.askOverlayCarriesIdleTimeoutSeconds -- Time elapsed: 0.008 s <<< FAILURE!
+Expecting map:
+  {}
+to contain entries:
+  ["idleTimeoutSeconds"=120L]
+but could not find the following map entries:
+  ["idleTimeoutSeconds"=120L]
+[INFO] harness-examples-headless .......................... FAILURE [  1.658 s]
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 同因：CLI 事实（flag 120s）到组合行的翻译链断裂——插件端将回落到终端形态缺省，
+# 人闸等待界不再受 --approval-timeout 控制；非 ask 档 overlay 用例未受影响（缺省即空 Map）。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-c-regreen.txt

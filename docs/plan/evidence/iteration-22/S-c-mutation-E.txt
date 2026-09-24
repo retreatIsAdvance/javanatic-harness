@@ -1,0 +1,24 @@
+# 突变 E：行配置读取失效（`ApprovalAskPlugin` 读错键名——行里的 idleTimeoutSeconds 不再生效），期望必红
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+# 突变点: ApprovalAskPlugin.java:52  `"idleTimeoutSeconds"` → `"idleTimeoutSecs"`（键名错位 → longValue 恒取默认 -1）
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言行 + 模块行 + BUILD）
+
+# 备注: 本轮先试过「整段 .map(...) 换成 .map(config -> -1L)」的直白突变——被 spotless 门禁在
+#   构建期拦下（ConfigValues import 变未使用 → format violations），未进入测试期。为让突变
+#   打到测试断言面，改用保编译且 lint 干净的键名错位形（同一失效语义：行配置读不到）。
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl interaction/approval -am test -Dtest='ApprovalModesTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 7, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 10.26 s <<< FAILURE! -- in io.javanatic.harness.interaction.approval.ApprovalModesTest
+[ERROR] io.javanatic.harness.interaction.approval.ApprovalModesTest.askPluginReadsIdleTimeoutFromRowConfig -- Time elapsed: 10.01 s <<< ERROR!
+java.util.concurrent.TimeoutException
+[ERROR] Tests run: 7, Failures: 0, Errors: 1, Skipped: 0
+[INFO] harness-interaction-approval ....................... FAILURE [ 11.391 s]
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 同因：行配置 1s 不再被插件读到 → 回落到终端形态缺省（非交互 300s）→ 用例有界 get(10s)
+# 超时判红（口令始终无人应答、也不按拒绝收口）；其余 6 用例不受影响（不依赖行配置）。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-c-regreen.txt

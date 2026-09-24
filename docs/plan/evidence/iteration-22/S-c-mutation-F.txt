@@ -1,0 +1,25 @@
+# 突变 F：/cancel 命令成空壳（注册保留、文案照吐，但不再调用收敛入口），期望必红
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+# 突变点: HeadlessMain.java:780  `/cancel` 命令体删去 `sigint.requestCancel();`（命令面仍答"已请求取消，等待收敛"）
+# 输出 = 决定性行（过滤器: "Tests run:.*in io" + "<<<" + 断言行 + 模块行 + BUILD）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl examples/headless -am test -Dtest='HeadlessSigintTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[ERROR] Tests run: 8, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 21.04 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.HeadlessSigintTest
+[ERROR] io.javanatic.harness.examples.headless.HeadlessSigintTest.replCancelCommandCancelsInFlightTurnAndKeepsLoopRunning -- Time elapsed: 20.04 s <<< FAILURE!
+java.lang.AssertionError:
+20s 内会话日志未出现: "cause":"user"
+实际:
+{"seq":5,...,"name":"cancel","rawInput":""},"type":"command/run"}
+{"seq":6,...,"ok":true,"name":"cancel","detail":"已请求取消，等待收敛"},"type":"command/done"}
+[ERROR] Tests run: 8, Failures: 1, Errors: 0, Skipped: 0
+[INFO] harness-examples-headless .......................... FAILURE [ 22.619 s]
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 断言行直指要害：命令面「答了话但不办事」——会话日志里 command/done 已落账（文案与真取消同形），
+# 却等不到 turn/end 的 cause=user（轮仍在途）→ 有界等待 20s 判红。文案断言（HeadlessReplTest 的
+# 静止期用例）不足以覆盖此突变，本用例是行为面唯一哨兵。
+
+# 还原: 突变撤销后源文件与突变前快照逐字节一致（cmp 空）；还原复绿见 S-c-regreen.txt

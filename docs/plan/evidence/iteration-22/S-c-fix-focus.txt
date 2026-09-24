@@ -1,0 +1,47 @@
+# 竞态修复（b）+ poll 窗口确定性单测 · 聚焦回归
+# 基线 commit: 41a4fb3（S-c 编辑在工作树，未提交）
+# 修复点: OpenAiCompatAdapter.java:84-88  `catch (AbortedException e)` 分支
+#         `offer(queue, new End())` → `offer(queue, new Failed(e))`
+#         协议归真: End 哨兵只表干净 EOF；取消不伪装流尾，经错误通道原样上浮
+# 新增测试: OpenAiCompatAdapterTest#cancelDuringPollWindowSurfacesAsAbortedNotCleanEnd
+#         形态 = 「消费线程阻塞于 next()/poll + 另一线程 cancel」闩锁形态:
+#           · 线程判别信号 ProducerOnlyCancel（只对消费线程以外的线程抛）——消费侧不可能自查收口，
+#             取消只能经队列条目抵达消费者
+#           · 服务端闸门（ResponseScript 新增 gate 组件：写出任何字节前先 await）保证取消
+#             发生在首字节之前——生产侧停在阻塞 read、消费侧停在 queue.poll，时序确定性
+# 无外部波及: 全仓无 llm/openai-compat 之外的模块引用 OpenAiCompatAdapter（JPMS 隔离），
+#             聚焦面 = 该模块 + 依赖（-am）
+# 输出 = 决定性行（过滤器: "Tests run:" + "BUILD"）
+
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -fae -pl llm/openai-compat -am test -Dtest='OpenAiCompatAdapterTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.60 s -- in io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapterTest
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+EXIT=0
+
+# 全模块 + 依赖（不加 -Dtest）：
+$ mvn -B -fae -pl llm/openai-compat -am test
+
+模块汇总行（六行，无 "-- in " 后缀；类级行之和 = 这六行之和 = 127，两法独立相等）:
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0        # harness-kernel-brand
+[INFO] Tests run: 36, Failures: 0, Errors: 0, Skipped: 0       # harness-kernel-core
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0       # harness-kernel-config
+[INFO] Tests run: 41, Failures: 0, Errors: 0, Skipped: 0       # harness-core-session
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0       # harness-llm-llm
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0       # harness-llm-openai-compat（21 + 2）
+[INFO] BUILD SUCCESS
+EXIT=0
+
+# 确定性重复（并发用例 5 连跑，单方法）：
+$ for i in 1 2 3 4 5; do mvn -B -pl llm/openai-compat -am test -Dtest='OpenAiCompatAdapterTest#cancelDuringPollWindowSurfacesAsAbortedNotCleanEnd' -Dsurefire.failIfNoSpecifiedTests=false; done
+
+run1 EXIT=0 | Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.312 s
+run2 EXIT=0 | Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.267 s
+run3 EXIT=0 | Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.281 s
+run4 EXIT=0 | Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.275 s
+run5 EXIT=0 | Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.254 s
+
+# 唯一未覆盖面（如实记录）: ChunkAssembly.fold 的 "stream ended without a Finish chunk" 防御断言
+# 在修复后已无触发路径（其唯一来源即本次修复的伪装流尾）——保留为内部不变量守卫，无负向用例。
