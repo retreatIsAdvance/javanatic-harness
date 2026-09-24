@@ -1,0 +1,175 @@
+# it24 S-c 补验：本机容器真跑（Linux 归档冒烟 / landlock 硬门 / 链诊断双支路 / 聚焦测试）
+# 基线 commit: 298fc98（HEAD；S-a 8353733 + S-b ef41e63 + S-c 298fc98 已提交，全部未推送）。
+# 本补验不改产品代码与 CI 定义：只落证据 + 台账回填（iteration-24.md）。
+# 环境：macOS/aarch64 宿主 + 本地 docker（24.0.6，内核 6.4.16-linuxkit，arm64）+ ubuntu:24.04 容器。
+#   干净档＝裸镜像；构建档＝补 binutils 与 ca-certificates。Linux JDK 25（Temurin 归档，只读挂载）。
+#   依赖走宿主 ~/.m2 缓存挂载。环境来源细节（镜像站/代理）不入档。
+# 本文件＝实跑输出摘录：每段给出完整命令、决定性输出行与真实 EXIT 回显。
+# 与 S-c-ci-leg-and-docs.txt 第 8 节的边界订正——该节登记的三项「首次 CI 跑事实」现状：
+#   (a) landlock 硬门真跑 → 本补验拿到**负支路**真跑（EXIT_UNAVAILABLE，§2）；
+#   (b) 容器 seccomp 行为 → 本补验给出可判别事实（ENOSYS 而非 EPERM，§2 判读）；
+#   (c) artifact 上传 → 仍属 CI 首跑（§8）。
+# 新增真跑：干净容器归档冒烟（§3，WARNING 支路）· INFO 支路（§4）· 交付归档自带助手（§5）·
+#   聚焦测试容器内真跑（§6）· CI 第 7 步断言 vs 真实报告（§7）。
+
+== 1. 前置：容器内构建 Linux 归档（本机 aarch64） ==
+$ docker run --rm -v <src>:/src -v <jdk25>:/opt/jdk25:ro -v <maven>:/opt/maven:ro -v ~/.m2:/root/.m2 \
+    -w /src -e JAVA_HOME=/opt/jdk25 ubuntu:24.04 sh -c '/opt/maven/bin/mvn -B -ntp -DskipTests package'
+  首撞（裸镜像）：
+    [ERROR] Error: java.io.IOException: Cannot run program "objcopy": Exec failed, error: 2 (No such file or directory)
+    [ERROR] Failed to execute goal org.moditect:moditect-maven-plugin:1.2.2.Final:create-runtime-image
+            (create-jh-runtime-image) on project harness-dist-jh: Execution of jlink failed
+    BUILD-EXIT=1（止步 harness-dist-jh）
+  处置：容器内装 binutils（jlink 打运行时镜像需 objcopy，stripDebug=true）；重跑 → BUILD-EXIT=0，Total time 01:23 min
+  产出：
+    dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-linux-aarch64.tar.gz   40,215,526 B
+    dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-linux-aarch64.zip      40,251,466 B
+    dist/jh/target/jlink-image/bin/{java,jh,keytool}
+  交叉核对：宿主直接 exec 该镜像 bin/java → "exec format error"（确为 linux/arm64 产物，非宿主二进制）
+  说明：CI 的构建在 runner（自带 binutils）上、冒烟在裸容器内；本机为了「在容器内取到 Linux 归档」
+        才需补 binutils——与归档冒烟本身无关，不改变 CI 语义。
+
+== 2. landlock 硬门（CI 第 6 步形状）真跑：负支路 ==
+$ docker exec <build> bash -c 'set -o pipefail; img=/src/dist/jh/target/jlink-image; \
+    "$img/bin/java" -XX:-UsePerfData --enable-native-access=io.javanatic.harness.sandbox.local \
+    -m io.javanatic.harness.sandbox.local/io.javanatic.harness.sandbox.local.LandlockExecMain --probe'
+landlock: unavailable — landlock syscalls not present (errno ENOSYS)
+PROBE-EXIT=10
+$ uname -r ; head -1 /proc/version
+6.4.16-linuxkit
+Linux version 6.4.16-linuxkit (root@buildkitsandbox) (gcc (Alpine 12.2.1_git20220924-r10) 12.2.1 ...
+# 判读：
+#  - 命中 Landlock.EXIT_UNAVAILABLE(10) 分支；结论行出自 absentReason() 的 ENOSYS 档（Landlock.java:416）。
+#  - ENOSYS 而非 EPERM ⇒ **syscall 444 抵达了内核**（seccomp 拦截给的是 EPERM 类错误码）。
+#    ⇒ 「容器默认 seccomp 是否放行 landlock 系统调用」这一待验项，本机给出可判别事实：放行。
+#  - 与 S-a-local-kernel-probe.txt 一致：该内核未编译 CONFIG_SECURITY_LANDLOCK。
+#  - 诊断三分档（ENOSYS / EOPNOTSUPP / 其他 errno）在本机拿到 ENOSYS 档实样。
+# 边界：正支路（ABI≥3 真建真限真拒写）需 landlock 内核，仍属 CI 首跑。
+
+== 3. 干净容器归档冒烟（CI 第 9 步逐字形状，仅挂载路径不同） ==
+$ archive=$(ls dist/jh/target/javanatic-harness-*-linux-*.tar.gz); name=$(basename "$archive"); dir=${name%.tar.gz}
+$ docker run --rm -v "$PWD/dist/jh/target:/drop:ro" -w /tmp ubuntu:24.04 sh -eu -c "
+    tar xzf /drop/$name
+    ./$dir/bin/jh --help
+    ./$dir/bin/jh --verify > /tmp/verify.txt 2>&1
+    echo \"VERIFY-EXIT=\$?\"
+    if command -v bwrap > /dev/null; then echo 'unexpected: bwrap present in the clean container'; exit 1; fi
+    grep -F 'bwrap probe failed' /tmp/verify.txt
+    grep -E 'sandbox(:| warning:) confining policy' /tmp/verify.txt
+  "
+VERIFY-EXIT=0
+WARNING: sandbox warning: confining policy "workspace-write" is configured but no sandbox backend is usable
+on platform "linux" (bwrap probe failed (binary: bwrap); landlock probe failed (exit 10 ? landlock:
+unavailable ? landlock syscalls not present (errno ENOSYS))); the first confined shell call will fail
+closed. Options: install bubblewrap, or overlay mode: danger-full-access (explicit bypass).
+（上面两行＝两条 grep 各自命中同一行的回显。此处「?」不是笔误：容器无 LANG，JVM 以 ASCII 编码出口，
+  em-dash 降级为单字节 0x3f——字节级实证与对照渲染见 §8 观察 1/2）
+$ cat /tmp/verify.txt
+Sep 24, 2026 10:02:57 AM io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$0
+WARNING: sandbox warning: confining policy "workspace-write" is configured but no sandbox backend is
+usable on platform "linux" (bwrap probe failed (binary: bwrap); landlock probe failed (exit 10 ? landlock:
+unavailable ? landlock syscalls not present (errno ENOSYS))); the first confined shell call will fail
+closed. Options: install bubblewrap, or overlay mode: danger-full-access (explicit bypass).
+Profile: headless   policy: STANDARD
+  composition: 20 rows, 25 discovered, 0 unreferenced
+  approval: AUTO (approval-auto; exempt=ask_user)
+  audit: jsonl /root/.harness/sessions (durable)
+  stop: max-turns=50 max-steps=40 budget=unlimited
+SMOKE-EXIT=0
+# 判读：无 Java/Maven 的裸容器里解压即可运行（自带运行时）；bwrap 不可见断言成立；
+#   两处 grep 均命中；--verify 在预警态仍 exit 0（预警非违规，05:470 口径）——WARNING 支路本机实证。
+#   CI 的 runner 内核支持 landlock，同一 grep 会命中 INFO 支路（§4 给出 bwrap 版实证）。
+#   另核：WARNING 行在 verify.txt 内只出现一次（grep -c = 1），无重复打印缺陷。
+
+== 4. INFO 支路真跑（bwrap 可用档） ==
+$ docker run --rm <build-img> sh -c 'bwrap --ro-bind / / --dev /dev /usr/bin/true; echo EXIT=$?'
+bwrap: Creating new namespace failed: Operation not permitted
+EXIT=1
+$ docker run --rm --security-opt seccomp=unconfined <build-img> sh -c '...同上...'
+bwrap: Creating new namespace failed: Operation not permitted       （放宽 seccomp 仍不行）
+$ docker run --rm --privileged <build-img> sh -c '...同上...'
+EXIT=0                                                              （容器需被给足命名空间权限）
+$ docker run --rm --privileged -e LANG=C.UTF-8 -v <target>:/drop:ro -w /tmp <build-img> \
+    sh -c '/drop/jlink-image/bin/jh --verify; echo "VERIFY-EXIT=$?"'
+INFO: sandbox: confining policy "workspace-write" is enforced by backend "bwrap" (enforcement FULL)
+Profile: headless   policy: STANDARD
+  ...
+VERIFY-EXIT=0
+# 判读：CI 第 8 步的 grep 串（生产文本 AppBoot.java:256 原样）在本机真 Linux 内核上逐字节命中。
+# 副产品（it25 相关事实）：容器内 bwrap 常态不可用（默认档与 seccomp=unconfined 都不行，需 --privileged）；
+#   而 landlock 是内核级能力、不经 userns。容器场景下 landlock 腿是主力。
+
+== 5. 交付归档自带助手真跑（「兜底随产物自带」） ==
+$ docker run --rm -e LANG=C.UTF-8 -v <target>:/drop:ro -w /tmp ubuntu:24.04 sh -c '
+    tar xzf /drop/javanatic-harness-0.2.0-SNAPSHOT-linux-aarch64.tar.gz
+    d=/tmp/javanatic-harness-0.2.0-SNAPSHOT-linux-aarch64
+    ls "$d/bin/"
+    "$d/bin/java" --list-modules | grep sandbox.local
+    "$d/bin/java" -XX:-UsePerfData --enable-native-access=io.javanatic.harness.sandbox.local \
+      -m io.javanatic.harness.sandbox.local/io.javanatic.harness.sandbox.local.LandlockExecMain --probe'
+java
+jh
+keytool
+io.javanatic.harness.sandbox.local@0.2.0-SNAPSHOT
+landlock: unavailable — landlock syscalls not present (errno ENOSYS)
+PROBE-EXIT=10
+# 判读：助手类与其模块随镜像交付（镜像自带 bin/java 可直接 -m 起名为态）；LANG=C.UTF-8 下 em-dash 正常。
+# 对照：无 LANG 时同一行渲染为 "landlock: unavailable ? landlock syscalls..."（§8 观察 1）。
+
+== 6. 聚焦测试容器内真跑 ==
+$ docker run --rm --privileged ... -w /src -e JAVA_HOME=/opt/jdk25 <build-img> \
+    sh -c '/opt/maven/bin/mvn -B -ntp -pl sandbox/local -am test -Dtest=SandboxLocalTest \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false'
+Tests run: 23, Failures: 0, Errors: 0, Skipped: 6 — in io.javanatic.harness.sandbox.local.SandboxLocalTest
+FOCUSED-EXIT=0
+  逐条（surefire XML）：RAN bwrapReadOnlyDeniesRealWriteWithDialectMarker
+                       RAN bwrapWorkspaceWriteAllowsInsideAndDeniesOutside
+                       RAN linuxChainFallsBackToLandlockWhenBwrapUnusable
+                       RAN linuxChainReportsProbeFailedNamingBothCandidateLegs
+                       RAN linuxChainFailsClosedWhenAllCandidatesUnusable
+                       RAN landlockProbeFailureIsNamedWithExitCodeAndLine
+                       RAN emptyChainFailsClosedNamingPlatformAndPlannedBackend
+                       RAN win32ChainReportsNoBackendNamingPlatform
+                       RAN platformChainsAreDarwinSeatbeltLinuxBwrapThenLandlockWin32Empty
+                       RAN passthroughPolicyIsRejectedByConfine / landlockWrap* 三条 / bwrapWrap* / seatbeltWrap*
+                       SKIP ×4  @EnabledOnOs(OS.MAC)：realSeatbeltReportsReady / confineWrapsArgvWithoutExecuting
+                                / readOnlyDeniesRealWriteWithDialectMarker / workspaceWriteAllowsInsideAndDeniesOutside
+                       SKIP ×2  landlock 两条 e2e（宿主内核无 landlock，assumeTrue 自跳）
+$ docker run --rm ... -Dtest=LandlockTest ...
+Tests run: 17, Failures: 0, Errors: 0, Skipped: 2 — in io.javanatic.harness.sandbox.local.LandlockTest
+  逐条：SKIP ×2 @EnabledOnOs(OS.MAC)；linux 腿真跑（用法拒绝 / 平台点名 / 形状）
+# 判读：**bwrap 两条真强制 e2e 在本机首次于真实 Linux 内核跑通**（此前只在 CI 跑，darwin 上恒跳）；
+#   平台分区与设计一致（mac 腿按平台跳、landlock 腿按能力自跳）；
+#   带构造器 seam 的仲裁/诊断用例在 linux 上全跑，与宿主现状无关（§7 结论）。
+
+== 7. CI 第 7 步断言 vs 真实 surefire 报告（干跑） ==
+$ python3 - <<'PY'    # 取 ci.yml 第 7 步同体：want 集合 + missing/skipped 判定，报告换成本机真实产出
+  want = {"landlockReadOnlyDeniesRealWriteWithDialectMarker",
+          "landlockWorkspaceWriteAllowsInsideAndDeniesOutside"}
+  ...
+PY
+landlock leg not really run: missing=[] skipped=['landlockReadOnlyDeniesRealWriteWithDialectMarker',
+                                                 'landlockWorkspaceWriteAllowsInsideAndDeniesOutside']
+ASSERT-EXIT=1
+# 判读：真实报告下（bwrap 腿真跑、landlock 腿因内核缺席自跳）断言如实转红并点名；
+#   比 S-c 的合成夹具更硬——门作用的对象正是「无声跳过」这一失效模式。
+# 顺带核实：§6 各 linux 用例均走构造器 seam（注伪 bwrap 路径与注伪助手命令），不依赖宿主现状，
+#   故 CI 首跑不存在「本机两候选全败所以绿、CI 两候选可用就红」的隐患。
+
+== 8. 诚实边界与两条待裁观察 ==
+仍属「首次 CI 跑」的事实：
+  - actions/upload-artifact 取件（0.2.0 发布面）；
+  - landlock **正**支路（ABI≥3 真建真限真拒写）——本机内核缺席，只能验负支路；
+  - CI 产物为 amd64、本机归档为 aarch64（形状/命名/profile 同源，非同一次构建）。
+两条观察（未改码，留待裁决）：
+  1. 非 UTF-8 locale 下 CLI 输出整体降级：同一命令，无 LANG → "Javanatic Harness headless runner
+     ?? ??????????(REPL)"，LANG=C.UTF-8 → 中文正常（本次两渲染均已实跑）。
+     影响面：裸容器/极简镜像这类默认 ASCII locale 的环境（正是「干净 Linux」验收场景）。
+     出路候选：启动器注入 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8（dist/jh 的 launcher
+     目前无 options 位，需另寻挂点），或在文档注明「非 UTF-8 locale 下请设 LANG」。
+  2. 结论行的 em-dash 与链诊断分隔符在非 UTF-8 locale 下同源降级为 "?"（英文骨架不受影响，
+     CI 的两处 grep 断言不受影响）。字节级实证（同一归档、同一命令，仅 locale 不同）：
+     $ <bin/jh> --verify 2>&1 | grep -o "exit 10 .\{0,14\}" | od -c
+       A 无 LANG       e x i t   1 0   ?   l a n d l o c k :   u n      （单字节 0x3f）
+       B LANG=C.UTF-8  e x i t   1 0   342 200 224   l a n d l o c k :（U+2014 的 UTF-8 三字节）
+     整行字节数：A=402 / B=406（两处 em-dash 各 +2 字节，与降级位置数一致）。
