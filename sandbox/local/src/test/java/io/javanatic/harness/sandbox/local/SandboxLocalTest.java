@@ -26,8 +26,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -38,8 +40,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * 平台链与 argv 形状的断言<b>平台无关</b>（darwin 上可全跑——it12 的教训：
  * 形状断言挂在真后端 OS 上等于本机之外一行验不到）；真强制 e2e 按平台分挂：
- * 本机 darwin 验 seatbelt、CI ubuntu 验 bwrap（未装 bwrap 的宿主自跳过，
- * CI job 预探保证跳过面在 CI 不可达）。
+ * 本机 darwin 验 seatbelt、CI ubuntu 验 bwrap 与 landlock 兜底腿（宿主自身
+ * 不满足者自跳过，CI job 预探保证跳过面在 CI 不可达）。
  */
 class SandboxLocalTest {
 
@@ -88,9 +90,9 @@ class SandboxLocalTest {
     // ---- 平台链结构（注伪平台，三平台断言平台无关） ----
 
     @Test
-    void platformChainsAreDarwinSeatbeltLinuxBwrapWin32Empty() {
+    void platformChainsAreDarwinSeatbeltLinuxBwrapThenLandlockWin32Empty() {
         assertThat(SandboxLocalPlugin.chainFor("darwin")).containsExactly("seatbelt");
-        assertThat(SandboxLocalPlugin.chainFor("linux")).containsExactly("bwrap");
+        assertThat(SandboxLocalPlugin.chainFor("linux")).containsExactly("bwrap", "landlock");
         assertThat(SandboxLocalPlugin.chainFor("win32")).isEmpty();
     }
 
@@ -147,6 +149,46 @@ class SandboxLocalTest {
         assertThat(profile.stream().filter("--bind"::equals).count()).isEqualTo(roots.size());
     }
 
+    // ---- landlock 包装（纯函数直测）：助手前缀 + 助手指令 + argv ----
+
+    @Test
+    void landlockWrapCarriesHelperThenModeRootsThenArgv() {
+        List<String> helper = List.of("/jdk/bin/java", "-XX:-UsePerfData",
+            "--enable-native-access=helper", "-cp", "/helper", "helper.Main");
+        SandboxPolicy readOnly = new SandboxPolicy(SandboxMode.READ_ONLY, workspace);
+        ConfinedArgv ro = SandboxLocalPlugin.landlockWrap(helper,
+            List.of("bash", "-c", "echo hi"), readOnly);
+        assertThat(ro.argv()).startsWith(helper.toArray(String[]::new));
+        assertThat(ro.enforcement()).isEqualTo(SandboxEnforcement.FULL);
+        assertThat(ro.denialSignatures()).containsExactly("Permission denied");
+
+        Landlock.Invocation roInvocation = Landlock.parse(
+            ro.argv().subList(helper.size(), ro.argv().size())).orElseThrow();
+        assertThat(roInvocation.probe()).isFalse();
+        assertThat(roInvocation.mode()).isEqualTo(Landlock.MODE_READ_ONLY);
+        assertThat(roInvocation.roots()).isEmpty();
+        assertThat(roInvocation.argv()).containsExactly("bash", "-c", "echo hi");
+
+        SandboxPolicy workspaceWrite = new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace);
+        ConfinedArgv ww = SandboxLocalPlugin.landlockWrap(helper,
+            List.of("bash", "-c", "echo hi"), workspaceWrite);
+        Landlock.Invocation wwInvocation = Landlock.parse(
+            ww.argv().subList(helper.size(), ww.argv().size())).orElseThrow();
+        assertThat(wwInvocation.mode()).isEqualTo(Landlock.MODE_WORKSPACE_WRITE);
+        assertThat(wwInvocation.roots())
+            .containsExactlyInAnyOrderElementsOf(WritableRoots.of(workspaceWrite));
+        assertThat(wwInvocation.argv()).containsExactly("bash", "-c", "echo hi");
+    }
+
+    @Test
+    void landlockWrapRefusesPassthroughModeInsteadOfWrappingIt() {
+        assertThatThrownBy(() -> SandboxLocalPlugin.landlockWrap(List.of("/jdk/bin/java"),
+            List.of("bash", "-c", "echo"),
+            new SandboxPolicy(SandboxMode.DANGER_FULL_ACCESS, workspace)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("explicit bypass");
+    }
+
     // ---- fail-closed：空链与候选不可用（注伪平台/二进制，平台无关） ----
 
     @Test
@@ -162,13 +204,16 @@ class SandboxLocalTest {
     }
 
     @Test
-    void linuxChainFailsClosedWhenBwrapUnusable() {
-        SandboxProvider provider = provider(
-            new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec", "/nonexistent/bwrap"));
+    void linuxChainFailsClosedWhenAllCandidatesUnusable() {
+        // landlock 助手形态不可判定（空 Optional）= 第二候选也不可用——本机事实无关
+        SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
+            "/nonexistent/bwrap", Optional.empty()));
         assertThatThrownBy(() -> provider.confine(List.of("bash", "-c", "echo"),
             new SandboxPolicy(SandboxMode.READ_ONLY, workspace)))
             .isInstanceOf(SandboxUnavailableException.class)
-            .hasMessageContaining("bwrap probe failed (binary: /nonexistent/bwrap)");
+            .hasMessageContaining("bwrap probe failed (binary: /nonexistent/bwrap)")
+            .hasMessageContaining("landlock probe failed (no decidable helper launch form")
+            .hasMessageContaining("refusing to run the command unconfined");
     }
 
     @Test
@@ -201,14 +246,15 @@ class SandboxLocalTest {
     }
 
     @Test
-    void linuxChainReportsProbeFailedNamingBackendBinary() {
-        SandboxProvider provider = provider(
-            new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec", "/nonexistent/bwrap"));
+    void linuxChainReportsProbeFailedNamingBothCandidateLegs() {
+        SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
+            "/nonexistent/bwrap", Optional.empty()));
         assertThat(provider.backendStatus()).isInstanceOfSatisfying(
             BackendStatus.ProbeFailed.class, failed -> {
                 assertThat(failed.platform()).isEqualTo("linux");
                 assertThat(failed.detail())
-                    .contains("bwrap probe failed (binary: /nonexistent/bwrap)");
+                    .contains("bwrap probe failed (binary: /nonexistent/bwrap)")
+                    .contains("landlock probe failed (no decidable helper launch form");
             });
     }
 
@@ -227,7 +273,52 @@ class SandboxLocalTest {
     @EnabledOnOs(OS.MAC)
     void realSeatbeltReportsReady() {
         assertThat(provider(new SandboxLocalPlugin()).backendStatus())
-            .isEqualTo(new BackendStatus.Ready("seatbelt"));
+            .isEqualTo(new BackendStatus.Ready("seatbelt", SandboxEnforcement.FULL, ""));
+    }
+
+    // ---- linux 第二候选仲裁（注伪助手：darwin 上可验 fallback 与诊断回收） ----
+    // 注伪助手只替「助手命令」，真结论（ABI/rights/真拒写）由 LandlockTest 与 CI 腿验
+
+    @Test
+    void linuxChainFallsBackToLandlockWhenBwrapUnusable() {
+        SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
+            "/nonexistent/bwrap", Optional.of(List.of("/usr/bin/true"))));
+        assertThat(provider.backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.Ready.class, ready -> {
+                assertThat(ready.backend()).isEqualTo("landlock");
+                assertThat(ready.enforcement()).isEqualTo(SandboxEnforcement.FULL);
+                // 注伪助手无输出 → 细节只有前候选失败（无 "; " 尾段）
+                assertThat(ready.detail()).isEqualTo("bwrap probe failed (binary: /nonexistent/bwrap)");
+            });
+        // 选择期 fallback：confine 走 landlock 腿（注伪助手在前缀，而非 bwrap）
+        assertThat(provider.confine(List.of("bash", "-c", "echo"),
+            new SandboxPolicy(SandboxMode.READ_ONLY, workspace)).argv())
+            .first().isEqualTo("/usr/bin/true");
+    }
+
+    @Test
+    void landlockCapabilityLineIsRecoveredIntoReadyDetail() {
+        SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
+            "/nonexistent/bwrap", Optional.of(List.of("/bin/sh", "-c",
+                "echo booted; echo 'landlock: ready (ABI 3, write denied)'"))));
+        assertThat(provider.backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.Ready.class, ready -> {
+                // 结论行取末尾非空行；前候选失败明细与其以 "; " 相连
+                assertThat(ready.detail()).isEqualTo("bwrap probe failed (binary: /nonexistent/bwrap)"
+                    + "; landlock: ready (ABI 3, write denied)");
+            });
+    }
+
+    @Test
+    void landlockProbeFailureIsNamedWithExitCodeAndLine() {
+        SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
+            "/nonexistent/bwrap", Optional.of(List.of("/bin/sh", "-c",
+                "echo 'landlock: ABI too old (no REFER)' 1>&2; exit 11"))));
+        assertThat(provider.backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.ProbeFailed.class, failed ->
+                assertThat(failed.detail())
+                    .contains("bwrap probe failed (binary: /nonexistent/bwrap)")
+                    .contains("landlock probe failed (exit 11 — landlock: ABI too old (no REFER))"));
     }
 
     // ---- 真强制 e2e：darwin/seatbelt（本机） ----
@@ -300,6 +391,72 @@ class SandboxLocalTest {
     void bwrapWorkspaceWriteAllowsInsideAndDeniesOutside() throws Exception {
         assumeTrue(bwrapUsable(), "bwrap not usable on this host");
         SandboxProvider provider = provider(new SandboxLocalPlugin());
+        SandboxPolicy policy = new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace);
+        ShellResult inside = run(provider, "echo ok > in.txt", policy, workspace);
+        assertThat(inside.exitCode()).isZero();
+        assertThat(inside.sandboxDenied()).isFalse();
+        assertThat(Files.readString(workspace.resolve("in.txt"))).isEqualTo("ok\n");
+
+        Path outside = Files.createTempDirectory(Path.of(System.getProperty("user.home")),
+            "jh-sandbox-outside");
+        try {
+            ShellResult denied = run(provider, "echo no > " + outside.resolve("x.txt"),
+                policy, workspace);
+            assertThat(denied.exitCode()).isNotZero();
+            assertThat(denied.sandboxDenied()).isTrue();
+            assertThat(Files.exists(outside.resolve("x.txt"))).isFalse();
+        } finally {
+            Files.deleteIfExists(outside.resolve("x.txt"));
+            Files.delete(outside);
+        }
+    }
+
+    // ---- 真强制 e2e：linux/landlock 兜底腿（CI ubuntu job；无 landlock 内核自跳过） ----
+    // 注伪「bwrap 不可用」逼出第二候选；助手指令用真实 hostHelperCommand
+
+    /** 真助手可用性探针（JUnit 侧独立事实，不借被测 provider 的探针结论）。 */
+    private static boolean landlockUsable() {
+        Optional<List<String>> helper = Landlock.hostHelperCommand();
+        if (helper.isEmpty()) {
+            return false;
+        }
+        List<String> probe = new ArrayList<>(helper.get());
+        probe.addAll(Landlock.probeArgs());
+        Process process;
+        try {
+            process = new ProcessBuilder(probe).start();
+        } catch (IOException spawnFailed) {
+            return false;
+        }
+        try {
+            return process.waitFor(30, TimeUnit.SECONDS) && process.exitValue() == 0;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            process.destroyForcibly();
+            return false;
+        }
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void landlockReadOnlyDeniesRealWriteWithDialectMarker() throws Exception {
+        assumeTrue(landlockUsable(), "landlock helper not usable on this host");
+        SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
+            "/nonexistent/bwrap"));
+        ShellResult result = run(provider, "echo denied > out.txt",
+            new SandboxPolicy(SandboxMode.READ_ONLY, workspace), workspace);
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.stderr()).contains("Permission denied");
+        assertThat(result.sandboxDenied()).isTrue();
+        assertThat(Files.exists(workspace.resolve("out.txt"))).isFalse();
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void landlockWorkspaceWriteAllowsInsideAndDeniesOutside() throws Exception {
+        assumeTrue(landlockUsable(), "landlock helper not usable on this host");
+        SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
+            "/nonexistent/bwrap"));
         SandboxPolicy policy = new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace);
         ShellResult inside = run(provider, "echo ok > in.txt", policy, workspace);
         assertThat(inside.exitCode()).isZero();

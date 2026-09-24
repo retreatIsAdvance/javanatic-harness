@@ -435,9 +435,12 @@ public record ConfinedArgv(List<String> argv, SandboxEnforcement enforcement,
                            List<String> denialSignatures) {}
 
 /** 后端可用性三态（it12.6）：Ready / NoBackend（平台链空，点名平台）/
- *  ProbeFailed（链上候选探针全败，点名明细）。 */
+ *  ProbeFailed（链上候选探针全败，点名明细）。
+ *  Ready 三件（it24 链仲裁）：生效后端 + 强制完备度 + 链路细节
+ *  （前候选失败明细 + 本后端能力行，无则空串）。 */
 public sealed interface BackendStatus {
-    record Ready(String backend) implements BackendStatus {}
+    record Ready(String backend, SandboxEnforcement enforcement, String detail)
+        implements BackendStatus {}
     record NoBackend(String platform) implements BackendStatus {}
     record ProbeFailed(String platform, String detail) implements BackendStatus {}
 }
@@ -448,26 +451,37 @@ public sealed interface BackendStatus {
 成为真实授予）。Seatbelt 授予与进程内 fs 围栏（fs-tool）都从这里取——「bash 能写而
 写工具不能」的不对称不可能出现。
 
-Provider（id `sandbox-local`）按**平台链**组形（dsh 对齐：平台→候选链；单候选只探
-可用性，>1 候选才探针仲裁）：
+Provider（id `sandbox-local`）按**平台链**组形（dsh 对齐：平台→候选链；**选择期
+fallback** 仲裁——一次探针、缓存、进程生命周期内不再切换；空链或候选全不可用一律
+fail-closed）：
 darwin=[seatbelt]（SBPL `deny file-write*` + /dev/null + 可写根 subpath；功能探针
-`sandbox-exec -p <profile> -- true`）；linux=[bwrap]（it12.7 落定——`--ro-bind / /` 整根
-只读 + `--dev /dev` + `--die-with-parent`，workspace-write 追加可写根 `--bind`；拒绝
-方言 `Read-only file system`/`Permission denied`；功能探针 `bwrap --ro-bind / / --dev
-/dev --die-with-parent -- true`。需主机装 bubblewrap，非特权 userns 受限的主机
-fail-closed——landlock 第二候选入 0.2.0：自限制后 exec、规则跨 execve 继承、allow-list
-只授不拒）；win32=[]（windows-acl 入 0.2.0：WRITE_RESTRICTED 受限令牌 +
+`sandbox-exec -p <profile> -- true`）；linux=[bwrap, landlock]（it12.7 落定 bwrap
+首候选——`--ro-bind / /` 整根只读 + `--dev /dev` + `--die-with-parent`，
+workspace-write 追加可写根 `--bind`；拒绝方言 `Read-only file system`/`Permission
+denied`；功能探针 `bwrap --ro-bind / / --dev /dev --die-with-parent -- true`。需主机
+装 bubblewrap，非特权 userns 受限的主机落第二候选——it24 落定 landlock：JVM 自限制
+助手（`Landlock`，FFM 直呼 `landlock_create_ruleset`/`landlock_add_rule`/
+`landlock_restrict_self`）先自限再 exec 目标 argv，规则跨 execve 继承、allow-list
+只授不拒；**入选门槛 = 内核接受的 rights 子集含 `WRITE_EFFECTS_V1` + `REFER` +
+`TRUNCATE`**（缺者 fail-closed 等 bwrap 腿——ABI 1–2 能清空只读文件、跨目录 rename
+不受控）；拒绝方言 `Permission denied`（EACCES，无 EROFS 面）；助手命令带
+`-XX:-UsePerfData` 与 `--enable-native-access`（classpath/模块路径/镜像三形态按运行
+事实择一，classpath 取助手类 code source——surefire 的 `java.class.path` 是空 booter
+jar）；机制结论（ABI/rights/正对照）来自探针内实测而非版本猜测）。
+win32=[]（windows-acl 入 0.2.0：WRITE_RESTRICTED 受限令牌 +
 per-workspace SID 常设授予 + per-session 随机临时目录/SID，**enforcement=PARTIAL 及
 两洞**——Everyone-可写外部对象仍可写、NTFS 硬链接别名越界，stderr 签名 + exit 127
 fail-closed）。空链平台上受限 confine 一律 `SandboxUnavailableException`（code
 SANDBOX_UNAVAILABLE）——**fail-closed，静默透传被禁止**。
 
-**查询面与 verify 预警（it12.6）**：`backendStatus()` 把「首调用才炸」提前成组合期
-可见事实——`--verify`（`AppBoot`，已依赖本模块）在组合含受限档时读它（probe session
-解析策略；无策略行或无同机 provider 的 docker 组合不预警——执行器自身消费策略），
-`NoBackend`/`ProbeFailed` → stderr WARNING 点名平台、后果（首次受限调用 fail-closed）
-与出路（显式 `danger-full-access` overlay 弃权 / 装 bubblewrap / windows-acl 入
-0.2.0）；**exit 码不变**（预警非违规——PRODUCTION 违规仍 exit 1）。
+**查询面与 verify 观测（it12.6；it24 分两级）**：`backendStatus()` 把「首调用才炸」
+提前成组合期可见事实——`--verify`（`AppBoot`，已依赖本模块）在组合含受限档时读它
+（probe session 解析策略；无策略行或无同机 provider 的 docker 组合不预警——执行器
+自身消费策略）：`NoBackend`/`ProbeFailed` → stderr **WARNING** 点名平台、后果（首次
+受限调用 fail-closed）与出路（显式 `danger-full-access` overlay 弃权 / 装
+bubblewrap / windows-acl 入 0.2.0）；`Ready` → 一行 **INFO 落点**（生效后端 + 完备度
++ 链路细节），使「档位真在生效」与「档位配了但不可用」在 verify 输出里可辨；
+**exit 码不变**（观测非违规——PRODUCTION 违规仍 exit 1）。
 
 **已知残余（诚实记录）**：读可见性与网络不在约束面（词表外，与 seatbelt 对齐）——
 bwrap 链不加 `--unshare-pid`/`--unshare-net`，`--ro-bind / /` 下宿主文件系统整体

@@ -5,8 +5,10 @@ import io.javanatic.harness.kernel.config.ConfigRowSpec;
 import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
+import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.sandbox.sandbox.BackendStatus;
 import io.javanatic.harness.sandbox.sandbox.ConfinedArgv;
+import io.javanatic.harness.sandbox.sandbox.SandboxEnforcement;
 import io.javanatic.harness.sandbox.sandbox.SandboxMode;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
 import io.javanatic.harness.sandbox.sandbox.SandboxPolicyService;
@@ -21,9 +23,6 @@ import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -257,7 +256,7 @@ class AppBootTest {
             rt.root().provide(SandboxPolicyService.KEY,
                 session -> new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, dir));
             rt.root().provide(SandboxProvider.KEY,
-                statusOnlyProvider(new BackendStatus.Ready("seatbelt")));
+                statusOnlyProvider(new BackendStatus.Ready("seatbelt", SandboxEnforcement.FULL, "")));
             assertThat(AppBoot.sandboxWarning(rt.root())).isEmpty();
         }
     }
@@ -272,28 +271,109 @@ class AppBootTest {
         }
     }
 
+    // ---- --verify 沙箱落点（Ready 面：点名后端 + 完备度 + 链路细节） ----
+
     @Test
-    void verifyWarnsOnStderrWhenPlatformChainIsEmptyAndStillPasses() throws Exception {
+    void sandboxLineNamesBackendEnforcementAndChainDetail() {
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(SandboxPolicyService.KEY,
+                session -> new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, dir));
+            rt.root().provide(SandboxProvider.KEY, statusOnlyProvider(new BackendStatus.Ready(
+                "landlock", SandboxEnforcement.FULL,
+                "bwrap probe failed (binary: bwrap); landlock: ready (ABI 3, write denied)")));
+            assertThat(AppBoot.sandboxLine(rt.root())).hasValueSatisfying(line ->
+                assertThat(line).contains("workspace-write").contains("landlock")
+                    .contains("FULL").contains("bwrap probe failed")
+                    .contains("landlock: ready (ABI 3, write denied)"));
+        }
+    }
+
+    @Test
+    void sandboxLineWithoutDetailHasNoTrailingSeparator() {
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(SandboxPolicyService.KEY,
+                session -> new SandboxPolicy(SandboxMode.READ_ONLY, dir));
+            rt.root().provide(SandboxProvider.KEY,
+                statusOnlyProvider(new BackendStatus.Ready("seatbelt", SandboxEnforcement.FULL, "")));
+            assertThat(AppBoot.sandboxLine(rt.root())).hasValueSatisfying(line ->
+                assertThat(line).doesNotContain(";").endsWith(")"));
+        }
+    }
+
+    @Test
+    void sandboxLineSilentWhenNotReadyOrNotApplicable() {
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(SandboxPolicyService.KEY,
+                session -> new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, dir));
+            rt.root().provide(SandboxProvider.KEY,
+                statusOnlyProvider(new BackendStatus.NoBackend("win32")));
+            assertThat(AppBoot.sandboxLine(rt.root())).isEmpty();
+        }
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(SandboxPolicyService.KEY,
+                session -> new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, dir));
+            rt.root().provide(SandboxProvider.KEY, statusOnlyProvider(
+                new BackendStatus.ProbeFailed("linux", "bwrap probe failed (binary: bwrap)")));
+            assertThat(AppBoot.sandboxLine(rt.root())).isEmpty();
+        }
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(SandboxPolicyService.KEY,
+                session -> new SandboxPolicy(SandboxMode.DANGER_FULL_ACCESS, dir));
+            rt.root().provide(SandboxProvider.KEY,
+                statusOnlyProvider(new BackendStatus.Ready("seatbelt", SandboxEnforcement.FULL, "")));
+            assertThat(AppBoot.sandboxLine(rt.root())).isEmpty();
+        }
+        try (Runtime rt = new Runtime()) {
+            assertThat(AppBoot.sandboxLine(rt.root())).isEmpty();
+        }
+    }
+
+    @Test
+    @EnabledOnOs(OS.MAC)
+    void sandboxLineOnRealDarwinCompositionNamesSeatbelt() throws Exception {
+        Path profile = profile("");
+        try (Runtime rt = AppBoot.boot(new AppBoot.BootOptions(profile, rootOverlays(),
+                true, Policy.STANDARD))) {
+            assertThat(AppBoot.sandboxLine(rt.root())).hasValueSatisfying(line ->
+                assertThat(line).contains("workspace-write").contains("seatbelt").contains("FULL"));
+        }
+    }
+
+    /** 观测出口的记录（注伪 sink；不走全局 stderr——JUL 的流绑定是 JVM 一次性事件）。 */
+    private static List<String> observations(Scope root) {
+        List<String> emitted = new ArrayList<>();
+        AppBoot.emitSandboxObservations(root, (level, message) -> emitted.add(level + ": " + message));
+        return emitted;
+    }
+
+    @Test
+    void verifyEmitsWarningForNonReadyChainAndStillPasses() throws Exception {
         String originalOs = System.getProperty("os.name");
-        PrintStream originalErr = System.err;
-        ByteArrayOutputStream captured = new ByteArrayOutputStream();
         try {
             // 注伪平台：真组合（含 sandbox-local/sandbox-policy 行）在 win32 链上
-            // 触发 NoBackend 预警——stderr 捕获即 verify 的观测面证据
+            // 发 NoBackend 预警——预警是观测面，verify 仍过（exit 码不变）
             System.setProperty("os.name", "Windows 11");
-            System.setErr(new PrintStream(captured, true, StandardCharsets.UTF_8));
             Path profile = profile("");
             try (Runtime rt = AppBoot.boot(new AppBoot.BootOptions(profile, rootOverlays(),
                     true, Policy.STANDARD))) {
-                assertThat(rt).isNotNull();
-            } finally {
-                System.setErr(originalErr);
+                assertThat(observations(rt.root())).singleElement().asString()
+                    .startsWith("WARNING: sandbox warning").contains("win32")
+                    .contains("fail closed");
             }
         } finally {
-            System.setErr(originalErr);
             System.setProperty("os.name", originalOs);
         }
-        assertThat(captured.toString(StandardCharsets.UTF_8))
-            .contains("sandbox warning").contains("win32").contains("fail closed");
+    }
+
+    @Test
+    @EnabledOnOs(OS.MAC)
+    void verifyEmitsSandboxLineForReadyBackendOnRealComposition() throws Exception {
+        Path profile = profile("");
+        try (Runtime rt = AppBoot.boot(new AppBoot.BootOptions(profile, rootOverlays(),
+                true, Policy.STANDARD))) {
+            assertThat(observations(rt.root())).singleElement().asString()
+                .startsWith("INFO: sandbox: confining policy").contains("seatbelt")
+                .doesNotContain("sandbox warning");
+        }
     }
 }

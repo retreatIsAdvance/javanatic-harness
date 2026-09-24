@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 /**
  * 组合装配入口（07 §5）：profile bundles → profile rows → CLI overlay 三层叠加
@@ -207,7 +208,7 @@ public final class AppBoot {
             if (!violations.isEmpty()) {
                 throw new VerifyFailedException(violations);
             }
-            sandboxWarning(root).ifPresent(warning -> LOG.log(System.Logger.Level.WARNING, warning));
+            emitSandboxObservations(root, LOG::log);
         }
         // 校验已过 → 恒 0；保留计数是摘要与校验同源的证据（不印常量）
         return new Booted(runtime, profile.name(), discovered.size(), unreferencedPlugins(discovered, rows).size());
@@ -226,6 +227,57 @@ public final class AppBoot {
      * @return 预警文本；无需预警时 empty
      */
     static Optional<String> sandboxWarning(Scope root) {
+        return observeSandbox(root).flatMap(observation -> switch (observation.status()) {
+            case BackendStatus.Ready ignored -> Optional.empty();
+            case BackendStatus.NoBackend noBackend -> Optional.of(
+                "sandbox warning: confining policy \"" + observation.mode() + "\" is configured but platform \""
+                + noBackend.platform() + "\" has no same-host sandbox backend yet; the first"
+                + " confined shell call will fail closed. Options: overlay mode:"
+                + " danger-full-access (explicit bypass), or wait for windows-acl (0.2.0).");
+            case BackendStatus.ProbeFailed failed -> Optional.of(
+                "sandbox warning: confining policy \"" + observation.mode() + "\" is configured but no sandbox"
+                + " backend is usable on platform \"" + failed.platform() + "\" ("
+                + failed.detail() + "); the first confined shell call will fail closed."
+                + " Options: install bubblewrap, or overlay mode: danger-full-access"
+                + " (explicit bypass).");
+        });
+    }
+
+    /**
+     * --verify 的沙箱落点（观测面，非违规——exit 码不变）：受限档且本宿主有可用后端时，
+     * 点名生效后端、强制完备度与本链路细节（候选失败明细 + 本后端能力行）。
+     *
+     * @param root 装配完成的 root scope
+     * @return 落点文本；无受限档 / 无同机 provider / 后端不可用时 empty
+     */
+    static Optional<String> sandboxLine(Scope root) {
+        return observeSandbox(root).flatMap(observation -> switch (observation.status()) {
+            case BackendStatus.Ready ready -> Optional.of(
+                "sandbox: confining policy \"" + observation.mode() + "\" is enforced by backend \""
+                + ready.backend() + "\" (enforcement " + ready.enforcement() + ")"
+                + (ready.detail().isEmpty() ? "" : "; " + ready.detail()));
+            case BackendStatus.NoBackend ignored -> Optional.empty();
+            case BackendStatus.ProbeFailed ignored -> Optional.empty();
+        });
+    }
+
+    /**
+     * verify 的沙箱观测出口（{@code boot} 的唯一消费点）：预警走 WARNING、落点走 INFO。
+     * 文本构造已由 {@link #sandboxWarning}/{@link #sandboxLine} 直接可测；本方法让「接线」
+     * 也不必经全局 stderr 观测——JUL 在首个日志记录时绑定当时的 {@code System.err}，
+     * 之后 {@code System.setErr} 不再生效（it24 实测），捕获式断言会随同 JVM 里更早的
+     * 日志记录失真。
+     *
+     * @param root 装配完成的 root scope
+     * @param sink 记录出口（生产为 {@code LOG::log}）
+     */
+    static void emitSandboxObservations(Scope root, BiConsumer<System.Logger.Level, String> sink) {
+        sandboxWarning(root).ifPresent(warning -> sink.accept(System.Logger.Level.WARNING, warning));
+        sandboxLine(root).ifPresent(line -> sink.accept(System.Logger.Level.INFO, line));
+    }
+
+    /** 受限档观测的共用前段：解析策略与 provider、探针 session、归一为「档位 + 后端状态」。 */
+    private static Optional<SandboxObservation> observeSandbox(Scope root) {
         Optional<SandboxPolicyService> policies = root.resolve(SandboxPolicyService.KEY);
         Optional<SandboxProvider> providers = root.resolve(SandboxProvider.KEY);
         if (policies.isEmpty() || providers.isEmpty()) {
@@ -236,21 +288,11 @@ public final class AppBoot {
         if (!policy.mode().confining()) {
             return Optional.empty();
         }
-        String mode = policy.mode().wire();
-        return switch (providers.get().backendStatus()) {
-            case BackendStatus.Ready ignored -> Optional.empty();
-            case BackendStatus.NoBackend noBackend -> Optional.of(
-                "sandbox warning: confining policy \"" + mode + "\" is configured but platform \""
-                + noBackend.platform() + "\" has no same-host sandbox backend yet; the first"
-                + " confined shell call will fail closed. Options: overlay mode:"
-                + " danger-full-access (explicit bypass), or wait for windows-acl (0.2.0).");
-            case BackendStatus.ProbeFailed failed -> Optional.of(
-                "sandbox warning: confining policy \"" + mode + "\" is configured but no sandbox"
-                + " backend is usable on platform \"" + failed.platform() + "\" ("
-                + failed.detail() + "); the first confined shell call will fail closed."
-                + " Options: install bubblewrap, or overlay mode: danger-full-access"
-                + " (explicit bypass).");
-        };
+        return Optional.of(new SandboxObservation(policy.mode().wire(), providers.get().backendStatus()));
+    }
+
+    /** 受限档观测：模式串 + 后端可用性三态。 */
+    private record SandboxObservation(String mode, BackendStatus status) {
     }
 
     /** workspace 承载键(it21 单源):四处围栏/提示词源——同组合必须同值。 */

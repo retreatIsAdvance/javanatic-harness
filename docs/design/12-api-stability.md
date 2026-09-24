@@ -81,6 +81,8 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 **0.2.0 增量（it22 澄清问答）**：`ToolDefinition.ofExempt(...)`（免审批声明：审批 stage 对声明工具不触发）与 `ToolExecutionResult.concluding(content)`（正常成功但终结本 turn）。`ask_user` 工具（`interaction.ask`，插件 id `ask-user`）——答复 = 下一轮 user message；非交互场景结构上不挂等（出口契约见 §6）。
 
+**0.2.0 迁移（it24 链仲裁）**：`BackendStatus.Ready(String)` → `Ready(String backend, SandboxEnforcement enforcement, String detail)`——Linux 平台链由 `[bwrap]` 变 `[bwrap, landlock]`（选择期 fallback：一次探针、缓存、进程生命周期内不切换），`Ready` 的 `detail` 承载链路细节（前候选失败明细 + 本后端能力行，无则空串）。`AppBoot.sandboxWarning(Scope)` 签名与语义不变（`Ready` 仍静默）；新增 `AppBoot.sandboxLine(Scope)`（`Ready` → INFO 行；观测非违规，**exit 码不变**）与 `AppBoot.emitSandboxObservations(Scope, BiConsumer<Level, String>)`（`boot` 的唯一观测出口；文本构造仍由 `sandboxWarning`/`sandboxLine` 独立可测）。
+
 ## 4. 事件 schema
 
 - **信封**：`LoggedEvent(seq, event)`——seq 单调（JSONL 一行一条）；`SessionEvent.time()` = epoch 毫秒。

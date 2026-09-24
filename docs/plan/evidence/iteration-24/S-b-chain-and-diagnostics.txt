@@ -1,0 +1,107 @@
+# it24 S-b 链仲裁与诊断契约 —— 编译/门禁 + 聚焦测试 + 真 --verify 双腿 + JUL 流绑定探针 + 突变
+# 基线 commit: e21bd6f（HEAD；与 S-a 同基线）。本停点工作树：8 改（S-b 代码 + 设计同步）+ 5 新增（S-a 起，见第 6 节）。
+# 环境：macOS/aarch64（os.name=Mac OS X）+ temurin-25 + apache-maven-3.8.8
+# 本文件＝实跑输出摘录：每段给出完整命令、决定性输出行与真实 EXIT 回显。
+
+== 1. 编译与门禁（spotless:check + checkstyle:check 在 validate 阶段内联） ==
+$ mvn -B -ntp -pl sandbox/local,bundle/base -am -Dtest=SandboxLocalTest,LandlockTest,AppBootTest -Dsurefire.failIfNoSpecifiedTests=false test
+[INFO] --- spotless-maven-plugin:2.43.0:check (spotless-check) @ harness-parent ---
+[INFO] --- maven-checkstyle-plugin:3.6.0:check (checkstyle-check) @ harness-parent ---
+[INFO] harness-sandbox-local .............................. SUCCESS [  0.755 s]
+[INFO] harness-bundle-base ................................ SUCCESS [  2.022 s]
+[INFO] BUILD SUCCESS
+EXIT=0
+
+== 2. 聚焦测试（跨模块：链仲裁 = sandbox/local；诊断契约 = bundle/base） ==
+（命令同第 1 节；聚焦跑必须带 -am——跨模块依赖需在 reactor 内）
+[WARNING] Tests run: 17, Failures: 0, Errors: 0, Skipped: 1 ... -- in io.javanatic.harness.sandbox.local.LandlockTest
+[WARNING] Tests run: 23, Failures: 0, Errors: 0, Skipped: 4 ... -- in io.javanatic.harness.sandbox.local.SandboxLocalTest
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0 ... -- in io.javanatic.harness.boot.AppBootTest
+[INFO] BUILD SUCCESS
+EXIT=0
+# 跳过 5 项＝平台分区（真强制 e2e 不跨平台假装）：LandlockTest 1（Linux 腿）、SandboxLocalTest 4（2 条 bwrap e2e +
+#   2 条 landlock 兜底腿）——CI ubuntu job 跑，宿主不满足者自跳过。本节同时是第 5 节所有突变的「还原复绿」证据。
+
+== 3. 真 --verify 双腿（jlink 镜像，真命令真进程） ==
+$ mvn -B -ntp -pl dist/jh -am -DskipTests package
+[INFO] BUILD SUCCESS   （10.263 s；镜像 dist/jh/target/jlink-image/）
+
+$ cd dist/jh/target/jlink-image && bin/jh --verify
+Sep 24, 2026 5:01:02 PM io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+Profile: headless   policy: STANDARD
+  composition: 20 rows, 25 discovered, 0 unreferenced
+  approval: AUTO (approval-auto; exempt=ask_user)
+  audit: jsonl /Users/abel_yang/.harness/sessions (durable)
+  stop: max-turns=50 max-steps=40 budget=unlimited
+EXIT=0
+# Ready 态：新增 INFO 沙箱落点行（点名生效后端 + 完备度 + 细节段），治理摘要其余行与 exit 码不变
+#   （对照 it22 同命令取证：此前 Ready 静默——criterion「--verify 在 Ready 时也打印沙箱行」达成）。
+
+$ cd dist/jh/target/jlink-image && bin/java -Dos.name="Windows 11" \
+    -m io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain --verify
+Sep 24, 2026 5:01:21 PM io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$0
+警告: sandbox warning: confining policy "workspace-write" is configured but platform "win32" has no same-host sandbox backend yet; the first confined shell call will fail closed. Options: overlay mode: danger-full-access (explicit bypass), or wait for windows-acl (0.2.0).
+Profile: headless   policy: STANDARD
+  …（摘要同 Ready 腿）
+EXIT=0
+# 非 Ready 态：WARNING 文案不变、无 INFO 行；exit 码仍 0（预警非违规，05 §6 / 05:470 口径）。
+# 注：JDK_JAVA_OPTIONS 不可用（jlink 启动器经它传主类 → Error: Cannot specify main class in environment
+#   variable JDK_JAVA_OPTIONS，EXIT=1），故以镜像内 bin/java 直跑 -m 覆写平台。
+# 留白（如实）：darwin 本机链不含 landlock，「前一候选 bwrap 失败 → 落到 landlock」的 detail 拼接只有测试级证据
+#   （注伪助手）与 S-c 的 CI ubuntu 腿权威验证。
+
+== 4. JUL 流绑定探针（修正表缺陷的实证） ==
+# 源文件随证据入库：docs/plan/evidence/iteration-24/S-b-jul-err-binding-probe.java（未参与构建）
+$ java docs/plan/evidence/iteration-24/S-b-jul-err-binding-probe.java      （连跑 3 次，逐次同形）
+first-captured=true second-captured=false second-received-first-line=false
+first-captured=true second-captured=false second-received-first-line=false
+first-captured=true second-captured=false second-received-first-line=false
+EXIT=0（逐次）
+# 结论：JUL 后端在**首条记录发布时**一次性绑定彼时的 System.err；发布后再 setErr 的新流收不到任何记录，
+#   旧流继续收。故 stderr 捕获式断言只对「本 JVM 的首条发布」可靠（同 JVM 内成对捕获必有一方捕空）——
+#   验证 --verify 双级观测改走包私有出口 AppBoot.emitSandboxObservations(root, sink)；生产出口仍 LOG::log，
+#   真实 stderr 面由第 3 节真镜像双腿覆盖。
+
+== 5. 突变检查（一处一处改坏 → 必红 → 还原；还原后的绿见第 2 节） ==
+M1 链去 landlock（PLATFORM_CHAINS.linux = [bwrap]）
+   → 红 6：platformChainsAreDarwinSeatbeltLinuxBwrapThenLandlockWin32Empty:95 · linuxChainFailsClosedWhenAllCandidatesUnusable:215 ·
+           linuxChainReportsProbeFailedNamingBothCandidateLegs:257 · linuxChainFallsBackToLandlockWhenBwrapUnusable:286 ·
+           landlockCapabilityLineIsRecoveredIntoReadyDetail:307 · landlockProbeFailureIsNamedWithExitCodeAndLine:321
+M2 Ready.detail 丢前候选失败段（chainDetail 只返 capability）
+   → 红 2：linuxChainFallsBackToLandlockWhenBwrapUnusable:291 · landlockCapabilityLineIsRecoveredIntoReadyDetail:307
+M3 档位映射放宽（READ_ONLY → MODE_WORKSPACE_WRITE）
+   → 红 1：landlockWrapCarriesHelperThenModeRootsThenArgv:168
+M4 探针结论短路（LandlockBackend.usable() 恒 true，不跑助手 --probe）
+   → 红 5：linuxChainFailsClosedWhenAllCandidatesUnusable:211 · linuxChainReportsProbeFailedNamingBothCandidateLegs:252 ·
+           linuxChainFallsBackToLandlockWhenBwrapUnusable:296 · landlockCapabilityLineIsRecoveredIntoReadyDetail:307 ·
+           landlockProbeFailureIsNamedWithExitCodeAndLine:317
+M5 落点行降级（sandboxLine 对 ProbeFailed 也出 INFO）
+   → 红 1：sandboxLineSilentWhenNotReadyOrNotApplicable:317
+# 每条突变的 mvn 命令与第 2 节同形（三测试类联跑）；红＝BUILD FAILURE + 上述断言行（M2 的
+#   landlockProbeFailure 未红——ProbeFailed 走 failures.toString()，不经 chainDetail，符合实现结构）。
+
+== 6. 本停点工作树（未提交；提交待放行） ==
+$ git status --porcelain
+ M bundle/base/src/main/java/io/javanatic/harness/boot/AppBoot.java
+ M bundle/base/src/main/resources/META-INF/harness/bundle.yml
+ M bundle/base/src/test/java/io/javanatic/harness/boot/AppBootTest.java
+ M docs/design/05-capability-seam.md
+ M docs/design/12-api-stability.md
+ M sandbox/local/src/main/java/io/javanatic/harness/sandbox/local/SandboxLocalPlugin.java
+ M sandbox/local/src/test/java/io/javanatic/harness/sandbox/local/SandboxLocalTest.java
+ M sandbox/sandbox/src/main/java/io/javanatic/harness/sandbox/sandbox/BackendStatus.java
+?? docs/plan/evidence/iteration-24/
+?? docs/plan/iteration-24.md
+?? sandbox/local/src/main/java/io/javanatic/harness/sandbox/local/Landlock.java
+?? sandbox/local/src/main/java/io/javanatic/harness/sandbox/local/LandlockExecMain.java
+?? sandbox/local/src/test/java/io/javanatic/harness/sandbox/local/LandlockTest.java
+# 主仓其余零改动（S-a 新增 3 个 java + 台账 2 项照旧未提交；本停点不 commit、不进 S-c）。
+
+== 7. 全 reactor package（S-b 停点旁证；S-c 收口时以含测试形态复跑） ==
+$ mvn -B -ntp package -DskipTests
+[INFO] Reactor Summary for Javanatic Harness 0.2.0-SNAPSHOT:   …（全模块 SUCCESS，含 examples 与 dist/jh）
+[INFO] BUILD SUCCESS   （7.779 s，增量）
+dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.tar.gz（35,482,013 B）与 .zip 重产。
+# BackendStatus 契约变更的消费面核对：全仓 grep 仅三处（sandbox/sandbox 定义 · sandbox/local 生产 ·
+#   bundle/base 消费），无第四消费方需随动。

@@ -1,5 +1,7 @@
 package io.javanatic.harness.sandbox.sandbox;
 
+import java.util.Objects;
+
 /**
  * 同机后端可用性的查询结果（{@link SandboxProvider#backendStatus()}）：
  * 受限档 fail-closed 的部署期可见形态——verify/preflight 用它把
@@ -8,8 +10,23 @@ package io.javanatic.harness.sandbox.sandbox;
  */
 public sealed interface BackendStatus {
 
-    /** 首个候选探针可用（点名后端 id）。 */
-    record Ready(String backend) implements BackendStatus {}
+    /**
+     * 首个候选探针可用：点名后端 id、本后端强制完备度与细节。
+     *
+     * @param backend     后端 id（平台链内的候选名，如 seatbelt / bwrap / landlock）
+     * @param enforcement 本后端在此宿主上的强制完备度（今日三个本机后端皆 FULL）
+     * @param detail      能力与链细节：前序候选为何未用（若有）+ 本候选能力事实
+     *                    （如 landlock 的 ABI 与 rights 子集）；无细节时空串
+     */
+    record Ready(String backend, SandboxEnforcement enforcement, String detail) implements BackendStatus {
+
+        /** @throws NullPointerException 任一字段为 null（无细节请传空串） */
+        public Ready {
+            Objects.requireNonNull(backend, "backend");
+            Objects.requireNonNull(enforcement, "enforcement");
+            Objects.requireNonNull(detail, "detail");
+        }
+    }
 
     /** 本平台无同机后端（平台链为空——点名平台）。 */
     record NoBackend(String platform) implements BackendStatus {}
