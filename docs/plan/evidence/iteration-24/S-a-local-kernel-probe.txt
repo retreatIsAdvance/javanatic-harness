@@ -1,0 +1,53 @@
+# it24 开工首步实探：landlock 在本机容器与内核的可用性
+
+日期：2026-09-24。目的：确定 landlock 真跑验证的落点（本机容器能否验正路径），并作为 CI 步骤设计依据。
+命令与关键输出行原样落盘（EXIT 回显）：
+
+## 1. 本机 docker 内核与 LSM
+
+```
+$ docker run --rm --entrypoint sh agent-runner:latest -c 'uname -r; echo "lsm: $(cat /sys/kernel/security/lsm 2>/dev/null)"; ...'
+6.4.16-linuxkit
+lsm:
+EXIT=0
+
+$ docker run --rm --privileged --entrypoint sh agent-runner:latest -c 'mount -t securityfs none /sys/kernel/security; cat /sys/kernel/security/lsm'
+capability,yama
+EXIT=0
+
+$ docker run --rm --entrypoint sh agent-runner:latest -c 'zcat /proc/config.gz | grep -i "landlock\|CONFIG_LSM"'
+# CONFIG_SECURITY_LANDLOCK is not set
+CONFIG_LSM="yama,loadpin,safesetid,integrity"
+EXIT=0
+```
+
+**结论 1**：本机 Docker Desktop 内核（6.4.16-linuxkit）**未编译 landlock**（`CONFIG_SECURITY_LANDLOCK is not set`，LSM 仅 capability,yama）。
+本机容器**不能**验 landlock 正路径（真拒写）；只能验 fail-closed 诊断与归档可跑性。正路径的真实 OS 验证位 = CI ubuntu runner。
+
+## 2. 本机 docker 的 seccomp 与 Linux JVM 可得性
+
+```
+$ docker run --rm --entrypoint sh agent-runner:latest -c 'cat /proc/self/status | grep -i seccomp'
+Seccomp:	0
+Seccomp_filters:	0
+EXIT=0
+
+$ docker pull eclipse-temurin:25-jre
+Error response from daemon: Get "https://registry-1.docker.io/v2/": context deadline exceeded
+EXIT=0
+
+$ docker run --rm --entrypoint sh sandbox-service:latest -c 'command -v java && java -version'
+/opt/java/openjdk/bin/java
+openjdk version "17.0.19" 2026-04-21
+EXIT=0
+```
+
+**结论 2**：本机 docker 无 seccomp 过滤（Seccomp: 0）——即使内核有 landlock 也不会被 seccomp 挡；docker.io 不可达，
+本机 Linux 侧只有 sandbox-service 镜像内的 JDK 17（低于 FFM 定稿线 22，也装不下 Java 25 类），故**本机不能跑 landlock 助手**
+——瓶颈是**缺席的 Linux 宿主/内核**，非 JDK 版本线（darwin 侧 temurin-25 已备 FFM，缺的是 Linux 内核 landlock）。
+
+## 3. 对 it24 的直接影响（如实记录）
+
+- 正路径（bwrap 注伪 → landlock 真拒写/真放行）：**只由 CI ubuntu runner 验**（内核 6.8+，Ubuntu 配置含 landlock）——CI 腿为唯一真实性证据位；
+- 负路径（内核无 landlock → 探针 fail-closed + 点名原因）：本机容器内核正好是「无 landlock」实例，可作参照事实（本轮以 kernel config 取证，非代码级）；
+- 归档冒烟（干净 Linux 环境解压即跑）：CI ubuntu job 的容器步骤验；本机容器不可验（无 Linux 归档可产——jlink 镜像与平台绑定）。

@@ -1,0 +1,114 @@
+# S-a Landlock FFM 助手与负向自检协议 —— 编译/门禁 + 聚焦测试 + 双形启动 + 用法拒绝 + FFM 形状面 + 突变
+# 基线 commit: e21bd6f（HEAD；it23 收口 + CI 首跑回填）。本停点新增文件（提交前 git status 仅此 5 项，主仓其余零改动）：
+#   ?? docs/plan/iteration-24.md · ?? docs/plan/evidence/iteration-24/
+#   ?? sandbox/local/src/main/java/io/javanatic/harness/sandbox/local/Landlock.java
+#   ?? sandbox/local/src/main/java/io/javanatic/harness/sandbox/local/LandlockExecMain.java
+#   ?? sandbox/local/src/test/java/io/javanatic/harness/sandbox/local/LandlockTest.java
+# 环境：macOS/aarch64（os.name=Mac OS X）+ temurin-25 + apache-maven-3.8.8
+# 本文件＝实跑输出摘录：每段给出完整命令、决定性输出行与真实 EXIT 回显。
+# 覆盖边界（如实）：本机不可验正路径的瓶颈是**缺席的 Linux 宿主/内核**（darwin 无 landlock 内核；
+#   容器内 Linux JDK 17 低于 FFM 定稿线 22——非本机 JDK 版本线：darwin 侧 temurin-25 已备，见 S-a-local-kernel-probe.txt），
+#   FFM 的「真建 ruleset + 真拒写 + 真 exec」正路径**本机不可验**——权威验证在 S-c 的 CI ubuntu 腿。
+
+== 1. 编译（spotless:check + checkstyle:check 在 validate 阶段内联） ==
+$ mvn -B -ntp -pl sandbox/local -am -DskipTests package
+[INFO] --- spotless-maven-plugin:2.43.0:check (spotless-check) @ harness-sandbox-local ---
+[INFO] --- maven-checkstyle-plugin:3.6.0:check (checkstyle-check) @ harness-sandbox-local ---
+[INFO] Building jar: /Users/abel_yang/study/deepseek/javanatic-harness/sandbox/local/target/harness-sandbox-local-0.2.0-SNAPSHOT.jar
+[INFO] harness-sandbox-local .............................. SUCCESS [  0.056 s]
+[INFO] BUILD SUCCESS
+EXIT=0
+
+== 2. 聚焦测试（本模块两类；含既有 SandboxLocalTest 回归，证明零副作用） ==
+$ mvn -B -ntp -pl sandbox/local -am -Dtest=LandlockTest,SandboxLocalTest -Dsurefire.failIfNoSpecifiedTests=false test
+[WARNING] Tests run: 17, Failures: 0, Errors: 0, Skipped: 1 ... -- in io.javanatic.harness.sandbox.local.LandlockTest
+[WARNING] Tests run: 16, Failures: 0, Errors: 0, Skipped: 2 ... -- in io.javanatic.harness.sandbox.local.SandboxLocalTest
+[WARNING] Tests run: 33, Failures: 0, Errors: 0, Skipped: 3
+[INFO] BUILD SUCCESS
+EXIT=0
+# 跳过 3 项＝平台分区（真强制 e2e 不跨平台假装）：LandlockTest 的 Linux 腿 1 条（darwin 不跑）、
+#   SandboxLocalTest 的两条 bwrap e2e（CI ubuntu job 跑）。本节同时是第 5 节所有突变的「还原复绿」证据。
+
+== 3. 双形启动（真命令真进程，非测试内断言） ==
+$ java -XX:-UsePerfData --enable-native-access=ALL-UNNAMED \
+    -cp sandbox/local/target/classes \
+    io.javanatic.harness.sandbox.local.LandlockExecMain --probe
+landlock: unsupported platform (os.name=Mac OS X) — landlock is linux-only
+EXIT=10
+
+$ java -XX:-UsePerfData --enable-native-access=io.javanatic.harness.sandbox.local \
+    --module-path kernel/brand/target/classes:kernel/core/target/classes:kernel/config/target/classes:\
+core/session/target/classes:sandbox/sandbox/target/classes:sandbox/local/target/classes \
+    -m io.javanatic.harness.sandbox.local/io.javanatic.harness.sandbox.local.LandlockExecMain --probe
+landlock: unsupported platform (os.name=Mac OS X) — landlock is linux-only
+EXIT=10
+# 模块形态需完整 requires 闭包（brand/core/config/session/sandbox.sandbox/sandbox.local）；
+# 镜像形态（S-c 的 dist 归档）模块在镜像内，无 module-path 负担——生产三形态见 Landlock.helperCommand。
+# 亦证明 fail-closed 文案诚实：非 Linux 直接点名平台，不做 native 调用。
+
+$ java -XX:-UsePerfData --enable-native-access=ALL-UNNAMED \
+    -cp sandbox/local/target/classes \
+    io.javanatic.harness.sandbox.local.LandlockExecMain --mode sandbox -- true
+usage: LandlockExecMain --probe | --mode read-only|workspace-write [--root <path>]... -- <command> [args...]
+EXIT=14
+# 词表外模式 → USAGE（不猜、不降级）；两形态共用同一解析器。
+
+== 4. FFM 绑定形状探针（darwin 上按 Landlock.Native 原样复刻五处调用形状） ==
+# 探针源文件随证据入库：docs/plan/evidence/iteration-24/S-a-ffm-shape-probe.java（未参与构建，手工执行）
+$ java --enable-native-access=ALL-UNNAMED docs/plan/evidence/iteration-24/S-a-ffm-shape-probe.java
+capture layout=[i4(errno)] errnoOffset=0
+symbol syscall present=true
+symbol prctl present=false
+symbol open present=true
+symbol close present=true
+symbol execvp present=true
+(a) syscall(20)=pid 81191 (self=81191) errno=2      ← 5×JAVA_LONG 描述符 + capture + firstVariadicArg(1)：返回真 pid
+(b) open("/") fd=4 errno=2                          ← (ADDRESS,INT,INT) + firstVariadicArg(2)：fd 合法
+(d) prctl bindable on this host: false              ← darwin 无 prctl 符号（该路径被平台门挡在 native 之前，本机不可达）
+(e) execvp bound; run with arg 'exec' to真替换进程
+(f) wrong-shape open rc=-1 errno=22 (EFAULT=14)
+EXIT=0
+
+$ java --enable-native-access=ALL-UNNAMED docs/plan/evidence/iteration-24/S-a-ffm-shape-probe.java exec
+jh-execvp-ok
+EXIT=0
+# (e) = execvp 真把进程镜像换成 /bin/echo（限制跨 execve 继承的机制前提）。
+# (f)（S-b 补录）错形状的失败方式是**静默传错参**：把 capture 布局也写进描述符、让它占住一个参数槽时，
+#   绑定与 invokeExact 都不报错；原生 open 收到错位实参、静默返回 -1。六次实跑 errno 在 14(EFAULT)×3 与
+#   22(EINVAL)×3 间摆动——错位槽收到什么由运行期地址决定（上行为其中一次摘录）。
+#   EFAULT(14) 的归属＝**探针 (f) 故意摆错的形状**，与交付代码无关：Landlock.java 的五个形状另经 §4b
+#   逐调用点 arity 审计（SYSCALL 6-long 与探针 5-long 同机制，尾部零 padding 参由 syscall wrapper 忽略）。
+# 故五个形状只能靠真实调用验证：本机验证了 syscall/open/close/execvp（prctl 符号面 darwin 不存在），
+# Linux 侧的真语义（rights 子集、restrict_self、真拒写）由 S-c CI 腿权威验证。
+
+== 4b. 调用点 × 描述符 arity 逐字节审计（packet 前置；形状错的另一条静默路） ==
+$ 逐 token 计数（Grep -o ValueLayout.* 于 Landlock.java 651-665 行）+ 逐调用点数实参
+SYSCALL : res(long) + 6×long  ← createRuleset 6 参 · addPathBeneathRule 6 · restrictSelf 6 · queryVersion 6  ✓ 逐一相符
+PRCTL   : res(int)  + 5 参    ← prctlNoNewPrivs 5 参（PR_SET_NO_NEW_PRIVS,1,0,0,0）            ✓
+OPEN    : res(int)  + 3 参    ← openDirFd 3 参（path, flags, 0）                                ✓
+CLOSE   : res(int)  + 1 参    ← closeFd 1 参                                                   ✓
+EXECVP  : res(int)  + 2 参    ← execTarget 2 参（file, argv）                                   ✓
+# invokeExact 的 arity 不符会在**运行时**抛（编译期不查）——与「静默传错参」并列的第二条形状坑，
+# 故以实例计数审计落盘。SYSCALL 取 6 个 long 形（= syscall(2) 的 6 参上限），探针验的是 5 参同机制形；
+# 差别的尾部全零 padding 参由 syscall wrapper 忽略（实参序不变），非语义差异。
+
+
+== 5. 突变检查（一处一处改坏 → 必红 → 还原；还原后的绿见第 2 节） ==
+M1 架构白名单关（default 分支也返回 444/445/446）
+   → 红 2：otherArchesFailLoudInsteadOfGuessingNumbers:37 · unsupportedReasonNamesTheOffendingFact:53
+M2 只读带根不再拒（删 parse 里 read-only+roots 校验）
+   → 红 1：malformedInvocationIsRejectedNotGuessed:163
+M3 helperCommand 去掉 -XX:-UsePerfData
+   → 红 4：helperCommandClasspathForm…:82 · ModulePathForm…:90 · ImageForm…:100 · hostHelperCommandIsSelfConsistent:115
+M4 平台门关（hostIsLinux() 恒 true）
+   → 红 3：helperProbeOffLinuxFailsClosedNamingThePlatform:177 · runModeOffLinuxRefusesToExecuteUnconfined:207 ·
+           unsupportedReasonNamesTheOffendingFact:48
+M5 admits 判据降级（FULL_REQUIREMENT → WRITE_EFFECTS_V1，即 ABI 1–2 的两洞放行）
+   → 红 1：rightsWithoutReferOrTruncateAreRefused:69
+# 每条突变的 mvn 命令与第 2 节同形（-Dtest=LandlockTest）；红＝BUILD FAILURE + 上述断言行。
+
+== 6. 突变暴露的测试缺陷（已修，留档——「若错靠什么发现」的实例） ==
+M4 首轮只红了 1 条：初版 launch 测试用**被测代码的** Landlock.hostIsLinux() 选平台分支——平台门被摘掉时
+测试分支跟着搬走，判别力归零（测试与实现同错即同绿）。改为 @EnabledOnOs(OS.MAC / OS.LINUX)（JUnit 用
+自身真实事实判定）+ 断言 stderr 点名文案后，M4 红 3 条（第 5 节）。规则已写进测试注释：
+平台分区不得借被测代码的平台判断。
