@@ -1,0 +1,12 @@
+# 负例③：坏治理配置——把 fs 围栏根挪到别处，与提示词 cwd / sandbox / shell 三处围栏
+# 漂移。装配期（boot）必须 fail loud（workspace 单源断言，it21 起）。
+name: consumer-sample
+policy: STANDARD
+bundles:
+  - base
+  - consumer-sample
+rows:
+  - plugin: fs-local
+    replace: true
+    config:
+      root: /tmp/consumer-sample-elsewhere

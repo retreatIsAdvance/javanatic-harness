@@ -71,12 +71,9 @@ public final class ExampleToolPlugin implements Plugin {
     public void apply(Scope scope) {
         ExampleService svc = scope.require(ExampleService.KEY);   // 从 Definition 查找，不 import Provider
         ToolRegistry tools = scope.require(ToolRegistry.KEY);
-        tools.register(ToolDefinition.builder("example")
-            .description("Calls example service")
-            .parameters(schema)
-            .execute((args, exec) ->
-                ToolExecutionResult.success(svc.doSomething(args.readString("input"))))
-            .build());
+        tools.register(ToolDefinition.of("example", "Calls example service", schema,
+            (args, exec) ->
+                ToolExecutionResult.success(svc.doSomething(args.readString("input")))));
     }
 }
 ```
@@ -256,14 +253,11 @@ public record SearchResult(List<Match> matches, boolean truncated) {}
 ### Consumer（`harness.fs.tool`，plugin id `fs-tool`）
 
 ```java
-tools.register(ToolDefinition.builder("fs_read")
-    .description("Read a file from the filesystem")
-    .parameters(ValueSchema.object(
-        "path", ValueSchema.string().description("Absolute file path")))
-    .execute((args, exec) -> ToolExecutionResult.success(
-        fs.read(Path.of(args.readString("path")))))
-    .render(RenderIntent.text())
-    .build());
+// 实况形状（节选；全量见 FsToolPlugin）：of(...) 渲染缺省 GENERIC；
+// 非 GENERIC（TERMINAL/DIFF/LOCATIONS）走记录构造器 new ToolDefinition(..., render, tool, exempt)
+tools.register(ToolDefinition.of("fs_read", "读取文件内容", READ_ARGS,
+    (args, ctx) -> ToolExecutionResult.success(
+        fs.read(Path.of(args.readString("path"))))));
 ```
 
 注意 Consumer **不做审批**：审批是 ToolExecutor 的固定 stage（§8、R4），不是各工具的自觉。
@@ -749,10 +743,10 @@ module io.javanatic.harness.fs.tool {
 | Service Provider | `implements` + `Plugin.apply(scope)` 注册 | |
 | Consumer (inject service) | `scope.require(KEY)` | 不 import Provider |
 | 三角色纪律靠约定 | JPMS `requires` 编译期保障 | **更强** |
-| `ToolDefinition` + defineTool DSL | `ToolDefinition.builder()` | |
+| `ToolDefinition` + defineTool DSL | `ToolDefinition.of(...)`（GENERIC，要审批）/ `ofExempt(...)`（免审批）；非 GENERIC 渲染走记录构造器 | 名称/描述/schema/执行体四参数 |
 | `tools/pre-execute` / `post-execute` waterfall | `ToolEvents.PRE/POST_EXECUTE` waterfall | |
 | 审批在工具内可选挂 | **ToolExecutor 固定 stage + 构造器强制** | R2/R4 收紧 |
 | 工具自己写日志/结果 | **executor 拥有 tool/call + tool/result 落账** | R2 |
-| `RenderIntent` | sealed interface | 设计期声明 |
+| `RenderIntent` | enum（`GENERIC`/`TERMINAL`/`DIFF`/`LOCATIONS`） | 实况；`of(...)` 恒 `GENERIC`，其余走记录构造器 |
 | LLM 流式 AsyncIterable | 阻塞 `Stream<StreamChunk>` + 有界队列 | 无协议税 |
 | capability graph | 扫描 module-info 生成 | 可选 |

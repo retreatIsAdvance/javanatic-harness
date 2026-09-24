@@ -45,6 +45,11 @@ jobs:
         run: |
           ./dist/jh/target/jlink-image/bin/jh --help
           ./dist/jh/target/jlink-image/bin/jh --verify
+      # 外部消费方示例（it23）：候选腿 = 工作树 install 进隔离仓 → 示例编译 + 治理自证
+      # 运行 + 四负例；脚本自持全部步骤（与本地证据同一入口，位置参数取 candidate）。
+      # 隔离仓每跑每新 ⇒ 只凭坐标真解析。发布腿不进 CI（公网依赖不作门禁，B 裁决）。
+      - name: Verify external consumer sample (candidate leg)
+        run: CONSUMER_WORK="$RUNNER_TEMP/consumer-sample" integration/verify-consumer.sh candidate
   macos:
     runs-on: macos-latest
     steps:

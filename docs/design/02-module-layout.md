@@ -101,7 +101,6 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | 职责 | dsh 对应 |
 |---|---|---|
 | `harness-bundle-base` | 首层 bundle：挂载 model adapter + tools + persistence + sandbox + approval | `dsh-base` |
-| `harness-bundle-headless` | 一次性 runner（无 server） | `dsh-headless` |
 
 ### Examples（可运行示例）
 
@@ -168,7 +167,6 @@ flowchart TD
 
     subgraph bundles[Bundles]
         base[harness-bundle-base]
-        headless[harness-bundle-headless]
     end
 
     subgraph examples[Examples]
@@ -535,8 +533,8 @@ harness/
                         -->
                         <compilerArgs>
                             <arg>-Xlint:all</arg>
-                            <arg>-Werror</arg>  <!-- 警告即错误，对应 dsh fail loud -->
                         </compilerArgs>
+                        <!-- it23 订正：仅 -Xlint:all，未开 -Werror（POM 与本文曾不一致） -->
                     </configuration>
                 </plugin>
 
@@ -747,7 +745,8 @@ mvn clean install                  # 全量构建 + 安装到本地仓库
 mvn -pl :harness-core-session test # 只测一个模块（按 artifactId 过滤）
 mvn -pl :harness-examples-headless -am package  # 只打 headless 及其依赖
 mvn dependency:tree                # 查看某模块的依赖树（验证 Consumer 未拉入 Provider）
-java -jar examples/headless/target/jh.jar --profile headless --verify   # R4 治理断言，无 key 可跑
+mvn -pl :harness-dist-jh -am package            # jlink 运行时镜像 → dist/jh/target/jlink-image/
+dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断言，无 key 可跑
 ```
 
 `-am`（also-make）会自动构建被依赖的模块；`-pl`（projects）按 `:artifactId` 选中。
@@ -780,7 +779,6 @@ java -jar examples/headless/target/jh.jar --profile headless --verify   # R4 治
 | `interaction/commands` | `interaction.commands` | ✅（it14 实装；dsh `@deepseek-ai/dsh-commands` 形状）|
 | （dsh 无对应：问答走审批通道）| `interaction.ask` | ✅（it22；`ask_user` 免审批 + 停轮结果——与审批分离的澄清通道）|
 | `bundle/base` | `bundle.base` | ✅ |
-| `bundle/headless` | `bundle.headless` | ✅ |
 | `core/agent-default-model` | （合并进 agent-loop）| ✅ 简化 |
 | `e2b/*` | — | ❌ 不做 |
 | `web/*` | — | ❌ 不做 |

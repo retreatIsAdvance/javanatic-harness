@@ -1,0 +1,63 @@
+# S-b module-path 路线实探 —— embedding.md §3 的 module-path 小节逐条对着真实输出写
+# 基线 commit: ed8b1c8；工件 = /tmp/it23-work/repo-candidate 的候选 jar（harness 模块 + jackson/snakeyaml 第三方闭包）
+# 探针（可重建）：/tmp/embedprobe/{src/module-info.java, src/probe/Probe.java}——源码全文附在文末。
+# 目的：为「消费两条路」提供可重跑的负/正证据，而不是照抄文档；三条真实报错各自对应 §6 排错表一行。
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ R=/tmp/it23-work/repo-candidate/io/github/retreatisadvance
+$ H=$(find "$R" -name '*.jar' | tr '\n' ':')                       # harness 模块 jar（33 个）
+$ T=$(find /tmp/it23-work/repo-candidate/com/fasterxml/jackson /tmp/it23-work/repo-candidate/org/yaml -name '*.jar' | tr '\n' ':')
+
+# ---- 1) 负例：module-path 缺 harness-bundle-base（javac 真实文案）----
+$ "${JAVA_HOME}/bin/javac" --module-path "<H 去掉 harness-bundle-base>" -d out src/module-info.java src/probe/Probe.java
+src/module-info.java:2: 错误: 找不到模块: io.javanatic.harness.bundle.base
+    requires io.javanatic.harness.bundle.base;
+                                        ^
+1 个错误
+# 对照正例：全量 H → 无输出（编译通过）。
+# 注：模块名 ≠ 包名——bundle/base 模块 io.javanatic.harness.bundle.base 导出包 io.javanatic.harness.boot。
+
+# ---- 2) 负例：module-path 只有 harness jar（缺第三方闭包）→ 启动层初始化即败 ----
+$ "${JAVA_HOME}/bin/java" --module-path "<H>" --add-modules ALL-MODULE-PATH -cp out probe.Probe <profile>
+Error occurred during initialization of boot layer
+java.lang.module.FindException: Module com.fasterxml.jackson.databind not found, required by io.javanatic.harness.llm.openai.compat
+
+# ---- 3) 负例：插件目录（无 module-info.class 的散装 classes）放 module-path 不被当作模块 ----
+# 现象 = 运行时找不到该 bundle 的资源：Exception ... IllegalStateException: profile references unknown bundle: consumer-sample
+# （原因：--module-path 只接受 jar/显式模块；散装目录不是自动模块 → 需打成 jar。同类处置见 §6）
+$ "${JAVA_HOME}/bin/java" --module-path "<H+T>/tmp/embedprobe/sample-classes" --add-modules ALL-MODULE-PATH -cp out probe.Probe <profile>
+Exception in thread "main" java.lang.RuntimeException: java.lang.IllegalStateException: profile references unknown bundle: consumer-sample
+	at io.javanatic.harness.bundle.base@0.2.0-SNAPSHOT/io.javanatic.harness.boot.AppBoot.compose(AppBoot.java:89)
+	at io.javanatic.harness.bundle.base@0.2.0-SNAPSHOT/io.javanatic.harness.boot.AppBoot.bootReported(AppBoot.java:190)
+
+# ---- 4) 正例：示例打成 jar（自动模块）→ 服务提供者由 META-INF/services 派生，boot 成功 ----
+$ "${JAVA_HOME}/bin/jar" --create --file sample.jar -C sample-classes .
+$ "${JAVA_HOME}/bin/jar" --describe-module --file sample.jar
+找不到模块描述符。已派生自动模块。
+sample automatic
+requires java.base mandated
+provides io.javanatic.harness.kernel.plugin.Plugin with io.github.retreatisadvance.sample.consumer.WordCountPlugin
+$ "${JAVA_HOME}/bin/java" --module-path "<H+T>/tmp/embedprobe/sample.jar" --add-modules ALL-MODULE-PATH -cp out probe.Probe <示例 profile>
+module-path probe ok: io.javanatic.harness.kernel.scope.ScopeImpl
+# 结论：module-path 路线端到端可用（编译 + 组合 + 装配），前提 = 模块 jar 全量 + 第三方闭包 + 提供者模块被解析。
+# 探针用 --add-modules ALL-MODULE-PATH 图省事；生产写法是 --add-modules <你的模块名>。
+
+# ---- 探针源码（/tmp/embedprobe/）----
+# src/module-info.java:
+#   module probe {
+#       requires io.javanatic.harness.bundle.base;
+#       requires io.javanatic.harness.kernel;
+#   }
+# src/probe/Probe.java:
+#   package probe;
+#   import io.javanatic.harness.boot.AppBoot;
+#   import io.javanatic.harness.kernel.scope.Runtime;
+#   public final class Probe {
+#       public static void main(String[] args) {
+#           try (Runtime rt = AppBoot.boot(new AppBoot.BootOptions(
+#                   java.nio.file.Path.of(args[0]), java.util.List.of(), true, null))) {
+#               System.out.println("module-path probe ok: " + rt.root().getClass().getName());
+#           } catch (Exception e) {
+#               throw new RuntimeException(e);
+#           }
+#       }
+#   }

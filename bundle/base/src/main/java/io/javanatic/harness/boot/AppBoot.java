@@ -30,7 +30,8 @@ import java.util.Set;
  * 组合装配入口（07 §5）：profile bundles → profile rows → CLI overlay 三层叠加
  * → 表达式求值（合并后、加载前）→ 双向显式校验（行引用必须存在 + 发现必须被
  * 引用）→ Runtime + ConfigService + CompositionManifest → 按行序加载。
- * --dump-config 与 --verify 是纯组合期操作（verify 无 key 可跑）。
+ * {@link #compose}/{@link #resolve}/{@link #dump} 是纯组合期操作（dump 为人读视图，
+ * 不加载插件）；{@link #boot} 才装配，verify 档位在装配后断言（无 key 可跑）。
  */
 public final class AppBoot {
 

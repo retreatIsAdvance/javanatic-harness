@@ -1,0 +1,54 @@
+# S-a 三负例控制 —— 坏版本 / 去显式版本 / 坏治理配置：各须必败或必抛，且诊断文案可读
+# 基线 commit: ed8b1c8（it23 S-a 新增 integration/** 在工作树，未提交；主仓源码零改动）
+# 三负例均以独立夹具或属性覆盖驱动（-Dharness.version / negatives/no-version/pom.xml / negatives/bad-governance.yml），
+#   不改主仓与示例源码 → 无「还原」动作；「还原复绿」由 S-a-regreen.txt 的同命令重跑承担。
+# 环境与隔离仓同 S-a-candidate.txt（/tmp/it23-work/repo-candidate；本机 settings.xml 走 ane56-mirror 代理公网）。
+# 输出 = 负例段 stdout（首跑，含驱动回显 EXIT=0：三负例全部「已拒」即脚本口径 0 失败）
+#   + 各负例日志决定性行（首跑时刻；复跑同形，差异单列于文末「复跑差异」）。
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ CONSUMER_WORK=/tmp/it23-work bash integration/verify-consumer.sh candidate   # 负例段
+
+== 三负例（候选仓 / 候选构建产物）==
+  ok   负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+  ok   负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+  ok   负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+
+# ---- 负例① 坏版本：-Dharness.version=9.9.9（隔离仓无此件 → 解析必败）----
++ /Users/abel_yang/Documents/apache-maven-3.8.8/bin/mvn -B -ntp -f /Users/abel_yang/study/deepseek/javanatic-harness/integration/consumer-sample/pom.xml -Dmaven.repo.local=/tmp/it23-work/repo-candidate -Dharness.version=9.9.9 compile
+[WARNING] The POM for io.github.retreatisadvance:harness-bundle-base:jar:9.9.9 is missing, no dependency information available
+（同形 WARNING ×16，逐个覆盖示例的 16 条显式依赖）
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal on project consumer-sample: Could not resolve dependencies for project io.github.retreatisadvance.sample:consumer-sample:jar:1.0.0-SNAPSHOT: The following artifacts could not be resolved: io.github.retreatisadvance:harness-bundle-base:jar:9.9.9, …（16 个坐标逐一列出）…, io.github.retreatisadvance:harness-core-preset:jar:9.9.9: Could not find artifact io.github.retreatisadvance:harness-bundle-base:jar:9.9.9 in ane56-mirror (http://nexus.ane56-ins.com:8081/repository/public/) -> [Help 1]
+（EXIT=1；首跑总耗时 02:11 min —— 16 条坐标逐条走 mirror 代理的公网 404 往返）
+
+# ---- 负例② 去显式版本：夹具 integration/consumer-sample/negatives/no-version/pom.xml ----
+# 夹具 = 示例 pom 的孪生体（自有坐标 …:consumer-sample-no-version），仅一处差异：harness-kernel-core 不写 <version>，
+# 且不复用任何可继承版本的父 POM → 「靠 reactor 泄漏依赖」的写法在独立工程里必被 Maven 拒
++ /Users/abel_yang/Documents/apache-maven-3.8.8/bin/mvn -B -ntp -f /Users/abel_yang/study/deepseek/javanatic-harness/integration/consumer-sample/negatives/no-version/pom.xml -Dmaven.repo.local=/tmp/it23-work/repo-candidate validate
+[ERROR] The build could not read 1 project -> [Help 1]
+[ERROR]   The project io.github.retreatisadvance.sample:consumer-sample-no-version:1.0.0-SNAPSHOT (…/integration/consumer-sample/negatives/no-version/pom.xml) has 1 error
+[ERROR]     'dependencies.dependency.version' for io.github.retreatisadvance:harness-kernel-core:jar is missing. @ line 19, column 21
+（EXIT=1）
+
+# ---- 负例③ 坏治理配置：夹具 negatives/bad-governance.yml ----
+# 夹具 = 示例 profile 的孪生体，仅一处差异：对 fs-local 行 replace，使 root=/tmp/consumer-sample-elsewhere →
+# 与其余三个 workspace 键（sandbox-policy / shell-tool / agent-loop）不同源；dump 可见漂移，boot() 必抛
++ /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/java -cp <示例 target/classes + /tmp/it23-work/repo-candidate 全量 jar> io.github.retreatisadvance.sample.consumer.SelfCheck …/integration/consumer-sample/negatives/bad-governance.yml
+profile=…/integration/consumer-sample/negatives/bad-governance.yml
+rows.composed=26 rows.enabled=21
+（effective rows 中）fs-local {root=/tmp/consumer-sample-elsewhere}
+Exception in thread "main" java.lang.IllegalStateException: workspace drift: {sandbox-policy.workspace=/Users/abel_yang/study/deepseek/javanatic-harness, fs-local.root=/tmp/consumer-sample-elsewhere, shell-tool.workspace=/Users/abel_yang/study/deepseek/javanatic-harness, agent-loop.cwd=/Users/abel_yang/study/deepseek/javanatic-harness} —— 提示词 cwd 与 fs/shell/sandbox 围栏必须同源(it21)
+	at io.javanatic.harness.boot.AppBoot.verifyWorkspaceAlignment(AppBoot.java:285)
+	at io.javanatic.harness.boot.AppBoot.bootReported(AppBoot.java:196)
+	at io.javanatic.harness.boot.AppBoot.boot(AppBoot.java:175)
+	at io.github.retreatisadvance.sample.consumer.SelfCheck.main(SelfCheck.java:45)
+（EXIT≠0，脚本判「已拒」）
+
+# ---- 复跑差异（S-a-regreen.txt 同轮；诊断仍含各自 needle，三项判定均 ok）----
+# 负例①：首跑 2:11 → 复跑 0.094s。原因：首次 404 已被隔离仓按 ane56-mirror 的 update interval 缓存，
+#   复跑的文案变为「… was not found in http://nexus.ane56-ins.com:8081/repository/public/ during a previous
+#   attempt. This failure was cached in the local repository and resolution is not reattempted until the update
+#   interval of ane56-mirror has elapsed or updates are forced」。判据（含 9.9.9）不受影响。
+# 负例②③：与首跑逐字一致（无缓存面）。
+# 注：负例③的 fail-loud 由 0.2.0 期 AppBoot.verifyWorkspaceAlignment（it21 引入）承担，不属 0.1.0 交集面 →
+#   负例③仅在候选腿成立；发布腿的治理自证以 boot() 的最小 fail-loud 面另行复验（见 S-b-release-leg.txt）。

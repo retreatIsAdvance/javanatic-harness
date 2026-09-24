@@ -16,12 +16,23 @@ import java.util.Map;
 /**
  * YAML → 行/bundle 的装载边界(07 §1):flat 行 Map → {@link ConfigRowSpec}
  * 判别联合在此一次性拦截矛盾组合(replace+remove、锚点与替换并存等)。
+ * 键名三层白名单(profile / bundle / 行)在此拦截未列名键——拼写错误与外来键 fail loud,不静默吞。
  * bundle 经 classpath 资源 {@code META-INF/harness/bundle.yml} 发现。
  */
 public final class YamlRows {
 
     /** bundle 资源路径(每 bundle 一份: name/description/rows)。 */
     public static final String BUNDLE_RESOURCE = "META-INF/harness/bundle.yml";
+
+    /** profile 顶层允许键。 */
+    private static final List<String> PROFILE_KEYS = List.of("name", "policy", "bundles", "rows");
+
+    /** bundle 顶层允许键。 */
+    private static final List<String> BUNDLE_KEYS = List.of("name", "description", "rows");
+
+    /** 行允许键(判别联合的全部字段)。 */
+    private static final List<String> ROW_KEYS =
+        List.of("plugin", "config", "remove", "replace", "after", "before", "disabled");
 
     /** 一个 bundle:name + 行序。 */
     public record Bundle(String name, String description, List<ConfigRowSpec> rows) {
@@ -64,6 +75,7 @@ public final class YamlRows {
     public static Bundle parseBundle(InputStream yaml) {
         Map<String, Object> root = asMap(new Yaml().load(yaml), "bundle document");
         String name = requireString(root, "name");
+        rejectUnknownKeys(root, BUNDLE_KEYS, "bundle '" + name + "'");
         String description = stringOf(root, "description", "");
         List<ConfigRowSpec> rows = parseRows(root.get("rows"), "bundle '" + name + "'");
         return new Bundle(name, description, rows);
@@ -74,6 +86,7 @@ public final class YamlRows {
     public static Profile parseProfile(InputStream yaml) {
         Map<String, Object> root = asMap(new Yaml().load(yaml), "profile document");
         String name = requireString(root, "name");
+        rejectUnknownKeys(root, PROFILE_KEYS, "profile '" + name + "'");
         Policy policy = root.containsKey("policy")
             ? Policy.valueOf(stringOf(root, "policy", "STANDARD").toUpperCase()) : Policy.STANDARD;
         List<String> bundles = new ArrayList<>();
@@ -107,6 +120,7 @@ public final class YamlRows {
     }
 
     private static ConfigRowSpec parseRow(Map<String, Object> map, String where) {
+        rejectUnknownKeys(map, ROW_KEYS, where);
         String plugin = requireString(map, "plugin");
         // 矛盾检查作用于 flat 键共存(分解之前)——主语是原始 Map,不传拆散的局部
         rejectContradictions(map, plugin, where);
@@ -127,6 +141,16 @@ public final class YamlRows {
             return new ConfigRowSpec.Replace(plugin, config, stringOf(map, "disabled", null));
         }
         return new ConfigRowSpec.Include(plugin, config, stringOf(map, "disabled", null));
+    }
+
+    /** 未列名键 fail loud(拼写错误/外来键不静默吞)。 */
+    private static void rejectUnknownKeys(Map<String, Object> map, List<String> allowed, String where) {
+        for (String key : map.keySet()) {
+            if (!allowed.contains(key)) {
+                throw new IllegalStateException(where + ": unknown key '" + key
+                    + "' (allowed: " + String.join(", ", allowed) + ")");
+            }
+        }
     }
 
     private static void rejectContradictions(Map<String, Object> map, String plugin, String where) {

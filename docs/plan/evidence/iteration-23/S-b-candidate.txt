@@ -1,0 +1,66 @@
+# S-b4 证据：候选腿（工作树 0.2.0-SNAPSHOT，隔离仓）+ 四负例
+
+- 时间：2026-09-24 10:38:03 → 10:40:1x（腿用时 76s）
+- 命令：`CONSUMER_WORK=/tmp/it23-sb/work-candidate bash integration/verify-consumer.sh candidate`
+- 环境：Maven 3.8.8 / Java 25.0.4.1 Temurin / 隔离仓 `/tmp/it23-sb/work-candidate/repo-candidate`（初始为空，只装工作树候选件）
+- 控制台全文：`/tmp/it23-sb/legs.log`；每步原始日志在同 WORK 目录（`install-candidate.log` / `compile-candidate.log` / `classpath-candidate.log` / `run-candidate.log` / `neg-*.log`）
+
+## 控制台（逐字）
+
+```
+== 腿 candidate：harness.version=0.2.0-SNAPSHOT，隔离本地仓 /tmp/it23-sb/work-candidate/repo-candidate ==
+  ok   候选：工作树 install → 隔离仓（跳测试）
+  ok   candidate：示例编译
+  ok   candidate：运行类路径
+  ok   candidate：治理自证运行
+  ok   candidate：自证通过
+  ok   candidate：自有工具可见
+  ok   candidate：自有工具可执行
+  用时 76s
+== 四负例（候选仓 / 候选构建产物）==
+  ok   负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+  ok   负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+  ok   负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+  ok   负例④生产档撞 AUTO 审批必须 boot 抛错（已拒，文案含「policy=PRODUCTION 但审批为 AUTO」）
+== 汇总：candidate ==
+失败项：0
+CANDIDATE_EXIT=0
+```
+
+## 自证运行关键行（`run-candidate.log`）
+
+```
+rows.composed=26 rows.enabled=21
+tool.schemas=11 word_count.visible=true
+word_count.invoke.error=false content=words=3
+SELF-CHECK OK
+```
+
+行尾 = 示例自有 bundle 行 `consumer-sample`（26/21 中末位），工具面 = base 组合 10 + 自有 `word_count` 1（见 S-b-release-leg.txt 的同源探针对照）。
+运行类路径 33 条（含 29 条 `io.github.retreatisadvance:*`）。
+
+## 四负例诊断逐字（节选）
+
+① 坏版本 `9.9.9`（`neg-version.log`）：
+```
+[ERROR] … The following artifacts could not be resolved: io.github.retreatisadvance:harness-bundle-base:jar:9.9.9, …（16 条逐个列名）…: Could not find artifact io.github.retreatisadvance:harness-bundle-base:jar:9.9.9 in ane56-mirror (http://nexus.ane56-ins.com:8081/repository/public/) -> [Help 1]
+```
+
+② 去显式版本（`neg-no-version.log`）：
+```
+[ERROR] 'dependencies.dependency.version' for io.github.retreatisadvance:harness-kernel-core:jar is missing. @ line 19, column 21
+```
+
+③ 坏治理配置（`neg-governance.log`）：
+```
+Exception in thread "main" java.lang.IllegalStateException: workspace drift: {sandbox-policy.workspace=…javanatic-harness, fs-local.root=/tmp/consumer-sample-elsewhere, shell-tool.workspace=…javanatic-harness, agent-loop.cwd=…javanatic-harness} —— 提示词 cwd 与 fs/shell/sandbox 围栏必须同源(it21)
+```
+
+④ 生产档撞 AUTO 审批（`neg-production.log`，钉 `VerifyFailedException` 面）：
+```
+Exception in thread "main" io.javanatic.harness.boot.AppBoot$VerifyFailedException: policy violations: [policy=PRODUCTION 但审批为 AUTO（换 approval-ask / approval-deny）, policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)]
+```
+
+## 结论
+
+候选腿全绿（`失败项：0`、`EXIT=0`），四负例各自被拒且诊断文案可读（含 ④ 的 `VerifyFailedException` 面）。对应验收 ①②③④⑥ 的腿面。

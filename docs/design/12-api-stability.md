@@ -8,13 +8,13 @@
 |---|---|
 | 0.1.x 修补 | **不破本文任一稳定面**：不删/不改导出包；不改契约接口方法签名；不改 sealed permits 与事件 record 组件（名 / 类型 / 序）；不改配置键名；不删 CLI flag（新增只可加可选项）|
 | 破坏性变更 | 只随次版本（0.2.0）发布；release notes 声明变更与迁移路径 |
-| 非稳定面 | 实现类、kernel 内部机制、`examples/*` / `dist/*` 的内部行为不承诺——pre-release 立场：无兼容垫片，重命名/重排随破坏性版本走 |
+| 非稳定面 | 实现类、kernel 内部机制、`examples/*` / `dist/*` 的内部行为不承诺——无兼容垫片，重命名/重排随破坏性版本走 |
 
 坐标口径：Maven `io.github.retreatisadvance:harness-*`（中央仓命名空间 = GitHub 身份）；包名 / JPMS 名 `io.javanatic.harness.*` 是编译期身份——**不同源属有意为之**（[00](00-overview.md)）。
 
 ## 2. 包级 API（JPMS 导出面）
 
-`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（32 个 reactor 代码模块 / 36 个包；前缀 `io.javanatic.harness.` 省略）：
+`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（33 个 reactor 代码模块 / 37 个包；前缀 `io.javanatic.harness.` 省略）：
 
 | 模块 | 导出包 |
 |---|---|
@@ -113,6 +113,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`ask-user`、`commands`（25 个 base 行 id = 14 可配 + 11 无配）。
 
 - **插值白名单**（[07](07-profile-bundle.md)）：`${env:NAME}` / `${props:NAME}` / `${cwd}` / `${home}` / `:-默认值`；比较式 `==` / `!=`（右操作数 `null` 或 `'literal'`）——无任意代码；源不在白名单 fail loud。
+- **键名白名单（it23，0.2.0 迁移面）**：profile 顶层 / bundle 顶层 / 行三层均为 allowlist，未列名键（含拼写错误）**装载期 fail loud**（`YamlRows`；**0.1.0 为静默忽略**）——键集与拒绝文案见 [07 §1](07-profile-bundle.md)。
 - **三层叠加**：bundle 行 → profile 行 → CLI flag overlay（AppBoot 装配序）；行动作为互斥 sealed 联合（include / replace / remove / insert）。
 
 ## 6. CLI 面（`jh`，dist/jh jlink 镜像）

@@ -1,0 +1,6 @@
+# 外部 bundle 示例（it23）：bundle 经 classpath 资源 META-INF/harness/bundle.yml 发现，
+# profile 以 name 引用（bundles: [base, consumer-sample]）；行序即装载序。
+name: consumer-sample
+description: External consumer sample plugin (word_count tool)
+rows:
+  - plugin: consumer-sample

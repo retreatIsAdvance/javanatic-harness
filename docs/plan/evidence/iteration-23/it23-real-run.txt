@@ -1,0 +1,102 @@
+# S-c 证据：docs/embedding.md 从零走查（陌生视角）+ 真跑
+
+- 时间：2026-09-24 11:15–11:16（本机）
+- 视角：**不读主仓源码**的外部开发者——只按 `docs/embedding.md` §2–§5 的步骤，在仓外新目录起一个**全新工程**
+  （自写插件、自写主类，非 `consumer-sample` 的拷贝）：`/tmp/it23-sc/fresh-consumer/`
+- 版本面：**0.1.0**（Central 发布件）= 指南 §2 pom 的缺省示例值；工件腿语义等同发布腿
+- 日志：`/tmp/it23-sc/logs/{compile.log,classpath.log,run.log,dump-composed.log}`
+
+**环境适配（两处，与文档口径无关，属取证环境细节）**：① 解析源加 `-s integration/settings-central.xml`
+（本机默认 settings 指向公司 mirror，对 0.1.0 的 16 个 jar 持续 404；文档假设 Central 可达）
+② 加 `-Dmaven.repo.local=/tmp/it23-sc/fresh-repo` 隔离仓（与文档 §3 的缺省本地仓等价，但排除
+「本机已有件」掩盖「坐标真能解析」）。除这两处，命令与 §3 逐字一致。
+
+## §2 pom：16 条显式依赖（依存清单按 §2 指引取自 integration/consumer-sample/pom.xml）
+
+`/tmp/it23-sc/fresh-consumer/pom.xml`：自有坐标 `io.example.walkthrough:fresh-consumer:1.0.0`、
+`<harness.version>0.1.0</harness.version>` 单点属性、无 parent 继承、16 条显式依赖（bundle-base 1 条
++ §2 点名的其余 15 条）。
+
+## §3 classpath 路：compile → build-classpath → java -cp
+
+```
+$ mvn -B -ntp -s <repo>/integration/settings-central.xml -Dmaven.repo.local=/tmp/it23-sc/fresh-repo \
+      -Dharness.version=0.1.0 compile
+[INFO] Compiling 2 source files with javac [debug release 25] to target/classes
+[INFO] BUILD SUCCESS
+[INFO] Total time:  13.707 s
+EXIT=0
+
+$ mvn ... org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
+      -Dmdep.includeScope=runtime -Dmdep.outputFile=cp.txt
+[INFO] BUILD SUCCESS  (15.908 s)   EXIT=0
+cp entries: 32
+
+$ java -cp "target/classes:$(cat cp.txt)" dev.walkthrough.Walkthrough profile/fresh.yml
+rows.composed=25 rows.enabled=20
+session-store
+persistence-jsonl {root=/Users/abel_yang/.harness/sessions}
+agents
+loop-guard
+system-prompt
+llm
+approval-auto
+tools
+plan {section=Plan mode is active: ...}
+sandbox-local
+sandbox-policy {mode=workspace-write, workspace=/private/tmp/it23-sc/fresh-consumer}
+fs-local {root=/private/tmp/it23-sc/fresh-consumer}
+fs-tool
+shell-bash-local
+shell-tool {workspace=/private/tmp/it23-sc/fresh-consumer, timeoutSeconds=60}
+todo {allowParallelInProgress=false}
+commands
+presets
+agent-loop
+stats-tools
+tool.schemas=9 text_stats.visible=true
+text_stats.invoke.error=false content=chars=31 words=5
+FRESH WALKTHROUGH OK
+EXIT=0
+```
+
+对照要点（与 S-b 发布腿逐项一致）：组合行 **25/20**、工具 **9**（base 8 + 自写 1）、自有工具行
+`stats-tools` 位列末位（bundle 行序 = 装载序）、自写工具可直接执行（`chars=31 words=5` 与输入
+`hello from an outside developer` 相符）。**0.1.0 上从零起工程 → 嵌入 → 自注册工具 → 治理自证，
+全程无需读主仓源码。**
+
+## 走查发现的文档缺陷（1 处）→ 已修（迭代内，S-c）
+
+**§5 的 `(disabled: <expr>)` 注记与示例代码自相矛盾**：示例按 `AppBoot.dump(enabled)`（`enabled =
+resolve(composed)`，已滤掉禁用行）调用，而紧随的说明写「禁用行附 `(disabled: <expr>)`」——按示例照做
+**永远看不到**该注记。
+
+实证（`DumpComposed.java`：dump **未 resolve** 的 `compose(...)` 结果）：
+
+```
+$ java -cp "target/classes:$(cat cp.txt)" dev.walkthrough.DumpComposed profile/fresh.yml
+llm-openai-compat {baseUrl=${env:DEEPSEEK_BASE_URL:-https://api.deepseek.com}, name=deepseek}  (disabled: ${env:DEEPSEEK_API_KEY} == null)
+approval-ask  (disabled: true)
+approval-deny  (disabled: true)
+shell-docker  (disabled: true)
+compaction  (disabled: true)
+（共 5 行带注记）
+$ grep -c disabled <dump(resolve) 输出>   → 0
+```
+
+修复（`docs/embedding.md §5`）：改为「`dump(enabled)` 输出一行一插件（…凭据键脱敏）；`(disabled: <expr>)`
+注记只在 dump **未 resolve** 的 `compose(...)` 结果时出现——`resolve` 后的列表已滤掉禁用行」。
+
+## 走查观察（非缺陷，不改文档；供裁决）
+
+1. §5 代码片段不列 import——包名可从 §2 依赖注释/`12 §2` 表推出，示例工程可作完整参照（指南已多处指向它）。
+2. §2 的 16 条依赖清单是「1 条 + 指到 `integration/consumer-sample/pom.xml`」——照抄需打开仓内该文件；这是
+   ADDED 收口时的设计选择（示例工程即完整清单的事实源），非走查缺陷。
+3. **keyed 真跑腿：本轮跳过**。计划书该项标注「可选」，且不在验收 ①–⑨ 面内；it23 的验证面是 keyless
+   嵌入与组合（`--verify`/`boot()` 均不需 key）。如需模型真跑，走 it17 基线口径（CLI 任务腿）更合适。
+
+## 结论
+
+按文档从零走查**通过**：新工程 + 新插件在 0.1.0 发布件上完成嵌入、自注册工具与治理自证（EXIT=0），
+差异面（工具 9 vs 候选腿 11）与文档版本面对照一致；走查共发现 1 处文档缺陷并已修（见上），
+其余 2 条为观察。对应验收 ⑦。

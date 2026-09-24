@@ -258,11 +258,6 @@
             </dependency>
             <dependency>
                 <groupId>io.github.retreatisadvance</groupId>
-                <artifactId>harness-bundle-headless</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.github.retreatisadvance</groupId>
                 <artifactId>harness-examples-agent-spine</artifactId>
                 <version>${project.version}</version>
             </dependency>

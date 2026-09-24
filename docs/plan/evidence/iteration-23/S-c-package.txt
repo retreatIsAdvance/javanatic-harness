@@ -1,0 +1,77 @@
+# S-c 证据：全量 `mvn -B package`（冻结树，含 CI 步骤与走查修复后的终态）
+
+- 时间：2026-09-24 11:17:06 → 11:18:04（57.4s）
+- 命令：`export JAVA_HOME=$(/usr/libexec/java_home -v 25) && ~/Documents/apache-maven-3.8.8/bin/mvn -B package`
+- 工作目录：`/Users/abel_yang/study/deepseek/javanatic-harness`
+- 完整日志：`/tmp/it23-sc/logs/package.log`（3002 行）
+- 冻结校验（构建窗口内源码/文档零改动）：
+  1. `find . -newermt '2026-09-24 11:17:06' -type f \( -name '*.java' -o -name '*.xml' -o -name '*.yml' -o -name '*.md' \) -not -path '*/target/*'` = **无输出**
+  2. `git status --short` 快照（构建前后各取一次，`/tmp/it23-sc/logs/status-{before,after}.txt`）→ `diff` **无差异**
+  → 本次构建对应确定状态：含 S-c 的 CI 步骤（`.github/workflows/ci.yml`）与走查缺陷修复（`docs/embedding.md §5`）
+
+## 关键输出行（逐字）
+
+```
+START 2026-09-24 11:17:06
+[INFO] BUILD SUCCESS
+[INFO] Total time:  57.447 s
+[INFO] Finished at: 2026-09-24T11:18:04+08:00
+EXIT=0
+```
+
+Reactor 汇总块内 `SUCCESS [` 行 **46**（根 + 45 模块），块内无 `FAILURE`/`SKIPPED`；
+全日志 `FAILURE|SKIPPED` 大写串 **0** 命中。
+
+## 测试计数（两法独立求和，逐项一致）
+
+| 法 | 口径 | 行数 | tests | failures | errors | skipped |
+|---|---|---|---|---|---|---|
+| A | 类级行（含 `-- in <class>`） | 77 | **515** | 0 | 0 | 4 |
+| B | 模块级汇总行（行尾即 Skipped） | 30 | **515** | 0 | 0 | 4 |
+
+跳过 4 项（环境面，非失败）：`SandboxLocalTest` 2、`DeepSeekE2ETest` 1、`RealModelAgentE2ETest` 1。
+计数与 S-b 基线（`S-b-package.txt`：515/0/0/4）逐项一致 → S-c 的两处改动（CI yml、embedding.md）
+**不动测试面**。
+
+## dist 产物
+
+```
+2941:[INFO] Running jlink
+2946:[INFO] Building tar: …/dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.tar.gz
+2947:[INFO] Building zip: …/dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.zip
+```
+`Two versions of module … found` 全日志 **0** 命中。已知非阻断告警（`harness-core-session` 重复依赖声明）
+同 S-b，属 CI 审计后续项，用户已裁决「先不做」，此处仅记录。
+
+## 结论
+
+`BUILD SUCCESS` + `EXIT=0`，46 模块全绿，515 测试 0 失败 0 错误，dist 镜像/归档产出正常；
+构建窗口内树冻结（两法互证）。对应验收 ⑨ 的构建面。
+
+## 后记：构建后的文档订正（不影响上列构建证据）
+
+上列冻结校验跑于构建结束（11:18:04）后、下列文件落笔之前。构建后仅**文档类**改动，
+均非构建输入、不参与编译：
+
+- `docs/plan/evidence/iteration-23/{S-c-package,S-c-ci-dryrun,it23-real-run}.txt`（本文件即其一，S-c 取证）
+- `docs/plan/iteration-23.md`（S-c 收口：锚点 12 勾选、停点状态、验收 ⑦⑨ 勾选、S-c 发现与取证表）
+- `docs/design/README.md`（「当前迭代 it23」状态行：进行中 → 实现完成；计划书 MODIFIED 所列「收口时」项）
+
+复核（真实命令，已跑）：
+
+```
+$ find . -newermt '2026-09-24 11:18:04' -type f -not -path '*/target/*' -not -path './.git/*' | sort
+./docs/design/README.md
+./docs/plan/evidence/iteration-23/S-c-ci-dryrun.txt
+./docs/plan/evidence/iteration-23/S-c-package.txt
+./docs/plan/evidence/iteration-23/it23-real-run.txt
+./docs/plan/iteration-23.md
+
+$ find . -newermt '2026-09-24 11:18:04' -type f \( -name '*.java' -o -name '*.xml' -o -name '*.yml' \) -not -path '*/target/*' -not -path './.git/*'
+（空）
+```
+
+= 构建后写入的仓库文件**恰为**上列五份文档，构建输入（`.java`/`.xml`/`.yml`）**零改动** →
+本文件的构建证据仍对应上列终态。
+（附注：`git status --short` 快照 diff 亦为 0，但它只比状态码——这些文件构建前已是 `??`/` M`，
+内容级改动不会被它检出，故不作证据，只在 `S-c-ci-dryrun.txt §6` 备注。）

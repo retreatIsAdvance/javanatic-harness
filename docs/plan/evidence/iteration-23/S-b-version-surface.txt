@@ -1,0 +1,46 @@
+# S-b 版本面实核 —— 0.1.0 发布件 vs 0.2.0-SNAPSHOT（docs/embedding.md §7 版本表的事实源）
+# 基线 commit: ed8b1c8；0.1.0 工件取自 Maven Central（经公共代理解析，落 /tmp/c010/）
+# 工具：JDK 25 javap；对象 = /tmp/c010/harness-bundle-base-0.1.0.jar 与 /tmp/c010/harness-core-tools-0.1.0.jar
+# 目的：订正「0.1.0 PRODUCTION 只查服务在场」的旧误判（本会话早前 javap 误读 Policy$1=STANDARD），
+#   并锚定 embedding.md 版本表的每一行。
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+
+# ---- 1) 0.1.0 AppBoot 公开方法（无 bootReported；有 compose/resolve/dump/boot + verifyComposition + sandboxWarning）----
+$ "${JAVA_HOME}/bin/javap" -p -c -cp /tmp/c010/classes010 io.javanatic.harness.boot.AppBoot | grep -E 'public|private|static' | head -12
+public static java.util.List<io.javanatic.harness.kernel.config.ConfigRowSpec> compose(io.javanatic.harness.boot.AppBoot$BootOptions) throws java.io.IOException;
+public static java.util.List<io.javanatic.harness.kernel.config.ConfigRowSpec> resolve(java.util.List<io.javanatic.harness.kernel.config.ConfigRowSpec>);
+public static java.lang.String dump(java.util.List<io.javanatic.harness.kernel.config.ConfigRowSpec>);
+public static io.javanatic.harness.kernel.scope.Runtime boot(io.javanatic.harness.boot.AppBoot$BootOptions) throws java.io.IOException;
+static java.util.Optional<java.lang.String> sandboxWarning(io.javanatic.harness.kernel.scope.Scope);
+static void verifyComposition(java.util.Map<java.lang.String, io.javanatic.harness.kernel.plugin.Plugin>, java.util.List<io.javanatic.harness.kernel.config.ConfigRowSpec>);
+# 无 verifyWorkspaceAlignment（it21 → 0.2.0 面）：grep 'workspace drift' 计数 = 0
+# 无 bootReported（0.2.0 新增）：方法清单里不出现
+
+# ---- 2) 0.1.0 Policy.PRODUCTION 违规文案（PRODUCTION 档禁 AUTO 审批在 0.1.0 即成立）----
+$ rm -rf /tmp/c010-verify && mkdir -p /tmp/c010-verify && cd /tmp/c010-verify && "${JAVA_HOME}/bin/jar" --extract --file /tmp/c010/harness-bundle-base-0.1.0.jar
+$ "${JAVA_HOME}/bin/javap" -p -c "io.javanatic.harness.boot.Policy\$2" > /tmp/p010v.txt && grep -oE 'String [^ ]+.*' /tmp/p010v.txt | cut -c1-120 | sort -u
+String policy=PRODUCTION 但 LoopGuard limits 为零
+String policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)
+String policy=PRODUCTION 但审批为 AUTO（换 approval-ask / approval-deny）
+String policy=PRODUCTION 但持久化非耐久（挂 persistence-jsonl）
+String policy=PRODUCTION 但沙箱为 danger-full-access（换 read-only / workspace-write）
+String 治理缺失：无 SandboxPolicyService（装载 sandbox-policy）
+
+# ---- 3) 0.1.0 ToolDefinition（无 approvalExempt 组件、无 ofExempt）/ ToolRegistry（有 schemas/resolve）----
+$ "${JAVA_HOME}/bin/javap" -cp /tmp/c010/harness-core-tools-0.1.0.jar io.javanatic.harness.tools.ToolDefinition
+public io.javanatic.harness.tools.ToolDefinition(java.lang.String, java.lang.String, io.javanatic.harness.tools.ValueSchema, io.javanatic.harness.tools.RenderIntent, io.javanatic.harness.tools.ToolDefinition$Tool);
+public static io.javanatic.harness.tools.ToolDefinition of(java.lang.String, java.lang.String, io.javanatic.harness.tools.ValueSchema, io.javanatic.harness.tools.ToolDefinition$Tool);
+$ "${JAVA_HOME}/bin/javap" -cp /tmp/c010/harness-core-tools-0.1.0.jar io.javanatic.harness.tools.ToolRegistry
+public static final io.javanatic.harness.kernel.scope.ServiceKey<io.javanatic.harness.tools.ToolRegistry> KEY;
+public abstract io.javanatic.harness.kernel.scope.Disposable register(io.javanatic.harness.kernel.scope.Scope, io.javanatic.harness.tools.ToolDefinition);
+public abstract java.util.List<io.javanatic.harness.llm.ToolSchema> schemas(io.javanatic.harness.kernel.scope.Scope);
+public abstract java.util.Optional<io.javanatic.harness.tools.ToolDefinition> resolve(io.javanatic.harness.kernel.scope.Scope, java.lang.String);
+
+# ---- 4) 结论（embedding.md §7 版本表逐行）----
+# ✅ 交集面（两版同有）：compose / resolve / dump / boot / Policy(STANDARD+PRODUCTION，含 AUTO 禁令) /
+#    VerifyFailedException / sandboxWarning / ToolRegistry.KEY+register+schemas+resolve / ToolDefinition.of / RenderIntent
+# ❌ 0.2.0 新增（0.1.0 无）：键名三层白名单 fail loud（YamlRows，it23）/ workspace 四处同源断言（it21）/
+#    AppBoot.bootReported（组合自述计数）/ ToolDefinition.ofExempt + approvalExempt 组件（it22）/
+#    ask_user（interaction.ask 模块 + ask-user 行，it22）/ ToolRegistry.definitions（it22）
+# 附：负例④（PRODUCTION 撞 AUTO → VerifyFailedException）在 0.1.0 亦成立——「0.2.0 起才查 AUTO」为误判，
+#   已订正 integration/verify-consumer.sh 头注释；④ 仍只跑候选腿（控制组只针对候选仓与候选构建产物）。

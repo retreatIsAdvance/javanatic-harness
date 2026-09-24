@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  发布腿专用取件设置（仅 integration/verify-consumer.sh release 经 -s 使用；候选腿与 CI 都用本机默认设置，不经此文件）。
+
+  为什么不用本机默认 settings.xml：公司 mirror 对 0.1.0 的 16 个 jar 持续 404（同坐标 .pom 正常 200；
+  repo1 与 aliyun 双双 200 实证发布件在公共仓，属 mirror 上游缺件），发布腿取件必须落在公共仓上，
+  故此处把全部仓库（mirrorOf=*）指向公共 Central 代理。
+
+  代理可替换：任何能取到 Central 的公共代理或直连均可，例如换 <url> 为
+  https://repo1.maven.org/maven2（权威源；本机直连偶发超时）。
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <mirrors>
+        <mirror>
+            <id>public-central</id>
+            <name>公共 Maven Central 代理</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <mirrorOf>*</mirrorOf>
+        </mirror>
+    </mirrors>
+</settings>

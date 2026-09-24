@@ -15,6 +15,8 @@
 = 最终 plugin 行序（可 dump，可替换任意一行）
 ```
 
+**键名白名单在装载期执法**（`YamlRows`，it23 起）：profile 顶层 `name`/`policy`/`bundles`/`rows`、bundle 顶层 `name`/`description`/`rows`、行 `plugin`/`config`/`remove`/`replace`/`after`/`before`/`disabled`——未列名键（含拼写错误）**fail loud**，不静默忽略。
+
 ### Profile
 
 一个**命名组合**，存储在 Harness home（`~/.harness/profiles/<name>/`）：
@@ -22,42 +24,41 @@
 ```yaml
 # ~/.harness/profiles/prod/profile.yml
 name: prod
-description: Production composition
 policy: production          # 治理档位（见 §6；缺省 standard）
 bundles:
-  - io.github.retreatisadvance:harness-bundle-base:0.1.0
-plugins: []                 # out-of-tree 插件（classpath/module-path 追加）
+  - base                    # bundle 名（非 GAV）——classpath 上 META-INF/harness/bundle.yml 的 name
+rows:                       # 可选：profile 级 patch 行（replace/remove/insert/include）
+  - plugin: approval-ask
+    replace: true
+    config:
+      idleTimeoutSeconds: 120
 ```
 
 ### Bundle
 
-一个**发行格式**：一组行 + 挂载的代码（JPMS 模块 jar）。Bundle 声明自己的 patch 文件：
+一个**发行格式**：一组行 + 挂载的代码（JPMS 模块 jar）。bundle 自述文件（classpath 资源，按 `name` 被 profile 引用）：
 
 ```yaml
-# harness-bundle-base 的 META-INF/harness/bundle.yml
+# harness-bundle-base 的 META-INF/harness/bundle.yml（节选；全文见该文件）
 name: base
 description: First layer of every profile
-patches: base-patch.yml
-```
-
-```yaml
-# harness-bundle-base 的 META-INF/harness/base-patch.yml
-# 行引用 plugin id（不是类名——JPMS 下类名不可跨模块反射访问）。
-# id 由 Plugin.id() 声明，ServiceLoader 发现后按 id 匹配。
 rows:
-  - plugin: agent-loop
+  # 行引用 plugin id（不是类名——JPMS 下类名不可跨模块反射访问）。
+  # id 由 Plugin.id() 声明，ServiceLoader 发现后按 id 匹配。
   - plugin: session-store
   - plugin: llm
-  - plugin: llm-deepseek
+  - plugin: llm-openai-compat
     config:
+      name: deepseek
       baseUrl: ${env:DEEPSEEK_BASE_URL:-https://api.deepseek.com}
-  - plugin: llm-replay
-    disabled: ${env:DEEPSEEK_API_KEY} != null   # 有 key 时禁用 replay（走真实 provider）
+    disabled: ${env:DEEPSEEK_API_KEY} == null   # 无 key 时禁用（走 replay/自检）
   - plugin: fs-local
+    config:
+      root: ${cwd}
   - plugin: shell-bash-local
   - plugin: persistence-jsonl
     config:
-      baseDir: ~/.harness/sessions
+      root: ${home}/.harness/sessions
 ```
 
 ### Patch
@@ -145,26 +146,23 @@ public final class AppBoot {
         // 6. 表达式求值（disabled / config 值）
         rows = resolveExpressions(rows);
 
-        // 7. dump-config：打印组合结果后退出（不加载任何插件）
-        if (opts.dumpConfig()) { printConfig(rows); return null; }
-
-        // 8. 双向显式组合校验（ServiceLoader 发现 ↔ 行引用，两侧都 fail loud）：
+        // 7. 双向显式组合校验（ServiceLoader 发现 ↔ 行引用，两侧都 fail loud）：
         //    a) 行引用的 id 必须存在——typo/缺 jar 立即暴露；
         //    b) 被发现的插件必须被某行引用——不做隐式挂载（发现≠组合）。
         PluginLoader loader = new PluginLoader();
         Map<String, Plugin> discovered = loader.discover();
         verifyComposition(discovered, rows);          // 双向，见上
 
-        // 9. Runtime + ConfigService + 组合清单
+        // 8. Runtime + ConfigService + 组合清单
         Runtime runtime = new Runtime();
         Scope root = runtime.root();
         root.provide(ConfigService.KEY, configServiceFrom(rows));
         root.provide(CompositionManifest.KEY, manifestFrom(rows));   // R1：进 SessionHeader
 
-        // 10. 按 rows 顺序加载（每插件子 scope，失败原子回滚——01 §7 R3）
+        // 9. 按 rows 顺序加载（每插件子 scope，失败原子回滚——01 §7 R3）
         loader.loadAll(root, rows.stream().map(r -> discovered.get(r.plugin())).toList());
 
-        // 11. 治理验证（R4）：构造期已强制（loop/executor 构造器），此处断言档位
+        // 10. 治理验证（R4）：构造期已强制（loop/executor 构造器），此处断言档位
         if (opts.verify()) { verifyGovernance(root, policyOf(opts)); }
 
         return runtime;
@@ -207,16 +205,16 @@ Profile: headless   policy: PRODUCTION
 实现落定（it8）：`ConfigService`/`ExpressionResolver`/行模型（sealed 动作联合 Include/Replace/Remove/Insert——互斥动作不落布尔字段）在 kernel/config（零第三方）；`AppBoot` + SnakeYAML 装载在 bundle/base（第三第三方，仅此模块）。it7 的程序化口径已迁移：headless 经内置 profile + CLI flag overlay 走同一 boot 路径；Policy 断言进 boot（VerifyFailedException 携带违规清单）。显式差异：profile 为显式文件路径（home 命名发现随 it9）；bundle 按 classpath 资源名解析（GAV 钉扎随发布切片）；CompositionManifest 含行序+已解析 config、进 SessionHeader（插件版本摘要随发布切片）；插件配置化——构造器注入（程序化组合）与无参 + `configFor(id())`（数据组合）两条显式路径等价，安全边界值（fs/persistence root）在 config 路径缺失即 fail loud。dump 对含 `apikey` 的键脱敏。
 
 实现落定（it7）：`Policy`（STANDARD/PRODUCTION）与治理断言在 `examples/headless` 落地——程序化组合口径（直装插件清单，非 YAML rows；YAML/ConfigService/bundle 层随 it8）。`--verify` 无 key 可跑（不装配 provider）；审批三模式齐备（auto 留 core/tools 作 executor 锚，ask/deny 在 interaction/approval；ask 缺省即拒绝语义）。PRODUCTION 拒 AUTO / 非 durable / 零 limits，违规逐项指出、exit 1。it8 bundle 落地时 Policy 校验上移到 boot。
-- `--dump-config` 回答"组成了什么"；`--verify` 回答"治理够不够"。两个都是纯组合期操作。
+- 组合结果的人读视图 = `AppBoot.dump(rows)`（API 面纯函数，§8）：一行一插件、`config` 展开为 `{k=v}`、凭据键脱敏、禁用行带 `(disabled: <expr>)`。**CLI 无 `--dump-config` flag**——`jh` 的组合期出口只有 `--verify`，CLI 面以 [12 §6](12-api-stability.md) 冻结清单为准。
+- `--verify` 回答"治理够不够"（§6）：组合 + 断言后 exit 0/1，不创建 agent、不需要 key。
 
 ## 7. Headless Profile（MVP 默认）
 
 ```yaml
 # ~/.harness/profiles/headless/profile.yml（模板）
 name: headless
-description: One-shot runner, no server
 bundles:
-  - io.github.retreatisadvance:harness-bundle-base:0.1.0
+  - base                    # bundle 名（0.1.0 起；旧文档的 GAV 写法不成立）
 ```
 
 ### Headless Runner 入口
@@ -271,25 +269,22 @@ jh --resume=<上次打印的 session=…> "继续"    # 会话按打印 id 续�
 
 `jh` = `dist/jh` jlink 运行时镜像的 launcher（it13，见 [02 §Distribution 层](02-module-layout.md)）：解出即用，无需手拼 module-path。
 
-## 8. dump-config 输出示例
+## 8. 组合结果的人读视图：`AppBoot.dump(rows)`
+
+`dump` 是 API 面纯函数（CLI 无对应 flag，见 §6）：一行一插件；`config` 非空则展开为 `{k=v}`（值已求值、含 `apikey` 的键脱敏为 `****`）；禁用行附 `(disabled: <expr>)`。任何一行都能被自己的 patch 替换——dump 是替换前的对照面。
 
 ```text
-Profile: headless   policy: standard
-Bundles: harness-bundle-base@0.1.0
-Patches: ~/.harness/patch.yml (absent)
-
-Effective plugin rows:
-  #0  agent-loop         [core]
-  #1  session-store      [core]
-  #2  llm                [core]
-  #3  llm-deepseek       baseUrl=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
-  #4  llm-replay         disabled (DEEPSEEK_API_KEY present)
-  #5  fs-local           [core]
-  #6  shell-bash-local   [core]
-  #7  persistence-jsonl  baseDir=~/.harness/sessions
-
-# Any row above can be replaced by a patch of your own.
+# 节选（base 组合，行序 = 装载序）
+session-store
+persistence-jsonl {root=/home/you/.harness/sessions}
+llm-openai-compat {name=deepseek, baseUrl=https://api.deepseek.com}
+approval-ask  (disabled: true)
+tools
+shell-docker  (disabled: true)
+agent-loop {cwd=/path/to/workspace}
 ```
+
+外部嵌入的自证即用它打印"组成了什么"（`integration/consumer-sample` 的 `SelfCheck`：`compose` → `dump`），`--verify` 另印治理摘要五行（§6）。
 
 ## 9. 自定义示例：换 shell provider / 改沙箱档
 
@@ -320,11 +315,11 @@ rows:
 | dsh | JH | 备注 |
 |---|---|---|
 | Profile（named composition） | `~/.harness/profiles/<name>/profile.yml` | 同 |
-| Bundle（dsh.bundle patch file） | `META-INF/harness/<name>-patch.yml` | 同语义 |
+| Bundle（dsh.bundle patch file） | `META-INF/harness/bundle.yml`（classpath 资源，资源名固定；`name:` 声明包名） | 同语义；引用写 name（§1） |
 | row 引用插件（path/类名） | **row 引用 plugin id**，ServiceLoader 发现 | JPMS 下类名不可反射 |
 | 隐式发现即挂载 | **双向显式组合**（发现 ⊇ 引用且引用 ⊇ 发现的已启用集）| 收紧：发现≠组合 |
 | row `id` patch 锚点 | 锚点 = plugin id | 少一个字段 |
 | `replace` / `disabled` / `remove` | 同 | |
 | `!!js` 表达式 | `${env:...}` 插值 + `==`/`!=` 比较 | 收紧（无任意代码） |
-| `dsh --profile X --dump-config` | 同 + **`--verify` + policy 档位** | R4 新增 |
+| `dsh --profile X --dump-config` | **无对应 CLI flag**：dump 收在 API（`AppBoot.dump`，§8），CLI 面只有 `--verify` + policy 档位 | 收紧：CLI 面以 12 §6 冻结清单为准 |
 | `dsh-base` 首层 | `harness-bundle-base` | 同 |

@@ -1,0 +1,71 @@
+# S-b4 证据：发布腿（Central 0.1.0，隔离仓初始为空）+ 与候选腿的差异清单
+
+- 时间：2026-09-24 10:40:20 → 10:41:02（腿用时 42s）
+- 命令：`CONSUMER_WORK=/tmp/it23-sb/work-release bash integration/verify-consumer.sh release`
+  （脚本对 release 腿自动挂 `-s integration/settings-central.xml`；隔离仓 `/tmp/it23-sb/work-release/repo-release` 初始为空）
+- 控制台全文：`/tmp/it23-sb/legs.log`；原始日志在 `/tmp/it23-sb/work-release/`（`compile-release.log` / `classpath-release.log` / `run-release.log`）
+- S-b1 手工探路（10:18，同口径同结论）日志：`/tmp/it23-sb/{compile,classpath,run}-release.log` + `repo-release/`
+
+## 控制台（逐字）
+
+```
+== 腿 release：harness.version=0.1.0，隔离本地仓 /tmp/it23-sb/work-release/repo-release ==
+  ok   release：示例编译
+  ok   release：运行类路径
+  ok   release：治理自证运行
+  ok   release：自证通过
+  ok   release：自有工具可见
+  ok   release：自有工具可执行
+  用时 42s
+== 汇总：release ==
+发布腿取件来源（隔离仓初始为空；0.1.0 只可能来自公共 Central 代理，mirror id 见下）：
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Sep 24 10:40:38 CST 2026
+harness-bundle-base-0.1.0.jar>public-central=
+失败项：0
+RELEASE_EXIT=0
+```
+
+取件来源全量核对：隔离仓内 `io/github/retreatisadvance/**/_remote.repositories` 共 66 条 `>public-central=`（无本机仓、无 mirror id 混入）——**本地仓为空 + 全量经公共 Central 代理解析**成立。
+
+## 自证运行关键行（`run-release.log`）
+
+```
+rows.composed=25 rows.enabled=20
+tool.schemas=9 word_count.visible=true
+word_count.invoke.error=false content=words=3
+SELF-CHECK OK
+```
+
+运行类路径 32 条（候选腿 33 条）。示例自有 `word_count` 在两条腿都注册成功并可直接执行 → **交集面（`compose`/`resolve`/`dump`/`boot`/`Plugin`/`of`/`register`）复验通过**。
+
+## 差异清单（0.1.0 发布件 vs 0.2.0-SNAPSHOT 工作树，同一份示例源码）
+
+| 面 | 发布腿 0.1.0 | 候选腿 0.2.0-SNAPSHOT | 成因 |
+|---|---|---|---|
+| 组合行 | 25 composed / 20 enabled | 26 / 21 | `base` bundle 少一行 `ask-user`（`harness-interaction-ask` 经候选 `bundle/base` 的 compile 依赖传递进入；0.1.0 发布 POM 未声明该依赖）——S-a 实探发现 2 已定案 |
+| 工具面 | 9 | 11 | 差的 2 个恰为 `ask_user`（it22）与 `fs_search`（it21 有界搜索） |
+| 运行类路径 | 32 条 | 33 条 | 差 `harness-interaction-ask-0.1.0` 一条 |
+| 键名未知键校验 | 静默忽略 | fail loud | it23 D 实修（0.2.0 迁移面，见 [12 §5](../../../design/12-api-stability.md)） |
+| workspace 同源断言 | 无 | 装配期拒绝 | it21 引入（负例③实测面） |
+
+## 工具面探针（两腿同源类路径 + 同一 profile，逐名对照）
+
+探针：`/tmp/it23-sb/ToolProbe.java`（只用交集面 `AppBoot.boot` + `ToolRegistry.schemas`），
+`java --class-path "<sample target/classes>:<腿 classpath>" ToolProbe.java <profile>`，两腿各 EXIT=0：
+
+```
+# 发布腿 0.1.0（toolprobe-release.log）
+tool.count=9
+tool=bash / exit_plan_mode / fs_delete / fs_edit / fs_list / fs_read / fs_write / todo_write / word_count
+
+# 候选腿 0.2.0-SNAPSHOT（toolprobe-candidate.log）
+tool.count=11
+tool=ask_user / bash / exit_plan_mode / fs_delete / fs_edit / fs_list / fs_read / fs_search / fs_write / todo_write / word_count
+```
+
+（`word_count` = 示例工程自注册工具，两腿皆在 → 外部插件接入不依赖 0.2.0 面。）
+
+## 结论
+
+发布腿全绿（`失败项：0`、`EXIT=0`）：**0.1.0 发布件在空隔离仓、只经公共 Central 代理解析的条件下，能完成同一份示例工程的编译、嵌入、自注册工具与 keyless 治理自证**。与候选腿的差异已逐项列名并入文档（[docs/embedding.md](../../../embedding.md) 版本面表）。对应验收 ②③⑤。

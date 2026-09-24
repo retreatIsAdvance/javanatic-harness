@@ -1,0 +1,61 @@
+# S-b4 证据：全量 `mvn -B package`（冻结树）
+
+- 时间：2026-09-24 10:35:52 → 10:36:48（55.6s）
+- 命令：`export JAVA_HOME=$(/usr/libexec/java_home -v 25) && ~/Documents/apache-maven-3.8.8/bin/mvn -B package`
+- 工作目录：`/Users/abel_yang/study/deepseek/javanatic-harness`
+- 完整日志：`/tmp/it23-sb/package.log`（3051 行）
+- 树冻结校验：`find . -newermt '2026-09-24 10:35:52' -type f \( -name '*.java' -o -name '*.xml' -o -name '*.yml' -o -name '*.md' \)`（排除 target/）= **无输出** → 构建期间无源码/文档改动，证据对应冻结状态
+
+## 关键输出行（逐字，行号取自 package.log）
+
+```
+1:START 2026-09-24 10:35:52
+3044:[INFO] ------------------------------------------------------------------------
+3045:[INFO] BUILD SUCCESS
+3046:[INFO] ------------------------------------------------------------------------
+3047:[INFO] Total time:  55.588 s
+3048:[INFO] Finished at: 2026-09-24T10:36:48+08:00
+3050:EXIT=0
+```
+
+Reactor 汇总（`:2996-3044`）：根 + 45 个模块 **全 SUCCESS**（46 行，无 SKIPPED/FAILURE）。
+
+## 测试计数（两法独立求和，逐项一致）
+
+| 法 | 口径 | 行数 | tests | failures | errors |
+|---|---|---|---|---|---|
+| A | 类级行（`Tests run: … -- in <class>`） | 77 | **515** | 0 | 0 |
+| B | 模块级汇总行（无 `-- in`） | 30 | **515** | 0 | 0 |
+
+跳过 4 项（环境/无 key，非失败）：`SandboxLocalTest` 2（平台面）、`DeepSeekE2ETest` 1、`RealModelAgentE2ETest` 1。
+
+摘要行样板（逐字）：
+```
+1664:[WARNING] Tests run: 16, Failures: 0, Errors: 0, Skipped: 2
+1886:[WARNING] Tests run: 2, Failures: 0, Errors: 0, Skipped: 1
+2261:[WARNING] Tests run: 6, Failures: 0, Errors: 0, Skipped: 1
+```
+
+## 孤岛删除后 reactor 与 dist 产物
+
+- `bundle/headless` 已不在 reactor（汇总表无 `harness-bundle-headless` 行），根 POM depMgmt 同步删净。
+- `harness-dist-jh` SUCCESS [6.159 s]，jlink 与归档逐字：
+```
+2987:[INFO] Deleting image directory /Users/abel_yang/study/deepseek/javanatic-harness/dist/jh/target/jlink-image
+2988:[INFO] Running jlink
+2993:[INFO] Building tar: /Users/abel_yang/study/deepseek/javanatic-harness/dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.tar.gz
+2994:[INFO] Building zip: /Users/abel_yang/study/deepseek/javanatic-harness/dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.zip
+```
+- 落盘核对：`dist/jh/target/jlink-image/bin/jh`（172 B 启动器）+ tar.gz（35,461,811 B）均在；**无 `Two versions of module … found`**（日志内该串 0 命中）。
+- 已知非阻断告警（预存，非本迭代引入）：根聚合构建中 `harness-core-session` 的 `dependencies.dependency… must be unique` 重复声明告警（`package.log:14-17`）——属 CI 审计后续项（用户已裁决「先不做」），此处仅记录不处置。
+
+## 结论
+
+`BUILD SUCCESS` + `EXIT=0`，46 模块全绿，515 测试 0 失败 0 错误（4 跳过为环境面），dist 镜像与归档产出正常。对应锚点 1–2、6–11 的构建面收口。
+
+## 后记：构建后的文档订正（不影响上列构建证据）
+
+上列冻结校验跑于构建结束后、下列订正之前。构建后另有一处**纯文档**订正（不参与编译，不影响本文件的构建证据）：
+
+- `docs/design/12-api-stability.md §2` 表头计数 `32 个 reactor 代码模块 / 36 个包` → `33 / 37`：it16 写就时表为 32 行/36 包（`git show 8e3c013:` → 32/36），it22 S-c（`e1e6e81`）加 `interaction/ask` 行时未同步计数（`git log -S'interaction/ask'` 唯一命中该提交；现表 33 行/37 包，脚本计数复核）。
+- `docs/embedding.md §3` 同步去掉重复的包计数（只留指向 12 §2 的链接）——计数单点住在事实源里，避免第二处漂移。

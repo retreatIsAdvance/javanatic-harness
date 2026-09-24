@@ -1,0 +1,107 @@
+# S-c 证据：CI 候选腿步骤（锚点 12）——工作流 YAML 校验 + 步骤命令本机干跑
+
+- 时间：2026-09-24 11:18:41 → 11:20:50（腿 79s；含 install 共约 129s）
+- 落点：`.github/workflows/ci.yml`，ubuntu `build` job **末位步骤**（`Build and test` → `Smoke jlink image`
+  → 本步骤）；macos job 不动（B 裁决：候选腿一条、发布腿不进 CI）
+
+## 1) 工作流 YAML 校验（ruby/psych 解析，步骤名逐条列出）
+
+```
+$ ruby -ryaml -e 'doc = YAML.load_file(".github/workflows/ci.yml"); doc["jobs"].each { |j, s| puts "#{j} -> " + s["steps"].map { |x| x["name"] || x["uses"] }.join(" | ") }'
+build -> actions/checkout@v4 | actions/setup-java@v4 | Pre-flight sandbox probe (bwrap: runnable and denying) | Provision docker test image | Build and test | Smoke jlink image | Verify external consumer sample (candidate leg)
+macos -> actions/checkout@v4 | actions/setup-java@v4 | Build and test | Smoke jlink image
+```
+
+新增步骤（逐字）：
+
+```yaml
+      # 外部消费方示例（it23）：候选腿 = 工作树 install 进隔离仓 → 示例编译 + 治理自证
+      # 运行 + 四负例；脚本自持全部步骤（与本地证据同一入口，位置参数取 candidate）。
+      # 隔离仓每跑每新 ⇒ 只凭坐标真解析。发布腿不进 CI（公网依赖不作门禁，B 裁决）。
+      - name: Verify external consumer sample (candidate leg)
+        run: CONSUMER_WORK="$RUNNER_TEMP/consumer-sample" integration/verify-consumer.sh candidate
+```
+
+## 2) 步骤命令本机干跑（唯一差异：`CONSUMER_WORK` 落本机路径）
+
+```
+$ CONSUMER_WORK=/tmp/it23-sc/work-ci-dryrun integration/verify-consumer.sh candidate
+== 腿 candidate：harness.version=0.2.0-SNAPSHOT，隔离本地仓 /tmp/it23-sc/work-ci-dryrun/repo-candidate ==
+  ok   候选：工作树 install → 隔离仓（跳测试）
+  ok   candidate：示例编译
+  ok   candidate：运行类路径
+  ok   candidate：治理自证运行
+  ok   candidate：自证通过
+  ok   candidate：自有工具可见
+  ok   candidate：自有工具可执行
+  用时 79s
+== 四负例（候选仓 / 候选构建产物）==
+  ok   负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+  ok   负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+  ok   负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+  ok   负例④生产档撞 AUTO 审批必须 boot 抛错（已拒，文案含「policy=PRODUCTION 但审批为 AUTO」）
+
+== 汇总：candidate ==
+失败项：0
+EXIT=0
+```
+
+关键行（`/tmp/it23-sc/work-ci-dryrun/`）：
+
+```
+install-candidate.log: [INFO] BUILD SUCCESS  / Total time:  01:15 min
+run-candidate.log:3   rows.composed=26 rows.enabled=21
+run-candidate.log:34  tool.schemas=11 word_count.visible=true
+run-candidate.log:35  word_count.invoke.error=false content=words=3
+run-candidate.log:36  SELF-CHECK OK
+classpath-candidate.txt 条目数：33
+```
+
+四负例诊断逐字（各日志尾部）：① `DependencyResolutionException`（16 坐标逐个 is missing）
+② `ProjectBuildingException`（`'dependencies.dependency.version' … is missing`）
+③ `IllegalStateException: workspace drift`（栈顶 `AppBoot.verifyWorkspaceAlignment`）
+④ `AppBoot$VerifyFailedException: policy violations: [policy=PRODUCTION 但审批为 AUTO…]`。
+计数与 S-b 候选腿（`S-b-candidate.txt`：26/21、11、`失败项：0`）逐项一致。
+
+## 3) 干跑窗口内树冻结
+
+- `find . -newermt '2026-09-24 11:18:41' … -not -path '*/target/*'` = **无输出**
+- `git status --short` 快照与构建前一致 → `diff` **无差异**
+
+## 4) 前置条件核对（CI 运行环境面）
+
+- 脚本相对路径调用依赖 **git 可执行位**：`integration/verify-consumer.sh` 本机 `-rwxr-xr-x`；
+  `git add` 将按其 fs 模式记为 `100755`（CI 步骤直接以 `integration/verify-consumer.sh candidate` 调用，
+  见 §1）。**提交时勿丢执行位**（`git ls-files -s` 复核为 `100755`）。
+- 步骤依赖 `mvn` 在 PATH（`actions/setup-java` 的 cache maven 提供）、`JAVA_HOME` 由 setup-java 设
+  （脚本按 `mvn -v` 推导 java）、`RUNNER_TEMP` 为 runner 默认环境变量。
+- 网络面：隔离仓每跑每新 ⇒ 该步骤会真下载依赖闭包（本地干跑 install 1:15 min 含下载）；
+  这是「只凭坐标真解析」的代价，属 B 裁决接受的漂移警报口径。
+
+## 5) 限制（如实）
+
+真实 GitHub Actions 运行需 **push**（另行授权；本轮无 push）。本证据覆盖：工作流 YAML 可解析、
+步骤名与位置正确、步骤命令在本机逐字可跑（同一脚本、同一位置参数、同一隔离仓语义）。
+runner 特有面（setup-java 缓存、runner 网络、bwrap/docker 前置）不在本文件证据内。
+
+## 6) 复核命令（后记声明的一致性检查）
+
+```
+$ cd /Users/abel_yang/study/deepseek/javanatic-harness
+$ find . -newermt '2026-09-24 11:18:04' -type f -not -path '*/target/*' -not -path './.git/*' | sort
+./docs/design/README.md
+./docs/plan/evidence/iteration-23/S-c-ci-dryrun.txt
+./docs/plan/evidence/iteration-23/S-c-package.txt
+./docs/plan/evidence/iteration-23/it23-real-run.txt
+./docs/plan/iteration-23.md
+```
+= S-c 收口落笔的**全部**文档（构建后写入，非构建输入）。构建输入复核（同窗口）：
+`find … \( -name '*.java' -o -name '*.xml' -o -name '*.yml' \)` = **空**。
+
+附注（口径诚实）：`git status --short | diff <构建前快照> -` 同样为 0 差异，但**它只比状态码**——
+上述文件构建前已是 `??`/` M`，内容级改动不会被它检出；故内容级证据以上面两条 `find` 为准。
+
+## 结论
+
+CI 步骤（锚点 12）落位正确、命令本机干跑全绿（`失败项：0`，EXIT=0）、干跑窗口树冻结。
+对应验收 ⑨ 的 CI 面；真实 CI 首跑随下次 push（另行授权）。

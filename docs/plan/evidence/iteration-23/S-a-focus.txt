@@ -1,0 +1,90 @@
+# S-a 聚焦回归 —— bundle/base（YamlRows / AppBoot / RowComposer 所在模块）及上游闭包（-am，40 工程）
+# 基线 commit: ed8b1c8（it23 S-a 新增 integration/**、docs/plan/iteration-23.md 在工作树，未提交；主仓源码零改动）
+# 输出 = 决定性行（过滤器: "Building …" 模块边界行 + 模块级 "Tests run:" 汇总行（无 Time elapsed））；
+#   bundle/base 段额外列类级行（"-- in io.…"）；sandbox-local 的两条 WARNING 级行另列，位置见注。
+# 计数（python3 两法独立求和，结果相等）：模块级汇总行 27 条 → tests=428 failures=0 errors=0 skipped=2；
+#   类级行 56 条 → 同值。skipped=2 全在 harness-sandbox-local（该模块类级与模块级汇总行由 surefire 打 WARNING 级——
+#   位置在 log 行 1615/1619，落在 sandbox-local 段内正确位置；只 grep "[INFO]" 前缀会静默漏掉，故本文件按值单列）。
+# 本 S-a 无主仓源改动 → 本回归承担「新增示例工程/脚本未破坏主链路」的装配证明。
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -pl bundle/base -am test
+
+[INFO] Building Javanatic Harness 0.2.0-SNAPSHOT                         [1/40]
+[INFO] Building harness-kernel-aggregator 0.2.0-SNAPSHOT                 [2/40]
+[INFO] Building harness-kernel-brand 0.2.0-SNAPSHOT                      [3/40]
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-kernel-core 0.2.0-SNAPSHOT                       [4/40]
+[INFO] Tests run: 36, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-kernel-config 0.2.0-SNAPSHOT                     [5/40]
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-aggregator 0.2.0-SNAPSHOT                   [6/40]
+[INFO] Building harness-core-session 0.2.0-SNAPSHOT                      [7/40]
+[INFO] Tests run: 41, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-system-prompt 0.2.0-SNAPSHOT                [8/40]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-llm-aggregator 0.2.0-SNAPSHOT                    [9/40]
+[INFO] Building harness-llm-llm 0.2.0-SNAPSHOT                          [10/40]
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-tools 0.2.0-SNAPSHOT                       [11/40]
+[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-session-aggregator 0.2.0-SNAPSHOT               [12/40]
+[INFO] Building harness-session-persistence 0.2.0-SNAPSHOT              [13/40]
+[INFO] Building harness-session-persistence-jsonl 0.2.0-SNAPSHOT        [14/40]
+[INFO] Tests run: 31, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-todo 0.2.0-SNAPSHOT                        [15/40]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-agent 0.2.0-SNAPSHOT                       [16/40]
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-llm-replay 0.2.0-SNAPSHOT                       [17/40]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-agent-loop 0.2.0-SNAPSHOT                  [18/40]
+[INFO] Tests run: 57, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-plan 0.2.0-SNAPSHOT                        [19/40]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-fs-aggregator 0.2.0-SNAPSHOT                    [20/40]
+[INFO] Building harness-fs-fs 0.2.0-SNAPSHOT                            [21/40]
+[INFO] Building harness-fs-local 0.2.0-SNAPSHOT                         [22/40]
+[INFO] Tests run: 33, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-sandbox-aggregator 0.2.0-SNAPSHOT               [23/40]
+[INFO] Building harness-sandbox-sandbox 0.2.0-SNAPSHOT                  [24/40]
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-shell-aggregator 0.2.0-SNAPSHOT                 [25/40]
+[INFO] Building harness-shell-shell 0.2.0-SNAPSHOT                      [26/40]
+[INFO] Building harness-shell-bash-local 0.2.0-SNAPSHOT                 [27/40]
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-sandbox-local 0.2.0-SNAPSHOT                    [28/40]
+[INFO] Building harness-sandbox-policy 0.2.0-SNAPSHOT                   [29/40]
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-fs-tool 0.2.0-SNAPSHOT                          [30/40]
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-core-preset 0.2.0-SNAPSHOT                      [31/40]
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-llm-openai-compat 0.2.0-SNAPSHOT                [32/40]
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-shell-tool 0.2.0-SNAPSHOT                       [33/40]
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-shell-docker 0.2.0-SNAPSHOT                     [34/40]
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-interaction-aggregator 0.2.0-SNAPSHOT           [35/40]
+[INFO] Building harness-interaction-approval 0.2.0-SNAPSHOT             [36/40]
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-interaction-ask 0.2.0-SNAPSHOT                  [37/40]
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-interaction-commands 0.2.0-SNAPSHOT             [38/40]
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Building harness-bundle-aggregator 0.2.0-SNAPSHOT                [39/40]
+[INFO] Building harness-bundle-base 0.2.0-SNAPSHOT                      [40/40]
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+
+# bundle/base 段类级行（RowComposerTest + AppBootTest + YamlRowsTest = 4 + 16 + 3 = 23）：
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.057 s -- in io.javanatic.harness.boot.RowComposerTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.320 s -- in io.javanatic.harness.boot.AppBootTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in io.javanatic.harness.boot.YamlRowsTest
+
+# sandbox-local 的两条 WARNING 级行（log 行号 1615/1619；值已计入上文 totals）：
+[WARNING] Tests run: 16, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.192 s -- in io.javanatic.harness.sandbox.local.SandboxLocalTest
+[WARNING] Tests run: 16, Failures: 0, Errors: 0, Skipped: 2
+
+[INFO] BUILD SUCCESS
+[INFO] Total time:  39.401 s
+EXIT=0

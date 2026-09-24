@@ -41,6 +41,8 @@
 
 预构建归档见 [v0.1.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0)：`javanatic-harness-0.1.0-<平台>.tar.gz` / `.zip`（运行时已内置，解压即用 `bin/jh`）；自源码构建见下文。
 
+在自家 Java 服务里嵌入——`AppBoot` 起 agent、自注册插件与工具、keyless 治理自证——见 [docs/embedding.md](docs/embedding.md)；可照抄、可复跑的最小工程在 [`integration/consumer-sample`](integration/consumer-sample)。
+
 ## 环境要求
 
 - **JDK 25**（LTS）+ Maven 3.8+

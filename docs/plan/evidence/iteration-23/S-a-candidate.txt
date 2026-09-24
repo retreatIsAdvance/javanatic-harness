@@ -1,0 +1,102 @@
+# S-a 候选腿 —— 独立工程（非 reactor）仅凭候选工件完成嵌入 + 自注册工具 + 治理自证，exit 0
+# 基线 commit: ed8b1c8（it23 S-a 新增 integration/consumer-sample/**、integration/verify-consumer.sh、docs/plan/iteration-23.md；
+#   主仓 45 模块源码零改动 —— 提交前 git status 仅 "?? docs/plan/iteration-23.md / ?? integration/"）
+# 环境：temurin-25（/usr/libexec/java_home -v 25）+ apache-maven-3.8.8；隔离仓 /tmp/it23-work/repo-candidate
+#   （-Dmaven.repo.local 覆盖，不碰 settings.xml 的 ~/Documents/m2e/repository）
+# 输出 = 绿跑 stdout 全文 + 各步日志决定性行。注：该轮各步日志随后被 S-a-regreen.txt 的同命令复跑按名覆盖，
+#   复跑计数与本文逐项一致；本文各行取自首跑时刻的实际输出（stdout 存档 /tmp/it23-candidate-run2.txt）。
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ CONSUMER_WORK=/tmp/it23-work bash integration/verify-consumer.sh candidate
+
+仓库：/Users/abel_yang/study/deepseek/javanatic-harness
+候选版本：0.2.0-SNAPSHOT（取自根 pom）
+工作目录：/tmp/it23-work
+Maven：/Users/abel_yang/Documents/apache-maven-3.8.8/bin/mvn
+Apache Maven 3.8.8 (4c87b05d9aedce574290d1acc98575ed5eb6cd39)
+Maven home: /Users/abel_yang/Documents/apache-maven-3.8.8
+Java version: 25.0.4.1, vendor: Eclipse Adoptium, runtime: /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+Java：/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/java
+openjdk version "25.0.4.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS)
+== 腿 candidate：harness.version=0.2.0-SNAPSHOT，隔离本地仓 /tmp/it23-work/repo-candidate ==
+  ok   候选：工作树 install → 隔离仓（跳测试）
+  ok   candidate：示例编译
+  ok   candidate：运行类路径
+  ok   candidate：治理自证运行
+  ok   candidate：自证通过
+  ok   candidate：自有工具可见
+  ok   candidate：自有工具可执行
+  用时 92s
+== 三负例（候选仓 / 候选构建产物）==
+  ok   负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+  ok   负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+  ok   负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+
+== 汇总：candidate ==
+失败项：0
+EXIT=0
+
+# ---- 各步命令与决定性行（脚本把命令写入各日志首行 "+ ..."；本段为日志摘录）----
+
+# 1) 工作树 install → 隔离仓（跳过测试；含 dist/jh 的 jlink 镜像组装）
++ /Users/abel_yang/Documents/apache-maven-3.8.8/bin/mvn -B -ntp -f /Users/abel_yang/study/deepseek/javanatic-harness/pom.xml -DskipTests -Dmaven.repo.local=/tmp/it23-work/repo-candidate install
+[INFO] harness-bundle-base ................................ SUCCESS [  0.160 s]
+[INFO] harness-examples-aggregator ........................ SUCCESS [  0.010 s]
+[INFO] harness-examples-agent-spine ....................... SUCCESS [  3.417 s]
+[INFO] harness-examples-headless .......................... SUCCESS [  0.420 s]
+[INFO] harness-dist-aggregator ............................ SUCCESS [  0.011 s]
+[INFO] harness-dist-jh .................................... SUCCESS [ 33.788 s]
+[INFO] BUILD SUCCESS
+[INFO] Total time:  01:28 min
+
+# 2) 示例工程编译（独立坐标 io.github.retreatisadvance.sample:consumer-sample:1.0.0-SNAPSHOT，无 parent 继承）
++ /Users/abel_yang/Documents/apache-maven-3.8.8/bin/mvn -B -ntp -f /Users/abel_yang/study/deepseek/javanatic-harness/integration/consumer-sample/pom.xml -Dmaven.repo.local=/tmp/it23-work/repo-candidate -Dharness.version=0.2.0-SNAPSHOT compile
+[INFO] Compiling 2 source files with javac [debug release 25] to target/classes
+[INFO] BUILD SUCCESS
+
+# 3) 运行类路径（runtime 范围 → 33 条 jar，全部来自隔离仓 /tmp/it23-work/repo-candidate）
++ /Users/abel_yang/Documents/apache-maven-3.8.8/bin/mvn -B -ntp -f /Users/abel_yang/study/deepseek/javanatic-harness/integration/consumer-sample/pom.xml -Dmaven.repo.local=/tmp/it23-work/repo-candidate -Dharness.version=0.2.0-SNAPSHOT org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath -Dmdep.includeScope=runtime -Dmdep.outputFile=/tmp/it23-work/classpath-candidate.txt
+[INFO] Wrote classpath file '/tmp/it23-work/classpath-candidate.txt'.
+[INFO] BUILD SUCCESS
+
+# 4) 治理自证运行（Java 直跑；-cp = 示例 target/classes + 33 条 jar 全路径，此处从略，全行见首跑日志首行）
++ /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/java -cp <示例 target/classes + /tmp/it23-work/repo-candidate 全量 jar> io.github.retreatisadvance.sample.consumer.SelfCheck /Users/abel_yang/study/deepseek/javanatic-harness/integration/consumer-sample/profile/consumer-sample.yml
+profile=/Users/abel_yang/study/deepseek/javanatic-harness/integration/consumer-sample/profile/consumer-sample.yml
+rows.composed=26 rows.enabled=21
+-- effective rows --
+session-store
+persistence-jsonl {root=/Users/abel_yang/.harness/sessions}
+agents
+loop-guard
+system-prompt
+llm
+approval-auto
+tools
+plan {section=Plan mode is active: research and plan only, do not execute yet. Investigate
+with read-only tools (fs_read, fs_list, fs_search; shell for inspection only) and think
+the task through. Use ask_user when a plan-blocking decision belongs to the user.
+When the plan is complete, present it with exit_plan_mode
+as markdown starting with a # heading; on approval, carry it out step by step.
+File-effect restriction is enforced by the sandbox layer (read-only while
+planning); this section states the discipline, the sandbox guarantees it.
+}
+sandbox-local
+sandbox-policy {mode=workspace-write, workspace=/Users/abel_yang/study/deepseek/javanatic-harness}
+fs-local {root=/Users/abel_yang/study/deepseek/javanatic-harness}
+fs-tool
+shell-bash-local
+shell-tool {workspace=/Users/abel_yang/study/deepseek/javanatic-harness, timeoutSeconds=60}
+todo {allowParallelInProgress=false}
+ask-user
+commands
+presets
+agent-loop {cwd=/Users/abel_yang/study/deepseek/javanatic-harness}
+consumer-sample
+-- end effective rows --
+tool.schemas=11 word_count.visible=true
+word_count.invoke.error=false content=words=3
+SELF-CHECK OK
+
+# 决定性点：26 行组合（base 25 + 示例 bundle 1）、21 行启用；示例 bundle 行 consumer-sample 位列末位；
+#   word_count 在 root 视图可见（tools 计数 11 = base 10 + 示例 1）且可执行（content=words=3）；
+#   四个 workspace 键（sandbox-policy/fs-local/shell-tool/agent-loop）同源展开为调用方 cwd。

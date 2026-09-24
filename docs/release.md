@@ -72,7 +72,7 @@ git add -A && git commit -m "chore(release): 0.1.0"
 mvn -B -P release deploy
 ```
 
-> 注：`bundle/headless/` 孤岛 POM 不入 reactor，不参与 versions:set——已知状态（it16 设计偏离④），其旧版本号不影响发布面。
+> 注：`bundle/headless/` 孤岛（it16 设计偏离④：不入 reactor、不参与 versions:set）**从未发布**，已于 it23 删除——发布面无该坐标。
 > 注2：版本变更后 `dist/jh/target/` 残留旧版本 jar，jlink 报 `Two versions of module ... found`；构建前 `rm -rf dist/jh/target` 即可（it16 实撞）。
 
 ## 4. 校验点

@@ -41,6 +41,8 @@ Full design docs: [docs/design/README.md](docs/design/README.md) (13 docs, with 
 
 Prebuilt archives are attached to the [v0.1.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0): `javanatic-harness-0.1.0-<platform>.tar.gz` / `.zip` (runtime baked in — unpack and run `bin/jh`). To build from source instead, see below.
 
+Embedding the harness in your own Java service — compose an agent (`AppBoot`), register your own plugin and tools, run a keyless governance self-check? See [docs/embedding.md](docs/embedding.md); the worked, re-runnable example is [`integration/consumer-sample`](integration/consumer-sample).
+
 ## Requirements
 
 - **JDK 25** (LTS) + Maven 3.8+

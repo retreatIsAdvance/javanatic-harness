@@ -1,0 +1,43 @@
+# S-a 还原复绿 —— 三负例之后以同一命令原地复跑候选腿（含负例段），全绿；证明负例未污染主链路
+# 基线 commit: ed8b1c8（工作树只含 it23 S-a 新增件；复跑前后 git status 均为 "?? docs/plan/iteration-23.md / ?? integration/"）
+# 复跑条件：同一 CONSUMER_WORK=/tmp/it23-work（隔离仓与构建产物已热）→ 腿用时 12s（首跑 92s；
+#   install 步 8.265s 为增量，首跑 01:28 min 为全量含 dist/jh jlink）。用时差异属预期，非判据。
+# 判据 = 逐项计数与首跑一致 + 失败项 0 + EXIT=0。
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ CONSUMER_WORK=/tmp/it23-work bash integration/verify-consumer.sh candidate
+
+仓库：/Users/abel_yang/study/deepseek/javanatic-harness
+候选版本：0.2.0-SNAPSHOT（取自根 pom）
+工作目录：/tmp/it23-work
+Maven：/Users/abel_yang/Documents/apache-maven-3.8.8/bin/mvn
+Apache Maven 3.8.8 (4c87b05d9aedce574290d1acc98575ed5eb6cd39)
+Maven home: /Users/abel_yang/Documents/apache-maven-3.8.8
+Java version: 25.0.4.1, vendor: Eclipse Adoptium, runtime: /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+Java：/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/java
+openjdk version "25.0.4.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS)
+== 腿 candidate：harness.version=0.2.0-SNAPSHOT，隔离本地仓 /tmp/it23-work/repo-candidate ==
+  ok   候选：工作树 install → 隔离仓（跳测试）
+  ok   candidate：示例编译
+  ok   candidate：运行类路径
+  ok   candidate：治理自证运行
+  ok   candidate：自证通过
+  ok   candidate：自有工具可见
+  ok   candidate：自有工具可执行
+  用时 12s
+== 三负例（候选仓 / 候选构建产物）==
+  ok   负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+  ok   负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+  ok   负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+
+== 汇总：candidate ==
+失败项：0
+EXIT=0
+
+# 复跑的自证运行决定性行（run-candidate.log，与首跑逐项一致）：
+rows.composed=26 rows.enabled=21
+tool.schemas=11 word_count.visible=true
+word_count.invoke.error=false content=words=3
+SELF-CHECK OK
+
+# 并行的聚焦回归（S-a-focus.txt）在本轮同批执行：40 工程 / tests=428 / failures=0 / errors=0 / skipped=2 / BUILD SUCCESS。

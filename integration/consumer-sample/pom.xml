@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+      外部消费方示例（it23，指南 docs/embedding.md）：独立工程、独立坐标——
+      不继承 harness-parent（继承会把 junit/assertj/jqwik 等测试依赖一起拖进来），
+      不进主仓 reactor。构建只依赖坐标解析：
+        候选工件：主仓工作树 `mvn install -Dmaven.repo.local=<隔离仓>` →
+                  -Dharness.version=0.2.0-SNAPSHOT
+        发布工件：-Dharness.version=0.1.0（Maven Central）
+    -->
+    <groupId>io.github.retreatisadvance.sample</groupId>
+    <artifactId>consumer-sample</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>consumer-sample</name>
+    <description>外部 Java 接入示例：嵌入 agent、注册自有工具、治理自证</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>25</maven.compiler.release>
+        <!-- 版本单点：0.1.0 = Central 发布件；0.x.0-SNAPSHOT = 工作树 install 的候选件 -->
+        <harness.version>0.2.0-SNAPSHOT</harness.version>
+    </properties>
+
+    <dependencies>
+        <!-- 组合装配面（AppBoot / Policy / YamlRows）及其 compile 依赖 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-bundle-base</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <!-- 嵌入面：Plugin / Runtime / Scope / ServiceKey -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-kernel-core</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <!-- 行模型：ConfigRowSpec（dump 的输入） -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-kernel-config</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <!-- 工具注册面：ToolRegistry / ToolDefinition / ToolArgs / ToolExecutionResult / ValueSchema -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-tools</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-session</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <!-- 模型面：ToolSchema（schemas() 的返回）与 AbortSignal -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-llm-llm</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <!--
+          base bundle 的行引用了这些插件，而 harness-bundle-base 只在测试面依赖它们：
+          运行闭包（= 组合行引用的插件集）由消费方自持，装配期双向校验会点名缺失项。
+        -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-agent</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-system-prompt</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-llm-openai-compat</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-fs-local</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-fs-tool</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-shell-bash-local</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-shell-tool</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-session-persistence-jsonl</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-interaction-approval</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-preset</artifactId>
+            <version>${harness.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>

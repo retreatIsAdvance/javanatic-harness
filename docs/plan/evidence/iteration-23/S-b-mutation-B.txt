@@ -1,0 +1,26 @@
+# S-b 突变 B —— bundle 级未知键检查失效 → bundle 用例必红
+# 基线 commit: ed8b1c8（工作树含 S-b D 实修：YamlRows 三层 allowlist + YamlRowsTest 两用例）
+# 突变 = 临时删去 YamlRows.parseBundle 里的一行 rejectUnknownKeys(root, BUNDLE_KEYS, …)（顶层/行两级保留）
+# 期望判据: 同用例在**第二个**断言（bundle 层）红——行号 77 相对 A(69) 后移，证明是 bundle 段而非顶层段命中；EXIT=1
+# 运行后立即还原该行；提交前工作树不含本突变。
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ mvn -B -ntp -pl bundle/base -am test -Dtest='YamlRowsTest#unknownKeysFailLoudAtAllThreeLayers' -Dsurefire.failIfNoSpecifiedTests=false
+
+[INFO] Running io.javanatic.harness.boot.YamlRowsTest
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.069 s <<< FAILURE! -- in io.javanatic.harness.boot.YamlRowsTest
+[ERROR] io.javanatic.harness.boot.YamlRowsTest.unknownKeysFailLoudAtAllThreeLayers -- Time elapsed: 0.057 s <<< FAILURE!
+java.lang.AssertionError:
+Expecting code to raise a throwable.
+	at io.javanatic.harness.boot.YamlRowsTest.unknownKeysFailLoudAtAllThreeLayers(YamlRowsTest.java:77)
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+EXIT=1
+
+# 还原（恢复该行）后全类复跑：
+$ mvn -B -ntp -pl bundle/base -am test -Dtest='YamlRowsTest' -Dsurefire.failIfNoSpecifiedTests=false
+
+[INFO] Running io.javanatic.harness.boot.YamlRowsTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.085 s -- in io.javanatic.harness.boot.YamlRowsTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+EXIT=0

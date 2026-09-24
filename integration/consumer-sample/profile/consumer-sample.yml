@@ -1,0 +1,7 @@
+# 外部消费方 profile 示例（it23）：base 首层（治理与工具面）+ 自有 bundle（自有插件行）。
+# profile 按文件路径装载；bundle 按 classpath 资源发现、按 name 引用（非 GAV）。
+name: consumer-sample
+policy: STANDARD
+bundles:
+  - base
+  - consumer-sample

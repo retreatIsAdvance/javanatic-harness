@@ -1,6 +1,6 @@
 /**
  * harness-bundle-base — AppBoot(组合数据化:三层行叠加/受限表达式/双向显式校验/
- * dump-config/--verify 与 policy 档位)与 base bundle 行资源(07)。SnakeYAML
+ * 三层未知键 fail loud(it23)/dump 视图/--verify policy 档位)与 base bundle 行资源(07)。SnakeYAML
  * 边界模块(仓库第三第三方,仅此模块)。
  */
 module io.javanatic.harness.bundle.base {
