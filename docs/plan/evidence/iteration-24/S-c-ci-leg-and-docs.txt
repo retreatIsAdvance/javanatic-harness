@@ -1,0 +1,134 @@
+# it24 S-c CI 腿 + 归档冒烟 + 文档收口 —— 工作流静态校验（YAML/语法/断言三分支）+ 全量 package + 归档名核对
+# 基线 commit: ef41e63（HEAD；S-a 8353733 + S-b ef41e63 已提交，未推送）。本停点工作树：7 改（ci.yml + 6 文档）+ 本文件 + 台账（iteration-24.md）。
+# 环境：macOS/aarch64（os.name=Mac OS X）+ temurin-25 + apache-maven-3.8.8
+# 本文件＝实跑输出摘录：每段给出完整命令、决定性输出行与真实 EXIT 回显。
+# 诚实边界（第 8 节）：landlock 硬门、干净容器冒烟、upload-artifact 三项是「首次 CI 跑」的事实——
+#   本地无 Linux 宿主/内核（见 S-a-local-kernel-probe.txt），只能做定义期静态校验与分支演习，不冒充已验。
+
+== 1. CI 定义（`.github/workflows/ci.yml` ubuntu job 的本次增量） ==
+$ git diff .github/workflows/ci.yml
+  + 步骤 6「Pre-flight sandbox probe (landlock: runnable and denying)」：前置硬门 2——走 jlink
+    镜像的模块形态真跑助手 --probe（`"$img/bin/java" -XX:-UsePerfData
+    --enable-native-access=io.javanatic.harness.sandbox.local -m
+    io.javanatic.harness.sandbox.local/...LandlockExecMain --probe`），非 0 即红，结论行 tee 入日志。
+  + 步骤 7「Assert the landlock e2e leg really ran (no silent skip)」：解析 surefire XML，
+    要求 `landlockReadOnlyDeniesRealWriteWithDialectMarker` 与
+    `landlockWorkspaceWriteAllowsInsideAndDeniesOutside` 两条「在 ran 集合内且无 <skipped>」。
+  ~ 步骤 8「Smoke jlink image」：`set -o pipefail` + `--verify` tee 入 `$RUNNER_TEMP/jh-verify-host.txt`
+    + `grep -Fq 'sandbox: confining policy "workspace-write" is enforced by backend "bwrap" (enforcement FULL)'`
+    （linux 第一候选侧点名；S-b 输出契约的落地断言）。
+  + 步骤 9「Archive smoke in a clean container (ubuntu:24.04)」：归档名 glob 推导 dir → docker 内
+    `tar xzf` → `--help` → `--verify > /tmp/verify.txt 2>&1` → 断言容器内 bwrap 不可见（`command -v`）
+    → `grep -F 'bwrap probe failed'`（链第 2 候选现实形态登记：NixOS/精简镜像这类宿主）→
+    `grep -E 'sandbox(:| warning:) confining policy'`（Ready 出 INFO / 全败出 WARNING，两种都算如实）。
+  + 步骤 10 `actions/upload-artifact@v4`：name `javanatic-harness-linux-amd64`，
+    path `dist/jh/target/javanatic-harness-*-linux-*.tar.gz` + `...zip`，`if-no-files-found: error`。
+# 断言串与产出文本逐字节核对（两处 grep 取自生产代码的拼接原样）：
+#   AppBoot.java:256  "sandbox: confining policy \"" + mode + "\" is enforced by backend \""
+#                     + ready.backend() + "\" (enforcement " + ready.enforcement() + ")"
+#   AppBoot.java:233/238  两分支 WARNING 均以 "sandbox warning: confining policy \"<mode>\" is configured but ..." 开头
+#   SandboxLocalPlugin.java:356  id() + " probe failed (binary: " + bwrapBinary + ")"  （id=bwrap）
+
+== 2. YAML 可解析 + ubuntu job 步骤清单（11 步，新增 2 步 + 归档取件 1 步） ==
+$ ruby -ryaml -e 'w = YAML.load_file(".github/workflows/ci.yml"); ...'
+jobs: build, macos
+ 1  actions/checkout@v4
+ 2  actions/setup-java@v4
+ 3  Pre-flight sandbox probe (bwrap: runnable and denying)
+ 4  Provision docker test image
+ 5  Build and test
+ 6  Pre-flight sandbox probe (landlock: runnable and denying)
+ 7  Assert the landlock e2e leg really ran (no silent skip)
+ 8  Smoke jlink image
+ 9  Archive smoke in a clean container (ubuntu:24.04)
+10  actions/upload-artifact@v4
+11  Verify external consumer sample (candidate leg)
+EXIT=0
+
+== 3. 每个 run 块 bash -n（含既有块回归；ruby 按 YAML 解析逐块落盘再检） ==
+OK    bash -n  step03.sh  (Pre-flight sandbox probe (bwrap: runnable and denying))
+OK    bash -n  step04.sh  (Provision docker test image)
+OK    bash -n  step05.sh  (Build and test)
+OK    bash -n  step06.sh  (Pre-flight sandbox probe (landlock: runnable and denying))
+OK    bash -n  step07.sh  (Assert the landlock e2e leg really ran (no silent skip))
+OK    bash -n  step08.sh  (Smoke jlink image)
+OK    bash -n  step09.sh  (Archive smoke in a clean container (ubuntu:24.04))
+OK    bash -n  step11.sh  (Verify external consumer sample (candidate leg))
+all run blocks bash -n: PASS
+
+== 4. 容器内层脚本 sh -n（从步骤 9 的 run 文本内层行抽出后的真身） ==
+$ sh -n /tmp/sc-blocks/inner.sh
+--- inner script ---
+  tar xzf /drop/$name
+  ./$dir/bin/jh --help
+  ./$dir/bin/jh --verify > /tmp/verify.txt 2>&1
+  if command -v bwrap > /dev/null; then echo 'unexpected: bwrap present in the clean container'; exit 1; fi
+  grep -F 'bwrap probe failed' /tmp/verify.txt
+  grep -E 'sandbox(:| warning:) confining policy' /tmp/verify.txt
+sh -n: PASS
+# $name/$dir 由外层 bash 在 docker 前展开（内层 sh 拿不到宿主变量）——归档名 glob 推导见第 7 节。
+
+== 5. 步骤 7 断言的本地三分支演习（脚本与 ci.yml 内嵌同源，dry-run 真跑） ==
+$ python3 /tmp/sc-blocks/assert-leg.py <surefire XML>          # 判定体逐字取自步骤 7
+
+(a) 负分支（本机真 XML：darwin 上两条 linux 腿被平台分区跳过）——必须红：
+landlock leg not really run: missing=[] skipped=['landlockReadOnlyDeniesRealWriteWithDialectMarker', 'landlockWorkspaceWriteAllowsInsideAndDeniesOutside']
+EXIT=1
+
+(b) 正分支（同 XML 剥掉 <skipped/> 模拟 Linux 全跑；testcase 计数不变 23==23）——必须绿：
+landlock e2e ran for real: landlockReadOnlyDeniesRealWriteWithDialectMarker, landlockWorkspaceWriteAllowsInsideAndDeniesOutside
+EXIT=0
+
+(c) 缺测试分支（正分支 XML 里删掉一条 landlock 用例）——必须红：
+landlock leg not really run: missing=['landlockWorkspaceWriteAllowsInsideAndDeniesOutside'] skipped=[]
+EXIT=1
+# 三分支＝「静默跳过不算绿」的三种失败面（跳/缺/正常）都被断言抓住；本机可验部分到此为止，
+#   真 runner 上的落点（ABI≥3 + seccomp 放行）归第 8 节的首次 CI 跑。
+
+== 6. 全量 package（本机 darwin 终局回归：7 改文档 + ci.yml 不影响编译，仍全绿） ==
+$ JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn -B -ntp package
+[INFO] BUILD SUCCESS   （Total time: 51.726 s）
+EXIT=0
+# 测试总账（30 个含测试模块的 "Results:" 段落求和）：
+TOTAL tests=544 failures=0 errors=0 skipped=7
+# 7 条跳过逐条枚举（平台/凭据分区，非静默）：
+examples/agent-spine -> realModelDrivesToolsThroughExecutor        （无 API key）
+llm/deepseek         -> realCompletionRoundTrips                   （无 API key）
+sandbox/local        -> helperProbeOnLinuxSpeaksOnlyProtocolVerdicts（linux 腿）
+sandbox/local        -> landlockWorkspaceWriteAllowsInsideAndDeniesOutside, bwrapReadOnlyDeniesRealWriteWithDialectMarker,
+                        landlockReadOnlyDeniesRealWriteWithDialectMarker, bwrapWorkspaceWriteAllowsInsideAndDeniesOutside
+# 其中 2 条 landlock = 步骤 7 断言在 CI 上要求「真跑」的对象（本机必跳、CI 必跑，口径一致）。
+
+== 7. 归档名与 glob 推导核对（步骤 9 的前置事实） ==
+$ sed -n '125,160p' dist/jh/pom.xml
+  <id>archive-linux</id>
+  <activation><os><family>unix</family><name>Linux</name></os></activation>
+  <properties><jh.archive.platform>linux-${os.arch}</jh.archive.platform></properties>
+  <jh.archive.name>javanatic-harness-${project.version}-${jh.archive.platform}</jh.archive.name>
+# linux 档 = javanatic-harness-<version>-linux-<os.arch>；x86_64 JDK 下 os.arch=amd64 ⇒
+#   javanatic-harness-0.2.0-SNAPSHOT-linux-amd64.tar.gz —— 与 glob `javanatic-harness-*-linux-*.tar.gz` 吻合。
+$ ls dist/jh/target/javanatic-harness-*-linux-* 2>&1; echo "EXIT=$?"
+(eval):1: no matches found: dist/jh/target/javanatic-harness-*-linux-*
+EXIT=1
+$ ls dist/jh/target/javanatic-harness-* 2>/dev/null                    # 本机真产物名做同构对照：
+dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.tar.gz
+dist/jh/target/javanatic-harness-0.2.0-SNAPSHOT-macos-aarch64.zip
+#（EXIT=1＝本机无 linux 档，符合平台；zsh 无匹配即报错、bash 下 glob 留原文——CI 是 bash，
+#  归档缺失时 tar 会以「文件不存在」fail loud，非静默。）
+$ ./dist/jh/target/jlink-image/bin/jh --verify 2>&1 | grep -E 'sandbox'
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+# ↑ 本机是 darwin 侧形态（seatbelt）；CI 步骤 8 断言的 bwrap 侧串与之同构（同一 sandboxLine 拼接，
+#   仅 backend 部件不同）——格式已由本机真跑逐字节坐实，词替换面归首次 CI 跑（第 8 节）。
+$ ./dist/jh/target/jlink-image/bin/jh --verify > /dev/null 2>&1; echo "EXIT=$?"
+EXIT=0
+
+== 8. 本机不可验边界（如实标注；首次 CI 跑后回填去向） ==
+- 步骤 6 landlock 硬门能否在 runner 上通过：取决于 runner 内核 ABI≥3 与 sysctl/AppArmor 面——本机无
+  landlock 内核（S-a-local-kernel-probe.txt 已实探），不可预验；CI 首跑结论若有偏差，按「回填」惯例补记。
+- 步骤 9 容器内 `--verify` 的两分支（landlock 可用 ⇒ INFO / 全败 ⇒ WARNING）与 docker 默认 seccomp 对
+  landlock 系统调用的放行情况：不预设、看日志；本机 docker.io 不可达（it24 实探），容器验不可本地复现。
+- 步骤 10 upload-artifact：仅 CI 环境可验（本地非 CI 无 artifact 服务）。
+- 05 §6 新记的 landlock `/dev/null` 写被拒（EACCES）：allow-list 语义的直接推论（写效果不在
+  任何可写根之下即拒），本机无 landlock 内核不可实测——已在 05 与台账同步标注；Linux 腿真跑后
+  可顺手复核该推论（不必为它单开用例）。
+- 三条均为**机械性事实**，不改变 S-c 的文档/定义面结论；首次 CI 跑（需 push 放行）后本节改为回填记录。

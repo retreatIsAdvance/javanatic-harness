@@ -183,20 +183,20 @@ class AgentLoopFactory implements AgentFactory {
 Preset 是 per-session 的 agent 组合，从 preset 文件在 agent scope 下挂载一组 plugin 行：
 
 ```yaml
-# ~/.harness/presets/coder/preset.yml
-name: coder
+# ~/.harness/presets/coder/preset.yml    （目录名即 preset id）
 description: A coding-focused agent
 rows:
   - plugin: fs-tool
   - plugin: shell-tool
   - plugin: lsp-tool            # 留接口档，见 05 §9
   - plugin: fs-observation-policy
-config:
-  fs:
-    workspaceRoot: ${cwd}
-  sandbox:
-    mode: landlock
 ```
+
+**档位不在 preset 里配**：沙箱模式是组合层 `sandbox-policy` 行的 `mode`（词表
+`read-only` / `workspace-write` / `danger-full-access`，写法见
+`bundle/base/src/main/resources/META-INF/harness/bundle.yml` 的该行）；`landlock`
+不是模式词而是**后端**，由平台链按能力选（05 §6）。preset 行只承载 `plugin`
+（行上 `config` 目前只解析不参与装配——`PresetService.mount` 按 plugin 装载）。
 
 ```java
 // io.javanatic.harness.preset.AgentPresets

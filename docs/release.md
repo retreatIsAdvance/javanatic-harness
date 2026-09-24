@@ -110,6 +110,8 @@ GitHub Release：附归档 + notes。归档在**构建平台**产出（jlink 镜
 
 - `dist/jh/target/javanatic-harness-0.1.0-<平台>.tar.gz` 与同名 `.zip`（解压即用，顶层目录同名）
 - 0.1.0 首发附本机（macOS/aarch64）归档；Linux 归档在 Linux 机器 `mvn -B package` 同法产出（CI 上传自动化留后续迭代）
+- it24 起 Linux 归档由 CI 供件：ubuntu job 产出 `javanatic-harness-*-linux-amd64.{tar.gz,zip}`，在干净 `ubuntu:24.04` 容器内解压冒烟（无 Maven/JDK/bwrap）后经 `actions/upload-artifact` 供下载，见该 job 的 `javanatic-harness-linux-amd64` artifact
+- **tag→GitHub Release 附件自动化点名推迟 it25**（0.2.0 发布工程一并做，发布动作用户侧）
 
 ## 6. 发布后（main 前进）
 
@@ -129,3 +131,4 @@ git add -A && git commit -m "chore: bump 0.2.0-SNAPSHOT"
 - `mvn -B package` 顺带产出 tar.gz/zip（it16 S3）：`--compress=zip-6`——镜像 86M → 53M（-38%；另 `jdk.httpserver` 出链，镜像模块 41 → 40）
 - 权限面：`bin/`、`lib/`（含 jspawnhelper）带执行位；`conf/`、`legal/`、`release` 常规位
 - 验收口径：解压后 `<dir>/bin/jh --help` 与 `<dir>/bin/jh --verify` 均 exit 0（无 key 可跑）
+- CI 验收口径（it24）：除构建平台本机跑这两条外，ubuntu job 还在干净 `ubuntu:24.04` 容器内解压重跑（无 Maven、无 JDK、PATH 无 bwrap），并断言沙箱诊断如实点名 bwrap 不可见——「干净 Linux 环境可安装运行」的实跑证据

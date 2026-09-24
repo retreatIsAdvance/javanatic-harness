@@ -68,11 +68,11 @@ rows:
 ```yaml
 # ~/.harness/profiles/prod/patch.yml
 rows:
-  - plugin: shell-bash-local     # 替换 base 的同名行（换 provider 不改代码）
-    replace: true
+  - plugin: sandbox-policy       # 改档：模式落在 policy 行（mode/workspace 是实况词表；
+    replace: true                # 后端 seatbelt/bwrap/landlock 由平台链按能力选，见 05 §6）
     config:
-      sandboxMode: landlock
-      workspaceRoot: ${cwd}
+      mode: workspace-write
+      workspace: ${cwd}
 
   - plugin: approval-ask         # 插入新行（生产档要求 human-gate，见 §6）
     after: session-store

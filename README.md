@@ -39,7 +39,7 @@ Full design docs: [docs/design/README.md](docs/design/README.md) (13 docs, with 
 </dependency>
 ```
 
-Prebuilt archives are attached to the [v0.1.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0): `javanatic-harness-0.1.0-<platform>.tar.gz` / `.zip` (runtime baked in — unpack and run `bin/jh`). To build from source instead, see below.
+Prebuilt archives: the [v0.1.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0) carries the macOS/aarch64 archive (`javanatic-harness-0.1.0-macos-aarch64.tar.gz` / `.zip`; runtime baked in — unpack and run `bin/jh`). Linux archives are built, smoke-tested in a clean `ubuntu:24.04` container, and attached to every CI run as the `javanatic-harness-linux-amd64` artifact (Release attachments for Linux land with the 0.2.0 release). To build from source instead, see below.
 
 Embedding the harness in your own Java service — compose an agent (`AppBoot`), register your own plugin and tools, run a keyless governance self-check? See [docs/embedding.md](docs/embedding.md); the worked, re-runnable example is [`integration/consumer-sample`](integration/consumer-sample).
 
@@ -156,7 +156,7 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 
 **Planning principle**: maintainer-led scenarios, real-task acceptance, and community feedback for calibration—not a prerequisite to begin. These future stages have not started; scope, dependencies, and acceptance gates live in the overall plan, with each iteration requiring its own scope confirmation and review checkpoints.
 
-**0.1.0 platform support**: macOS and Linux (including on-host sandboxing). macOS ships seatbelt, works out of the box; Linux uses bwrap — **the host must install bubblewrap**, then it works out of the box; hosts without userns privileges fall back fail-closed (Landlock is the 0.2.0 fallback). **Windows is not in the 0.1.0 support surface** — no on-host sandbox backend, and `shell-bash-local` assumes bash exists (pwsh provider pending); both land with windows-acl in 0.2.0.
+**Platform support (current tree — 0.2.0 series, not yet released)**: macOS and Linux, including on-host sandboxing. macOS ships seatbelt and works out of the box. On Linux the platform chain takes the first usable backend: bwrap when the host has bubblewrap installed, otherwise the bundled Landlock helper (kernel ABI ≥ 3 — nothing extra to install; the archive's own JVM self-confines and then execs the target), and hosts where neither is usable fail closed with a named reason and a way out in `--verify`. The v0.1.0 release shipped the macOS archive only; Linux archives ride every CI run as an artifact until 0.2.0 attaches them to a Release. **Windows is not in the support surface yet** — no on-host sandbox backend, and `shell-bash-local` assumes bash exists (pwsh provider pending); both land with windows-acl in 0.2.0.
 
 R1–R4 tests travel with each slice, never backfilled at the end ([10-testing.md](docs/design/10-testing.md)).
 

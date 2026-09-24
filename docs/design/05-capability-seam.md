@@ -467,7 +467,10 @@ denied`；功能探针 `bwrap --ro-bind / / --dev /dev --die-with-parent -- true
 不受控）；拒绝方言 `Permission denied`（EACCES，无 EROFS 面）；助手命令带
 `-XX:-UsePerfData` 与 `--enable-native-access`（classpath/模块路径/镜像三形态按运行
 事实择一，classpath 取助手类 code source——surefire 的 `java.class.path` 是空 booter
-jar）；机制结论（ABI/rights/正对照）来自探针内实测而非版本猜测）。
+jar）；机制结论（ABI/rights/正对照）来自探针内实测而非版本猜测；助手退出码协议即诊断
+词表——0 通过 / 10 平台或内核不支持 / 11 ABI 不足 / 12 机制未真拒写 / 13 应用失败 /
+14 用法 / 127 exec 失败，非 0 一律 fail-closed，末行结论原样进 `Ready.detail` 或
+`ProbeFailed.detail`）。
 win32=[]（windows-acl 入 0.2.0：WRITE_RESTRICTED 受限令牌 +
 per-workspace SID 常设授予 + per-session 随机临时目录/SID，**enforcement=PARTIAL 及
 两洞**——Everyone-可写外部对象仍可写、NTFS 硬链接别名越界，stderr 签名 + exit 127
@@ -486,7 +489,15 @@ bubblewrap / windows-acl 入 0.2.0）；`Ready` → 一行 **INFO 落点**（生
 **已知残余（诚实记录）**：读可见性与网络不在约束面（词表外，与 seatbelt 对齐）——
 bwrap 链不加 `--unshare-pid`/`--unshare-net`，`--ro-bind / /` 下宿主文件系统整体
 读可见、/proc 为宿主视图；非特权 userns 被内核策略禁用（如 AppArmor 收紧的
-Ubuntu 24.04 默认态）的主机受限档 fail-closed；denial 标记以 `exit≠0` 为门
+Ubuntu 24.04 默认态）的主机由第二候选 landlock 接住，两候选都不可用才 fail-closed；
+bwrap 定位不到或不可用的宿主形态（NixOS 这类发行版布局：二进制在 store 里而不在
+系统 PATH——与「未安装」同一探针结论）同理——`bwrap probe failed` 在诊断里实名登记，
+链按序落到 landlock（CI 的干净容器冒烟即该形态的真跑登记：容器内无 bwrap，
+`--verify` 必现该点名行）；
+landlock 腿的写授权只到可写根——`/dev/null` 不在 `WritableRoots` 内，该腿下
+`cmd > /dev/null` 被拒（EACCES；与 seatbelt 的 `(literal "/dev/null")` 放行、bwrap
+的新 devtmpfs 不同，差异如实记此、不假装同构；此为 allow-list 语义的直接推论，
+无 landlock 内核的宿主上未实测）；denial 标记以 `exit≠0` 为门
 （§5 docker 同款 seam 属性，修正归 seam 层）。
 
 **消费端接线**：shell——`ShellRequest` 携带非空策略，bash-local 对受限档 wrap argv 再

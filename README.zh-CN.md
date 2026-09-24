@@ -39,7 +39,7 @@
 </dependency>
 ```
 
-预构建归档见 [v0.1.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0)：`javanatic-harness-0.1.0-<平台>.tar.gz` / `.zip`（运行时已内置，解压即用 `bin/jh`）；自源码构建见下文。
+预构建归档：[v0.1.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0) 附的是 macOS/aarch64 归档（`javanatic-harness-0.1.0-macos-aarch64.tar.gz` / `.zip`；运行时已内置，解压即用 `bin/jh`）。Linux 归档由 CI 每次构建产出——在干净 `ubuntu:24.04` 容器内冒烟后作为 `javanatic-harness-linux-amd64` artifact 供下载（Release 附件随 0.2.0 发布挂上）；自源码构建见下文。
 
 在自家 Java 服务里嵌入——`AppBoot` 起 agent、自注册插件与工具、keyless 治理自证——见 [docs/embedding.md](docs/embedding.md)；可照抄、可复跑的最小工程在 [`integration/consumer-sample`](integration/consumer-sample)。
 
@@ -108,7 +108,7 @@ docs/design/        13 篇设计文档（00-overview … 12-api-stability）+ do
 docs/dsh-reference.md   设计参照系说明（dsh 仓库路径约定）
 kernel/             Cordis 等价物：core（统一 Scope/Events/Plugin）+ brand + config（YAML + ConfigService）
 core/               Agent 主干：session/tools/todo/plan/agent/agent-loop/system-prompt/preset（全部已实现）
-sandbox/            同机进程约束：Definition + seatbelt/bwrap Provider + 策略解析（darwin/linux 实测；windows 设计先行）
+sandbox/            同机进程约束：Definition + 平台链（seatbelt | bwrap→landlock）+ 策略解析（darwin/linux 真 OS 实测；windows 设计先行）
 llm/                seam + replay（keyless 测试地基）+ openai-compat（通用适配器）+ deepseek（真实 Provider）
 fs/ shell/          capability 三角色（均已实现；shell 有两个互斥 Provider——本机 bash 与 docker 容器，见 it12.5）
 session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端（R1 闭环）
@@ -146,7 +146,7 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 
 **规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。以上未来阶段均未开工；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。
 
-**0.1.0 平台支持面**：macOS 与 Linux 可用（含同机沙箱）。macOS 自带 seatbelt、开箱即用；Linux 走 bwrap——**需主机安装 bubblewrap**，就绪后开箱可用；无 userns 权限的主机受限档 fail-closed（Landlock 兜底入 0.2.0）。**Windows 不在 0.1.0 支持面**——缺同机沙箱后端，且 `shell-bash-local` 假设 bash 存在（pwsh provider 待做），两者随 windows-acl 一并排入 0.2.0。
+**平台支持面（当前树——0.2.0 系列，尚未发布）**：macOS 与 Linux 可用（含同机沙箱）。macOS 自带 seatbelt、开箱即用。Linux 走平台链：装了 bubblewrap 用 bwrap，没装则落自带 Landlock 助手（内核 ABI ≥ 3——无须额外安装，归档自带的 JVM 先自限制再 exec 目标），两条都不可用时受限档 fail-closed，`--verify` 点名原因与出路。v0.1.0 发布只附了 macOS 归档，Linux 归档在 0.2.0 挂上 Release 之前以 CI artifact 供取件。**Windows 暂不在支持面**——缺同机沙箱后端，且 `shell-bash-local` 假设 bash 存在（pwsh provider 待做），两者随 windows-acl 一并排入 0.2.0。
 
 R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 

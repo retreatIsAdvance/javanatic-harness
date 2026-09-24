@@ -1,4 +1,4 @@
-# 迭代 24 — Linux 交付与 Landlock（状态：进行中——四确认与 ①–⑤ 裁决 2026-09-24 落盘（全按建议）；三处事实订正与七条锚点增强并入）
+# 迭代 24 — Linux 交付与 Landlock（状态：S-a / S-b / S-c 三段全部落盘并放行（2026-09-24）；S-a/S-b 已按「放行 S-b，按两提交收口」裁决收口（`8353733` / `ef41e63`，未推送），S-c（CI 腿 + 归档冒烟 + 文档）随收口提交一并落盘；全量 package 544/0/0/7 绿（本机 darwin）；首次 CI 跑（landlock 硬门 / 容器冒烟 / upload-artifact 三项）待 push 放行后回填——S-c 证据第 8 节已如实标注边界）
 
 模块：`sandbox/local`（linux 候选链 + landlock 后端 + FFM 自限制助手）· `sandbox/sandbox`（`BackendStatus` 能力诊断契约扩展）· `bundle/base`（`AppBoot` verify 沙箱行）· `.github/workflows/ci.yml`（landlock 腿 + 归档冒烟 + artifact）· `docs/design/{05,README}` · `docs/release.md` · `README{,.zh-CN}.md` · `bundle/base/src/main/resources/META-INF/harness/bundle.yml`（注释）· `docs/design/{06,07}`（漂移订正）
 
@@ -101,9 +101,9 @@
 | `sandbox/local` · 新增 `Landlock.java` / `LandlockExecMain.java` | FFM 自限制后 exec；架构白名单 fail loud；rights 子集探测；no_new_privs 前置；负向自检 | ✓（S-a） |
 | `sandbox/sandbox` · `BackendStatus.Ready` | 扩 enforcement + detail；消费方（AppBoot/测试）随动；设计同步② | ✓（S-b） |
 | `bundle/base` · `AppBoot.sandboxWarning`(:228-254) | Ready 沙箱行 + 级联失败点名；exit 码/预警语义不变 | ✓（S-b） |
-| `.github/workflows/ci.yml` ubuntu job | landlock 腿 + 归档冒烟（解压/`--help`/`--verify`/PATH 下 bwrap 不可见诊断行）+ upload-artifact | |
-| `docs/design/05` §6、`README{,.zh-CN}.md`、`docs/release.md`、bundle.yml 注释 | 链/形状/洞/进程树/归档获取同步 | 部分（05 §6、12 §3、bundle.yml 注释 ✓ S-b；README×2/release.md 待 S-c） |
-| `06-scope.md:198`、`07-profile-bundle.md:74` | 漂移订正（限定词汇表回落实况） | |
+| `.github/workflows/ci.yml` ubuntu job | landlock 腿 + 归档冒烟（解压/`--help`/`--verify`/PATH 下 bwrap 不可见诊断行）+ upload-artifact | ✓（S-c：前置硬门 2 真跑助手 `--probe` + surefire XML 断言「跑了且没跳过」+ verify 落点点名 bwrap 断言 + `ubuntu:24.04` 容器解压冒烟 + `upload-artifact@v4`；定义期静态校验与断言三分支演习见 S-c 证据，真 runner 落点待首次 CI 跑回填） |
+| `docs/design/05` §6、`README{,.zh-CN}.md`、`docs/release.md`、bundle.yml 注释 | 链/形状/洞/进程树/归档获取同步 | ✓（S-c 补齐：05 §6 退出码协议 + `/dev/null` 与 seatbelt 差异 + NixOS 宿主形态登记；README×2 平台段与归档索取；release.md §5/§8；05 §6 / 12 §3 / bundle.yml 注释 S-b 已在案） |
+| `06-scope.md:198`、`07-profile-bundle.md:74` | 漂移订正（限定词汇表回落实况） | ✓（S-c：06 示例回收 `description`+`rows` 实况并补「档位不在 preset 里配」（含 preset 行 `config` 只解析不装配的实况）；07 patch 示例改 `sandbox-policy` 行 `mode`/`workspace`） |
 | `sandbox/local` · `SandboxLocalTest`（+ landlock 形状/仲裁/负向 e2e `@EnabledOnOs(OS.LINUX)`） | 聚焦测试 + 突变 | ✓（S-a 形状/负向 e2e；S-b 仲裁/诊断/包装） |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行，全机械迭代写「无」）
@@ -112,7 +112,7 @@
 |---|---|---|
 | S-a：**自限制助手与 FFM 绑定**（安全不变量承载类：allow-list 口径、no_new_privs 顺序、架构 fail loud、双形启动、负向自检） | `Landlock.java`、`LandlockExecMain.java` | **停点已达并已放行（2026-09-24；裁决「放行 S-a，继续 S-b」）**：`Landlock.java`（FFM 五形状 + 三形态启动 + 严格解析 + 负向探针 + 退出码协议）与 `LandlockExecMain.java` 落盘；`LandlockTest` 17 测试（1 条 Linux 腿在 darwin 跳过）；双形启动真命令各 exit 10 点名平台、用法拒绝 exit 14；五突变必红→还原复绿（M1/M2/M3/M4/M5）；**M4 首轮自曝测试缺陷已修**（平台分区曾借被测代码判断 → 改 `@EnabledOnOs`）；本机不可验边界如实标注（darwin 无 landlock 内核、容器内 Linux JDK 17 低于 FFM 定稿线 22——瓶颈是缺席的 Linux 宿主/内核，非 JDK 版本线 → 正路径归 S-c CI） |
 | S-b：**链仲裁与诊断契约**（跨模块契约变更：链序、探针、`BackendStatus` 扩展、`--verify` 输出） | `SandboxLocalPlugin` 链、`BackendStatus`、`AppBoot.sandboxWarning` | **停点已达并已放行（2026-09-24；裁决「放行 S-b，按两提交收口」）**：链 `linux=[bwrap, landlock]`（选择期 fallback：探针一次、缓存、进程生命周期内不切换）+ `LandlockBackend`（helper 命令双形 + 负向探针 + 结论行回收）；`BackendStatus.Ready(backend, enforcement, detail)` 三部件（fail-loud 构造）；`AppBoot` 双级观测——`sandboxWarning` 字节不变、新增 `sandboxLine` + 可注入 `emitSandboxObservations`（WARNING/INFO 两级，exit 码不变）；聚焦三模块全绿（LandlockTest 17 / SandboxLocalTest 23 / AppBootTest 21，跳过项为平台分区）；真 `jh --verify` 出 INFO 沙箱行（证据第 3 节）；突变 5 条必红→还原复绿；**JUL 一次性流绑定缺陷自曝并修**（修正表）；随 S-b 落盘两台账小项（EFAULT 归属措辞对齐见 `S-a-landlock-helper.txt` §4；JDK 口径统一见本节三处） |
-| S-c：CI 腿 + 归档冒烟 + 文档 + 收口 | （不设停点：机械为主） | —（待办已并入：CI landlock 腿 + 归档冒烟/upload-artifact · README×2/release.md · 06:198 与 07:74 漂移订正 · 05 §6 补 `--verify` `/dev/null` 与 seatbelt 差异一句 · 退出码协议一句带过 · NixOS 探针尾步登记） |
+| S-c：CI 腿 + 归档冒烟 + 文档 + 收口 | （不设停点：机械为主） | **已完成（2026-09-24，随收口提交）**——待办逐条落地：① CI landlock 腿＝前置硬门 2（jlink 镜像模块形态真跑助手 `--probe`，非 0 即红）+ 配套 surefire XML 断言（两条 landlock e2e「跑了且没跳过」，跳/缺/正常三分支本地演习过）；② 归档冒烟＝`ubuntu:24.04` 容器内解压重跑（`--help`/`--verify`，断言 bwrap 不可见点名行 + 沙箱行如实两分支）+ `upload-artifact@v4`（`javanatic-harness-linux-amd64`，`if-no-files-found: error`）；③ README×2/release.md 按 S-b 输出契约与归档实况同步；④ 05 §6 补退出码协议一句带过与 `/dev/null`/seatbelt 差异一句，并按「NixOS 探针尾步登记」把「bwrap 定位不到」宿主形态写进已知残余（连 CI 容器冒烟作真跑登记——**此处为解释性落点，若原意是代码级探针步骤新增请指出，回填订正**）；⑤ 06/07 两处漂移订正（示例回落实况词表）。本地校验：YAML 可解析（11 步）、8 个 `run` 块 `bash -n` 全过、容器内层脚本 `sh -n` 过、断言脚本三分支演习齐、全量 package 544/0/0/7 绿；**边界**：landlock 硬门真跑、容器 seccomp 行为、artifact 上传三项为首次 CI 跑事实，本机不可预验（证据第 8 节登记，push 后回填）。**发现残余（候选挂账）**：landlock 腿写授权只到可写根，`/dev/null` 不在 `WritableRoots` 内 ⇒ 该腿下 `cmd > /dev/null` 被拒（EACCES），与 seatbelt/bwrap 行为不同——已在 05 §6 如实记账（**标为 allow-list 语义推论、本机无 landlock 内核未实测**），未修（修法涉及 `WritableRoots` 单一来源语义，宜与 sandbox 策略同议） |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-24/）
 
@@ -123,15 +123,18 @@
 | `S-a-ffm-shape-probe.java` | FFM 绑定形状的本机实跑探针源码（上文件第 4 节命令的执行体，未参与构建；含「形状错=静默传错参」实证 (f)，六次实跑 errno 14×3 / 22×3 摆动） |
 | `S-b-chain-and-diagnostics.txt` | S-b 停点：链仲裁（`[bwrap, landlock]` 选择期 fallback、探针缓存与结论行回收）· `BackendStatus.Ready` 三部件 · `--verify` 双级观测（真 `jh --verify` 出 INFO 沙箱行）· JUL 一次性流绑定探针 · 突变 M1–M5 必红→还原复绿 |
 | `S-b-jul-err-binding-probe.java` | 「JUL 后端在首条记录发布时一次性绑定 `System.err`」的独立复现源（上文件第 4 节命令的执行体；修正表缺陷的实证，未参与构建） |
+| `S-c-ci-leg-and-docs.txt` | S-c 收口：CI 增量逐条（硬门 2 / 断言 / verify 点名 / 容器冒烟 / artifact）· YAML 可解析与 11 步清单 · 8 个 `run` 块 `bash -n` 全过 · 容器内层脚本 `sh -n` · 断言脚本三分支演习（跳/缺/正常）· 全量 package 544/0/0/7 + 7 条跳过逐条枚举 · 归档名与 glob/profile 核对 + 本机 `--verify` 同构行 · **第 8 节：三项首次 CI 跑事实的边界登记（待 push 后回填）** |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] 干净 Linux 环境可安装运行（归档在干净容器/主机解压 → `--help`/`--verify` 全绿）
-- [ ] bwrap 不可用时按能力选择（链仲裁落到 landlock，真拒写真放行，CI linux 腿 + 本机容器）
-- [ ] 不满足约束时 fail-closed（ABI<3 / LSM 缺失 / 两候选全败 → 点名原因，不裸跑）
-- [ ] 真实 OS 验证，不以编译通过代替（darwin 不可验项如实标注；CI/容器实跑证据在案）
-- [ ] 全 reactor `mvn -B -ntp package` 绿（本机 darwin + CI 双 job）
-- [ ] 文档同步（05/README×2/release.md/bundle.yml 注释 + 06/07 两处漂移订正）
+- [ ] 干净 Linux 环境可安装运行（归档在干净容器/主机解压 → `--help`/`--verify` 全绿）——**CI 侧定义 ✓ S-c**（`ubuntu:24.04` 容器冒烟步骤 + artifact 取件；归档名/glob/profile 推导已核对，`S-c-ci-leg-and-docs.txt` §7）；**实跑待首次 CI 跑回填**（本机 docker.io 不可达，无 Linux 宿主）
+- [ ] bwrap 不可用时按能力选择（链仲裁落到 landlock，真拒写真放行，CI linux 腿 + 本机容器）——**CI 侧定义 ✓ S-c**（硬门 2 真跑助手 `--probe` + 两条 landlock e2e 断言「跑了且没跳过」+ 容器内 bwrap 不可见点名行断言；断言三分支演习齐，§5）；**真 runner 落点待首次 CI 跑回填**（本机无 landlock 内核）
+- [x] 不满足约束时 fail-closed（ABI<3 / LSM 缺失 / 两候选全败 → 点名原因，不裸跑）——助手退出码 10/11/12/13/14/127 全 fail-closed + 结论行回收（`S-a-local-kernel-probe.txt` / `S-a-landlock-helper.txt`）；链仲裁与全败点名由 `SandboxLocalTest` 注入式 e2e 覆盖（S-b，平台无关，本机真跑 23/0/0/4）
+- [ ] 真实 OS 验证，不以编译通过代替（darwin 不可验项如实标注；CI/容器实跑证据在案）——darwin 侧真跑在案（seatbelt 真强制 e2e + 真 `jh --verify` INFO 行，S-b）；**linux 侧实跑（landlock 硬门/容器）待首次 CI 跑回填**
+- [ ] 全 reactor `mvn -B -ntp package` 绿（本机 darwin + CI 双 job）——**本机 ✓ S-c**（544/0/0/7，跳过 7 条逐条枚举见 §6；30 个含测试模块）；**CI 双 job 待首次 CI 跑回填**
+- [x] 文档同步（05/README×2/release.md/bundle.yml 注释 + 06/07 两处漂移订正）——S-b 落 05 §6/12 §3/bundle.yml 注释；S-c 补齐 05 §6 退出码协议与 `/dev/null`/seatbelt 差异、README×2 平台段与归档索取、release.md §5/§8、06/07 漂移订正
+
+**首跑回填（照 it23 先例）**：push 放行后 CI 首次跑，上列 1/2/4/5 的 CI 侧与 CI run id 一次回填；若 landlock 硬门或容器 seccomp 面与定义期判断有偏差，按「回填／修正表」惯例订正，不改本节已 ✓ 的本地部分。
 
 ## 修正（如有）
 
@@ -144,3 +147,5 @@
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
 | 锚点增强 2 的 unnamed 形态写法 `-cp <java.class.path> <main>`（plan:71） | `-cp <助手类 code source>`——`Landlock.hostHelperCommand` 取 `Landlock.class` 的 code source 所在路径 | surefire/JPMS 下 `java.class.path` 可能是 booter jar（实测该形态下为空壳），助手类真实位置只在 code source；镜像态走 named 形态，不受影响 | 迭代内已同步（plan:71 已订正 + 本表登记；S-a packet 四项偏离裁决 ①） |
+| `06-scope.md` preset 示例含顶层 `config:`（缩进块给 `workspaceRoot`/`sandbox.mode`） | preset 行只承载 `plugin`；行上 `config` 被解析但**不参与装配**——`PresetService.mount` 走 `PluginLoader.loadAllUnder(agentScope, List<Plugin>)`（无 config 入参），`ConfigRowSpec.Include` 的 config 字段装载时被弃 | S-c 订正 06:198 漂移时实读源码发现：示例给的是能力，实现只有 Include 面（preset 的定位本就是「agent 组合的增量能力集」） | 迭代内已同步（06 示例回落实况 + 新增「档位不在 preset 里配」段并点名该限制）；**行 config 生效与否是 preset 面自身的设计题**，不在 it24 范围——若后续要做，随 preset 演进立项 |
+| landlock 腿写授权只到 `WritableRoots`（设计口径原文，05 §6 allow-list） | 该腿下 `/dev/null` 的写被拒（EACCES）——与 seatbelt 的 `(literal "/dev/null")` 放行、bwrap 的新 devtmpfs 行为不同（**allow-list 语义的直接推论；本机无 landlock 内核，未实测**） | `WritableRoots` 单一来源不含设备节点；把 `/dev/null` 加进去会改 fs 围栏共用的可写根语义（牵动 fs-tool/seatbelt/bwrap 三处消费面） | 迭代内已同步（05 §6 已知残余如实记账，不假装同构）；**挂账候选**：与 sandbox 策略一并议（是否引入「设备节点例外」而不动 `WritableRoots`）；Linux 腿真跑后可顺手复核此推论 |
