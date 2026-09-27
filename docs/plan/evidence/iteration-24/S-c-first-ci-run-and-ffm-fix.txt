@@ -195,4 +195,64 @@ $ docker run --rm …ubuntu:24.04… -pl sandbox/local -am test -Dtest=LandlockT
   runner 内核 landlock ABI ≥ 3。
 - 容器内聚焦测试为 `-Dspotless.check.skip=true`（离线仓库缺 google-java-format:1.19.2）——
   样式门禁由本机 validate（§10）与 CI 步骤 6 承担，如实标注，不冒充等价覆盖。
-- 静默跳过护栏（CI 步骤 8）至今仍未在 CI 上真正执行过一次，其有效性待第三轮。
+- 静默跳过护栏（CI 步骤 8）至今仍未在 CI 上真正执行过一次，其有效性待第三轮。（→ 第三轮已执行，见 §12）
+
+== 12. 第三轮 CI 跑（run 36313280206 / headSha 5b47ebd / 2026-09-27）——全绿与四项回填 ==
+$ gh run watch 36313280206 --exit-status     → WATCH-EXIT=0
+job 结论：macos=success（1m22s，10:40:27→10:41:49）；build=success（2m49s，10:40:21→10:43:10）
+build 12 步全绿（**本迭代首个全绿轮**）：4 bwrap 前置门 · 5 置 docker 镜像 · 6 Build and test ·
+  7 landlock 硬门 · 8 静默跳过断言 · 9 jlink 冒烟 · 10 干净容器归档冒烟 · 11 upload-artifact · 12 候选腿
+测试计数：两 job 各 **545/0/0**（30 个含测试模块）；build 跳过 13 / macos 跳过 15（平台分区）
+  sandbox/local（build 侧）：
+    LandlockTest 18/0/0/2 —— 含首轮新增用例在真 landlock 内核上真走 EPERM 档
+      ⇒ 第二轮按内核查序修正的期望由此**实证**（该分支此前只有「红」这一手证据）
+    SandboxLocalTest 23/0/0/4 —— 4 条为 mac 平台分区；landlock 两条真强制 e2e 真跑未被跳过
+
+步骤 7（**该步自诞生以来首次真实执行**）——命令与逐字输出：
+$ dist/jh/target/jlink-image/bin/java -XX:-UsePerfData \
+    --enable-native-access=io.javanatic.harness.sandbox.local \
+    -m io.javanatic.harness.sandbox.local/io.javanatic.harness.sandbox.local.LandlockExecMain \
+    --probe 2>&1 | tee "$RUNNER_TEMP/landlock-probe.txt"
+landlock: ready — ABI v7, rights 0x7ff2 (REFER+TRUNCATE), write denied (AccessDeniedException)
+  # ABI v7 ⇒ 远超入选线 3（首跑已由同蹦床的 createRuleset 成功旁证 ABI≥3，本轮直读结论行）；
+  # rights 0x7ff2 = WRITE_EFFECTS_V1|REFER|TRUNCATE 全集被内核接受；
+  # 末段「write denied」为真拒写（含限制前写正对照，防 DAC 误绿）⇒ 负向探针全链路真跑通过
+
+步骤 8（**该步自诞生以来首次真实执行**）——逐字输出：
+landlock e2e ran for real: landlockReadOnlyDeniesRealWriteWithDialectMarker, landlockWorkspaceWriteAllowsInsideAndDeniesOutside
+  # 判据＝surefire XML 里两条 e2e「存在且未被 skip」；静默跳过护栏首次真执行即绿
+
+步骤 9（jlink 冒烟，runner 宿主形态）：
+INFO: sandbox: confining policy "workspace-write" is enforced by backend "bwrap" (enforcement FULL)
+
+步骤 10（干净容器 ubuntu:24.04 归档冒烟）——逐字两行（--verify 两次调用）：
+INFO: sandbox: confining policy "workspace-write" is enforced by backend "landlock" (enforcement FULL); bwrap probe failed (binary: bwrap); landlock: ready ? ABI v7, rights 0x7ff2 (REFER+TRUNCATE), write denied (AccessDeniedException)
+  # 三分事实：① 归档在无 JDK/无 Maven 的干净容器里解压即跑（--help / --verify exit 0）；
+  #   ② 链仲裁真落到 landlock 且点名前候选为何未用（bwrap 二进制不存在）；
+  #   ③ em-dash 显示为 `?` ＋ --help 中文整体降级为 `?` —— 非 UTF-8 locale 降级（§8 两条观察）
+  #      在 CI 上复现；CI 的两处 grep 断言按 ASCII 骨架写，不受影响（步骤绿）
+
+步骤 11（artifact 上传）：
+  name: javanatic-harness-linux-amd64 · path: dist/jh/target/javanatic-harness-*-linux-*.{tar.gz,zip}
+  Artifact javanatic-harness-linux-amd64 has been successfully uploaded! Final size is 82028251 bytes. Artifact ID is 10928799565
+  SHA256 digest of uploaded artifact zip is 4fea50c78bba677b6a657b41195c67b2b0f985504d9a63ef37bacc0dd72098d9
+  归档名实见（日志内）：javanatic-harness-0.2.0-SNAPSHOT-linux-amd64.{tar.gz,zip}（amd64 产物回填）
+
+步骤 12（候选腿）：
+  ok ×6（示例编译 / 运行类路径 / 治理自证运行 / 自证通过 / 自有工具可见 / 自有工具可执行）
+  + 四负例全「已拒」；== 汇总：candidate == 失败项：0（用时 37s）
+
+三层后端矩阵（同一轮全绿，真实 OS 上各得其所）：macos=seatbelt FULL（步骤 4/5）·
+  runner 宿主=bwrap FULL（步骤 9）· 干净容器=landlock FULL（步骤 10）
+  ⇒ it24 验收问句「bwrap 不可用时按能力落到 Landlock 仍被约束」在真实环境闭环。
+
+== 13. 第三轮后的边界（如实登记） ==
+- **四项待回填全部落地**：① 步骤 6 全绿（含 EPERM 档实证）；② 步骤 7/8 首次真执行且绿；
+  ③ artifact 上传 + amd64 产物；④ 双 job 全绿（含步骤 12 候选腿）。
+- `/dev/null` allow-list 推论（05 §6 已知残余）：**仍未实测**——两条 landlock e2e 不触碰
+  `/dev/null`，步骤 10 只跑 `--help`/`--verify`。但 runner 已是真 landlock 宿主（ABI v7），
+  该推论自本轮起「可在有 landlock 的宿主上随手复核」，仍按挂账候选处理，未改码。
+- 两条 locale 观察（§8）：**已在 CI 步骤 10 复现**（中文与 em-dash 同为 `?`）；未改码、待裁，
+  出路候选不变（启动器注入 UTF-8 出口编码，或文档注明请设 LANG）。影响面＝裸容器/极简镜像
+  ——正是本迭代「干净 Linux」验收场景，故不宜长期挂空。
+- 本轮回填提交为 docs-only（证据 + 台账），待 push；其后本迭代无待回填项。
