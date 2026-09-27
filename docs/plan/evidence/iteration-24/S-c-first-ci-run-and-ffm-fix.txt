@@ -1,0 +1,146 @@
+# it24 首跑回填 + it24 修正：CI 首跑（红）· FFM 调用点类型纪律缺陷（真跑暴露）与修法
+# 首跑对象 commit: b02528c（it24 五提交，2026-09-24 推送）；修正对象：Landlock.java 两处调用点形参。
+# 本文件覆盖：① 首次 CI 跑事实（照 it23 先例回填）；② 首跑暴露的产品缺陷与根因；
+#   ③ 修法与新增真跑用例；④ 容器内真跑「破坏必红 → 修复复绿」对；⑤ 本机全量门禁；
+#   ⑥ 业界方案核对（FFM 绑定选型复核）；⑦ 修正后仍待回填的项与「landlock 正支路从未真实执行」的边界。
+# 环境：CI＝GitHub Actions（run 36297109220）；容器＝本机 docker（arm64，内核 6.4.16-linuxkit）
+#   + 本地既有 ubuntu:24.04 镜像。环境来源细节（镜像站/代理）不入档。
+# 本文件＝实跑输出摘录：每段给出完整命令、决定性输出行与真实 EXIT 回显。
+
+== 1. 首次 CI 跑确定事实（run 36297109220，headSha b02528c，2026-09-27） ==
+$ gh run view 36297109220 --json jobs --jq '.jobs[] | {name, conclusion, steps: [.steps[] | {n, name, c: .conclusion}]}'
+  macos           -> conclusion = success
+  build (ubuntu)  -> conclusion = failure
+build 步骤表（步骤号与 CI 定义一致）：
+   1 Set up job                                                   success
+   2 Run actions/checkout@v4                                      success
+   3 Run actions/setup-java@v4                                    success
+   4 Pre-flight sandbox probe (bwrap: runnable and denying)        success
+   5 Provision docker test image                                   success
+   6 Build and test                                               success
+   7 Pre-flight sandbox probe (landlock: runnable and denying)     ** failure **  ← 首跑止步点
+   8 Assert the landlock e2e leg really ran (no silent skip)       skipped
+   9 Smoke jlink image                                             skipped
+  10 Archive smoke in a clean container (ubuntu:24.04)             skipped
+  11 Run actions/upload-artifact@v4                                skipped
+  12 Verify external consumer sample (candidate leg)               skipped
+测试计数（surefire 报告行）：
+  macos           job: LandlockTest 17/0/0/1 · SandboxLocalTest 23/0/0/4（跳过＝平台分区，与本机 darwin 口径一致）
+  build (ubuntu)  job: SandboxLocalTest 23/0/0/6 · LandlockTest 17/0/0/2
+# 判读（关键）：
+#  - build job 的步骤 6 表面全绿，但两条 landlock e2e 是**静默跳过**——`landlockUsable()` 真跑
+#    `--probe` 子进程并要求 exit 0；该子进程此刻已因本缺陷 exit 13 ⇒ false ⇒ assumeTrue 跳过。
+#  - 步骤 8（断言 landlock 腿「跑了且没跳过」，即专治静默跳过的护栏）恰在失败步之后 ⇒ 未获执行。
+#    即本轮 CI 自身没暴露「landlock 腿没真跑」，是失败步的报错把它带出来的。
+#  - 步骤 4（bwrap 前置硬门）实况：探针首撞 `bwrap: setting up uid map: Permission denied` →
+#    命中 CI 既有的 `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` 处置 → 探针二跑通过
+#    ⇒ 两条 bwrap 真强制 e2e 在真实 runner 内核上跑通（CI 侧首次）。
+#  - 回填结论：原「待回填三项」本轮均未达成——artifact 上传与 amd64 产物（步骤 11 被跳）、
+#    landlock 正支路（步骤 6 静默跳过）、CI 双 job 全绿（build job 止步步骤 7）。
+
+== 2. 首跑暴露的缺陷（决定性输出行，逐字） ==
+build  step 7  Pre-flight sandbox probe (landlock: runnable and denying)  2026-09-27T05:26:16Z
+landlock: native call failure: java.lang.invoke.WrongMethodTypeException: handle's method type (MemorySegment,long,long,long,long,long,long)long but found (MemorySegment,long,int,long,long,long,long)long
+##[error]Process completed with exit code 13.
+# exit 13 = Landlock.EXIT_APPLY_FAILED（应用限制阶段失败，非探针负结论 10/11/12）。
+# 结论行前缀 `landlock: native call failure:` 出自 restrict() 的 catch(Throwable)。
+
+== 3. 根因：FFM 蹦床的全 long 句柄 vs 调用点的 int 实参（invokeExact 无隐式加宽） ==
+- 蹦床：`Landlock.Native.SYSCALL`＝libc `syscall` 的 FFM downcall，描述符
+  `FunctionDescriptor.of(JAVA_LONG, JAVA_LONG×6)` + `Linker.Option.firstVariadicArg(1)` +
+  `Linker.Option.captureCallState("errno")` ⇒ 句柄静态类型 `(MemorySegment,long,long,long,long,long,long)long`。
+- `MethodHandle.invokeExact` 要求**实参静态类型与句柄类型逐位一致**（不做 int→long 隐式加宽）。
+- 缺陷点：`restrictSelf(int rulesetFd)`（Landlock.java:566 的 invokeExact 行）与
+  `addPathBeneathRule(int rulesetFd, …)`（:557）以 `int` 直接喂 fd ⇒ FFM 层即抛
+  WrongMethodTypeException，**调用根本没到内核**；异常被 restrict() 的 catch 归为
+  `native call failure` → exit 13。
+- 为何直到 CI 首跑才暴露（「首次真跑」定位）：
+    · darwin 本机：无 landlock，Linux 腿平台分区跳过（LandlockTest 17/0/0/1）；
+    · 本机容器：内核未编译 CONFIG_SECURITY_LANDLOCK，`--probe` 在 `gate()` 即返 exit 10，
+      apply 路径（restrict → add_rule/restrict_self）不执行（S-c 补验档 §2）；
+    · CI 步骤 6：e2e 因探针失败静默跳过（§1 判读）。
+  ⇒ 本次 CI 步骤 7 是 **apply 路径在任何环境上的首次真实执行**。
+- 同蹦床的其余事实（本次一并确认，非推论）：
+    · `createRuleset(long)` / `prctlNoNewPrivs()` 等调用点在 CI 上真跑成功——gate() 通过、
+      限制前写正对照通过、createRuleset 真建出 ruleset fd（否则报错行不会是 restrictSelf）；
+    · ⇒ runner 内核确有 landlock 且 **ABI ≥ 3**（内核接受了 WRITE_EFFECTS_V1|REFER|TRUNCATE 全集）。
+      「正支路环境能力」在 CI runner 上成立；缺的只是修好调用点后重跑。
+
+== 4. 修法（已获放行：参数改 long + 每绑定一条真跑用例 + 台账回填） ==
+$ git diff sandbox/local/src/main/java/io/javanatic/harness/sandbox/local/Landlock.java
+-    private record CallResult(long value, int errno) {
++    record CallResult(long value, int errno) {
+-    private static CallResult addPathBeneathRule(int rulesetFd, int parentFd, long allowed) throws Throwable {
++    static CallResult addPathBeneathRule(long rulesetFd, int parentFd, long allowed) throws Throwable {
+-    private static CallResult restrictSelf(int rulesetFd) throws Throwable {
++    static CallResult restrictSelf(long rulesetFd) throws Throwable {
++        // 全 long 形参：invokeExact 要求实参静态类型逐位一致（无隐式加宽），故调用点 fd 一律以 long 传入。
+（置于 SYSCALL 句柄声明上方）
+# 取舍：调用点 cast 也能过，但把 fd 形参定为 long，纪律写进类型、不散落在调用点；
+#   上层 `restrict()` 的 `int rulesetFd = (int) created.value()` 与 `addRootRule(int rulesetFd, …)`
+#   保持不变——Java 方法调用处的 int→long 是合法静态加宽，蹦床边界处已是 long。
+# 可见性同步放宽为包私有：新增用例与产品同包，直接真调这两个内核调用点。
+新增用例（LandlockTest）：
+  bogusFdReachesTheKernelInsteadOfFailingAtInvokeExact   @EnabledOnOs(OS.LINUX)
+  以非法 fd（-1）真调 restrictSelf / addPathBeneathRule，断言裁决出自**内核**：
+    value == -1 且 errno ∈ {EBADF(9), ENOSYS(38)}（后者为无 landlock 内核的合法档）
+  ——若调用点类型纪律再破，异常落在 FFM 层（WrongMethodTypeException），断言即红。
+  范围说明：同一蹦床承载 create_ruleset(444)/add_rule(445)/restrict_self(446) 三号；
+  本用例真跑覆盖两个带 fd 的调用点（createRuleset 由 gate/acceptedRights 路径真跑覆盖）。
+
+== 5. 容器内真跑对：破坏必红 → 修复复绿（Linux 真跑，非编译期） ==
+命令（两跑同一条；`-Dspotless.check.skip=true` 仅因离线仓库缺 google-java-format:1.19.2，
+  样式门禁在本机与 CI 照常执行，见 §6/§7 边界）：
+$ docker run --rm -v /tmp/jh-linux-src:/src -v /tmp/jdk25-linux:/opt/jdk25:ro \
+    -v "$HOME/Documents/apache-maven-3.8.8":/opt/maven:ro -v "$HOME/Documents/m2e/repository":/root/.m2:ro \
+    -w /src -e JAVA_HOME=/opt/jdk25 -e LANG=C.UTF-8 ubuntu:24.04 \
+    /opt/maven/bin/mvn -B -ntp -o -Dmaven.repo.local=/root/.m2 -Dspotless.check.skip=true \
+    -pl sandbox/local -am test -Dtest=LandlockTest -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
+(a) 破坏态（两形参还原为 int）——必须红：
+[ERROR] Tests run: 18, Failures: 0, Errors: 1, Skipped: 2 <<< FAILURE! -- in io.javanatic.harness.sandbox.local.LandlockTest
+[ERROR] io.javanatic.harness.sandbox.local.LandlockTest.bogusFdReachesTheKernelInsteadOfFailingAtInvokeExact -- Time elapsed: 0.037 s <<< ERROR!
+java.lang.invoke.WrongMethodTypeException: handle's method type (MemorySegment,long,long,long,long,long,long)long but found (MemorySegment,long,int,long,long,long,long)long
+	at io.javanatic.harness.sandbox.local.Landlock.restrictSelf(Landlock.java:566)
+	at io.javanatic.harness.sandbox.local.LandlockTest.bogusFdReachesTheKernelInsteadOfFailingAtInvokeExact(LandlockTest.java:205)
+[INFO] BUILD FAILURE
+# 逐字复现 CI 首跑的异常与栈顶帧（同一条 WrongMethodTypeException、同一行 Landlock.java:566）。
+(b) 修复后（即当前工作树）——必须绿：
+[WARNING] Tests run: 18, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.385 s -- in io.javanatic.harness.sandbox.local.LandlockTest
+[INFO] BUILD SUCCESS   （Total time: 3.095 s；GREEN-EXIT=0，2026-09-27 复跑确认）
+# 语义（本机容器内）：errno 断言走的 ENOSYS 档（该内核无 CONFIG_SECURITY_LANDLOCK）——
+#   即"裁决确实来自内核"；EBADF 档需真 landlock 内核，归 CI 重跑（§7）。
+
+== 6. 本机门禁（darwin） ==
+$ JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn -B -q validate        # 样式门禁
+VALIDATE-EXIT=0
+$ JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn -B -ntp package
+[INFO] BUILD SUCCESS   （EXIT=0）
+TOTAL tests=545 failures=0 errors=0 skipped=8（30 个含测试模块的 "Results:" 段落求和）
+  sandbox/local: LandlockTest 18/0/0/2 · SandboxLocalTest 23/0/0/4（跳过＝平台分区；较修正前 +1 测试 +1 跳过，
+  即新增用例在 darwin 上按 @EnabledOnOs(OS.LINUX) 跳过——口径与既有平台分区一致）
+
+== 7. 业界方案核对（FFM 绑定选型复核，回答「有没有更好的方案」） ==
+在本机容器（ubuntu:24.04 / glibc 2.39）实查：
+$ nm -D /lib/aarch64-linux-gnu/libc.so.6 | grep -E 'landlock|syscall|prctl'
+  ...只有 `syscall` 与 `prctl`，**无任何 `landlock_*` 符号**
+判读：landlock 无 libc 包封（man-pages landlock(7) 指定 `syscall(SYS_landlock_create_ruleset, …)`；
+  内核文档只给 C 示例 `samples/landlock/sandboxer.c`）⇒
+  · jextract / libc 包装：包来包去还是同一个 `syscall()` 蹦床，不消除本类缺陷面，只增生成物与
+    头文件依赖（且需 libc 头/版本绑定）；
+  · JNA / invokeWithArguments：引入装箱与类型检查绕过，且 `captureCallState("errno")` 的
+    errno 捕获直通要重新造轮子；`invokeWithArguments` 反而**掩盖**本缺陷（会做隐式转换）⇒ 更差；
+  · 原生 helper（C/musl）：it24「不做」清单已钉死（FFM 分支为选中路线）；且真引入原生构建链。
+结论：**维持 FFM 绑定**，本轮加固的是调用点类型纪律 + 每绑定一条真跑用例（§4）——
+  这正是本缺陷的正确修法而非换机制。
+
+== 8. 边界与仍待回填项（如实登记） ==
+- **landlock 正支路（ABI≥3 真建真限真拒写）至今在任何环境都未真实执行过**：darwin 无 landlock；
+  本机容器内核未编译 landlock（只到负支路 exit 10）；CI runner 内核能力已确认（§3），但首跑在
+  apply 步即红、e2e 静默跳过。⇒ 修正后 push 触发第二轮 CI 才可能拿到正支路真跑。
+- 仍待第二轮 CI 回填：① landlock 正支路（步骤 6 e2e 真跑 + 步骤 7 硬门真绿 + 步骤 8 断言真执行）；
+  ② artifact 上传与 amd64 产物（步骤 10/11）；③ CI 双 job 全绿（含步骤 12 候选腿）。
+- 本轮 CI 的 macos job 全绿与 bwrap 两条真强制 e2e 真跑为**已确认事实**（§1），不受修正影响。
+- 容器内聚焦测试为 `-Dspotless.check.skip=true`（离线仓库缺 google-java-format:1.19.2）——
+  样式门禁由本机 validate（§6）与 CI 步骤 6 承担，此处如实标注，不冒充等价覆盖。
+- 首跑未暴露本缺陷的机制（探针失败 ⇒ 平台无关的 e2e 断言静默跳过）仍是后续 CI 步骤 8 要守的面；
+  本轮未改动该护栏，其有效性待第二轮 CI 验证。

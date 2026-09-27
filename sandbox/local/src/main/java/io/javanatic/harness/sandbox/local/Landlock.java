@@ -522,7 +522,7 @@ final class Landlock {
 
     // ---- 原生调用（FFM；只在助手进程被触发） ----
 
-    private record CallResult(long value, int errno) {
+    record CallResult(long value, int errno) {
     }
 
     private static int errnoOf(MemorySegment capture) {
@@ -548,7 +548,7 @@ final class Landlock {
         }
     }
 
-    private static CallResult addPathBeneathRule(int rulesetFd, int parentFd, long allowed) throws Throwable {
+    static CallResult addPathBeneathRule(long rulesetFd, int parentFd, long allowed) throws Throwable {
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment capture = arena.allocate(Landlock.Native.CAPTURE_LAYOUT);
             MemorySegment attr = arena.allocate(PATH_BENEATH_ATTR_BYTES);
@@ -560,7 +560,7 @@ final class Landlock {
         }
     }
 
-    private static CallResult restrictSelf(int rulesetFd) throws Throwable {
+    static CallResult restrictSelf(long rulesetFd) throws Throwable {
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment capture = arena.allocate(Landlock.Native.CAPTURE_LAYOUT);
             long rc = (long) Landlock.Native.SYSCALL.invokeExact(capture, Landlock.Native.syscalls().restrictSelf(),
@@ -648,6 +648,7 @@ final class Landlock {
             .orElseThrow(() -> new IllegalStateException("no landlock syscall numbers for os.arch=\""
                 + System.getProperty("os.arch", "") + "\""));
 
+        // 全 long 形参：invokeExact 要求实参静态类型逐位一致（无隐式加宽），故调用点 fd 一律以 long 传入。
         private static final MethodHandle SYSCALL = variadic("syscall",
             FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG,
                 ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG), 1);

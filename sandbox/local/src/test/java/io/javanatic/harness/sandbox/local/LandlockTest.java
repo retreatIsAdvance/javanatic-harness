@@ -190,6 +190,27 @@ class LandlockTest {
         }
     }
 
+    /** 非法 fd 的内核裁决（uapi errno）：无效 fd 是 EBADF；无 landlock 的内核在系统调用号上给 ENOSYS。 */
+    private static final int EBADF = 9;
+    private static final int ENOSYS = 38;
+
+    /**
+     * 原生调用点类型纪律（it24 首跑修正）：syscall 蹦床句柄形参全 long，invokeExact 不做隐式
+     * 加宽——fd 若以 int 直喂，异常落在 FFM 层而到不了内核。以非法 fd 真调一次：裁决必须
+     * 来自内核（EBADF），不是 WrongMethodTypeException。
+     */
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void bogusFdReachesTheKernelInsteadOfFailingAtInvokeExact() throws Throwable {
+        Landlock.CallResult restricted = Landlock.restrictSelf(-1);
+        assertThat(restricted.value()).isEqualTo(-1L);
+        assertThat(restricted.errno()).isIn(EBADF, ENOSYS);
+
+        Landlock.CallResult ruled = Landlock.addPathBeneathRule(-1, -1, Landlock.WRITE_EFFECTS_V1);
+        assertThat(ruled.value()).isEqualTo(-1L);
+        assertThat(ruled.errno()).isIn(EBADF, ENOSYS);
+    }
+
     @Test
     void helperRejectsMalformedInvocationWithUsageExit() throws Exception {
         ProcessResult result = launch(Landlock.hostHelperCommand().orElseThrow(),
