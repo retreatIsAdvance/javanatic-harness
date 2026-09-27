@@ -133,14 +133,66 @@ $ nm -D /lib/aarch64-linux-gnu/libc.so.6 | grep -E 'landlock|syscall|prctl'
 结论：**维持 FFM 绑定**，本轮加固的是调用点类型纪律 + 每绑定一条真跑用例（§4）——
   这正是本缺陷的正确修法而非换机制。
 
-== 8. 边界与仍待回填项（如实登记） ==
-- **landlock 正支路（ABI≥3 真建真限真拒写）至今在任何环境都未真实执行过**：darwin 无 landlock；
-  本机容器内核未编译 landlock（只到负支路 exit 10）；CI runner 内核能力已确认（§3），但首跑在
-  apply 步即红、e2e 静默跳过。⇒ 修正后 push 触发第二轮 CI 才可能拿到正支路真跑。
-- 仍待第二轮 CI 回填：① landlock 正支路（步骤 6 e2e 真跑 + 步骤 7 硬门真绿 + 步骤 8 断言真执行）；
-  ② artifact 上传与 amd64 产物（步骤 10/11）；③ CI 双 job 全绿（含步骤 12 候选腿）。
-- 本轮 CI 的 macos job 全绿与 bwrap 两条真强制 e2e 真跑为**已确认事实**（§1），不受修正影响。
+== 8. 第二轮 CI 跑（run 36308418756 / headSha 9d8281f / 2026-09-27）确证事实 ==
+$ gh run view 36308418756
+job 结论：macos=success（1m21s）；build(ubuntu)=failure（51s）
+build 步骤：1–5 ✓（含步骤 4 bwrap 前置门）· 6 Build and test **✗** · 7–12 全跳过（tests 未过，硬门/断言/冒烟/artifact/候选腿均未执行）
+测试计数：
+  SandboxLocalTest 23/0/0/4 —— 比对首跑同 job 的 23/0/0/**6**：少掉的 2 条正是 landlock e2e
+    （4 条为 @EnabledOnOs(OS.MAC) 平台分区，恒跳）⇒ **两条 landlock 真强制 e2e 在真实 runner 内核上真跑并通过**
+    （间接确证 `landlockUsable()` 真跑 `--probe` 得 exit 0 —— 即 it24 修正后的 apply 路径在 CI 上端到端成立）
+  LandlockTest 18/0/0/2，其中 1 条失败＝本轮新增用例（详见 §9）
+# 意义：迭代的核验目标「bwrap 不可用时按能力选择、真拒写真放行」（验收 2/4 的 landlock 正支路）
+#   在本轮取得**真实 CI 证据**；本轮红与产品代码无关，是新增用例的 errno 期望写窄了（§9–§10）。
+
+== 9. 第二轮暴露的测试缺陷：errno 期望未按内核查序分档 ==
+决定性输出（build 步骤 6，LandlockTest 内）：
+[ERROR] Tests run: 18, Failures: 1, Errors: 0, Skipped: 2 <<< FAILURE! -- in io.javanatic.harness.sandbox.local.LandlockTest
+[ERROR] io.javanatic....bogusFdReachesTheKernelInsteadOfFailingAtInvokeExact -- Time elapsed: 0.063 s <<< FAILURE!
+java.lang.AssertionError:
+Expecting actual:
+  1
+to be in:
+  [9, 38]
+	at io.javanatic.harness.sandbox.local.LandlockTest.bogusFdReachesTheKernelInsteadOfFailingAtInvokeExact(LandlockTest.java:207)
+# 即 `restrictSelf(-1)` 在 runner 内核上给出 errno 1（EPERM），断言只认 {9 EBADF, 38 ENOSYS}。
+内核查序（上游 `security/landlock/syscalls.c`，逐字引用）：
+  landlock_restrict_self：先 `if (!(flags & …NO_NEW_PRIVS) && !task_no_new_privs(current) &&
+      !ns_capable_noaudit(current_user_ns(), CAP_SYS_ADMIN)) return -EPERM;` —— **在取 ruleset fd 之前**；
+      之后才 `ruleset = get_ruleset_from_fd(ruleset_fd, FMODE_CAN_READ)`（fd 非法 → EBADF）。
+  landlock_add_rule：`is_initialized()` → flags 校验 → **先取并校验 ruleset fd**（`get_ruleset_from_fd`，
+      非法 fd → EBADF）→ 再按 rule_type 分派。
+判读：普通 JVM 既无 no_new_privs 也无 CAP_SYS_ADMIN ⇒ 在**真有 landlock 的内核**上
+  `restrict_self(-1)` 恒给 EPERM，EBADF 分支根本到不了；本机两个环境（darwin 无 landlock、容器内核
+  未编译 landlock）都只会给 ENOSYS/缺档 ⇒ 该期望**只有 CI 能证伪**，本地红绿对无法覆盖此分支。
+另注：LSM 未启用档给 EOPNOTSUPP(95)，系统调用号不存在档给 ENOSYS(38)——分档随内核状态而定。
+
+== 10. 修正（测试期望 + 规则回填）与本地复验 ==
+$ git diff sandbox/local/src/test/java/io/javanatic/harness/sandbox/local/LandlockTest.java
+-    assertThat(restricted.errno()).isIn(EBADF, ENOSYS);
++    assertThat(restricted.errno()).isIn(EPERM, EBADF, ENOSYS, EOPNOTSUPP);
+-    assertThat(ruled.errno()).isIn(EBADF, ENOSYS);
++    assertThat(ruled.errno()).isIn(EBADF, ENOSYS, EOPNOTSUPP);
++ 新增四个具名常量（EPERM=1 / EBADF=9 / ENOSYS=38 / EOPNOTSUPP=95）与查序注释（引 syscalls.c）
+# 纪律面不变：断言要守的性质仍是「裁决来自内核而非 FFM 层」——类型纪律再破即 WrongMethodTypeException，
+#   与 errno 取值无关；分档只让合法性判断准确。
+本地复验（两档环境）：
+$ JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn -B -q validate        → VALIDATE-EXIT=0
+$ JAVA_HOME=$(/usr/libexec/java_home -v 25) mvn -B -ntp package       → PACKAGE-EXIT=0，545/0/0/8
+   sandbox/local: LandlockTest 18/0/0/2（darwin 平台分区）· SandboxLocalTest 23/0/0/4
+$ docker run --rm …ubuntu:24.04… -pl sandbox/local -am test -Dtest=LandlockTest   → CONTAINER-EXIT=0
+   LandlockTest 18/0/0/2（无 landlock 内核 → 走 ENOSYS 档）
+# 边界：EPERM 档（真有 landlock 的内核）本地无处可跑，其真跑证据只有第二轮 CI 的实测（§9）
+#   与第三轮的复验；本机复验只覆盖 ENOSYS 档，不冒充。
+
+== 11. 边界与仍待回填项（如实登记，2026-09-27 第二轮后） ==
+- landlock **正**支路（ABI≥3 真建真限真拒写）：**已取得 CI 证据**——第二轮两条 landlock 真强制
+  e2e 在 runner 内核上真跑并通过（§8）。仍欠的是**硬门与断言步骤**：步骤 7（`--probe` 硬门真绿）、
+  步骤 8（静默跳过断言真执行）因本轮 tests 先红而未执行。
+- 仍待第三轮 CI 回填：① 步骤 6 全绿（含本轮修正的用例在真 landlock 内核上走 EPERM 档）；② 步骤 7/8
+  （硬门 + 断言真执行）；③ artifact 上传与 amd64 产物（步骤 10/11）；④ CI 双 job 全绿（含步骤 12 候选腿）。
+- 首跑与第二轮共同确认的既有事实：macos job 两轮皆绿；bwrap 两条真强制 e2e 于真实 runner 内核跑通；
+  runner 内核 landlock ABI ≥ 3。
 - 容器内聚焦测试为 `-Dspotless.check.skip=true`（离线仓库缺 google-java-format:1.19.2）——
-  样式门禁由本机 validate（§6）与 CI 步骤 6 承担，此处如实标注，不冒充等价覆盖。
-- 首跑未暴露本缺陷的机制（探针失败 ⇒ 平台无关的 e2e 断言静默跳过）仍是后续 CI 步骤 8 要守的面；
-  本轮未改动该护栏，其有效性待第二轮 CI 验证。
+  样式门禁由本机 validate（§10）与 CI 步骤 6 承担，如实标注，不冒充等价覆盖。
+- 静默跳过护栏（CI 步骤 8）至今仍未在 CI 上真正执行过一次，其有效性待第三轮。

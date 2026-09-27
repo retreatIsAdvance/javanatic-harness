@@ -190,25 +190,31 @@ class LandlockTest {
         }
     }
 
-    /** 非法 fd 的内核裁决（uapi errno）：无效 fd 是 EBADF；无 landlock 的内核在系统调用号上给 ENOSYS。 */
+    /** 内核 errno（uapi）：给哪个码取决于内核查序与 LSM 状态，故按档列举（见用例注释）。 */
+    private static final int EPERM = 1;
     private static final int EBADF = 9;
     private static final int ENOSYS = 38;
+    private static final int EOPNOTSUPP = 95;
 
     /**
      * 原生调用点类型纪律（it24 首跑修正）：syscall 蹦床句柄形参全 long，invokeExact 不做隐式
      * 加宽——fd 若以 int 直喂，异常落在 FFM 层而到不了内核。以非法 fd 真调一次：裁决必须
-     * 来自内核（EBADF），不是 WrongMethodTypeException。
+     * 来自内核，不是 WrongMethodTypeException。
+     *
+     * <p>errno 分档随内核查序（`security/landlock/syscalls.c`）：`restrict_self` 先查
+     * no_new_privs/CAP_SYS_ADMIN（普通 JVM 两者皆无 → EPERM），之后才校验 ruleset fd（EBADF）；
+     * `add_rule` 先校验 fd（EBADF）。LSM 未启用给 EOPNOTSUPP，系统调用号不存在给 ENOSYS。
      */
     @Test
     @EnabledOnOs(OS.LINUX)
     void bogusFdReachesTheKernelInsteadOfFailingAtInvokeExact() throws Throwable {
         Landlock.CallResult restricted = Landlock.restrictSelf(-1);
         assertThat(restricted.value()).isEqualTo(-1L);
-        assertThat(restricted.errno()).isIn(EBADF, ENOSYS);
+        assertThat(restricted.errno()).isIn(EPERM, EBADF, ENOSYS, EOPNOTSUPP);
 
         Landlock.CallResult ruled = Landlock.addPathBeneathRule(-1, -1, Landlock.WRITE_EFFECTS_V1);
         assertThat(ruled.value()).isEqualTo(-1L);
-        assertThat(ruled.errno()).isIn(EBADF, ENOSYS);
+        assertThat(ruled.errno()).isIn(EBADF, ENOSYS, EOPNOTSUPP);
     }
 
     @Test
