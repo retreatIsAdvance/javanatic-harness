@@ -90,10 +90,10 @@ class SandboxLocalTest {
     // ---- 平台链结构（注伪平台，三平台断言平台无关） ----
 
     @Test
-    void platformChainsAreDarwinSeatbeltLinuxBwrapThenLandlockWin32Empty() {
+    void platformChainsAreDarwinSeatbeltLinuxBwrapThenLandlockWin32WindowsAcl() {
         assertThat(SandboxLocalPlugin.chainFor("darwin")).containsExactly("seatbelt");
         assertThat(SandboxLocalPlugin.chainFor("linux")).containsExactly("bwrap", "landlock");
-        assertThat(SandboxLocalPlugin.chainFor("win32")).isEmpty();
+        assertThat(SandboxLocalPlugin.chainFor("win32")).containsExactly("windows-acl");
     }
 
     // ---- argv 形状（纯函数直测，不依赖宿主平台） ----
@@ -189,17 +189,60 @@ class SandboxLocalTest {
             .hasMessageContaining("explicit bypass");
     }
 
+    // ---- windows-acl 包装（纯函数直测）：助手前缀 + 助手指令 + argv ----
+
+    @Test
+    void windowsAclWrapReadOnlyCarriesNoRootsAndNoTemp() {
+        List<String> helper = List.of("/jdk/bin/java", "-XX:-UsePerfData", "WindowsAclExecMain");
+        ConfinedArgv ro = SandboxLocalPlugin.windowsAclWrap(helper,
+            List.of("cmd.exe", "/d", "/c", "echo hi"),
+            new SandboxPolicy(SandboxMode.READ_ONLY, workspace));
+        assertThat(ro.argv()).startsWith(helper.toArray(String[]::new));
+        assertThat(ro.enforcement()).isEqualTo(SandboxEnforcement.PARTIAL);
+        assertThat(ro.denialSignatures())
+            .containsExactlyElementsOf(SandboxLocalPlugin.WINDOWS_ACL_DENIALS);
+
+        WindowsAcl.Invocation invocation = WindowsAcl.parse(
+            ro.argv().subList(helper.size(), ro.argv().size())).orElseThrow();
+        assertThat(invocation.mode()).isEqualTo(WindowsAcl.MODE_READ_ONLY);
+        assertThat(invocation.roots()).isEmpty();
+        assertThat(invocation.temp()).isEmpty();
+        assertThat(invocation.argv()).containsExactly("cmd.exe", "/d", "/c", "echo hi");
+    }
+
+    @Test
+    void windowsAclWrapWorkspaceWritePassesWorkspaceRootAndTempParentOnly() {
+        List<String> helper = List.of("/jdk/bin/java");
+        ConfinedArgv ww = SandboxLocalPlugin.windowsAclWrap(helper,
+            List.of("cmd.exe", "/d", "/c", "echo hi"),
+            new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace));
+        WindowsAcl.Invocation invocation = WindowsAcl.parse(
+            ww.argv().subList(helper.size(), ww.argv().size())).orElseThrow();
+        assertThat(invocation.mode()).isEqualTo(WindowsAcl.MODE_WORKSPACE_WRITE);
+        // 可写根只有 workspace 根——Windows 宿主临时区不整树打标，与 WritableRoots.of 有意不同源
+        assertThat(invocation.roots()).containsExactly(workspace);
+        assertThat(invocation.temp()).contains(WritableRoots.tempRoot());
+    }
+
+    @Test
+    void windowsAclWrapRefusesPassthroughModeInsteadOfWrappingIt() {
+        assertThatThrownBy(() -> SandboxLocalPlugin.windowsAclWrap(List.of("/jdk/bin/java"),
+            List.of("cmd.exe", "/d", "/c", "echo"),
+            new SandboxPolicy(SandboxMode.DANGER_FULL_ACCESS, workspace)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("explicit bypass");
+    }
+
     // ---- fail-closed：空链与候选不可用（注伪平台/二进制，平台无关） ----
 
     @Test
-    void emptyChainFailsClosedNamingPlatformAndPlannedBackend() {
+    void platformWithoutChainFailsClosedNamingIt() {
         SandboxProvider provider = provider(
-            new SandboxLocalPlugin("win32", "/usr/bin/sandbox-exec", "bwrap"));
+            new SandboxLocalPlugin("sunos", "/usr/bin/sandbox-exec", "bwrap"));
         assertThatThrownBy(() -> provider.confine(List.of("bash", "-c", "echo"),
             new SandboxPolicy(SandboxMode.READ_ONLY, workspace)))
             .isInstanceOf(SandboxUnavailableException.class)
-            .hasMessageContaining("win32")
-            .hasMessageContaining("windows-acl")
+            .hasMessageContaining("sunos")
             .hasMessageContaining("refusing to run the command unconfined");
     }
 
@@ -238,11 +281,11 @@ class SandboxLocalTest {
     // ---- backendStatus 查询面（与 confine 同一份探针结论） ----
 
     @Test
-    void win32ChainReportsNoBackendNamingPlatform() {
+    void platformWithoutChainReportsNoBackendNamingIt() {
         SandboxProvider provider = provider(
-            new SandboxLocalPlugin("win32", "/usr/bin/sandbox-exec", "bwrap"));
+            new SandboxLocalPlugin("sunos", "/usr/bin/sandbox-exec", "bwrap"));
         assertThat(provider.backendStatus())
-            .isEqualTo(new BackendStatus.NoBackend("win32"));
+            .isEqualTo(new BackendStatus.NoBackend("sunos"));
     }
 
     @Test
@@ -319,6 +362,53 @@ class SandboxLocalTest {
                 assertThat(failed.detail())
                     .contains("bwrap probe failed (binary: /nonexistent/bwrap)")
                     .contains("landlock probe failed (exit 11 — landlock: ABI too old (no REFER))"));
+    }
+
+    // ---- win32 候选仲裁（注伪助手：darwin 上可验 PARTIAL 回收与失败点名） ----
+    // 注伪助手只替「助手命令」，真机制（低完整性令牌/打标/真拒写）由 WindowsAclTest 与 VM 腿验
+
+    @Test
+    void win32ChainReportsReadyWithPartialEnforcementAndCapabilityLine() {
+        SandboxProvider provider = provider(new SandboxLocalPlugin("win32", "/usr/bin/sandbox-exec",
+            "bwrap", Optional.empty(), Optional.of(List.of("/bin/sh", "-c",
+                "echo 'windows-acl: ready — low integrity token; enforcement PARTIAL (stub)'"))));
+        assertThat(provider.backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.Ready.class, ready -> {
+                assertThat(ready.backend()).isEqualTo("windows-acl");
+                assertThat(ready.enforcement()).isEqualTo(SandboxEnforcement.PARTIAL);
+                assertThat(ready.detail())
+                    .isEqualTo("windows-acl: ready — low integrity token; enforcement PARTIAL (stub)");
+            });
+        assertThat(provider.confine(List.of("cmd.exe", "/d", "/c", "echo hi"),
+            new SandboxPolicy(SandboxMode.READ_ONLY, workspace)).argv())
+            .first().isEqualTo("/bin/sh");
+    }
+
+    @Test
+    void win32ChainProbeFailureIsNamedWithExitCodeAndLine() {
+        SandboxProvider provider = provider(new SandboxLocalPlugin("win32", "/usr/bin/sandbox-exec",
+            "bwrap", Optional.empty(), Optional.of(List.of("/bin/sh", "-c",
+                "echo 'windows-acl: write to an unlabeled directory was NOT denied' 1>&2; exit 12"))));
+        assertThat(provider.backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.ProbeFailed.class, failed -> {
+                assertThat(failed.platform()).isEqualTo("win32");
+                assertThat(failed.detail()).contains(
+                    "windows-acl probe failed (exit 12 — windows-acl: write to an unlabeled directory"
+                        + " was NOT denied)");
+            });
+        assertThatThrownBy(() -> provider.confine(List.of("cmd.exe", "/d", "/c", "echo"),
+            new SandboxPolicy(SandboxMode.READ_ONLY, workspace)))
+            .isInstanceOf(SandboxUnavailableException.class)
+            .hasMessageContaining("windows-acl probe failed");
+    }
+
+    @Test
+    void win32ChainWithUndecidableHelperFailsClosed() {
+        SandboxProvider provider = provider(new SandboxLocalPlugin("win32", "/usr/bin/sandbox-exec",
+            "bwrap", Optional.empty(), Optional.empty()));
+        assertThat(provider.backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.ProbeFailed.class, failed -> assertThat(failed.detail())
+                .contains("windows-acl probe failed (no decidable helper launch form"));
     }
 
     // ---- 真强制 e2e：darwin/seatbelt（本机） ----
@@ -475,5 +565,53 @@ class SandboxLocalTest {
             Files.deleteIfExists(outside.resolve("x.txt"));
             Files.delete(outside);
         }
+    }
+
+    // ---- it24 挂账实测（D4）：landlock 腿下 /dev/null 的写 ----
+    // 本机 darwin 无 landlock、本机容器内核未编译 landlock ⇒ 事实唯真 landlock 宿主（CI runner）
+    // 可出。本项**不带预判**：只断言「腿真在运行（正对照）」+「/dev/null 结局有界（放行或
+    // EACCES 拒绝）」，实测分支出 stdout（console + surefire XML system-out）供取证；策略
+    // （文档化差异 / 设备节点例外）裁决后再收紧断言。
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    void landlockDevNullWriteIsMeasuredForAdjudication() throws Exception {
+        assumeTrue(landlockUsable(), "landlock helper not usable on this host");
+        SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
+            "/nonexistent/bwrap"));
+        SandboxPolicy policy = new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace);
+
+        // 正对照（it24 探针「限前正对照」同口径）：同腿内工作区写成功 ⇒ 腿真在运行，
+        // 后续若拒绝才可归因到 /dev/null 本身而非链路失效。
+        ShellResult control = run(provider, "echo probe > control.txt", policy, workspace);
+        assertThat(control.exitCode()).isZero();
+        assertThat(control.sandboxDenied()).isFalse();
+
+        ShellResult result = run(provider, "echo probe > /dev/null", policy, workspace);
+        if (result.exitCode() == 0) {
+            System.out.println("[D4] landlock leg /dev/null write: ALLOWED (exit 0)");
+            assertThat(result.sandboxDenied()).isFalse();
+        } else {
+            System.out.println("[D4] landlock leg /dev/null write: DENIED (exit " + result.exitCode()
+                + ", sandboxDenied=" + result.sandboxDenied() + ", stderr="
+                + result.stderr().strip() + ")");
+            assertThat(result.sandboxDenied()).isTrue();
+            assertThat(result.stderr()).contains("Permission denied");
+        }
+    }
+
+    // ---- 真强制 e2e：windows-acl（VM/CI windows job） ----
+    // Windows 侧真腿不经 bash（bash-local 平台化是 S-b）——真跑在 WindowsAclTest 直跑
+    // 助手；此处验链仲裁在真 Windows 把 windows-acl 报成 Ready/PARTIAL（探针即机制自检）
+
+    @Test
+    @EnabledOnOs(OS.WINDOWS)
+    void realWindowsAclReportsReadyWithPartialEnforcement() {
+        assertThat(provider(new SandboxLocalPlugin()).backendStatus()).isInstanceOfSatisfying(
+            BackendStatus.Ready.class, ready -> {
+                assertThat(ready.backend()).isEqualTo("windows-acl");
+                assertThat(ready.enforcement()).isEqualTo(SandboxEnforcement.PARTIAL);
+                assertThat(ready.detail()).contains("enforcement PARTIAL");
+            });
     }
 }

@@ -74,39 +74,7 @@ class LandlockTest {
         assertThat(Landlock.admits(Landlock.FULL_REQUIREMENT | (1L << 20))).isTrue();
     }
 
-    // ---- 启动三形态（+ 不自洽时 fail loud） ----
-
-    @Test
-    void helperCommandClasspathFormForUnnamedModule() {
-        assertThat(Landlock.helperCommand("/jdk", "/tmp/helper.jar", "", null).orElseThrow())
-            .containsExactly("/jdk/bin/java", "-XX:-UsePerfData", "--enable-native-access=ALL-UNNAMED",
-                "-cp", "/tmp/helper.jar", LandlockExecMain.class.getName());
-    }
-
-    @Test
-    void helperCommandModulePathFormWhenModulePathPresent() {
-        assertThat(Landlock.helperCommand("/jdk", "", "/modules", "io.javanatic.harness.sandbox.local")
-            .orElseThrow())
-            .containsExactly("/jdk/bin/java", "-XX:-UsePerfData",
-                "--enable-native-access=io.javanatic.harness.sandbox.local",
-                "--module-path", "/modules", "-m",
-                "io.javanatic.harness.sandbox.local/" + LandlockExecMain.class.getName());
-    }
-
-    @Test
-    void helperCommandImageFormWhenModulePathAbsent() {
-        assertThat(Landlock.helperCommand("/image", "", "", "io.javanatic.harness.sandbox.local")
-            .orElseThrow())
-            .containsExactly("/image/bin/java", "-XX:-UsePerfData",
-                "--enable-native-access=io.javanatic.harness.sandbox.local", "-m",
-                "io.javanatic.harness.sandbox.local/" + LandlockExecMain.class.getName());
-    }
-
-    @Test
-    void helperCommandWithoutDecidableFormIsEmpty() {
-        assertThat(Landlock.helperCommand("/jdk", "", "", null)).isEmpty();
-        assertThat(Landlock.helperCommand("/jdk", null, "/modules", null)).isEmpty();
-    }
+    // ---- 启动形态（构造面在 HelperLaunch，见该测试类；此处只验 landlock 助手自洽） ----
 
     @Test
     void hostHelperCommandIsSelfConsistent() {
@@ -114,6 +82,7 @@ class LandlockTest {
         assertThat(command).first().asString().endsWith("/bin/java");
         assertThat(command).contains("-XX:-UsePerfData");
         assertThat(command).anyMatch(token -> token.startsWith("--enable-native-access="));
+        assertThat(command).last().asString().endsWith(LandlockExecMain.class.getName());
     }
 
     // ---- 指令往返与非法拒绝 ----

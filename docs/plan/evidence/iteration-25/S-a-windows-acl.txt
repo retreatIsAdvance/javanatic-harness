@@ -1,0 +1,471 @@
+# it25 S-a 证据：windows-acl（低完整性令牌 + 逐对象打标）——真 VM 真跑 / 两洞实测 / 打标成本 /
+#   D4 /dev/null 测量落地与边界
+#
+# 对象：S-a 工作树（未提交）。被测类 = a5-classes.zip = 本工作树 sandbox/local/target/classes
+#   打包——与当前主源码的构建逐字节一致（§6 核对）；测试面改动（SandboxLocalTest 新增的 D4
+#   测量项）不进该包，本文件 §7/§8 单独取证。
+# 场所：UTM Win11 25H2 ARM64 VM（uuid 91EA42FC-F894-4E2A-AF34-EA6393127351）——用户 j'h
+#   （本机管理员、EnableLUA=0、High IL）、chcp 936、JDK 25.0.4.1（C:\jh\jdk）。
+# 投递/执行/回读：utmctl file push 载荷 + schtasks（/ru "j'h" /it 交互会话）跑
+#   C:\jh-payload\a5.cmd；utmctl file pull + iconv GBK→UTF-8 入库；VM 内原始日志
+#   C:\jh\mx\a5\all.txt。驱动器 a5.cmd（162 行；源 /private/tmp/a5/a5.cmd，CRLF 投递）
+#   四轮真跑完全相同——差异只在推入的 a5-classes.zip 版本。
+# 本文件＝实跑输出摘录：每段给出命令、决定性输出行与真实 EXIT 回显；附录 A 为收官轮全文。
+# 全档行尾 CR 与尾随空白已去（控制台/日志原样的行尾空格不承载信息；提交前按仓库白空格
+#   门禁规范化，内容逐字符未动）；环境来源细节（镜像站/代理）不入档。
+
+== 1. 环境事实（[env] 段，收官轮逐字） ==
+
+[env] run-date 2026/09/28 周一 14:53:38.95
+win-088t9s8v0lt\j'h
+Mandatory Label\High Mandatory Level 标签   S-1-16-12288
+（whoami /priv 24 项中 3 项已启用：SeChangeNotifyPrivilege / SeImpersonatePrivilege /
+  SeCreateGlobalPrivilege；其余含 SeSecurityPrivilege、SeBackupPrivilege、SeRestorePrivilege
+  全为已禁用——即打标成功不是靠特权位，而是 SetNamedSecurityInfoW 的 LABEL 位语义）
+[env] chcp → 活动代码页: 936（GBK 控制台；拒绝方言因此是本地化文案「拒绝访问」）
+Microsoft Windows [版本 10.0.26200.8037]
+openjdk version "25.0.4.1" 2026-08-18 LTS（Microsoft-14951896，JDK 由载荷 zip 就地展开）
+[env] classpath → io / META-INF / module-info.class（jar xf 解包形态）
+
+== 2. leg0 探针真跑（真建 / 真限 / 真跑 / 真拒写 / 正对照） ==
+
+命令（a5.cmd:47）：
+  C:\jh\jdk\bin\java.exe -XX:-UsePerfData --enable-native-access=ALL-UNNAMED
+    -cp C:\jh\mx\winacl\classes io.javanatic.harness.sandbox.local.WindowsAclExecMain --probe
+
+收官轮：
+[leg0] probe begin 14:53:39.24
+拒绝访问。                      ← 拒写腿的 cmd stderr（子进程写给未标 Low 的目录）
+windows-acl: ready — low integrity token (S-1-16-4096) + recursive per-object labels; enforcement PARTIAL (writable surface = every low-labeled object on this host; labeling follows hardlinks, so an object linked into the tree is labeled too, even outside it; labels persist, no revert in 0.2)
+[leg0] probe end 14:53:40.53 exit=0
+
+判读（探针七腿，WindowsAcl.probeLegs/strippedSessionLeg）：
+  ① 探针树自写（Files.createDirectory/createFile/writeString）成功 = 「树本身可写」的正对照，
+     排除 DAC 误绿；② 低完整性子进程写未标目录被拒（写了即 EXIT_NOT_ENFORCING）；③ 纯 FFM
+     递归打标（ConvertStringSecurityDescriptorToSecuritySD → SetNamedSecurityInfoW(LABEL)）
+     成功；④ 打标目录对低完整性儿可写（新对象靠 (OI)(CI) 继承）；⑤ 既有对象在递归打标后可写
+     （size>0）；⑥ 退出码 7 原样上浮；⑦ 标准用户近似腿（DISABLE_MAX_PRIVILEGE 令牌嵌套跑完整
+     workspace-write 会话）——同时断言嵌套会话根真被标 + TEMP 重定向真生效（观测面记在会话根，
+     见下「前史」）。exit=0 ⇒ 七腿全过，结论行即 Ready.detail 的来源（provider 首探缓存）。
+
+前史（首跑红 → 修 → 绿；两次红跑决定性输出见附录 B）：
+- 首跑（14:49）leg0 exit=12：`windows-acl: nested session TEMP redirect ineffective (no
+  temp-proof.txt under C:\Users\j'h\AppData\Local\Temp\jh-winacl-temp-10228…)`。
+  根因 = 探针自身缺陷：TEMP 重定向的观测面原本落在 %TEMP% 下的 temp-proof.txt，而嵌套助手
+  退出时按设计删掉自己的会话临时目录（jh-sbx-*）——文件随之消失，断言恒搜不到；重定向其实
+  是生效的（另查主机临时目录与 jh-winacl-* 残留均为「找不到文件」）。修法：子进程先把
+  %TEMP% 的值记在会话根（temp-seen.txt），「往 %TEMP% 写文件」排在命令串最后一条（退出码
+  即它的成败）；断言改查「记下的值落在 --temp 父下的 jh-sbx-* 目录 + 退出码 0」。
+- M5 突变（TEMP/TMP 覆写两行改成占位串，14:53）leg0 exit=12：
+  `windows-acl: stripped-privilege nested session failed (exit=1)`，且 leg5 显示子进程看到的
+  TEMP 退回宿主值 `C:\Users\j'h\AppData\Local\Temp`（对照收官轮见 §3）——证明该断言承载真事实。
+  还原后复绿（本档收官轮）。
+
+== 3. 真跑六题（读写面 / stdio / 命令串完整性 / 退出码） ==
+
+① read-only 写未标对象（leg1，a5.cmd:53）：
+   拒绝访问。
+   [leg1] read-only exit=1
+   [leg1] denied.txt exists=false DENIED        ← 真拒写 + 无残留
+② read-only stdio 直通（leg2，:60）：
+   hello-from-low
+   [leg2] stdio exit=0                          ← 低完整性儿的 stdout 原样回来
+③ workspace-write 新文件（leg3a，:67）：
+   [leg3a] ws-write-new exit=0 / in.txt exists=true / content: ok
+④ workspace-write 既有文件追加（leg3b，:76）：
+   [leg3b] ws-write-preexisting exit=0 / pre.txt content: premade + appended
+⑤ 标签实证（leg3c，:83）icacls：
+   C:\jh\mx\a5ws            … Mandatory Label\Low Mandatory Level:(OI)(CI)(NW)
+   C:\jh\mx\a5ws\pre.txt    … Mandatory Label\Low Mandatory Level:(NW)
+   （目录带 (OI)(CI) 继承位、既有文件单机位——打标面与机制一致）
+⑥ workspace-write 写面外（leg4，:88）：
+   拒绝访问。
+   [leg4] ws-write-outside exit=1
+   [leg4] outside.txt exists=false DENIED       ← 同轮内「工作区内可写 / 区外不可写」成对
+⑦ 会话 TEMP 重定向（leg5，:95）：
+   [leg5] temp-redirect exit=0
+   [leg5] TEMP seen by child: C:\jh\mx\a5temp\jh-sbx-16411816163057787127
+⑧ 命令串完整性（leg6a `&` 多语句 :102 / leg6b 内层引号 :109）：
+   [leg6a] ampersand exit=0 / two.txt content: second
+   [leg6b] inner-quotes exit=0 / quoted.txt content: "quoted arg"
+⑨ 子进程退出码上浮（leg7，:116）：
+   [leg7] exit-code exit=7 expect=7
+
+== 4. 打标成本（leg8，:120-128） ==
+
+方法：同一台 VM、同一助手，分别对 2000 文件树与空树跑 workspace-write 会话
+（`cmd.exe /d /c exit 0`），PowerShell Stopwatch 包住整个 java.exe 启动；两次读数：
+
+  收官轮：leg8 big2000-ms=942 / empty-ms=463（begin 14:53:45.09 → end 14:53:48.46）
+  首跑：  leg8 big2000-ms=932 / empty-ms=483
+
+判读：两值都含 JVM 启动等固定开销；差值 ≈ 460–479 ms / 2000 文件 ⇒ 打标边际成本 ≈ 0.23–0.24
+ms/文件（线性外推，仅到 2000 深度有限）。结论行同轮内两次读数差 <5%，量级可信。
+
+== 5. 两洞实测（leg9 洞 1 / leg10 洞 2） ==
+
+洞 1（leg9，:130-144）：可写面是「主机上一切 Low 对象」，不限于策略根。
+  icacls C:\jh\mx\a5foreign /setintegritylevel "(OI)(CI)L" → exit=0，标签实证
+  `Mandatory Label\Low Mandatory Level:(OI)(CI)(NW)`；
+  随后一次 **read-only** 会话写该目录：
+  [leg9] read-only-to-foreign-low exit=0
+  [leg9] hole2.txt exists=true WRITABLE-SURFACE-IS-GLOBAL-LOW
+  判读：MAC 只问对象标签、不问策略词——任何进程把工作区外对象标成 Low（icacls 即可），该对象
+  就进可写面。这条坐实了 Ready.detail 的「writable surface = every low-labeled object on this
+  host」不是修辞。
+
+洞 2（leg10，:146-159）：打标会顺硬链接泄漏到工作区外的目标对象。
+  mklink /h %WS%\hl-alias.txt %OUT%\hl-target.txt → exit=0（目标在工作区外，内容 src-medium）；
+  随后一次 workspace-write 会话（打标 pass 会走遍树内对象）：
+  [leg10] write-via-alias exit=0
+  [leg10] hl-target.txt content outside the workspace: src-medium + hacked
+  [leg10] hl-target.txt label after labeling pass: … Mandatory Label\Low Mandatory Level:(NW)
+  判读：硬链接不带重解析属性（reparse point）⇒ 打标 pass 的 reparse 护栏漏掉它，Low 标签落到
+  工作区外的目标对象上——目标由此进入可写面（追加成功），且标签是持久元数据。**推翻 S-0 的
+  推论**「硬链接与目标同对象同标签 ⇒ 不构成越界」（该推论假设标签已存在；实际是打标 pass
+  自己把标签写到了外部目标上）。0.2 不做检测（需 GetFileInformationByHandle 查 link count），
+  如实进 Ready.detail + 05 §6。
+
+== 6. 被测类一致性核对（本机，2026-09-28） ==
+
+$ unzip -q a5-classes.zip -d /tmp/a5zipcheck
+$ diff -r /tmp/a5zipcheck/classes sandbox/local/target/classes
+IDENTICAL: VM-measured classes == current main-source build      （27 个 .class，无差异）
+
+⇒ 本文件全部 VM 事实对应的是当前工作树主源码的构建产物（S-a4 后主源码未再改动；此后只改了
+   测试面 SandboxLocalTest）。
+
+== 7. D4 /dev/null：测量项落地 + 本机边界（事实待真 landlock 宿主） ==
+
+D4 内容（it25 裁决记录）：「`/dev/null` 顺手实测出选项（runner 真 landlock 宿主 ABI v7，一条
+e2e 出事实再裁，不带预判）」。
+
+落地（S-a 代码面）：SandboxLocalTest 新增 Linux/landlock 门控 e2e
+`landlockDevNullWriteIsMeasuredForAdjudication`（正对照工作区写成功 + `echo probe > /dev/null`
+结局二选一：exit 0 或 EACCES 方言拒绝，两分支都过并把实测分支出 stdout——console 与 surefire
+XML system-out 双落点，供真 landlock 宿主运行时取证）。
+
+本机边界（两条事实，均为今日实测）：
+- 本机容器（docker 24.0.6，内核 6.4.16-linuxkit，未编译 CONFIG_SECURITY_LANDLOCK）：
+  $ java … LandlockExecMain --probe
+  landlock: unavailable — landlock syscalls not present (errno ENOSYS)
+  PROBE-EXIT=10
+- 同容器内经助手做「D4 测量」的尝试（本档命令即真实测量形态）：
+  $ java … LandlockExecMain --mode workspace-write --root /tmp/d4ws -- sh -c 'echo probe > /dev/null'
+  landlock: unavailable — landlock syscalls not present (errno ENOSYS)
+  MEASURE-EXIT=10                      ← 助手 fail-closed：命令根本没跑，问题在本机不可判定
+- 非受限对照（同容器）：`sh -c 'echo probe > /dev/null'` → UNCONFINED-EXIT=0（宿主本可写）
+
+⇒ 本机（darwin 无 landlock；本机容器内核无 landlock）**无法取得该事实**——事实唯真 landlock
+宿主可出：首个可及场所 = CI ubuntu job（runner 内核 landlock ABI v7，it24 第三轮已证）。
+故 D4 在本停点交付「测量项 + 边界 + 选项」，事实随 S-c 首轮 CI 回填后再裁。选项：
+  A. 文档化差异（维持 05 §6 已知残余）——seatbelt 显式放行 `(literal "/dev/null")`、bwrap 新
+     devtmpfs、landlock 腿拒绝；
+  B. 设备节点例外——在 landlock ruleset 里为 `/dev/null` 增显式规则（上游 `landlock_add_rule`
+     的 `parent_fd` 语义可指向单文件；此为文档级事实，若选 B 在 S-c 对照内核文档复核）。
+S-c 挂钩（防事实静默丢失）：把该用例名并入 CI「landlock e2e ran for real」断言集（步骤 8 的
+want 集合），并从日志/XML 收割 `[D4] landlock leg /dev/null write: …` 行。
+
+== 8. 突变与红/绿对 ==
+
+VM 侧（M5，§2 前史）：TEMP/TMP 覆写 → leg0 exit=12 + leg5 退回宿主 TEMP；还原复绿。
+容器侧（D4 门禁）：删掉 `assumeTrue(landlockUsable(), …)` 后运行该用例——
+  SandboxUnavailableException: sandbox mode "workspace-write" is requested but no sandbox backend
+  is usable on this host; refusing to run the command unconfined — bwrap probe failed (binary:
+  /nonexistent/bwrap); landlock probe failed (exit 10 — landlock: unavailable — … errno ENOSYS)
+  Tests run: 1, Failures: 0, Errors: 1 ⇒ 用例体是活的、且「无 landlock 即拒绝非受限执行」；
+  还原后：Tests run: 1, …, Skipped: 1 / BUILD SUCCESS。
+本机侧（生产面三处，S-a 主源码；破坏 → 聚焦必红 → 还原 → 复绿，还原后 md5 一致）：
+  M1 win32 链置空   → platformChainsAreDarwinSeatbeltLinuxBwrapThenLandlockWin32WindowsAcl
+                     Tests run: 1, Failures: 1
+  M2 PARTIAL 改 FULL → windowsAclWrapReadOnlyCarriesNoRootsAndNoTemp  Failures: 1
+  M3 摘掉 --temp    → windowsAclWrapWorkspaceWritePassesWorkspaceRootAndTempParentOnly  Errors: 1
+  复绿（聚焦四类）：HelperLaunchTest 5/0/0/0 · LandlockTest 14/0/0/2 · WindowsAclTest 19/0/0/7 ·
+  SandboxLocalTest 31/0/0/6（含 D4 项按平台跳过）· 合计 69/0/0/15
+容器侧复绿（Linux 无 landlock）：同四类 69/0/0/21（SandboxLocalTest 31/0/0/10——多出的 4 条
+= 两条 bwrap e2e + 两条 landlock e2e + D4 项，均按假设跳过；D4 项在 surefire XML 中确认为
+`skipped`，未被误激活）。
+
+== 9. 边界与未测项（诚实登记） ==
+
+- 场所边界：上述真跑在 VM（ARM64 Win11 25H2，EnableLUA=0、High IL 管理员）上完成；CI windows
+  job（S-c）是另一场所，届时跑的是测试面而非本驱动器。
+- 洞 2 未修（0.2 不做）：检测硬链接需 GetFileInformationByHandle/FileStandardInformation 的
+  link count；修法（跳过或拒绝）与 WritableRoots 语义同议，另行排期。
+- 标签是持久元数据：0.2 无还原（会话结束/崩溃均不摘标）；Ready.detail 已如实携带。
+- 打标成本只测到 2000 文件（线性外推）；更深树/更大文件的成本未测。
+- 拒绝方言是本地化文案：本 VM 为 GBK「拒绝访问」；dialect 表两形态（"Access is denied" /
+  "拒绝访问"）都在，但只在 zh-CN 环境实测过英文形态的匹配逻辑（WINDOWS_ACL_DENIALS 为
+  contains 匹配，两串互不影响）。
+- 探针的 D4 项在真 landlock 宿主上的首次执行 = S-c 首轮 CI；本档不含其判读。
+- 未实测（沿自 S-0，维持）：CreateProcessWithTokenW 备选腿（不在采纳形状内）。
+
+== 10. 文案/文档同步后的收官复验（S-a6，2026-09-28） ==
+
+- 口径反转同步面（S-a 接上 win32 链后，「windows-acl 入 0.2.0 / win32=空链」类文案全部失效；
+  旧措辞全局 grep 后逐处订正）：05 §6 win32 段（重写为低完整性 + 逐对象打标 + 两洞实测）·
+  05 §6 verify 出路清单（「等待 windows-acl」不再是出路）· 02 模块表（并补 it24 漏同步的
+  linux 链 `[bwrap]` → `[bwrap→landlock]`）· `bundle.yml` 注释 · README×2 平台段 ·
+  AGENTS.md 现状与 layout 行 · `AppBoot` NoBackend 生产文案（+ 随动断言 `AppBootTest`
+  21/0/0/0）。05 §6 的 `/dev/null` 口径改标「推论待实测」并点名 D4 测量项（见 §7）。
+- 全量 package（本机 darwin，15:10）：**BUILD SUCCESS**，30 个含测试模块汇总
+  **573/0/0/17**（跳过 = 平台分区：linux/windows 腿）。沙箱四项：HelperLaunchTest
+  5/0/0/0 · LandlockTest 14/0/0/2 · WindowsAclTest 19/0/0/7 · SandboxLocalTest 31/0/0/6。
+- 被测类一致性复校（全量重编后重跑 §6 的 diff）：`diff -r /private/tmp/a5zipcheck/classes
+  sandbox/local/target/classes` → 无差异，仍 27 类 ⇒ 本档 VM 取证所测的类 = 当前主源码的
+  构建产物（sandbox/local 主源码在 §6 核对与本次复编之间零改动；S-a6 改动面仅 docs 与
+  `bundle/base` 文案/断言）。
+
+== 11. 放行条件项修正与复验（2026-09-28，本机 darwin；原始片段见附录 C） ==
+
+- 修正面 = **测试面 + 文档面，主源码零改动**（`WindowsAcl` / `HelperLaunch` /
+  `WindowsAclExecMain` / `SandboxLocalPlugin` 未动一行）⇒ §6/§10 的被测类一致性
+  （a5-classes 27 类同构）不受影响，**无需重跑 VM**（用户裁定）。
+- 放行条件项 1（`hostHelperCommandIsSelfConsistent` 的 `endsWith("/bin/java")` 无 OS 门，
+  Windows 分隔符必红）：改按 Path 语义断言——`Path.of(首参).getFileName()=="java"` +
+  父目录名 `"bin"`。突变 M6（期望文件名扰动为 `java-x`）：WindowsAclTest 20/1/0/7、
+  `expected: "java-x"` ⇒ 断言承载真事实；还原后 md5 一致
+  （cdd9eba382f0104df25afb97502e7041）、复绿。
+- 放行条件项 2（`launch()` 单 UTF-8 解码使 GBK 的「拒绝访问」在 chcp 936 控制台永不成串，
+  两条方言绑定腿必红）：`ProcessResult` 改持原始字节、解码推迟到断言点；`dialectSeen`
+  按 UTF-8 / GBK 两种控制台码页都试解后匹配（**断言强度不变**）；新增纯函数锚点
+  `dialectMatchingHoldsForBothConsoleCodepages`（en-US ASCII + zh-CN GBK + 非方言反例，
+  任意宿主全跑）。突变 M7（解码收窄回单 UTF-8）：该锚点必红（GBK 形态，
+  `WindowsAclTest.java:171`）⇒ 修正承载真事实；还原后 md5 一致、复绿。
+- 复绿（修正 + 还原后）：四类聚焦 **70/0/0/15** BUILD SUCCESS——HelperLaunchTest
+  5/0/0/0 · LandlockTest 14/0/0/2 · **WindowsAclTest 20/0/0/7**（19→20 = 新增方言锚点）·
+  SandboxLocalTest 31/0/0/6；`AppBootTest` 21/0/0/0 绿（bundle/base 自 S-a6 未再改动，
+  该运行即修正后面貌）。
+- 命令与 EXIT 回显：
+  `mvn -B -pl sandbox/local -am test -Dtest='HelperLaunchTest,LandlockTest,WindowsAclTest,SandboxLocalTest' -Dsurefire.failIfNoSpecifiedTests=false` → EXIT=0
+  `mvn -B -pl bundle/base -am test -Dtest='AppBootTest' -Dsurefire.failIfNoSpecifiedTests=false` → EXIT=0
+  M6 突变跑 → EXIT=1；M7 突变跑 → EXIT=1；还原后复跑 → EXIT=0（附录 C）。
+- 三处顺手带上（同提交）：05 §6 win32 段退出码词表去 11（本助手无 ABI 概念：
+  0/10/12/13/14/127）· `PROBE_TIMEOUT_SECONDS` 5→60 的全局影响入台账设计增量表
+  （所有平台链的外层护栏随之上抬；腿级裁决不变）· AGENTS.md「不捕获 Throwable」
+  补 FFM 豁免条款（犯错回填：`invokeExact` 声明 `throws Throwable`——蹦床 / 助手边界 /
+  无补救路径的句柄收尾不得已兜边，条件 = 边界点翻译成协议退出码、收尾点注明无补救路径）。
+
+附录 A：收官轮（all3）原始日志全文（GBK→UTF-8，行尾 CR/尾随空白已去）
+
+[setup] jar-extract exit=0
+[env] run-date 2026/09/28 周一 14:53:38.95
+[env] whoami
+win-088t9s8v0lt\j'h
+[env] groups-integrity
+Mandatory Label\High Mandatory Level 标签   S-1-16-12288
+[env] privileges
+
+特权信息
+----------------------
+
+特权名                                    描述                               状态
+========================================= ================================== ======
+SeIncreaseQuotaPrivilege                  为进程调整内存配额                 已禁用
+SeSecurityPrivilege                       管理审核和安全日志                 已禁用
+SeTakeOwnershipPrivilege                  取得文件或其他对象的所有权         已禁用
+SeLoadDriverPrivilege                     加载和卸载设备驱动程序             已禁用
+SeSystemProfilePrivilege                  配置文件系统性能                   已禁用
+SeSystemtimePrivilege                     更改系统时间                       已禁用
+SeProfileSingleProcessPrivilege           配置文件单一进程                   已禁用
+SeIncreaseBasePriorityPrivilege           提高计划优先级                     已禁用
+SeCreatePagefilePrivilege                 创建一个页面文件                   已禁用
+SeBackupPrivilege                         备份文件和目录                     已禁用
+SeRestorePrivilege                        还原文件和目录                     已禁用
+SeShutdownPrivilege                       关闭系统                           已禁用
+SeDebugPrivilege                          调试程序                           已禁用
+SeSystemEnvironmentPrivilege              修改固件环境值                     已禁用
+SeChangeNotifyPrivilege                   绕过遍历检查                       已启用
+SeRemoteShutdownPrivilege                 从远程系统强制关机                 已禁用
+SeUndockPrivilege                         从扩展坞上取下计算机               已禁用
+SeManageVolumePrivilege                   执行卷维护任务                     已禁用
+SeImpersonatePrivilege                    身份验证后模拟客户端               已启用
+SeCreateGlobalPrivilege                   创建全局对象                       已启用
+SeIncreaseWorkingSetPrivilege             增加进程工作集                     已禁用
+SeTimeZonePrivilege                       更改时区                           已禁用
+SeCreateSymbolicLinkPrivilege             创建符号链接                       已禁用
+SeDelegateSessionUserImpersonatePrivilege 获取同一会话中另一个用户的模拟令牌 已禁用
+[env] chcp
+活动代码页: 936
+
+Microsoft Windows [版本 10.0.26200.8037]
+[env] java
+openjdk version "25.0.4.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Microsoft-14951896 (build 25.0.4.1+1-LTS)
+OpenJDK 64-Bit Server VM Microsoft-14951896 (build 25.0.4.1+1-LTS, mixed mode, sharing)
+[env] classpath
+io
+META-INF
+module-info.class
+[leg0] probe begin 14:53:39.24
+拒绝访问。
+windows-acl: ready — low integrity token (S-1-16-4096) + recursive per-object labels; enforcement PARTIAL (writable surface = every low-labeled object on this host; labeling follows hardlinks, so an object linked into the tree is labeled too, even outside it; labels persist, no revert in 0.2)
+[leg0] probe end 14:53:40.53 exit=0
+[leg1] read-only write outside labeled surface
+拒绝访问。
+[leg1] read-only exit=1
+[leg1] denied.txt exists=false DENIED
+[leg2] read-only stdio passthrough
+hello-from-low
+[leg2] stdio exit=0
+[leg3a] workspace-write new file inside
+[leg3a] ws-write-new exit=0
+[leg3a] in.txt exists=true
+[leg3a] in.txt content:
+ok
+[leg3b] workspace-write pre-existing file inside
+[leg3b] ws-write-preexisting exit=0
+[leg3b] pre.txt content:
+premade
+appended
+[leg3c] label-proof icacls
+C:\jh\mx\a5ws BUILTIN\Administrators:(I)(OI)(CI)(F)
+              NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+              BUILTIN\Users:(I)(OI)(CI)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+              NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+              Mandatory Label\Low Mandatory Level:(OI)(CI)(NW)
+
+已成功处理 1 个文件; 处理 0 个文件时失败
+C:\jh\mx\a5ws\pre.txt BUILTIN\Administrators:(I)(F)
+                      NT AUTHORITY\SYSTEM:(I)(F)
+                      BUILTIN\Users:(I)(RX)
+                      NT AUTHORITY\Authenticated Users:(I)(M)
+                      Mandatory Label\Low Mandatory Level:(NW)
+
+已成功处理 1 个文件; 处理 0 个文件时失败
+[leg4] workspace-write write outside
+拒绝访问。
+[leg4] ws-write-outside exit=1
+[leg4] outside.txt exists=false DENIED
+[leg5] session temp redirect
+[leg5] temp-redirect exit=0
+[leg5] TEMP seen by child:
+C:\jh\mx\a5temp\jh-sbx-16411816163057787127
+[leg6a] multi-statement command with ampersand
+first
+[leg6a] ampersand exit=0
+[leg6a] two.txt content:
+second
+[leg6b] command string carrying inner quotes
+[leg6b] inner-quotes exit=0
+[leg6b] quoted.txt content:
+"quoted arg"
+[leg7] child exit code propagation
+[leg7] exit-code exit=7 expect=7
+[leg8] label-cost begin 14:53:45.09
+
+C:\jh\mx\winacl>C:\jh\jdk\bin\java.exe -XX:-UsePerfData --enable-native-access=ALL-UNNAMED -cp C:\jh\mx\winacl\classes io.javanatic.harness.sandbox.local.WindowsAclExecMain --mode workspace-write --root C:\jh\mx\a5big --temp C:\jh\mx\a5temp -- cmd.exe /d /c exit 0
+leg8 big2000-ms=942
+
+C:\jh\mx\winacl>C:\jh\jdk\bin\java.exe -XX:-UsePerfData --enable-native-access=ALL-UNNAMED -cp C:\jh\mx\winacl\classes io.javanatic.harness.sandbox.local.WindowsAclExecMain --mode workspace-write --root C:\jh\mx\a5empty --temp C:\jh\mx\a5temp -- cmd.exe /d /c exit 0
+leg8 empty-ms=463
+[leg8] label-cost end 14:53:48.46
+[leg9] hole1 writable surface is global-low
+已处理的文件: C:\jh\mx\a5foreign
+已成功处理 1 个文件; 处理 0 个文件时失败
+[leg9] icacls-setintegritylevel exit=0
+C:\jh\mx\a5foreign BUILTIN\Administrators:(I)(OI)(CI)(F)
+                   NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+                   BUILTIN\Users:(I)(OI)(CI)(RX)
+                   NT AUTHORITY\Authenticated Users:(I)(M)
+                   NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+                   Mandatory Label\Low Mandatory Level:(OI)(CI)(NW)
+
+已成功处理 1 个文件; 处理 0 个文件时失败
+[leg9] label-foreign-dir exit=0
+C:\jh\mx\a5foreign BUILTIN\Administrators:(I)(OI)(CI)(F)
+                   NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+                   BUILTIN\Users:(I)(OI)(CI)(RX)
+                   NT AUTHORITY\Authenticated Users:(I)(M)
+                   NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+                   Mandatory Label\Low Mandatory Level:(OI)(CI)(NW)
+
+已成功处理 1 个文件; 处理 0 个文件时失败
+[leg9] read-only-to-foreign-low exit=0
+[leg9] hole2.txt exists=true WRITABLE-SURFACE-IS-GLOBAL-LOW
+[leg10] hardlink alias inside workspace
+为 C:\jh\mx\a5ws\hl-alias.txt <<===>> C:\jh\mx\a5\hl-target.txt 创建了硬链接
+[leg10] mklink exit=0
+[leg10] write-via-alias exit=0
+[leg10] hl-alias.txt line:
+ 驱动器 C 中的卷没有标签。
+ 卷的序列号是 D233-D515
+
+ C:\jh\mx\a5ws 的目录
+
+2026/09/28  14:53                22 hl-alias.txt
+               1 个文件             22 字节
+               0 个目录 63,638,409,216 可用字节
+[leg10] hl-target.txt content outside the workspace:
+src-medium
+hacked
+[leg10] hl-target.txt label after labeling pass:
+C:\jh\mx\a5\hl-target.txt BUILTIN\Administrators:(I)(F)
+                          NT AUTHORITY\SYSTEM:(I)(F)
+                          BUILTIN\Users:(I)(RX)
+                          NT AUTHORITY\Authenticated Users:(I)(M)
+                          Mandatory Label\Low Mandatory Level:(NW)
+
+已成功处理 1 个文件; 处理 0 个文件时失败
+[run] end 2026/09/28 周一 14:53:49.88
+
+附录 B：红跑决定性片段（首跑 leg0 / M5 突变 leg0+leg5）
+
+B1 首跑（14:49，修前形状）leg0 —— 红在探针自身（观测面被嵌套会话按设计删掉，非机制失效；
+   修法与对照见 §2「前史」）：
+
+[leg0] probe begin 14:49:00.80
+拒绝访问。
+windows-acl: nested session TEMP redirect ineffective (no temp-proof.txt under C:\Users\j'h\AppData\Local\Temp\jh-winacl-temp-10228574078480231441)
+[leg0] probe end 14:49:01.98 exit=12
+
+B2 M5 突变（14:53，TEMP/TMP 覆写两行改成占位串）—— 幂等红：嵌套会话因 TEMP 未改道而失败
+   （leg0 exit=12），且 leg5 所见 TEMP 退回宿主值（对照收官轮 C:\jh\mx\a5temp\jh-sbx-*）：
+
+[leg0] probe begin 14:53:07.22
+拒绝访问。
+拒绝访问。
+windows-acl: stripped-privilege nested session failed (exit=1)
+[leg0] probe end 14:53:08.56 exit=12
+
+[leg5] session temp redirect
+[leg5] temp-redirect exit=0
+[leg5] TEMP seen by child:
+C:\Users\j'h\AppData\Local\Temp
+
+附录 C：S-a 修正轮（放行条件项）原始片段（本机 darwin，2026-09-28；行尾 CR/尾随空白已去）
+
+C1 修正+还原后聚焦四类复绿（EXIT=0）：
+
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.047 s -- in io.javanatic.harness.sandbox.local.HelperLaunchTest
+[WARNING] Tests run: 14, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.144 s -- in io.javanatic.harness.sandbox.local.LandlockTest
+[WARNING] Tests run: 20, Failures: 0, Errors: 0, Skipped: 7, Time elapsed: 0.173 s -- in io.javanatic.harness.sandbox.local.WindowsAclTest
+[WARNING] Tests run: 31, Failures: 0, Errors: 0, Skipped: 6, Time elapsed: 0.185 s -- in io.javanatic.harness.sandbox.local.SandboxLocalTest
+[WARNING] Tests run: 70, Failures: 0, Errors: 0, Skipped: 15
+[INFO] BUILD SUCCESS
+
+C2 AppBootTest 复绿（EXIT=0）：
+
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.479 s -- in io.javanatic.harness.boot.AppBootTest
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+C3 M6 突变（期望文件名 java→java-x）失败片段（EXIT=1）：
+
+[ERROR] Tests run: 20, Failures: 1, Errors: 0, Skipped: 7, Time elapsed: 0.206 s <<< FAILURE! -- in io.javanatic.harness.sandbox.local.WindowsAclTest
+[ERROR] io.javanatic.harness.sandbox.local.WindowsAclTest.hostHelperCommandIsSelfConsistent -- Time elapsed: 0.006 s <<< FAILURE!
+expected: "java-x"
+	at io.javanatic.harness.sandbox.local.WindowsAclTest.hostHelperCommandIsSelfConsistent(WindowsAclTest.java:157)
+[ERROR]   WindowsAclTest.hostHelperCommandIsSelfConsistent:157
+expected: "java-x"
+[INFO] BUILD FAILURE
+
+C4 M7 突变（解码收窄回单 UTF-8）失败片段（EXIT=1）：
+
+[ERROR] Tests run: 20, Failures: 1, Errors: 0, Skipped: 7, Time elapsed: 0.279 s <<< FAILURE! -- in io.javanatic.harness.sandbox.local.WindowsAclTest
+[ERROR] io.javanatic.harness.sandbox.local.WindowsAclTest.dialectMatchingHoldsForBothConsoleCodepages -- Time elapsed: 0.012 s <<< FAILURE!
+[zh-CN chcp 936（GBK）——单用 UTF-8 解码时必假红]
+	at io.javanatic.harness.sandbox.local.WindowsAclTest.dialectMatchingHoldsForBothConsoleCodepages(WindowsAclTest.java:171)
+[ERROR]   WindowsAclTest.dialectMatchingHoldsForBothConsoleCodepages:171 [zh-CN chcp 936（GBK）——单用 UTF-8 解码时必假红]
+[INFO] BUILD FAILURE

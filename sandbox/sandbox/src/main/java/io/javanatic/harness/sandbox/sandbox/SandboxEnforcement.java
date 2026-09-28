@@ -9,6 +9,9 @@ public enum SandboxEnforcement {
     /** 承诺的文件效果全部由内核强制。 */
     FULL,
 
-    /** 部分强制（预留：Landlock ABI 级别降档等场景）。 */
+    /**
+     * 部分强制：首用是 windows-acl（可写面 = 主机上一切低完整性标签对象，超出工作区
+     * 树）；Landlock ABI 级别降档为同类预留。
+     */
     PARTIAL
 }

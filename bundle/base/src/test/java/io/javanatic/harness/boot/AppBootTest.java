@@ -211,7 +211,7 @@ class AppBootTest {
             assertThat(AppBoot.sandboxWarning(rt.root())).hasValueSatisfying(warning ->
                 assertThat(warning).contains("workspace-write").contains("win32")
                     .contains("fail closed").contains("danger-full-access")
-                    .contains("windows-acl"));
+                    .contains("on-host backend"));
         }
     }
 

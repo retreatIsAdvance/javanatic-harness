@@ -233,7 +233,7 @@ public final class AppBoot {
                 "sandbox warning: confining policy \"" + observation.mode() + "\" is configured but platform \""
                 + noBackend.platform() + "\" has no same-host sandbox backend yet; the first"
                 + " confined shell call will fail closed. Options: overlay mode:"
-                + " danger-full-access (explicit bypass), or wait for windows-acl (0.2.0).");
+                + " danger-full-access (explicit bypass), or a platform with an on-host backend.");
             case BackendStatus.ProbeFailed failed -> Optional.of(
                 "sandbox warning: confining policy \"" + observation.mode() + "\" is configured but no sandbox"
                 + " backend is usable on platform \"" + failed.platform() + "\" ("

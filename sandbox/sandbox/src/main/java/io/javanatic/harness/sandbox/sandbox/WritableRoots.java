@@ -35,8 +35,17 @@ public final class WritableRoots {
         if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
             roots.add(canonical(Path.of("/tmp")));
         }
-        roots.add(canonical(Path.of(System.getProperty("java.io.tmpdir"))));
+        roots.add(tempRoot());
         return roots;
+    }
+
+    /**
+     * 宿主临时区根（规范化）。windows-acl 的 {@code --temp} 取它作<b>父</b>再取会话
+     * 私有子目录——该后端不整根授予临时区（整树打标是越界足迹），故它与 {@link #of}
+     * 的授予面不同源，独立取用。
+     */
+    public static Path tempRoot() {
+        return canonical(Path.of(System.getProperty("java.io.tmpdir")));
     }
 
     /** realpath 规范化；解析失败保守返回原拼写（见类注）。 */

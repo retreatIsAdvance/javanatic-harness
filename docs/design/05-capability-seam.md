@@ -471,10 +471,25 @@ jar）；机制结论（ABI/rights/正对照）来自探针内实测而非版本
 词表——0 通过 / 10 平台或内核不支持 / 11 ABI 不足 / 12 机制未真拒写 / 13 应用失败 /
 14 用法 / 127 exec 失败，非 0 一律 fail-closed，末行结论原样进 `Ready.detail` 或
 `ProbeFailed.detail`）。
-win32=[]（windows-acl 入 0.2.0：WRITE_RESTRICTED 受限令牌 +
-per-workspace SID 常设授予 + per-session 随机临时目录/SID，**enforcement=PARTIAL 及
-两洞**——Everyone-可写外部对象仍可写、NTFS 硬链接别名越界，stderr 签名 + exit 127
-fail-closed）。空链平台上受限 confine 一律 `SandboxUnavailableException`（code
+win32=[windows-acl]（it25 S-a 落地：**低完整性（Low IL）形状**——拓扑与 landlock 不同，
+是「助手受限生子」：助手 JVM 不受限，子进程唯一生成路径 = 受限令牌
+（`CreateRestrictedToken(DISABLE_MAX_PRIVILEGE, 0 受限 SID)` +
+`SetTokenInformation(TokenIntegrityLevel, S-1-16-4096)`）经 `CreateProcessAsUserW` 生出，
+令牌构造任一步失败即不生子；既定 WRITE_RESTRICTED + per-workspace SID 常设授予 +
+per-session 随机 SID 形状已证物理不可用（`CREATE_NO_WINDOW` 下受限 SID 子进程必死
+0xC0000142、借 Administrators 过启动则写限制形同虚设——S-0 实探），不得回头再试。
+可写面 = **Low 标签面**：会话前助手纯 FFM 逐对象递归打标
+（`ConvertStringSecurityDescriptorToSecurityDescriptorW` +
+`SetNamedSecurityInfoW(LABEL_SECURITY_INFORMATION)`；目录带 (OI)(CI) 继承、既有子对象
+逐个打——标签不向已存在子对象回溯，新对象靠继承），标签是持久元数据、0.2 不做还原；
+MAC 不理会 DACL ⇒ 写 Low 标签对象放行、写中标签对象（含 DACL 已授权的）被拒；打标
+成本实测 ≈0.23 ms/文件（2000 文件 942 ms vs 空树 463 ms 基线）。**enforcement=PARTIAL，
+两洞如实（`Ready.detail` 携探针结论行，结构保证不冒充 FULL）**：洞 1 = 可写面 = 主机上
+**一切** Low 标签对象（不止本会话树）；洞 2 = 递归打标**跟随 NTFS 硬链接**（硬链接无
+reparse 属性，跳重解析点的守卫拦不住）⇒ 链入会话树的工作区外目标对象被标 Low、永久
+进入可写面。退出码协议沿用 landlock 词表但**无 11**（本助手无 ABI 概念）：
+0/10/12/13/14/127，探针七腿全过才 Ready、非 0 一律 fail-closed；拒绝方言
+`Access is denied` / `拒绝访问`（GBK 控制台本地化文案）。空链平台上受限 confine 一律 `SandboxUnavailableException`（code
 SANDBOX_UNAVAILABLE）——**fail-closed，静默透传被禁止**。
 
 **查询面与 verify 观测（it12.6；it24 分两级）**：`backendStatus()` 把「首调用才炸」
@@ -482,7 +497,7 @@ SANDBOX_UNAVAILABLE）——**fail-closed，静默透传被禁止**。
 （probe session 解析策略；无策略行或无同机 provider 的 docker 组合不预警——执行器
 自身消费策略）：`NoBackend`/`ProbeFailed` → stderr **WARNING** 点名平台、后果（首次
 受限调用 fail-closed）与出路（显式 `danger-full-access` overlay 弃权 / 装
-bubblewrap / windows-acl 入 0.2.0）；`Ready` → 一行 **INFO 落点**（生效后端 + 完备度
+bubblewrap / 换到有同机后端的平台）；`Ready` → 一行 **INFO 落点**（生效后端 + 完备度
 + 链路细节），使「档位真在生效」与「档位配了但不可用」在 verify 输出里可辨；
 **exit 码不变**（观测非违规——PRODUCTION 违规仍 exit 1）。
 
@@ -494,10 +509,13 @@ bwrap 定位不到或不可用的宿主形态（NixOS 这类发行版布局：�
 系统 PATH——与「未安装」同一探针结论）同理——`bwrap probe failed` 在诊断里实名登记，
 链按序落到 landlock（CI 的干净容器冒烟即该形态的真跑登记：容器内无 bwrap，
 `--verify` 必现该点名行）；
-landlock 腿的写授权只到可写根——`/dev/null` 不在 `WritableRoots` 内，该腿下
+landlock 腿的写授权只到可写根——**预期** `/dev/null` 不在 `WritableRoots` 内 ⇒ 该腿下
 `cmd > /dev/null` 被拒（EACCES；与 seatbelt 的 `(literal "/dev/null")` 放行、bwrap
-的新 devtmpfs 不同，差异如实记此、不假装同构；此为 allow-list 语义的直接推论，
-无 landlock 内核的宿主上未实测）；denial 标记以 `exit≠0` 为门
+的新 devtmpfs 不同，差异如实记此、不假装同构；此为 allow-list 语义的直接推论——
+**推论待实测**：D4 测量项已落地
+（`SandboxLocalTest#landlockDevNullWriteIsMeasuredForAdjudication`，正对照 + 放行/拒绝
+两分支取证、不带预判），本机无 landlock 宿主（容器内核未编译 landlock）⇒ 事实唯真
+landlock 宿主可出，裁决随 S-c 首轮 CI runner（ABI v7）回填）；denial 标记以 `exit≠0` 为门
 （§5 docker 同款 seam 属性，修正归 seam 层）。
 
 **消费端接线**：shell——`ShellRequest` 携带非空策略，bash-local 对受限档 wrap argv 再

@@ -9,7 +9,6 @@ import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -55,7 +54,6 @@ final class Landlock {
     private static final String ROOT_FLAG = "--root";
     private static final String PROBE_FLAG = "--probe";
     private static final String SEPARATOR = "--";
-    private static final String MAIN_CLASS = LandlockExecMain.class.getName();
 
     static final String USAGE = "usage: LandlockExecMain --probe | --mode read-only|workspace-write"
         + " [--root <path>]... -- <command> [args...]";
@@ -174,69 +172,13 @@ final class Landlock {
     // ---- 助手命令与协议（provider 侧的纯函数面） ----
 
     /**
-     * 助手启动命令（裁决增强 1+2）：固定带 {@code -XX:-UsePerfData}（否则 JVM 启动
-     * 在 /tmp 落 hsperfdata——READ_ONLY 下是违规写）与 {@code --enable-native-access}
-     * （FFM 受限方法授权；named 模块点模块名，unnamed 用 ALL-UNNAMED）。启动形态按
-     * 运行事实三选一（非猜测）：classpath 态 → {@code -cp}；模块路径态 →
-     * {@code --module-path + -m}；镜像态（两者皆空，模块在镜像内）→ {@code -m}。
-     *
-     * @param javaHome   JVM 主目录（镜像态 = 镜像根，其 bin/java 即自带 JVM）
-     * @param classPath  unnamed 形态的 classpath（唯一需要的条目 = 助手类所在目录/jar）
-     * @param modulePath 模块路径态的非空 {@code jdk.module.path}；镜像态为空串
-     * @param moduleName LandlockExecMain 的具名模块名；unnamed 时为 null
-     * @return 助手命令；形态不自洽（unnamed 无 classpath）时 empty
-     */
-    static Optional<List<String>> helperCommand(String javaHome, String classPath, String modulePath, String moduleName) {
-        List<String> command = new ArrayList<>(List.of(
-            Path.of(javaHome, "bin", "java").toString(), "-XX:-UsePerfData"));
-        if (moduleName == null) {
-            if (classPath == null || classPath.isEmpty()) {
-                return Optional.empty();
-            }
-            command.add("--enable-native-access=ALL-UNNAMED");
-            command.add("-cp");
-            command.add(classPath);
-            command.add(MAIN_CLASS);
-            return Optional.of(List.copyOf(command));
-        }
-        command.add("--enable-native-access=" + moduleName);
-        if (modulePath != null && !modulePath.isEmpty()) {
-            command.add("--module-path");
-            command.add(modulePath);
-        }
-        command.add("-m");
-        command.add(moduleName + "/" + MAIN_CLASS);
-        return Optional.of(List.copyOf(command));
-    }
-
-    /**
-     * 本进程的助手启动命令（provider 与测试共用的事实收集点）：具名模块走模块面
-     * （模块路径态带 {@code jdk.module.path}，镜像态该属性为空、模块在镜像内）；
-     * unnamed 走助手类<b>自身 code source</b> 作 classpath——{@code java.class.path}
-     * 在 surefire 等宿主里是只有 Class-Path 清单的 booter jar、无真实条目（it24 实探），
-     * 拿它当 classpath 会起一个类都找不到的 JVM。
+     * 本进程的助手启动命令（与 {@link WindowsAcl} 共用 {@link HelperLaunch}
+     * 的事实收集与三形态构造）。
      *
      * @return 助手命令；形态不可判定时 empty（调用方 fail-closed 并点名）
      */
     static Optional<List<String>> hostHelperCommand() {
-        Class<?> helper = LandlockExecMain.class;
-        String javaHome = System.getProperty("java.home");
-        if (helper.getModule().isNamed()) {
-            return helperCommand(javaHome, "", System.getProperty("jdk.module.path", ""),
-                helper.getModule().getName());
-        }
-        return codeSourceOf(helper).flatMap(classPath -> helperCommand(javaHome, classPath, "", null));
-    }
-
-    /** 助手类的 code source 路径（目录或 jar）；不可判定时 empty。 */
-    private static Optional<String> codeSourceOf(Class<?> type) {
-        try {
-            var source = type.getProtectionDomain().getCodeSource();
-            return source == null ? Optional.empty()
-                : Optional.of(Path.of(source.getLocation().toURI()).toString());
-        } catch (URISyntaxException | IllegalArgumentException undeterminable) {
-            return Optional.empty();
-        }
+        return HelperLaunch.hostCommand(LandlockExecMain.class);
     }
 
     /** 探针指令（无根、READ_ONLY 语义：hold 全部写效果、零授予）。 */
