@@ -1,0 +1,357 @@
+S-0 形状追查证据：WRITE_RESTRICTED → 低完整性（真 Windows 实跑，轮次 8–12）
+======================================================================
+
+来源：it25 S-0 首跑（探针套件 S-0-windows-probe.java，输出 S-0-windows-probe.txt）
+     落点 failures=1——grant-write 腿（per-workspace SID 授权后应可写）未通过，且三腿
+     共性是受限子进程当场 0xC0000142。按裁决增强 4「任一符号/结构布局不可用都改变实现
+     形状」，本档记录改用一次性诊断（S-0-windows-acl-shape.java，C:\jh\mx 内真跑）
+     逐轮追查的原始输出与最终形状裁定。
+
+环境：UTM / Windows 11 25H2 ARM64 虚拟机（计算机名 WIN-088T9S8V0LT）；用户 j'h
+     （本机管理员、EnableLUA=0）；JDK 25.0.4.1（C:\jh\jdk）；诊断工作目录 C:\jh\mx；
+     控制台 GBK（本档全部输出已转 UTF-8）；pwsh 不存在（PS 5.1.26100.7920）。
+
+运行方式（utmctl）：file push 投递 .java/.cmd → schtasks（/ru "j'h" /it）在交互会话内
+     以 j'h 身份运行 round*.cmd（cmd 重定向落盘）→ file pull 回读诊断文件。exec 的
+     stdout 不可靠（陈旧输出先例在案），一律以文件回读为准。
+
+----------------------------------------------------------------------
+一、结论（S-a 直接采用）
+----------------------------------------------------------------------
+
+1) **WRITE_RESTRICTED 形状作废**。令牌构造与 ACL 授权全部成功（CreateRestrictedToken
+   ok=true、SetEntriesInAclW/SetNamedSecurityInfoW ok=true），子进程却一律以
+   -1073741502 = 0xC0000142 STATUS_DLL_INIT_FAILED 死在启动初始化（轮次 8/9/10/11 四轮
+   复现）。决定性对照：
+   - 同样令牌 + 不限制控制台（flags=0 继承 console）→ exit=0（轮次 9 A2 腿）；
+   - CREATE_NO_WINDOW 下唯一能启动的受限 SID 是 **Administrators**（S-1-5-32-544）；
+     Everyone / INTERACTIVE / 用户 SID / 登录 SID / 随机 S-1-5-x 全部 0xC0000142
+     （轮次 9/10 全谱，ASCII 输出见 §2）；
+   - 给随机 SID 逐个授权目标目录 / HKCU\Console / HKCU 根 / WinSta0 / WinSta0\Default，
+     甚至自建 window station + desktop 并用 lpDesktop 指定，**均不能修复**（轮次 9/10）
+     ⇒ 死因不是这些对象的 DACL；应用事件日志无 WER/Application-Error 记录（轮次 10），
+     行为矩阵是唯一取证手段；
+   - 受限 SID 列表取 {随机 SID, Administrators} 后子进程可启动，但写限制**形同虚设**：
+     未授权目录照写（轮次 11 P4 腿 wrote=true）——默认 DACL 普遍授予 Administrators，
+     受限检查被其满足 ⇒ 该形状无安全价值。
+
+2) **形状改为低完整性（Low IL）**，轮次 11 L 腿 + 轮次 12 复现腿全数通过：
+   - 令牌：CreateRestrictedToken(flags=DISABLE_MAX_PRIVILEGE, 0 个受限 SID，即无写限制位)
+     + SetTokenInformation(TokenIntegrityLevel=25, {S-1-16-4096, attrs=SE_GROUP_INTEGRITY
+     (0x20)}, 16B)；CREATE_NO_WINDOW 下子进程启动正常（exit=0，无 0xC0000142）；
+   - 写入面由强制完整性策略（MAC）管控：写 Low 标签目录**成功**、写中标签（含 DACL 已
+     授权的）目录**被拒**（exit=1、文件不存在）；读取不受限（低完整性默认无 read-up）；
+   - **形状简化**：05 §6 既定设计的「per-workspace SID 常设授予」与「per-session 随机
+     SID/临时目录」两个机制整体退役——令牌构造不再需要 AllocateAndInitializeSid（Low IL
+     SID 是固定常量 S-1-16-4096），工作区可写性改由标签面表达。
+
+3) **打标可纯 FFM**（轮次 12，无需 icacls）：
+   ConvertStringSecurityDescriptorToSecurityDescriptorW("S:(ML;OICI;NW;;;LW)", rev=1) →
+   取回自相对 SD（control=0x8010、SACL 偏移自 offset 12 读出）→
+   SetNamedSecurityInfoW(path, SE_FILE_OBJECT, LABEL_SECURITY_INFORMATION=0x10,
+   SACL=该指针) → ok=true。SACL_SECURITY_INFORMATION=0x4 位在管理员令牌下亦 ok（本机
+   EnableLUA=0 全管理员）；采用 0x10（LABEL 位的存在意义即免 SeSecurityPrivilege，
+   普通用户会话下可用）。icacls 等价物实测于轮次 11（`icacls lowdir /setintegritylevel
+   (OI)(CI)L` 产出 `Mandatory Label\Low Mandatory Level:(OI)(CI)(NW)`，随轮输出见 §2）。
+
+4) **递归打标是硬性义务**：标签不向已存在子对象回溯传播（轮次 12 复现：打在目录上的
+   (OI)(CI) 只影响此后新建对象——打标前已存在的 pre.txt 保持中标签，Low 子进程写它
+   被拒、文件长度 13B 未变；同一目录里新建文件则可写）。会话可写区域 = 工作区树需
+   逐对象打 Low（目录 + 已存在的文件）；新对象由 (OI)(CI) 继承覆盖。
+
+5) **两洞重述**（替代 05 §6 既定设计的旧两洞，S-a 的 Ready.detail 须携带新版）：
+   - 旧洞「Everyone-可写外部对象仍可写」不再成立（MAC 不理会 DACL——DACL 已授权的
+     中标签目录照样拒写，轮次 11 L4 实证）；**新洞 1**：可写面 = 主机上一切 Low 标签
+     对象（例：同机其它低完整性沙箱的目录/文件），不再限于工作区树——边界外对象若为
+     Low 标签即可写、且其内容（低完整性对象对低完整性主体）可读；
+   - 旧洞「NTFS 硬链接别名越界」归**待实测**（推论：硬链接与目标同属一个文件对象、
+     同标签 ⇒ 不构成越界；轮次无直证，S-a 探针可顺手验证）；
+   - 打标有**主机足迹**：Low 标签打在用户工作区对象上是持久元数据（可还原为 M/中标签），
+     会话崩溃/强杀时的还原义务与打标成本（大树递归）是 S-a 的设计决策项；
+   - 提示（推论，未实测）：子进程 TEMP/TMP 宜指向 Low 目录，否则工具链写临时文件即被拒。
+
+6) 备选与不可达路径：CreateProcessWithTokenW 腿在首跑里真启动了子进程（pid=788）但
+   退出码不可判定（探针 `waitExit` 回落 -1：WAIT 超时或 GetExitCodeProcess 未成功）——
+   备选路径不在采纳形状内，未再追查；`CreateFile("\\.\ConDrv")` errno=2
+   (ERROR_FILE_NOT_FOUND)，控制台对象 DACL 理论不可验证（形状改 Low 后已于事无补）。
+
+----------------------------------------------------------------------
+二、逐轮原始输出（轮次 8–12；每轮 = 一次 javac + java 真跑，round*.cmd 落盘后 pull 回读）
+----------------------------------------------------------------------
+
+【轮次 8】第一矩阵：N 对照 / D 仅 DISABLE_MAX_PRIVILEGE / A 写受限 / F 写受限+全授权。
+  （探针 run6 的 0xC0000142 之后的首轮缩小化；诊断当时尚未加 V/P/L 腿）
+
+  [mx] OpenProcessToken ok=true token=0x464
+  [mx] AllocateAndInitializeSid ok=true sid=0x271d90efaf0 sub0=88701168
+  [mx] root=C:\Users\j'h\AppData\Local\Temp\jh-mx-10176191262853692876
+  [mx] CreateRestrictedToken flags=0x9 restrictCount=1 ok=true errno=0 token=0x4f4
+  [mx] A write-restricted: pid=6512 wait=0 exit=-1073741502 hex=0xc0000142 wrote=false
+  [mx] N unrestricted: pid=10900 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] CreateRestrictedToken flags=0x1 restrictCount=0 ok=true errno=0 token=0x520
+  [mx] D disable-max only: pid=10108 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] OpenWindowStationW winsta=0x528 errno=0
+  [mx] GetSecurityInfo(WinSta0) ok=true errno=122 oldDacl=0x271b5bf1c84
+  [mx] SetEntriesInAclW(WinSta0) ok=true errno=0 newAcl=0x271b5bf1e00
+  [mx] SetSecurityInfo(WinSta0) ok=true errno=0
+  [mx] OpenDesktopW default=0x500 errno=0
+  [mx] GetSecurityInfo(Default) ok=true errno=122 oldDacl=0x271b5ded934
+  [mx] SetEntriesInAclW(Default) ok=true errno=122 newAcl=0x271b5dee1e0
+  [mx] SetSecurityInfo(Default) ok=true errno=122
+  [mx] GetNamedSecurityInfoW(dir) ok=true errno=1008 oldDacl=0x271d91ff840
+  [mx] SetEntriesInAclW(dir) ok=true errno=0 newAcl=0x271d92ff920
+  [mx] SetNamedSecurityInfoW(dir) ok=true errno=1008
+  [mx] F write-restricted+grants: pid=8716 wait=0 exit=-1073741502 hex=0xc0000142 wrote=false
+  [mx] done
+
+  判定：写限制位本身（X/A）与授权无关——0xC0000142 是启动失败，不是拒绝写入；
+  D（仅 DISABLE_MAX_PRIVILEGE，无写限制位）正常 ⇒ 病灶在 WRITE_RESTRICTED/受限 SID。
+
+【轮次 9】受限 SID 全谱 + 授权矩阵（E=Everyone、W=Administrators、U=用户 SID、
+  V=登录 SID、A2=同 A 但继承 console）。注：本轮的 V 腿因 TOKEN_GROUPS 数组偏移读错
+  而 SKIP（修复见轮次 10）；grantWinSta 腿因把返回句柄的 API 当作出参 API 调用而抛
+  WrongMethodTypeException（修复同上）——两处均为探针自身缺陷，判定以其余腿为准。
+
+  [mx] OpenProcessToken ok=true token=0x454
+  [mx] AllocateAndInitializeSid ok=true subs=1 errno=0 sid=0x17519df86d0
+  [mx] random restricting SID = S-1-5-329880620
+  [mx] AllocateAndInitializeSid ok=true subs=1 errno=0 sid=0x17519df5e40
+  [mx] Everyone SID = S-1-1-0
+  [mx] AllocateAndInitializeSid ok=true subs=2 errno=0 sid=0x17519df5fd0
+  [mx] Administrators SID = S-1-5-32-544
+  [mx] TokenUser ok=true sid=S-1-5-21-2307717076-3788335653-3466515197-1001
+  [mx] logon SID = (not found)
+  [mx] root=C:\Users\j'h\AppData\Local\Temp\jh-mx2-6439237225590165783
+  [mx] token[X wronly] flags=0x8 count=1 ok=true errno=0 token=0x4d4 restrictedSids=1
+  [mx] token[A rand] flags=0x9 count=1 ok=true errno=0 token=0x4b8 restrictedSids=1
+  [mx] token[D disable-max] flags=0x1 count=0 ok=true errno=0 token=0x50c restrictedSids=0
+  [mx] token[E everyone] flags=0x9 count=1 ok=true errno=0 token=0x510 restrictedSids=1
+  [mx] token[W admins] flags=0x9 count=1 ok=true errno=0 token=0x514 restrictedSids=1
+  [mx] token[U user] flags=0x9 count=1 ok=true errno=0 token=0x518 restrictedSids=1
+  [mx] N unrestricted echo: pid=972 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] D disable-max echo: pid=5568 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] X write-restricted-only exit0: pid=9692 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] A disable-max+rand exit0: pid=8800 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] A2 same-as-A +inherit-console exit0: pid=8184 wait=0 exit=0 hex=0x0 wrote=-
+  [mx] J A-token java.exe -version: pid=6780 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] G A-token javaw.exe -version: pid=6756 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] E everyone exit0: pid=4912 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] W admins exit0: pid=11072 wait=0 exit=0 hex=0x0 wrote=-
+  [mx] U user-sid exit0: pid=8400 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] V logon-sid exit0: SKIP (no token)
+  [mx] GetNamedSecurityInfoW(dir) ok=true errno=1008 oldDacl=0x1753d284450
+  [mx] SetEntriesInAclW(dir) ok=true errno=0 newAcl=0x1753d3f9990
+  [mx] SetNamedSecurityInfoW(dir) ok=true errno=1008
+  [mx] RegOpenKeyExW(HKCU\Console) ok=true errno=0 hKey=0x550
+  [mx] GetSecurityInfo(HKCU\Console) ok=true errno=0 oldDacl=0x1753d3fbf14
+  [mx] SetEntriesInAclW(HKCU\Console) ok=true errno=0 newAcl=0x1753d3fbd00
+  [mx] SetSecurityInfo(HKCU\Console) ok=true errno=1008
+  [mx] RegOpenKeyExW(HKCU\<root>) ok=true errno=0 hKey=0x550
+  [mx] GetSecurityInfo(HKCU\<root>) ok=true errno=0 oldDacl=0x17519cf8804
+  [mx] SetEntriesInAclW(HKCU\<root>) ok=true errno=0 newAcl=0x17519cf7130
+  [mx] SetSecurityInfo(HKCU\<root>) ok=true errno=1008
+  [mx] EXC grantWinSta: java.lang.invoke.WrongMethodTypeException: handle's method type
+       (MemorySegment,long,int,int)long but found (MemorySegment,long,int,int,long)int
+  [mx] R A + all grants exit0: pid=6704 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] R2 A + all grants echo: pid=3644 wait=0 exit=-1073741502 hex=0xc0000142 wrote=false
+  [mx] done
+
+  判定：W（Administrators 作受限 SID）是 CREATE_NO_WINDOW 下唯一能启动的受限档；
+  A2（同一受限令牌、但不加 CREATE_NO_WINDOW，继承调用者 console）能启动 ⇒ 失败路径与
+  「无控制台启动初始化」相关（J/G 腿：java.exe/javaw.exe 同样 0xC0000142，与解释器无关）。
+  注：errno=1008/122 等为上一次调用的滞留值（ok= 布尔为准，探针不做 SetLastError 清零）。
+
+【轮次 10】修 TOKEN_GROUPS 偏移（数组起点 = count 后偏移 8）与 OpenWindowStationW/
+  OpenDesktopW 返回句柄的调用形；补 INTERACTIVE（S-1-5-4）与登录 SID；
+  新增 WinSta0/WinSta0\Default/HKCU 授权与自建 window station + desktop + lpDesktop 腿。
+
+  [mx] OpenProcessToken ok=true token=0x460
+  [mx] random restricting SID = S-1-5-2124557074
+  [mx] Everyone=S-1-1-0 Administrators=S-1-5-32-544 INTERACTIVE=S-1-5-4
+  [mx] TokenUser ok=true sid=S-1-5-21-2307717076-3788335653-3466515197-1001
+  [mx] TokenGroups ok=true count=14
+  [mx] logon SID = S-1-5-5-0-1824785
+  [mx] root=C:\Users\j'h\AppData\Local\Temp\jh-mx3-14867841805250212094
+  [mx] token[X wronly] flags=0x8 count=1 ok=true errno=0 token=0x500
+  [mx] token[A rand] flags=0x9 count=1 ok=true errno=0 token=0x504
+  [mx] token[D disable-max] flags=0x1 count=0 ok=true errno=0 token=0x508
+  [mx] token[E everyone] flags=0x9 count=1 ok=true errno=0 token=0x50c
+  [mx] token[W admins] flags=0x9 count=1 ok=true errno=0 token=0x510
+  [mx] token[I interactive] flags=0x9 count=1 ok=true errno=0 token=0x514
+  [mx] token[V logon] flags=0x9 count=1 ok=true errno=0 token=0x518
+  [mx] N unrestricted echo: pid=4172 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] D disable-max echo: pid=4184 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] X write-restricted-only exit0: pid=8104 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] A rand exit0: pid=6600 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] A2 rand +inherit-console exit0: pid=11044 wait=0 exit=0 hex=0x0 wrote=-
+  [mx] E everyone exit0: pid=7152 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] W admins exit0: pid=1200 wait=0 exit=0 hex=0x0 wrote=-
+  [mx] I interactive exit0: pid=8580 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] V logon-sid exit0: pid=9212 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] GetNamedSecurityInfoW(dir) ok=true oldDacl=0x20d7e441180
+  [mx] SetEntriesInAclW(dir) ok=true newAcl=0x20d7e2ff0d0
+  [mx] SetNamedSecurityInfoW(dir) ok=true
+  [mx] RegOpenKeyExW(HKCU\Console) ok=true hKey=0x538
+  [mx] SetEntriesInAclW(HKCU\Console) ok=true newAcl=0x20d5aef6660
+  [mx] SetSecurityInfo(HKCU\Console) ok=true
+  [mx] RegOpenKeyExW(HKCU\<root>) ok=true hKey=0x538
+  [mx] SetEntriesInAclW(HKCU\<root>) ok=true newAcl=0x20d5aae9050
+  [mx] SetSecurityInfo(HKCU\<root>) ok=true
+  [mx] OpenWindowStationW(WinSta0) h=0x548 errno=0
+  [mx] SetEntriesInAclW(WinSta0) ok=true newAcl=0x20d5aff8710
+  [mx] SetSecurityInfo(WinSta0) ok=true
+  [mx] OpenDesktopW(Default) h=0x534 errno=0
+  [mx] SetEntriesInAclW(WinSta0\Default) ok=true newAcl=0x20d7e3ed200
+  [mx] SetSecurityInfo(WinSta0\Default) ok=true
+  [mx] R A + grants exit0: pid=10408 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] R2 A + grants echo: pid=11016 wait=0 exit=-1073741502 hex=0xc0000142 wrote=false
+  [mx] CreateWindowStationW(jh-sbx-ws-47842) h=0x4a4 errno=0
+  [mx] SetProcessWindowStation(new) ok=true errno=0
+  [mx] CreateDesktopW(jh-sbx-desk) h=0x53c errno=0
+  [mx] SetProcessWindowStation(orig) ok=true errno=0
+  [mx] SetEntriesInAclW(jh-sbx-ws-47842) ok=true newAcl=0x20d7e2ff290
+  [mx] SetSecurityInfo(jh-sbx-ws-47842) ok=true
+  [mx] SetEntriesInAclW(jh-sbx-ws-47842\jh-sbx-desk) ok=true newAcl=0x20d5aff9480
+  [mx] SetSecurityInfo(jh-sbx-ws-47842\jh-sbx-desk) ok=true
+  [mx] SB A + own winsta/desk exit0: pid=2360 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] SB2 A + own winsta/desk echo: pid=5416 wait=0 exit=-1073741502 hex=0xc0000142 wrote=false
+  [mx] done
+
+  判定：R/R2（全部授权后）仍 0xC0000142 ⇒ 不是 dir/HKCU/WinSta0/Default 的 DACL；
+  SB/SB2（自建 winsta + desktop + lpDesktop）亦然 ⇒ 不是 window station/desktop 面。
+  旁证：应用事件日志（Application）对这些死亡无 WER/Application-Error 记录（同轮 evt 拉取
+  只有 qemu-ga 条目），本档不含（无信息量）。
+
+【轮次 11】终局对照：P 腿 = {随机 SID, Administrators}（借 Administrators 过启动），
+  L 腿 = 低完整性令牌（DISABLE_MAX_PRIVILEGE + IL=Low），低标签目录由 icacls 打；
+  另测 CreateFile("\\.\ConDrv")（不可达，errno=2）。
+
+  [mx] OpenProcessToken ok=true
+  [mx] random=S-1-5-1362874274 admins=S-1-5-32-544 lowIL=S-1-16-4096
+  [mx] root=C:\Users\j'h\AppData\Local\Temp\jh-mx4-7569637070279760974
+  [mx] meddir exists=true lowdir exists=true
+  [mx] token[A rand] flags=0x9 sids=1 ok=true errno=0 token=0x4a0
+  [mx] token[W admins] flags=0x9 sids=1 ok=true errno=0 token=0x4b0
+  [mx] token[P rand+admins] flags=0x9 sids=2 ok=true errno=0 token=0x4f8
+  [mx] token[L base] flags=0x1 sids=0 ok=true errno=0 token=0x4fc
+  [mx] SetTokenInformation(IL=Low) ok=true errno=0
+  [mx] readback IL ok=false sid=-
+  [mx] N unrestricted exit0: pid=10948 wait=0 exit=0 hex=0x0 wrote=-
+  [mx] A rand exit0: pid=11244 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] W admins exit0: pid=1976 wait=0 exit=0 hex=0x0 wrote=-
+  [mx] CreateFile(\\.\ConDrv) h=0xffffffffffffffff errno=2
+  [mx] CP A + ConDrv grant exit0: pid=1280 wait=0 exit=-1073741502 hex=0xc0000142 wrote=-
+  [mx] revokeConDrv: open FAILED errno=2
+  [mx] SetNamedSecurityInfoW(dir) ok=true
+  [mx] P1 rand+admins exit0: pid=6288 wait=0 exit=0 hex=0x0 wrote=-
+  [mx] P2 rand+admins echo granteddir: pid=5884 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] P4 rand+admins echo ungranteddir: pid=5176 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] L1 lowIL exit0: pid=11104 wait=0 exit=0 hex=0x0 wrote=-
+  [mx] L2 lowIL echo lowdir: pid=8048 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] L3 lowIL echo meddir: pid=8540 wait=0 exit=1 hex=0x1 wrote=false
+  [mx] L4 lowIL echo granteddir(medium): pid=5180 wait=0 exit=1 hex=0x1 wrote=false
+  [mx] done
+
+  icacls 对照（同轮，MEDIUM=无标签对照；LOW=setintegritylevel 后）：
+  icacls lowdir /setintegritylevel (OI)(CI)L 输出：
+    已处理的文件: lowdir
+    已成功处理 1 个文件; 处理 0 个文件时失败
+    lowdir BUILTIN\Administrators:(I)(OI)(CI)(F)
+           NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+           BUILTIN\Users:(I)(OI)(CI)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)
+           NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+           Mandatory Label\Low Mandatory Level:(OI)(CI)(NW)
+
+  meddir（未打标）DACL 同上但无 Mandatory Label 行。
+  （`Low Mandatory Level:(OI)(CI)(NW)` = 显式 SACL ACE，策略 NW=对低于者禁写、对高于者放行）
+
+  判定：P4 决定性——仅 Authorized 的 grant 档下仍能写未授权目录 ⇒ 写限制失效；
+  L2/L3/L4 = 低完整性形状的正/负对照全数符合预期（能写 Low、拒写 Medium，且被拒时
+  进程正常启动、exit=1 而非死亡）。readback IL ok=false 为探针读回缺陷（行为腿已证
+  生效），未深究；ConDrv 不可打开 ⇒ 控制台对象理论不可验证且随形状改定而失效。
+
+【轮次 12】纯 FFM 打标验证 + 行为三腿（本档随附源码 S-0-windows-acl-shape.java；
+  运行前删除并重建 ffm-low/ffm-plain 两目录，pre.txt 在打标前创建）。
+
+  [mx] OpenProcessToken ok=true
+  [mx] lowIL=S-1-16-4096
+  [mx] lowDir=C:\jh\mx\ffm-low preFile exists=true
+  [mx] token[L base] flags=0x1 ok=true errno=0 token=0x490
+  [mx] SetTokenInformation(IL=Low) ok=true errno=0
+  [mx] ConvertStringSecurityDescriptorToSecurityDescriptorW ok=true errno=0 sd=0x2036d0fb7c0 size=48
+  [mx] SD control=0x8010 selfRelative=true saclPresent=true sacl=0x2036d0fb7d4
+  [mx] SetNamedSecurityInfoW(LABEL=0x10) ok=true errno=1008
+  [mx] SetNamedSecurityInfoW(SACL=0x4) ok=true errno=1008
+  [mx] readback GetNamedSecurityInfoW(LABEL) ok=true errno=87 sacl=0x20349bd3564
+  [mx] L write lowDir/new.txt: pid=6948 wait=0 exit=0 hex=0x0 wrote=true
+  [mx] L write lowDir/pre.txt (pre-existing before label): pid=3716 wait=0 exit=1 hex=0x1 wrote=true
+  [mx] pre.txt after: size=13 (13=unchanged/denied, 4=overwritten)
+  [mx] L write plainDir/new.txt: pid=6372 wait=0 exit=1 hex=0x1 wrote=false
+  [mx] done
+
+  判定：纯 FFM 打标与 icacls 等价（LABEL 位成功；SACL 位在管理员下亦成功）；
+  三腿 = 新文件可写 / 既有文件拒写（⇒ 需递归打标）/ 中标签目录拒写。
+  errno 打印无需解读（成功行显示的是滞留值；ok= 布尔为准）。
+
+----------------------------------------------------------------------
+三、探针套件首跑订正链（run1–run6：同一探针在本 VM 内连续真跑，逐次暴露并订正五处套件缺陷，
+    最终 run6 全腿走通；本节的 run 编号按落盘/回读次序，run2 一次的输出未单独留存，其事实
+    由 run3 输出（捕获段布局打印）与探针源注共同固定）
+----------------------------------------------------------------------
+
+  run1：advapi32!LocalFree = MISSING → LocalFree 归 kernel32 绑定（订正①）
+       （原始输出段：kernel32 四符号 present、advapi32 十一符号 present、LocalFree MISSING）
+  run2：捕获状态段实测 12 字节（i4(GetLastError)i4(WSAGetLastError)i4(errno)），按
+       JAVA_INT(4B) 分配 invoke 时被 checkCaptureSegment 拒 → 按 captureStateLayout 分配（订正②）
+       （该次输出未单独留存，事实与修法见探针源注【首跑订正】）
+  run3：AllocateAndInitializeSid 原型为 8 个 sub-authority DWORD，只传 7 个 → 当场
+       WrongMethodTypeException；补足第 8 个（订正③）
+       原始异常：handle's method type (…,byte,int×9,long)int but found (…,byte,int×8,long)int
+  run4：语句上下文直接 invokeExact（localFree.invokeExact(ptr) 等 3 处）被编成 (…)void
+       描述符 → WrongMethodTypeException (long)long but found (long)void；返回值统一承接（订正④）
+  run5：SidsToRestrict.Attributes 填 SE_GROUP_ENABLED → CreateRestrictedToken errno=87
+       (ERROR_INVALID_PARAMETER)；该字段必须为 0（MSDN 口径）（订正⑤）
+       原始输出：CreateRestrictedToken ok=false errno=87 restrictedToken=0x0
+                [SKIP] child legs: no restricted token
+  run6：全腿走通，落点 failures=1 = grant-write 腿被 0xC0000142 拒绝（= 本档追查起点）。
+       另有 with-token 备选腿 pid=788 exit=-1（不可判定回落）。
+
+----------------------------------------------------------------------
+四、FFM / Win32 事实订正清单（累计，S-a 绑定层直接照做）
+----------------------------------------------------------------------
+
+  1. advapi32 不导出 LocalFree（首跑 MISSING）——kernel32 绑定。
+  2. Windows 捕获状态段 = 12 字节（Linker.Option.captureStateLayout()），不可按 4 字节分配。
+  3. AllocateAndInitializeSid 的 dwSubAuthority0..7 = 8 个 DWORD 形参（原型 11 参）。
+  4. 语句上下文 invokeExact 会被编成 (…)void 描述符 → 返回值必须有承接（close/freeLocal
+     等包装的由来；同一坑在自定义绑定里重复出现）。
+  5. SID_AND_ATTRIBUTES.Attributes：受限 SID 列表须为 0（SE_GROUP_ENABLED 报 87）；
+     低完整性标签须为 SE_GROUP_INTEGRITY(0x20)。
+  6. TOKEN_GROUPS 数组起点 = count DWORD 之后的偏移 8（4 字节对齐填充），不是 4。
+  7. OpenWindowStationW / OpenDesktopW **返回**句柄（无出参）；按出参形调用 ⇒
+     WrongMethodTypeException。
+  8. GetSecurityInfo / SetSecurityInfo 参数序：
+     (err, handle, objectType, securityInfo, owner, group, dacl, sacl, sd/pSD)。
+  9. WRITE_RESTRICTED + CREATE_NO_WINDOW 的子进程 0xC0000142：令牌/授权全 OK 也死；
+     唯一可启动的受限 SID 是 Administrators，而其一旦入列写限制即形同虚设（P4 直证）
+     ⇒ 写限制形状弃用，改低完整性。
+ 10. SetTokenInformation(TokenIntegrityLevel=25, {SID_AND_ATTRIBUTES}) 形参 = (err, token,
+     class, ptr, 16)；readback GetTokenInformation 在本探针内读回失败（ok=false，未深究，
+     行为腿已证生效）——S-a 若要读回需另查缓冲/类号口径。
+ 11. ConvertStringSecurityDescriptorToSecurityDescriptorW(rev=1) 产出**自相对** SD
+     （control=0x8010）：SACL 指针 = 基址 + offset(12) 处的 DWORD；绝对布局才是 offset 24
+     的 8 字节指针——两形都要处理。
+ 12. `\\.\ConDrv` 经 CreateFileW 不可打开（errno=2 ERROR_FILE_NOT_FOUND）——控制台对象
+     DACL 面不可经此验证（形状改定后不再需要）。
+
+----------------------------------------------------------------------
+五、未实测项与设计提示（诚实边界）
+----------------------------------------------------------------------
+
+  - 硬链接别名越界在新形状下的归属：推论 = 关闭（同文件对象同标签），未实测。
+  - 子进程对 Medium 对象连标签也写不动：推论（写操作受 MAC 拦、且无 WRITE_DAC），未实测；
+    若成立，则子进程无法自行打标/解标逃逸。
+  - TEMP/TMP 指向 Low 目录：推论性提示（否则工具链写临时文件被拒），未实测。
+  - 打标足迹的还原义务（会话结束 / 崩溃恢复）与大树递归打标成本：设计决策项，随 S-a。
+  - 本档所有判定基于行为矩阵（进程退出码 + 目标文件落盘性）；事件日志无辅助记录。

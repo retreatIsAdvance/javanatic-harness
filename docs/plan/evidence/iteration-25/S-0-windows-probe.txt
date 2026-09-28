@@ -1,0 +1,44 @@
+== it25 S-0 windows probe ==
+[os] name=Windows 11 arch=aarch64 version=10.0 env.PROCESSOR_ARCHITECTURE=ARM64
+[jdk] version=25.0.4.1 home=C:\jh\jdk
+[enc] native.encoding=GBK
+[enc] stdout.encoding=GBK
+[enc] stderr.encoding=GBK
+[enc] file.encoding=UTF-8
+[enc] sample: 中文 — em-dash
+[paths] user.home=C:\Users\j'h tmpdir=C:\Users\j'h\AppData\Local\Temp\
+[pwsh] pwsh unavailable: Cannot run program "pwsh": CreateProcess error=2, 系统找不到指定的文件。
+[pwsh] powershell exit=0 version=5.1.26100.7920
+[signal] Signal.raise(INT) -> handler fired=true
+[ffm] kernel32!GetCurrentProcess = present
+[ffm] kernel32!WaitForSingleObject = present
+[ffm] kernel32!GetExitCodeProcess = present
+[ffm] kernel32!CloseHandle = present
+[ffm] advapi32!OpenProcessToken = present
+[ffm] advapi32!CreateRestrictedToken = present
+[ffm] advapi32!AllocateAndInitializeSid = present
+[ffm] advapi32!FreeSid = present
+[ffm] advapi32!CreateProcessAsUserW = present
+[ffm] advapi32!CreateProcessWithTokenW = present
+[ffm] advapi32!ConvertSidToStringSidW = present
+[ffm] advapi32!GetNamedSecurityInfoW = present
+[ffm] advapi32!SetEntriesInAclW = present
+[ffm] advapi32!SetNamedSecurityInfoW = present
+[ffm] kernel32!LocalFree = present
+[ffm] captureStateLayout = [i4(GetLastError)i4(WSAGetLastError)i4(errno)]
+[ffm] OpenProcessToken ok=true errno=0 token=0x4d8
+[ffm] AllocateAndInitializeSid ok=true errno=0 sid=0x2b182cf4460 sub0=261024887
+[ffm] sid string = S-1-5-261024887
+[ffm] CreateRestrictedToken ok=true errno=0 restrictedToken=0x4dc
+[legs] root=C:\Users\j'h\AppData\Local\Temp\jh-probe-9061094419869574123
+[ctrl] plain write exit=0 exists=true  (必须 exists=true)
+[ffm] deny-write: pid=6364 exit=-1073741502
+[ffm] deny-write: exists=false as expected
+[ffm] GetNamedSecurityInfoW(grant) ok=true errno=1008 oldDacl=0x2b182942c30
+[ffm] SetEntriesInAclW ok=true errno=1008 ret=0 newAcl=0x2b1a61ffca0
+[ffm] SetNamedSecurityInfoW(grant) ok=true errno=1008 ret=0
+[ffm] grant-write: pid=9716 exit=-1073741502
+[FAIL] grant-write denied — per-workspace SID 授权机制不可用（实现形状要改）
+[ffm] with-token: pid=788 exit=-1
+[ffm] FreeSid -> ok
+== probe done, failures=1 ==

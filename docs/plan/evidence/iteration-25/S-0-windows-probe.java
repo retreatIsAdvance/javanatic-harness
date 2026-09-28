@@ -22,6 +22,7 @@
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
+import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
@@ -43,7 +44,6 @@ class Probe {
     static final int TOKEN_ADJUST_SESSIONID = 0x0100;
     static final int DISABLE_MAX_PRIVILEGE = 0x0001;
     static final int WRITE_RESTRICTED = 0x0008;
-    static final int SE_GROUP_ENABLED = 0x00000004;
     static final int CREATE_NO_WINDOW = 0x08000000;
     static final int SE_FILE_OBJECT = 1;
     static final int DACL_SECURITY_INFORMATION = 0x00000004;
@@ -65,6 +65,8 @@ class Probe {
     static final boolean WINDOWS = System.getProperty("os.name", "").toLowerCase().contains("win");
     static final Linker LINKER = Linker.nativeLinker();
     static final Arena ARENA = Arena.ofShared();
+    // 首跑订正：Windows 捕获状态段实测 12 字节（int + 8 pad），按 JAVA_INT(4B) 分配 invoke 时被 checkCaptureSegment 拒
+    static final MemoryLayout CAPTURE_STATE = Linker.Option.captureStateLayout();
     // "GetLastError" 只在 Windows 链接器注册；非 Windows 造这个选项当场抛（smoke 腿要能空跑）
     static final Linker.Option ERR = WINDOWS ? Linker.Option.captureCallState("GetLastError") : null;
 
@@ -136,12 +138,15 @@ class Probe {
         present("kernel32", k32, "GetCurrentProcess", "WaitForSingleObject", "GetExitCodeProcess", "CloseHandle");
         present("advapi32", adv, "OpenProcessToken", "CreateRestrictedToken", "AllocateAndInitializeSid",
             "FreeSid", "CreateProcessAsUserW", "CreateProcessWithTokenW", "ConvertSidToStringSidW",
-            "GetNamedSecurityInfoW", "SetEntriesInAclW", "SetNamedSecurityInfoW", "LocalFree");
+            "GetNamedSecurityInfoW", "SetEntriesInAclW", "SetNamedSecurityInfoW");
+        // 首跑订正：advapi32 不导出 LocalFree（实探 MISSING，sym() 当场抛 IllegalStateException）；归 kernel32 绑定
+        present("kernel32", k32, "LocalFree");
         if (k32 == null || adv == null) {
             return;
         }
 
-        MemorySegment err = ARENA.allocate(ValueLayout.JAVA_INT);
+        MemorySegment err = ARENA.allocate(CAPTURE_STATE);
+        System.out.println("[ffm] captureStateLayout = " + CAPTURE_STATE);
 
         MethodHandle getCurrentProcess = LINKER.downcallHandle(sym(k32, "GetCurrentProcess"),
             FunctionDescriptor.of(ValueLayout.JAVA_LONG));
@@ -183,7 +188,7 @@ class Probe {
             FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT,
                 ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG,
                 ValueLayout.JAVA_LONG), ERR);
-        MethodHandle localFree = LINKER.downcallHandle(sym(adv, "LocalFree"),
+        MethodHandle localFree = LINKER.downcallHandle(sym(k32, "LocalFree"),
             FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
         MethodHandle freeSid = LINKER.downcallHandle(sym(adv, "FreeSid"),
             FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
@@ -206,8 +211,9 @@ class Probe {
         authority.set(ValueLayout.JAVA_BYTE, 5, (byte) 5);
         int sub0 = (int) (System.nanoTime() & 0x7FFFFFFFL);
         MemorySegment sidSlot = ARENA.allocate(ValueLayout.JAVA_LONG);
+        // 首跑订正：AllocateAndInitializeSid 的 dwSubAuthority0..7 是 8 个 DWORD，原先只传了 7 个（WrongMethodType 当场抛）
         int sidOk = (int) allocSid.invokeExact(err, authority.address(), (byte) 1,
-            sub0, 0, 0, 0, 0, 0, 0, sidSlot.address());
+            sub0, 0, 0, 0, 0, 0, 0, 0, sidSlot.address());
         long sid = sidSlot.get(ValueLayout.JAVA_LONG, 0);
         report("AllocateAndInitializeSid", sidOk != 0, err, "sid=0x" + Long.toHexString(sid) + " sub0=" + sub0);
         if (sid != 0) {
@@ -218,7 +224,8 @@ class Probe {
         if (sid != 0) {
             MemorySegment restrictArray = ARENA.allocate(SID_AND_ATTRIBUTES_SIZE);
             restrictArray.set(ValueLayout.JAVA_LONG, 0, sid);
-            restrictArray.set(ValueLayout.JAVA_INT, 8, SE_GROUP_ENABLED);
+            // 首跑订正：SidsToRestrict 的 Attributes 必须为 0（MSDN）；填 SE_GROUP_ENABLED 会 ERROR_INVALID_PARAMETER(87)
+            restrictArray.set(ValueLayout.JAVA_INT, 8, 0);
             MemorySegment newTokenSlot = ARENA.allocate(ValueLayout.JAVA_LONG);
             int rtOk = (int) createRestricted.invokeExact(err, token, DISABLE_MAX_PRIVILEGE | WRITE_RESTRICTED,
                 0, 0L, 0, 0L, 1, restrictArray.address(), newTokenSlot.address());
@@ -304,7 +311,7 @@ class Probe {
             "oldDacl=0x" + Long.toHexString(oldDacl));
         if (readOk != 0) {
             if (sd != 0) {
-                localFree.invokeExact(sd);
+                freeLocal(localFree, sd);
             }
             return false;
         }
@@ -325,15 +332,15 @@ class Probe {
         report("SetEntriesInAclW", mergeOk == 0, err,
             "ret=" + mergeOk + " newAcl=0x" + Long.toHexString(newAcl));
         if (mergeOk != 0) {
-            localFree.invokeExact(sd);
+            freeLocal(localFree, sd);
             return false;
         }
 
         int writeOk = (int) setNamedSecurity.invokeExact(err, name.address(), SE_FILE_OBJECT,
             DACL_SECURITY_INFORMATION, 0L, 0L, newAcl, 0L);
         report("SetNamedSecurityInfoW(" + dir.getFileName() + ")", writeOk == 0, err, "ret=" + writeOk);
-        localFree.invokeExact(newAcl);
-        localFree.invokeExact(sd);
+        freeLocal(localFree, newAcl);
+        freeLocal(localFree, sd);
         return writeOk == 0;
     }
 
@@ -391,7 +398,14 @@ class Probe {
 
     static void close(long handle) throws Throwable {
         if (handle != 0) {
-            W32_CLOSE_HANDLE.invokeExact(handle);
+            int closed = (int) W32_CLOSE_HANDLE.invokeExact(handle);
+        }
+    }
+
+    /** 语句上下文直接 invokeExact 会被编成 (…)void 描述符而当场抛 WrongMethodType（首跑订正）；返回值必须有承接。 */
+    static void freeLocal(MethodHandle localFree, long ptr) throws Throwable {
+        if (ptr != 0) {
+            long ignored = (long) localFree.invokeExact(ptr);
         }
     }
 
@@ -404,7 +418,7 @@ class Probe {
         }
         long str = out.get(ValueLayout.JAVA_LONG, 0);
         String text = MemorySegment.ofAddress(str).reinterpret(256).getString(0, StandardCharsets.UTF_16LE);
-        localFree.invokeExact(str);
+        freeLocal(localFree, str);
         return text;
     }
 
