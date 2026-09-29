@@ -1,4 +1,4 @@
-# it25.1 停点 A 证据：windows-arm job 首跑与二跑（scratch 侦察跑——「首跑即首验面」·放行裁决第 3 条；F1 裁决后加二跑）
+# it25.1 停点 A 证据：windows-arm job 首跑、二跑与三跑（scratch 侦察跑——「首跑即首验面」·放行裁决第 3 条；F1 后二跑、R1 后三跑全绿）
 #
 # 对象：CI 工作树（分支 recon/it25.1-arm-first-run，head b3cedae；C1 5a7e077 = windows-arm job
 #   镜像落盘，C2 b3cedae = 侦察跑临时形态（Build 步 -Dmaven.test.failure.ignore=true，仅
@@ -225,3 +225,61 @@ F1 绿证（job 日志 it25.1-arm2-job.log 逐字）：
 待裁（随 packet）：R1 = 修 quoting（单引号 `'-Dmaven.test.failure.ignore=true'`）→ 侦察三跑、
 收全测试面（初判推荐——裁决序列本意即先收全清单）；R2 = 直接摘旗标、scratch 并回 master →
 真跑（fail-fast；在 VM 全 reactor 绿 + x64 腿绿的既证面下可接受，省一轮）。
+
+== 11. 三跑（run 36548135323，head 1b0fbdd = R1 单引号修复后；2026-09-29） ==
+
+采纳：R1（§10 待裁）——侦察 delta 的 -D token 加单引号 + AGENTS.md 同提交两处（配方互指
+pwsh 条目、按「先删后加」压缩回 200 行；commit 1b0fbdd，push 后 pre-push 全量构建绿）；R2 未采。
+
+时间线（watch log it25.1-run3-watch.log 逐字摘）：
+  WATCH_START 09:17:16Z / RUN_ID=36548135323
+  09:17:19Z（首拍）build/macos/windows/windows-arm 四腿全 in_progress
+  09:19:05Z macos -> completed/success
+  09:20:08Z build -> completed/success；windows -> completed/success
+  09:20:50Z **completed success | 四腿全绿**
+  WATCH_DONE
+  ⇒ windows-arm 为最后一腿（Build 步 09:17:21 起，job 09:20:4x 收，~3m30s 含全测试 +
+    探针/断言/jlink 冒烟/归档冒烟/upload）；既有三腿零扰动。
+
+R1 绿证（job 日志 it25.1-arm3-job.log 逐字）：
+  ##[group]Run mvn -B -ntp package '-Dmaven.test.failure.ignore=true'    ← 单引号形态（行 147）
+  行 3554: [INFO] BUILD SUCCESS
+  ⇒ "Unknown lifecycle phase" grep 计数 = 0——token 解析为系统属性；failure.ignore 本轮真正
+    生效（「一次收全清单」的收益本轮兑现）。
+
+测试面（模块汇总行口径：无锚点 grep `Tests run:`、剔除含 `-- in ` 的类行）：
+  windows-arm : 30 模块 / 596 例 / Failures 0 / Errors 0 / Skipped 54
+  windows x64 : 30 模块 / 596 例 / Failures 0 / Errors 0 / Skipped 53（同 run 对照腿；
+               log it25.1-win-x64-run3.log）
+  ⇒ 逐模块计数 596=596 全一致；唯一差异 = harness-shell-docker.DockerShellTest（11 例）跳 8 vs 7：
+    多跳的 1 例 = missingImageFailsLoudAtApply——类内按 `assumeTrue(daemonUp())` 设计跳过（类耗时
+    旁证 0.223s vs 3.122s）：arm runner 镜像无 docker daemon、x64 镜像有。非产品/测试缺陷，
+    属 runner 镜像环境事实（Windows 容器不在交付面——it25 既定「不做 Windows 容器」）。
+  ⇒ 零被忽略的失败：`There are test failures` / `<<< FAILURE!` / `Failures: [1-9]` /
+    `Errors: [1-9]` 四 grep 全空——绿是实心绿，非 failure.ignore 兜出的空转。
+
+arm 特异面逐步实证（同日志）：
+  setup-java：Java 25.0.3 was downloaded / Distribution: microsoft /
+              Path: C:\hostedtoolcache\windows\Java_Microsoft_jdk\25.0.3\aarch64（行 130–141）
+  探针步（Pre-flight sandbox probe）：`Access is denied.` +
+              `windows-acl: ready — low integrity token (S-1-16-4096) + recursive per-object
+              labels; enforcement PARTIAL …`（就绪行原样命中；步 success）
+  e2e 断言步（Assert the windows-acl e2e leg really ran）：
+              `windows-acl leg ran for real: 2 case(s)`（SandboxLocalTest）/
+              `7 case(s)`（WindowsAclTest）/ `5 case(s)`（LocalShellExecutorWindowsTest）
+  归档（Build 日志行 3502–3503）：
+              Building tar/zip: …javanatic-harness-0.2.0-SNAPSHOT-windows-aarch64.{tar.gz,zip}
+              ⇒ runner JDK 真为 aarch64（jlink 产出 -windows-aarch64- 件；通配钉死面自证）
+  归档冒烟（Archive smoke）：解压 zip 起 jh --verify 过——Select-String 命中
+              `sandbox: confining policy "workspace-write" is enforced by backend "windows-acl"
+              (enforcement PARTIAL)`（ci.yml 门原样命中；另有 Profile/composition/approval/
+              audit/stop 启动行）
+  upload-artifact：name: javanatic-harness-windows-aarch64 /
+              path: dist/jh/target/javanatic-harness-*-windows-aarch64.{zip,tar.gz}
+              （if-no-files-found: error）
+  步表：8 步全 success（Build and test / 探针 / 断言 / Smoke jlink image / Archive smoke /
+        upload-artifact 等）；per-job 状态逐拍见 watch log（jobs API 轮询行）。
+
+判定与后续（按 R1 裁决序列）：侦察三跑干净 ⇒ 摘侦察旗标（ci.yml 该步回归 `mvn -B -ntp package`，
+与 windows x64 腿逐字同形；全 `run:` 行零裸 -D、全文件零 failure.ignore 引用 grep 核过）→
+scratch 并回 master → 单次 push → CI 真跑（fail-fast 形态）。master 全绿即选 2 落证、停点 A 闭合。

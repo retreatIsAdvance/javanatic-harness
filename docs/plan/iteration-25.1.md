@@ -1,4 +1,4 @@
-# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A 首跑红 → 裁决 F1（arm 腿改 microsoft）+ 规则回填；当前段：侦察二跑））
+# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 已摘旗标并回 master、真跑待观；2026-09-29））
 
 模块：发布面文档（`README.md` / `README.zh-CN.md` / `docs/release.md` / `docs/design/12-api-stability.md` / `docs/design/README.md`）· 根 POM 与全仓 POM（版本翻转）· `.github/workflows/`（tag→Release 附件工作流定义）· aarch64 交付面（裁决后落地）
 
@@ -57,6 +57,15 @@
 
 首跑证据档：`docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt`（run/失败全文/三特异点对账/厂商探针/源码线索/F 选项）。
 
+**侦察二跑裁决（R1）（2026-09-29，二跑红后；裁决文本四条）**：
+
+1. **归因核可**：二跑红（run `36546502989`）隔离在 scratch-only 侦察 delta 的 pwsh 点号截断（F1 已证生效；landing 形态零裸 `-D` token；与 it25 五跑同族、被 AGENTS.md 自家条目预言——配方与兄长条目未交叉核对属回填教训）。**采 R1**：`ci.yml` 侦察 delta 的 token 加单引号 → 侦察三跑（收全 ARM 测试面清单）；R2（直接摘旗标省一轮）不采。
+2. **AGENTS.md 同提交两处**：侦察跑配方补「pwsh 步必须单引号（见上条 pwsh 实参坑）；bash 步无须」并与 pwsh 条目互指；按「先删后加」压缩回 ≤200 行（201 → 200）。
+3. **收口序列不变**：侦察三跑干净 → 摘旗标 → scratch 并回 master → 单次 push → 真跑；master 三+一全绿即 aarch64 交付（选 2）落证、首裁项闭合。
+4. **纪律不变**：任一轮红即停取证；master 收口前零合并。
+
+二/三跑证据：`docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt` §10（二跑实况与 R1/R2 待裁）· §11（三跑全绿实况与判定）。
+
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
 - **ADDED**：
@@ -84,7 +93,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **进行中**（首跑红 → 裁决 F1 已落；侦察二跑，2026-09-29） |
+| A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **进行中**（三跑全绿（run `36548135323`）→ 已摘侦察旗标、并回 master；真跑待观——2026-09-29） |
 | B｜发布面成文（对外承诺面：12 扫描结论 + release notes + README×2 反转稿） | `12-api-stability.md` §2 / `release-notes-0.2.0.md` / README×2 | 未到 |
 | C｜收口前（版本翻转 + 干跑 + 附件工作流定义落盘后，发布执行交接前） | 全仓 POM / `release.md` / 附件工作流 / 全量证据 | 未到 |
 
@@ -112,7 +121,8 @@
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
-| （随工作填写） | | |
+| `a8cdafa` | arm 首跑红：temurin 无 windows-aarch64 JDK 25（run `36543615310`） | `distribution: temurin → microsoft` + `ci.yml` 注释校正（裁决 F1） |
+| `1b0fbdd` | 二跑红：侦察 delta 的 `-D` token 被 pwsh 点号截断（run `36546502989`） | token 加单引号 + AGENTS.md 配方互指与压缩（裁决 R1） |
 
 ## 设计偏离（如有）
 
