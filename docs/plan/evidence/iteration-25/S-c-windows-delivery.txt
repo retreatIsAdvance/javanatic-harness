@@ -282,3 +282,40 @@ D4 事实与终裁（ubuntu job 真跑，逐字）：
      HostileInstructionsTest 建链腿已按先例 POSIX 门）；
   ③ 归档名 windows-${os.arch}：GH x64 runner ⇒ windows-amd64（VM ARM64 侧为 windows-aarch64，
      两归档同构、仅架构面不同）。
+
+== 10. CI 二跑事实（run 36517435784，head 9e7308c，2026-09-29）与红腿裁决（断言面修复） ==
+
+Job 结论：build ✓（03:30:30→03:33:16，15 步全绿，含 bwrap/landlock 探针、landlock 断言、
+归档冒烟、候选腿）；macos ✓（1m1s）；windows ✗（1m33s，止于 "Build and test"——其后
+windows-acl 探针 / e2e 断言 / jlink 冒烟 / 归档冒烟 / upload 五步未跑）。
+
+CRLF 假红已消：windows job 过 spotless 直达全量测试；sandbox/local 之前全部模块 SUCCESS
+（含 fs-local 1.726s、shell-local 2.939s），唯一红在 `harness-sandbox-local`（8.833s）：
+
+  [ERROR] Tests run: 22, Failures: 1, Errors: 0, Skipped: 2 -- WindowsAclTest
+  [ERROR] WindowsAclTest.sessionTempIsARedirectedPrivateDirUnderTheGivenParent -- <<< FAILURE!
+  Expecting actual:
+    "C:\Users\runneradmin\AppData\Local\Temp\junit16342074614454303629\jh-sbx-4697768841779833961"
+  to start with:
+    "C:\Users\RUNNER~1\AppData\Local\Temp\junit16342074614454303629"
+    at WindowsAclTest.java:342                                    （log 行 2114-2136）
+  模块合计 73/1/0/24；BUILD FAILURE（log 行 2191）。
+
+归因链（已裁）：JUnit `@TempDir outside` 源于 java.io.tmpdir＝runner TEMP，拼写
+为 8.3 短名 `C:\Users\RUNNER~1\...`，而断言 `temp.startsWith(outside.toString())` 按原始
+字符串比；产品 `WindowsAcl.canonical()`（:637 对 `--temp` 父调用；:660-673 Javadoc「规范化为
+真实对象面（realpath：junction/短名/大小写）。按拼写打标会打不到目标对象」）经 `toRealPath()`
+展开短名 ⇒ 会话目录与子进程 TEMP 均呈长名 `C:\Users\runneradmin\...`。同一目录对象、两种
+拼写；机制本身工作正常（exit 0、jh-sbx- 建于真实父下；WindowsAclTest 21/22 腿绿，含全部
+执法腿）。VM 未现此形＝VM TEMP 本就长名。裁决（2026-09-29，用户）：**断言面缺陷（S-a 先例族），修断言
+不修产品**——期望侧改 `outside.toRealPath()` 的 Path 语义比较（`jh-sbx-` 文件名断言保留，附
+一行 8.3 注释）；主源码零改动。红/绿对＝本档（run 2）真红日志 / CI 三跑绿腿——无需 VM 复现，
+可选任意宿主符号链接纯锚点未加（非必须）；本机聚焦复绿 sandbox/local 73/0/0/16（darwin，
+Windows 腿另在 CI）。爆面：:342 为 WindowsAclTest 唯一原始路径串比较（:218-219 仅比较文件名）。
+
+二跑对 §7 观察项的回答面：① 探针/断言步未跑，但**实质已答（正向）**——真执法腿
+`workspaceWriteRunAdmitsInsideAndDeniesOutside` / `readOnlyRunDeniesWriteOutsideTheLabeledSurface`
+（含 stdio/引号/退出码腿）在非管理员 UAC runner 通过 ⇒ 低完整性令牌在该 runner 可用（比探针门
+更强的正面证据）；探针门步骤本身待三跑。② fs-local 30/0/0/1（1 跳，跳过
+用例名不在控制台日志内）+ shell-local 平台分区明细 LocalShellExecutorWindowsTest 5/0/0/0 绿
+→ 部分正向；③ 归档冒烟/命名步未跑 → 未能回答。

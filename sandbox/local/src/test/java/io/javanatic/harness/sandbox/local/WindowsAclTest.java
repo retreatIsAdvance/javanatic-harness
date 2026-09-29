@@ -338,8 +338,10 @@ class WindowsAclTest {
         ProcessResult result = runHelper(WindowsAcl.MODE_WORKSPACE_WRITE, List.of(workspace), outside,
             List.of("cmd.exe", "/d", "/c", "echo %TEMP% > \"" + recorded + "\""));
         assertThat(result.exit()).isZero();
-        String temp = Files.readString(recorded).strip();
-        assertThat(temp).startsWith(outside.toString()).contains("jh-sbx-");
+        Path temp = Path.of(Files.readString(recorded).strip());
+        // runner 的 TEMP 可为 8.3 短名拼写：期望侧按 realpath 语义比较（同一目录、两种拼写）。
+        assertThat(temp).startsWith(outside.toRealPath());
+        assertThat(temp.getFileName().toString()).contains("jh-sbx-");
     }
 
     /** 跑一次受限会话（真助手 + 真机制；只在 Windows 挂靠）。 */
