@@ -283,7 +283,7 @@ D4 事实与终裁（ubuntu job 真跑，逐字）：
   ③ 归档名 windows-${os.arch}：GH x64 runner ⇒ windows-amd64（VM ARM64 侧为 windows-aarch64，
      两归档同构、仅架构面不同）。
 
-== 10. CI 二跑事实（run 36517435784，head 9e7308c，2026-09-29）与红腿裁决（断言面修复） ==
+== 10. CI 二/三跑事实（run 36517435784 / 36526729984，head 9e7308c / 7bcfa5e，2026-09-29）与红腿裁决（断言面修复，两段） ==
 
 Job 结论：build ✓（03:30:30→03:33:16，15 步全绿，含 bwrap/landlock 探针、landlock 断言、
 归档冒烟、候选腿）；macos ✓（1m1s）；windows ✗（1m33s，止于 "Build and test"——其后
@@ -309,13 +309,44 @@ CRLF 假红已消：windows job 过 spotless 直达全量测试；sandbox/local 
 拼写；机制本身工作正常（exit 0、jh-sbx- 建于真实父下；WindowsAclTest 21/22 腿绿，含全部
 执法腿）。VM 未现此形＝VM TEMP 本就长名。裁决（2026-09-29，用户）：**断言面缺陷（S-a 先例族），修断言
 不修产品**——期望侧改 `outside.toRealPath()` 的 Path 语义比较（`jh-sbx-` 文件名断言保留，附
-一行 8.3 注释）；主源码零改动。红/绿对＝本档（run 2）真红日志 / CI 三跑绿腿——无需 VM 复现，
+一行 8.3 注释）；主源码零改动。红腿第一段＝本档（run 2）真红日志；绿腿取 run 4（三跑复红、见下）——无需 VM 复现，
 可选任意宿主符号链接纯锚点未加（非必须）；本机聚焦复绿 sandbox/local 73/0/0/16（darwin，
 Windows 腿另在 CI）。爆面：:342 为 WindowsAclTest 唯一原始路径串比较（:218-219 仅比较文件名）。
 
-二跑对 §7 观察项的回答面：① 探针/断言步未跑，但**实质已答（正向）**——真执法腿
-`workspaceWriteRunAdmitsInsideAndDeniesOutside` / `readOnlyRunDeniesWriteOutsideTheLabeledSurface`
-（含 stdio/引号/退出码腿）在非管理员 UAC runner 通过 ⇒ 低完整性令牌在该 runner 可用（比探针门
-更强的正面证据）；探针门步骤本身待三跑。② fs-local 30/0/0/1（1 跳，跳过
-用例名不在控制台日志内）+ shell-local 平台分区明细 LocalShellExecutorWindowsTest 5/0/0/0 绿
-→ 部分正向；③ 归档冒烟/命名步未跑 → 未能回答。
+三跑（run 36526729984，head 7bcfa5e——二跑修复提交后复跑）：build ✓（05:33:35→05:36:27）/
+macos ✓（05:33:40→05:35:15）/ windows ✗（05:33:36→05:34:59，1m23s，止于 "Build and test"；
+job 内其后 windows-acl 探针 / e2e 断言 / jlink 冒烟 / 归档冒烟 / upload 各步仍未跑）。CRLF
+假红维持已消；唯一红仍为同一用例、但换因——ERROR（非 FAILURE）@ WindowsAclTest.java:343：
+
+  java.io.UncheckedIOException: java.nio.file.NoSuchFileException:
+      C:\Users\runneradmin\AppData\Local\Temp\junit12309313512364924105\jh-sbx-15066649687633579370
+      at org.assertj.core.internal.Paths.toRealPath(Paths.java:491)
+      at org.assertj.core.internal.Paths.assertStartsWith(Paths.java:213)
+      at org.assertj.core.api.AbstractPathAssert.startsWith(AbstractPathAssert.java:1236)
+      at io.javanatic.harness.sandbox.local.WindowsAclTest
+          .sessionTempIsARedirectedPrivateDirUnderTheGivenParent(WindowsAclTest.java:343)
+  WindowsAclTest 22/0/1/2；模块 sandbox/local 73/0/1/24（fs-local SUCCESS 1.674s /
+  shell-local SUCCESS 2.805s / sandbox-local FAILURE 8.292s；其余 27 模块 SUCCESS；
+  Total time 01:03 min）。
+
+根因（新，与二跑两层）：7bcfa5e 的修复行 `assertThat(temp).startsWith(outside.toRealPath())`
+走 AssertJ PathAssert——其 startsWith 对 actual 也做 `toRealPath()`（报错路径带 jh-sbx- 后缀
+＝ actual），而会话 TEMP 按设计在助手退出时已自删（WindowsAcl.java:654-655 `finally
+deleteTree`）：realpath 已删对象必抛。同一断言行的观测面缺陷第二段：run 2 是拼写面
+（8.3 短/长名）、run 3 是存续面（自清理对象）——S-a 家族再演（修正表 S-a 行 / 本档 §2 前史：
+通类风险＝以会自己清场的对象作断言面）。机制面无恙（21/22 腿绿，含全部执法腿）。
+
+裁决（2026-09-29，用户）：**继续修断言不修产品**——改纯 JDK 谓词
+`assertThat(temp.startsWith(outside.toRealPath())).as(…).isTrue()`（actual 不触盘，与产品
+探针 WindowsAcl:578 同形；`jh-sbx-` 文件名断言保留）；AGENTS.md 已知坑回填一行（合并 S-a
+temp-proof.txt 同族教训）；主源码零改动。爆面复扫：`assertThat(Path).startsWith` 全仓仅此
+一处（WritableRootsTest 的 toRealPath 均为活路径）。红腿两段＝run 2 / run 3 真红日志，
+绿腿取 run 4。
+
+二/三跑对 §7 观察项的回答面：① 探针/断言步（job 内后续步骤）两跑均未跑，但**实质已答
+（正向）**——真执法腿 `workspaceWriteRunAdmitsInsideAndDeniesOutside` /
+`readOnlyRunDeniesWriteOutsideTheLabeledSurface`（含 stdio/引号/退出码腿）在非管理员 UAC
+runner 通过（三跑复证）⇒ 低完整性令牌在该 runner 可用（比探针门更强的正面证据）；探针门
+步骤本身两跑均止于测试步未跑，待四跑。② fs-local 30/0/0/1（1 跳，跳过用例名不在控制台
+日志内）+ shell-local 平台分区明细 LocalShellExecutorWindowsTest 5/0/0/0 绿 → 部分正向；
+③ 归档冒烟/命名步两跑均未跑 → 未能回答（待四跑）。

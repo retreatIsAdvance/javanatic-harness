@@ -189,6 +189,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - Windows 受限令牌：`WRITE_RESTRICTED` 令牌 + `CREATE_NO_WINDOW` 的子进程**必死 0xC0000142**（STATUS_DLL_INIT_FAILED；同令牌不设该旗标则能启动）——唯一能启动的 restricting SID = Administrators，但写限制随即形同虚设 ⇒ win32 受限形状已改低完整性（Low IL + 逐对象打标，打标不回溯既有子项）；不要回头再试 WRITE_RESTRICTED。
 - Windows 真跑通道（it25 起）：本机 UTM Win11 ARM VM 经 `utmctl`（路径与 uuid 见 docs/plan/iteration-25.md S-0 节）——`exec --cmd` 的 argv 须分元素传、跑在 SYSTEM/session 0 且 stdout 会陈旧 ⇒ 载荷 `file push` 送入、结果一律 `file pull` 取回；guest 内用 schtasks 拉起到交互会话；控制台 GBK——**取回文本按来源选编码**：jh 自身输出自 it25 S-c 起恒 UTF-8（入口 wrap + 助手 `-Dstderr.encoding`，见 12 §6 / 05 §6），cmd/系统工具的输出仍是 GBK（`iconv -f GBK -t UTF-8`）。
 - macOS 打包 → Windows 解压的载荷陷阱（it25 S-c 实撞）：macOS 默认 bsdtar 把 xattr 存 PAX 记录 ⇒ Windows 解压物化 AppleDouble 旁车 `._*` 源文件（checkstyle 首撞即崩 `._module-info.java`，`no viable alternative at input 'Mac'`）；打包用 `COPYFILE_DISABLE=1 tar -czf … --no-xattrs --no-mac-metadata --exclude='./.git' --exclude='./target' … .`，打包后自检 `gzcat <tar.gz> | strings | grep -c xattr` = 0。
+- AssertJ `PathAssert` 的路径断言（`startsWith` 等）对 **actual 也做 realpath**——已删/自清理路径作 actual 必抛 `UncheckedIOException(NoSuchFileException)`（it25 三跑 CI 实证：会话 TEMP `jh-sbx-*` 助手退出即自删）；与 S-a 探针 `temp-proof.txt` 观测面同族（通类风险＝以会自己清场的对象作断言面，`S-a-windows-acl.txt` §2）——改纯 JDK 谓词（`Path.startsWith` 等不触盘；产品探针 `WindowsAcl:578` 即此形）。
 
 ## 修改本文件
 

@@ -340,7 +340,9 @@ class WindowsAclTest {
         assertThat(result.exit()).isZero();
         Path temp = Path.of(Files.readString(recorded).strip());
         // runner 的 TEMP 可为 8.3 短名拼写：期望侧按 realpath 语义比较（同一目录、两种拼写）。
-        assertThat(temp).startsWith(outside.toRealPath());
+        // 纯 JDK 谓词 actual 不触盘（与产品探针 WindowsAcl:578 同形）；AssertJ PathAssert 会对
+        // actual 做 realpath，而会话 TEMP 在助手退出时已按设计自删——用之必炸（it25 三跑实证）。
+        assertThat(temp.startsWith(outside.toRealPath())).as("child TEMP 应落在 --temp 真实父下：%s", temp).isTrue();
         assertThat(temp.getFileName().toString()).contains("jh-sbx-");
     }
 
