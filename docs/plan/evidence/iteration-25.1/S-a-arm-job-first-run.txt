@@ -1,0 +1,180 @@
+# it25.1 停点 A 证据：windows-arm job 首跑（scratch 侦察跑——「首跑即首验面」·放行裁决第 3 条）
+#
+# 对象：CI 工作树（分支 recon/it25.1-arm-first-run，head b3cedae；C1 5a7e077 = windows-arm job
+#   镜像落盘，C2 b3cedae = 侦察跑临时形态（Build 步 -Dmaven.test.failure.ignore=true，仅
+#   scratch 分支，master 落地形态不带））。
+# 场所：GitHub Actions hosted runner `windows-11-arm`（镜像 windows-11-vs2026-arm64
+#   20260920.164，Azure Region westus3）；本机探针 = macOS 侧 curl（2026-09-29 16:4x CST）。
+# 本文件＝首跑（run 36543615310）实况摘录 + 厂商面实探：每段给出命令、决定性输出行与真实
+#   EXIT 回显。行尾空白已去。
+#
+# 结论摘要（待裁决——本档不改代码不推分支）：
+# ① 首跑红在 actions/setup-java@v4：temurin 无 windows-aarch64 的 JDK 25 ⇒ 预登记事实 ① 被证伪；
+# ② runner 秒级可用、无排队（启动 08:34:52Z，失败 08:35:09Z，全程 ~25s）⇒ 预授权降级条件
+#    「可用性/排队问题」未触发，降级选 3 不可自行行使；
+# ③ 替代发行实探（都过 setup-java 各自解析路径）：Microsoft Build of OpenJDK 与 Azul Zulu 均有
+#    windows-aarch64 JDK 25；Amazon Corretto 无；Adoptium（temurin）无；BellSoft 探针不结论
+#    （API 400，参数面——未追）。
+# ④ 修复方向 = 仅 arm job 的 distribution 面（temurin → microsoft 或 zulu），x64 三腿零动；
+#    具体选谁待用户裁决（见 §7）。
+
+== 1. 运行事实 ==
+
+run：36543615310（workflow ci，event push，head b3cedae，分支 recon/it25.1-arm-first-run）
+  URL  https://github.com/retreatIsAdvance/javanatic-harness/actions/runs/36543615310
+job 表（watch 轮询日志 it25.1-arm-watch.log）：
+  WATCH_START 08:35:13Z
+  08:35:15Z in_progress  | windows:in_progress,windows-arm:in_progress,build:in_progress,macos:in_progress
+  08:35:38Z in_progress  | windows:in_progress,windows-arm:completed,build:in_progress,macos:in_progress
+  08:37:51Z completed failure | windows:completed,windows-arm:completed,build:completed,macos:completed
+  WATCH_DONE
+  ⇒ 唯一红腿 = windows-arm（complete 于 08:35:38Z 前）；既有三 job（build/windows/macos）全绿
+    ⇒ 新 job 为独立腿，scratch 临时形态未扰动既有面。
+
+windows-arm job 内部时间线（job 日志 it25.1-arm-job.log 逐字）：
+  08:34:52.9379152Z Set up job：Runner 2.337.0；Image Provisioner 20260828.587
+  08:34:52.9446451Z Operating System: Microsoft Windows 11 / 10.0.26200 / Enterprise
+  08:34:52.9449103Z Image: windows-11-vs2026-arm64；Version 20260920.164
+  08:34:52.9444216Z Azure Region: westus3
+  08:35:08.5787766Z checkout：git log -1 = b3cedae8c9bc9012ac038f24fc2bcf708c81e121
+  08:35:08.6513577Z setup-java 开始
+  08:35:09.4404448Z ##[error]Could not find satisfied version for SemVer '25'.
+  08:35:14.2738113Z Complete job
+  ⇒ 从 job 启动到失败 ~17s、到收尾 ~22s：**无排队/无可用性异常**——预授权降级条件未触发。
+
+== 2. 失败步全文（actions/setup-java@v4） ==
+
+输入（job 日志逐字）：
+  distribution: temurin
+  java-version: 25
+  architecture: aarch64
+  cache: maven / java-package: jdk / check-latest: false / overwrite-settings: true
+  （另：##[warning]setup-java v4 is deprecated ... migrate to actions/setup-java@v5——非阻塞
+   警告，随日志在案；动作不升级，仅记事实。）
+
+解析与失败：
+  08:35:08.9504141Z Trying to resolve the latest version from remote
+  08:35:09.4404448Z ##[error]Could not find satisfied version for SemVer '25'.
+  08:35:09.44...  Available versions: 23.0.2+7, 23.0.1+11, 21.0.12+101.0.LTS, 21.0.12+8.0.LTS,
+    21.0.11+10.0.LTS, 21.0.10+7.0.LTS, 21.0.9+10.0.LTS, 21.0.8+9.0.LTS, 21.0.7+6.0.LTS,
+    21.0.6+7.0.LTS, 21.0.5+11.0.LTS
+  ⇒ temurin 的 windows-aarch64 面最高到 23.0.2+7 与 21.0.x LTS——**没有 JDK 25**。
+  （该清单与 arm 镜像预装 JDK 口径一致：镜像自带 21.0.12+101.0 与 23.0.2+7——见 §5.6。）
+
+跳过面（job 日志出现的唯一 step 名集合）：Set up job / Run actions/checkout@v4 /
+  Run actions/setup-java@v4 / Post Run actions/setup-java@v4 / Post Run actions/checkout@v4 /
+  Complete job —— 八步中的后六步（windows-acl 探针硬门、e2e 点名断言、jlink 冒烟、归档冒烟、
+  upload、以及 Build）**一个都没开始** ⇒ 侦察跑临时形态（Build 步 ignore flag）本轮天然未生效，
+  侦察面的价值顺延到下一次重跑；产品/沙箱面零新信息（都未触）。
+
+== 3. 三个 arch 特异点预登记 vs 实况 ==
+
+① setup-java `architecture: aarch64` 且「temurin 有 windows-aarch64 JDK 25」——**证伪**（§2）。
+   真事实：temurin windows-aarch64 最高 23.0.2+7 / 21.0.x；JDK 25 在本 arch 无 temurin 发行。
+   （VM 上跑的 aarch64 JDK 25 是别的发行——产品面结论不变，但 CI 装不了 temurin 25。
+   镜像自带 21.0.12/23.0.2 ——见 §5.6。）
+② 归档名走 windows-${os.arch}（pom.xml:142 archive-windows profile）——**未验**（构建未跑）；
+   落地形态已把归档冒烟/上传通配钉死 windows-aarch64（若运行时非 aarch64 即 fail loud）。
+③ pwsh 7 为镜像自带（ARM64 原生）——镜像清单层面已证：镜像 README 列 PowerShell 7.6.6（§5.6）；
+   运行层面未验（pwsh 步未开始）。容器 e2e 的 POSIX 门为既有事实（windows x64 腿六跑口径），
+   零涉面不变。
+
+== 4. skip 面证明（防止「红被读成产品问题」） ==
+
+本红 = 装 JDK 失败，发生在任何产品步骤之前；唯一涉及仓库内容的动作是 checkout（成功，
+  head=b3cedae 核验）。既有三腿同 run 全绿 ⇒ 与 C1（job 镜像落盘）无关的执行面全部无恙。
+
+== 5. 厂商面实探（本机 curl；2026-09-29） ==
+
+[5.1] Adoptium/temurin（对照 §2 —— API 口径坐实）
+  $ curl -s --max-time 20 'https://api.adoptium.net/v3/assets/version/25?architecture=aarch64&os=windows&image_type=jdk&vendor=eclipse'
+  （空体；即 []）
+  EXIT=0
+  ⇒ 确认无 temurin 25 / windows / aarch64 资产。
+
+[5.2] Microsoft Build of OpenJDK —— 下载端点
+  $ curl -sI --max-time 25 -o /dev/null -w 'HTTP %{http_code} -> %{url_effective}\n' -L 'https://aka.ms/download-jdk/microsoft-jdk-25-windows-aarch64.zip'
+  HTTP 200 -> https://download.visualstudio.microsoft.com/download/pr/63897bbf-44cd-4f8f-b320-bc1df6b5c0f5/754fcf5413f680465f475a59a4801f8e/microsoft-jdk-25.0.4.1-windows-aarch64.zip
+  EXIT=0
+
+[5.3] Microsoft —— setup-java 实际读的版本清单（**关键**：见 §6 源码线索）
+  $ curl ... 'https://raw.githubusercontent.com/actions/setup-java/main/src/distributions/microsoft/microsoft-openjdk-versions.json'
+  实得 94284 字节，59 条目；版本含 25.0.0 / 25.0.1 / 25.0.2 / 25.0.3；win32+aarch64 逐条在案：
+    ver: 25.0.3  arch: aarch64 | microsoft-jdk-25.0.3-windows-aarch64.zip
+    ver: 25.0.2  arch: aarch64 | microsoft-jdk-25.0.2-windows-aarch64.zip
+    ver: 25.0.1  arch: aarch64 | microsoft-jdk-25.0.1-windows-aarch64.zip
+    ver: 25.0.0  arch: aarch64 | microsoft-jdk-25.0.0-windows-aarch64.zip
+  25.0.3 条目字段：{"version":"25.0.3","stable":true,"release_url":"https://aka.ms/download-jdk"}
+    download_url = https://aka.ms/download-jdk/microsoft-jdk-25.0.3-windows-aarch64.zip
+  （注：v4 tag 自带清单副本停在 21.0.2 且与运行无关——action 读的是 main，见 §6。）
+
+[5.4] Azul Zulu —— setup-java zulu 分支实际查询的 API 形态
+  $ curl -s 'https://api.azul.com/metadata/v1/zulu/packages/?java_version=25&os=windows&arch=aarch64&java_package_type=jdk&archive_type=zip&latest=true&availability_type=CA'
+  count: 2
+  zulu25.36.205-ca-jdk25.0.4.1-win_aarch64.zip | https://cdn.azul.com/zulu/bin/zulu25.36.205-ca-jdk25.0.4.1-win_aarch64.zip
+  zulu25.34.17-ca-jdk25.0.3-win_aarch64.zip | https://cdn.azul.com/zulu/bin/zulu25.34.17-ca-jdk25.0.3-win_aarch64.zip
+  EXIT=0
+
+[5.5] 否定面
+  Amazon Corretto: $ curl -sI -o /dev/null -w '%{http_code}' 'https://corretto.aws/downloads/latest/amazon-corretto-25-aarch64-windows-jdk.zip'
+    404  EXIT=0  ⇒ 无 Windows-aarch64 发行（对照）。
+  BellSoft Liberica: API 探针返回 400（「Unexpected parameter value arch=aarch64」类）——参数面
+    不结论；未追（两个可用候选已足，无必要扩大探针面）。
+
+[5.6] arm runner 镜像清单（README，参考面）
+  URL: https://github.com/actions/runner-images/blob/win11-vs2026-arm64/20260920.164/images/windows/Windows11-VS2026-Arm64-Readme.md
+  PowerShell: 7.6.6（预装）· Java: 21.0.12+101.0, 23.0.2+7（预装，无 25）· Maven: 3.9.16
+  ⇒ 事实 ③（pwsh 7 自带）清单层面成立；镜像预装 JDK 与 §2 可解析清单口径一致。
+
+== 6. setup-java@v4 源码线索（为什么「microsoft」这条路可解 25/aarch64） ==
+
+来源：https://raw.githubusercontent.com/actions/setup-java/v4/src/distributions/microsoft/installer.ts（4261B）
+  行 55-58:  const arch = this.distributionArchitecture();
+             if (arch !== 'x64' && arch !== 'aarch64') { throw ... }   ⇒ aarch64 显式支持
+  行 70-82:  manifest = await this.getAvailableVersions(); ... tc.findFromManifest(range, true, manifest, arch)
+             ⇒ 失败文案「Could not find satisfied version for SemVer」同源（temurin 侧另一实现，同理）
+  行 92-107: const owner='actions', repository='setup-java', branch='main';
+             fileUrl = https://api.github.com/repos/actions/setup-java/contents/
+               src/distributions/microsoft/microsoft-openjdk-versions.json?ref=main
+             ⇒ **运行时读 main 分支清单**（非自带副本）⇒ §5.3 的 main 清单即裁决依据；
+               25.0.0–25.0.3 win32/aarch64 在案 ⇒ distribution: microsoft + java-version '25' +
+               architecture aarch64 可解析（择 25.0.3）。
+  行 76:     tc.findFromManifest(range, true, ...) 的第二实参 = stableOnly ⇒ manifest 需 stable:true，
+             §5.3 已核。
+
+== 7. 待裁选项（修复方向；本档只列证，不动手） ==
+
+F1（建议）| arm job `distribution: temurin → microsoft`，其余不动（java-version '25'、
+  architecture aarch64、cache maven）。
+  证据链：§5.2（端点 200）+ §5.3（main 清单含 stable 25.0.x win32/aarch64）+ §6（action 读 main
+  清单、aarch64 显式支持、stableOnly 满足）。同时把 ci.yml:266 的预登记注释「temurin 有
+  windows-aarch64 JDK 25」改成已核实况（temurin 无、选 microsoft 的依据）。
+  代价面：与三 x64 腿（temurin）发行不同源——jlink 运行时来自 Microsoft JDK 模块；语言级同为
+  Java 25，class 文件/模块面向产品无差；归档内嵌运行时 vendor 标识随发行（单 arch 事实源内一致）。
+F2 | arm job 改 `distribution: zulu`。
+  证据链：§5.4（API 实查 2 件、latest 25.0.4.1，比 Microsoft 清单更新）。同样是单 job 改动。
+  差异仅发行选择（Azul 走实时 API 无清单滞后；Microsoft 是 Windows/ARM 原生家）。
+F3 | 不用 setup-java，raw 下载（curl aka.ms zip + 解压 + 写 JAVA_HOME/GITHUB_ENV）。
+  多自由度、重复造 setup-java 的缓存/工具链面——不推荐（列此仅为完备）。
+F4 | 降级选 3（0.2 只承诺 amd64）。
+  **不可自行行使**：预授权条件 = 「arm runner 可用性/排队问题致不可靠」；实况 §1 = 秒级可用、
+  无排队——条件未触发；且 F1/F2 已证有可解路径。若仍选 3，属新裁决面。
+
+红线提示：修复面 = 仅 windows-arm job 的 setup-java distribution 行（+ ci.yml:266 注释校正）；
+三个既有绿腿零动；master 落地形态不带侦察 flag（Build 步原样回归）。
+
+== 8. 复现命令（探针面） ==
+
+  curl -s --max-time 20 'https://api.adoptium.net/v3/assets/version/25?architecture=aarch64&os=windows&image_type=jdk&vendor=eclipse'
+  curl -sI --max-time 25 -o /dev/null -w 'HTTP %{http_code} -> %{url_effective}\n' -L 'https://aka.ms/download-jdk/microsoft-jdk-25-windows-aarch64.zip'
+  curl -s 'https://api.azul.com/metadata/v1/zulu/packages/?java_version=25&os=windows&arch=aarch64&java_package_type=jdk&archive_type=zip&latest=true&availability_type=CA'
+  curl -sI -o /dev/null -w '%{http_code}\n' 'https://corretto.aws/downloads/latest/amazon-corretto-25-aarch64-windows-jdk.zip'
+  curl -s 'https://raw.githubusercontent.com/actions/setup-java/main/src/distributions/microsoft/microsoft-openjdk-versions.json'   # 清单（api.github.com 同内容）
+  gh run view 36543615310 --log  （或 job 日志 it25.1-arm-job.log 对照 §1/§2）
+
+== 9. 侦察跑规则缺口（随档重提，待一并裁决） ==
+
+放行裁决第 3 条引「此前回填的侦察跑规则」（-Dmaven.test.failure.ignore=true 一次收全清单）。
+已检索仓库（AGENTS.md / docs/ / .github/；词：侦察|recon|failure.ignore）与长期记忆——**未找到
+该规则的书面出处**；本轮按「内容」执行（scratch 分支临时形态）并在台账记缺口。是否回填、
+回填到哪（AGENTS.md 或 docs/），请裁决。
