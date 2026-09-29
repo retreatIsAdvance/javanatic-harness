@@ -260,3 +260,126 @@ jobs:
             dist/jh/target/javanatic-harness-*-windows-*.zip
             dist/jh/target/javanatic-harness-*-windows-*.tar.gz
           if-no-files-found: error
+  # aarch64 发布件事实源（it25.1 aarch64 裁决·选 2）：双 arch CI job 各出一件，同一事实源；
+  # VM 手工产物降级为证据引用、永不作发布件（不可 CI 复现的产物不进发布面）。
+  # 镜像 windows 腿八步，三个 arch 特异点预先在案：
+  # ① setup-java 需 architecture: aarch64（temurin 有 windows-aarch64 JDK 25——ARM64 VM 已证产品面）；
+  # ② 归档名由 dist/jh 的 windows-${os.arch} profile（pom.xml:142）自动得 windows-aarch64，与 VM
+  #    命名一致；归档冒烟与上传通配钉死 -windows-aarch64- 面——若运行时是 x64 JDK（镜像漂移/仿真），
+  #    jlink 会产出 amd64 件，通配失配即 fail loud，不会以 aarch64 名义混入发布面；
+  # ③ 容器 e2e 已 POSIX 门（docker 面零涉——不预置、不跑）；pwsh 7 为镜像自带（ARM64 原生）。
+  windows-arm:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          architecture: aarch64
+          cache: maven
+      # validate 阶段内置 spotless:check + checkstyle:check，与本地 pre-push 同口径；
+      # 测试平台分区与 windows 腿一致：Windows 腿真跑，POSIX 腿按 @EnabledOnOs 跳——
+      # 含 shell/docker 容器 e2e 六条（台账「不做 Windows 容器」）与 mac-only 用例；
+      # 跳过面由下面两条断言步兜底（防静默绿）。
+      - name: Build and test
+        run: mvn -B -ntp package
+      # 前置硬门：windows-acl 助手必须在本 runner 上真跑通——同 windows 腿之理，否则
+      # Windows 腿的 e2e（真拒写 → sandboxDenied 命中）会静默跳过。走 jlink 镜像的模块
+      # 形态真跑助手 --probe（真建低完整性令牌 + 真限 + 真拒写）；诊断行原样入日志，
+      # 非 0 或缺 ready 行即红（不静默吞）。实参走数组 splat：pwsh 参数 token 解析会在
+      # 点号处截断未引号实参（五跑实证 run 36530292970；AGENTS.md 已知坑有记）。
+      - name: "Pre-flight sandbox probe (windows-acl: runnable and denying)"
+        shell: pwsh
+        run: |
+          $img = "dist/jh/target/jlink-image"
+          $probeArgs = @(
+            '-XX:-UsePerfData',
+            '-Dstderr.encoding=UTF-8',
+            '--enable-native-access=io.javanatic.harness.sandbox.local',
+            '-m', 'io.javanatic.harness.sandbox.local/io.javanatic.harness.sandbox.local.WindowsAclExecMain',
+            '--probe'
+          )
+          & "$img/bin/java.exe" @probeArgs 2>&1 | Tee-Object "$env:RUNNER_TEMP/windows-acl-probe.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $probe = Get-Content -Raw "$env:RUNNER_TEMP/windows-acl-probe.txt"
+          if ($probe -notmatch 'windows-acl: ready' -or $probe -notmatch 'PARTIAL') {
+            Write-Error "probe did not report windows-acl ready/PARTIAL"
+            exit 1
+          }
+      # 硬门配套断言（同 windows 腿之理）：跳过不算绿——直接解析 surefire XML，要求
+      # Windows 腿「跑了且没跳过」。MAC/LINUX 门用例在 Windows 本就该跳，不列入。
+      - name: "Assert the windows-acl e2e leg really ran (no silent skip)"
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $legs = @(
+            @{ report = 'sandbox/local/target/surefire-reports/TEST-io.javanatic.harness.sandbox.local.SandboxLocalTest.xml'
+               want = @('windowsAclCommandDeniedOutsideStillMarksSandboxDenied',
+                        'realWindowsAclReportsReadyWithPartialEnforcement') },
+            @{ report = 'sandbox/local/target/surefire-reports/TEST-io.javanatic.harness.sandbox.local.WindowsAclTest.xml'
+               want = @('helperProbeOnWindowsSpeaksOnlyProtocolVerdicts',
+                        'readOnlyRunDeniesWriteOutsideTheLabeledSurface',
+                        'workspaceWriteRunAdmitsInsideAndDeniesOutside',
+                        'stdioPassesThroughToTheLowIntegrityChild',
+                        'innerQuotesSurviveTheTwoHopQuoting',
+                        'childExitCodePropagatesUnchanged',
+                        'sessionTempIsARedirectedPrivateDirUnderTheGivenParent') },
+            @{ report = 'shell/local/target/surefire-reports/TEST-io.javanatic.harness.shell.local.LocalShellExecutorWindowsTest.xml'
+               want = @('capturesStdoutStderrExitCodeAndDuration',
+                        'envIsPassedThrough',
+                        'timeoutKillsProcessTreeFast',
+                        'cancelKillsProcessTreeIncludingGrandchildren',
+                        'confiningRequestWithoutProviderFailsClosed') }
+          )
+          foreach ($leg in $legs) {
+            if (-not (Test-Path $leg.report)) { Write-Error "missing surefire report: $($leg.report)"; exit 1 }
+            $doc = [xml](Get-Content -Raw $leg.report)
+            $ran = @($doc.SelectNodes('//testcase') | ForEach-Object { $_.GetAttribute('name') })
+            $skipped = @($doc.SelectNodes('//testcase[skipped]') | ForEach-Object { $_.GetAttribute('name') })
+            $missing = @($leg.want | Where-Object { $ran -notcontains $_ })
+            $skips = @($leg.want | Where-Object { $skipped -contains $_ })
+            if ($missing.Count -or $skips.Count) {
+              Write-Error "windows-acl leg not really run in $($leg.report): missing=$($missing -join ',') skipped=$($skips -join ',')"
+              exit 1
+            }
+            Write-Host "windows-acl leg ran for real: $($leg.want.Count) case(s) in $($leg.report)"
+          }
+      # dist 镜像冒烟：同 windows 腿口径——help 纯 CLI、verify 全组合 boot，断言沙箱落点
+      # 是点名 windows-acl 的 enforcement PARTIAL 行（JUL 日志落 stderr ⇒ 2>&1 合流捕获）。
+      - name: Smoke jlink image
+        shell: pwsh
+        run: |
+          & ./dist/jh/target/jlink-image/bin/jh.bat --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./dist/jh/target/jlink-image/bin/jh.bat --verify 2>&1 | Tee-Object "$env:RUNNER_TEMP/jh-verify-host.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path "$env:RUNNER_TEMP/jh-verify-host.txt" -SimpleMatch 'sandbox: confining policy "workspace-write" is enforced by backend "windows-acl" (enforcement PARTIAL)' -Quiet)) {
+            Write-Error "jlink verify did not report the windows-acl enforcement line"
+            exit 1
+          }
+      # 归档冒烟：同 windows 腿口径；zip 通配钉 windows-aarch64（job 注释 ②——防错架构件）
+      - name: Archive smoke (zip expands and runs)
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem dist/jh/target/javanatic-harness-*-windows-aarch64.zip | Select-Object -First 1
+          if (-not $zip) { Write-Error "windows-aarch64 archive zip not found"; exit 1 }
+          $dest = "$env:RUNNER_TEMP/jh-archive"
+          Expand-Archive -Path $zip.FullName -DestinationPath $dest -Force
+          $dist = Get-ChildItem $dest -Directory | Select-Object -First 1
+          & "$($dist.FullName)/bin/jh.bat" --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$($dist.FullName)/bin/jh.bat" --verify 2>&1 | Tee-Object "$env:RUNNER_TEMP/jh-verify-archive.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path "$env:RUNNER_TEMP/jh-verify-archive.txt" -SimpleMatch 'sandbox: confining policy "workspace-write" is enforced by backend "windows-acl" (enforcement PARTIAL)' -Quiet)) {
+            Write-Error "archive verify did not report the windows-acl enforcement line"
+            exit 1
+          }
+      # aarch64 归档取件（it25.1 裁决：双 job 收件构成 Release 附件事实源）
+      - uses: actions/upload-artifact@v4
+        with:
+          name: javanatic-harness-windows-aarch64
+          path: |
+            dist/jh/target/javanatic-harness-*-windows-aarch64.zip
+            dist/jh/target/javanatic-harness-*-windows-aarch64.tar.gz
+          if-no-files-found: error
