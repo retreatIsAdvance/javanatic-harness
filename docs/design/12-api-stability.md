@@ -86,7 +86,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 ## 4. 事件 schema
 
 - **信封**：`LoggedEvent(seq, event)`——seq 单调（JSONL 一行一条）；`SessionEvent.time()` = epoch 毫秒。
-- **核心 sealed**：`SessionEvent permits` `TurnStart` / `TurnEnd` / `StepStart` / `StepEnd` / `UserMessageEvent` / `AssistantMessageEvent` / `LlmRequestEvent` / `ToolCallEvent` / `ToolResultEvent` / `CompactionStart` / `CompactionSummary` / `CompactionEnd` / `RequestHeader` / `SessionEndSeedEvent` / `ExtensionEvent`（[03](03-session-event-sourcing.md)）。
+- **核心 sealed**：`SessionEvent permits` `TurnStart` / `TurnEnd` / `StepStart` / `StepEnd` / `UserMessageEvent` / `AssistantMessageEvent` / `LlmRequestEvent` / `ToolCallEvent` / `ToolResultEvent` / `CompactionStart` / `CompactionSummary` / `CompactionEnd` / `RequestHeader` / `ProjectInstructions` / `SessionEndSeedEvent` / `ExtensionEvent`（[03](03-session-event-sourcing.md)）。
 - **扩展点**：`ExtensionEvent`（开放）+ `SessionEventCodec<T>` SPI——ServiceLoader 注册、jsonl 落盘驱动；现有 codec 实例：assistant/chunk、todo、plan、command 等。
 - **R1 锚点**：`LlmRequestEvent` 双哈希——模型请求可逐字节重建，回放闭环比对（[10](10-testing.md)）。
 - **失败词表**：`FailureKind`（typed LLM 失败，it12.6）。
@@ -108,7 +108,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | shell-local | `maxOutputBytes` | 输出截断（it25 S-b 由 `shell-bash-local` 改名，坐标 `harness-shell-local`）|
 | shell-docker | `image` / `maxOutputBytes` | 镜像须本机在场（不自动拉取）|
 | todo | `allowParallelInProgress` | 并行 in_progress 开关 |
-| presets | `root` / `presets` | preset 组合 |
+| presets | `root` | preset 组合 |
 | agent-loop | `cwd` / `instructionsFile` | 提示词上下文工作目录（`request/header` 落账值；缺省 `user.dir`）。与 `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 同源——四处漂移装配期拒绝（[07 §5](07-profile-bundle.md)）；项目说明文件名或路径（it21，缺省 `AGENTS.md`）|
 | approval-ask | `idleTimeoutSeconds` | 人闸等待界（秒；0 = 不设限；it22）。缺省按终端形态：**非交互 300s 后按拒绝**（fail-closed）/ 交互不设限；CLI `--approval-timeout=` 覆盖（§6）。读取点 `ApprovalAskPlugin`，有效值判定与 CLI 同源（`ApprovalPrompt.effectiveIdleTimeout`）|
 
@@ -120,7 +120,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 ## 6. CLI 面（`jh`，dist/jh jlink 镜像）
 
-`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--approval-timeout=<秒>` / `--budget=` / `--docker [--image=]` / `--resume=` / `--sessions[=<N>]` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--help`。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）/ `/cancel`（it22：取消在途轮，同 Ctrl-C 收敛；空闲回「无进行中的轮」）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。`--sessions` 只读旁路（keyless、不建会话；与任务文本 / `--resume` / `--verify` 互斥——一次只做一件事）。
+`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--approval-timeout=<秒>` / `--budget=` / `--docker [--image=]` / `--resume=` / `--sessions[=<N>]` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--help`（`-h` 同）。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）/ `/cancel`（it22：取消在途轮，同 Ctrl-C 收敛；空闲回「无进行中的轮」）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。`--sessions` 只读旁路（keyless、不建会话；与任务文本 / `--resume` / `--verify` 互斥——一次只做一件事）。
 
 一次性任务的结果契约（it17 起，输出形状的稳定承诺）：
 

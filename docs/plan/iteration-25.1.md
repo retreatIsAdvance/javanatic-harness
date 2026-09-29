@@ -85,7 +85,7 @@
 |---|---|---|
 | `.github/workflows/ci.yml:142` windows job（镜像源） | 追加 `windows-arm` job：八步镜像 + 三 arch 特异点 + 归档/上传通配钉 `windows-aarch64`（已落地，真跑全绿） | ☑ |
 | `README.md:159` / `README.zh-CN.md:149` 平台段 | 平台反转 + pwsh 前提（双语同步） | ☐ |
-| `docs/design/12-api-stability.md` §2 导出面 | 全量扫描逐条核对（缺口随扫随补） | ☐ |
+| `docs/design/12-api-stability.md` §2 导出面 | 全量扫描逐条核对（缺口随扫随补）——33/33 模块 + 37/37 包相符；三处补丁：§4 补 `ProjectInstructions` 缺登记、§5 presets 行删多登记 `presets` 键、§6 补 `-h` alias（S-d §1–§5） | ☑ |
 | `docs/release.md` §5 注（tag→Release 点名推迟） | 附件自动化在案化（定义落盘） | ☐ |
 | 根 POM `version` + 全仓 POM | `0.2.0-SNAPSHOT` → `0.2.0`（+ 干跑预检） | ☐ |
 
@@ -108,7 +108,7 @@
 
 （放行 2026-09-29 启用；勾选与证据随工作推进落此。）
 
-- [ ] 12 全量扫描：导出面逐条核对、无未登记破坏面
+- [x] 12 全量扫描：导出面逐条核对、无未登记破坏面——33 模块 / 37 包与 §2 表逐行相符；破坏面 = v0.1.0..HEAD 唯一 `!` 提交 `5d18585`（§5 + embedding §7 已在案）；三处补丁随扫随落（§4 补 `ProjectInstructions`、§5 删 `presets` 多登记键、§6 补 `-h` alias；S-d §1–§5）
 - [ ] release notes 成文（含已知残余清单）
 - [ ] README×2 平台段与 pwsh 前提与实况一致
 - [x] aarch64 交付裁决落地（选 2：双 arch CI job 事实源；降级预授权 = 选 3）——真跑 run `36549993644` 四 job 全绿、windows-arm 12 步全过、`javanatic-harness-windows-aarch64` 归档 68,512,445B 在案（S-a §12）；降级选 3 未行使（授权条件未触发）

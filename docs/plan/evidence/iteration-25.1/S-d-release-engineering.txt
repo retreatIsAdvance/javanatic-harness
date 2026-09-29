@@ -1,0 +1,134 @@
+# it25.1 证据：发布工程（12 全量扫描 · release notes · release.md · 附件工作流 · aarch64 落地）
+#
+# 场所：主仓工作树 master（扫描时 head 126db6d，v0.1.0 = a87b625）；核对基准 = 实现实况
+#   （module-info.java 全量扫描 / SessionEvent sealed permits / 插件 config 读取点 /
+#   jh --help——12 §7 固化方法）。CLI 取证用 dist/jh/target/jlink-image/bin/jh
+#   （2026-09-29 17:33 本机全量 package 产物）。本文件随停点 B packet 落盘，逐段给
+#   命令、决定性输出行与 EXIT 回显。行尾空白已去。
+#
+# 12 全量扫描结论（2026-09-29）：六面逐条核对。导出面 33 模块 / 37 包与 §2 表逐行相符；
+#   §3 seam 与 it18/it22/it24 迁移注记在案；§4 permits 缺 ProjectInstructions（it21）→ 补；
+#   §5 键表 14 行读取点全在、无未登记键读取，presets 行多登记 `presets` 键 → 删；
+#   §6 CLI 16/16 冻结旗标 + 退出码 0–5 + REPL 命令与 --help 对齐，`-h` alias → 补记。
+#   破坏面登记：v0.1.0..HEAD 唯一 `!` 提交 = 5d18585（shell 平台化），§5 与 embedding §7
+#   均在案。合计三处补丁（1 缺登记 + 2 精确化），无未登记破坏面。
+
+== 1. 导出面：module-info.java 全量扫描（12 §2） ==
+
+命令：
+  find . -name module-info.java -not -path "*/target/*" -not -path "./integration/*" | wc -l
+输出：
+  33
+命令：
+  grep -rh "exports io.javanatic.harness" --include=module-info.java . | sort -u | wc -l
+输出：
+  37
+命令（包名去重）：
+  grep -rh "exports io.javanatic.harness" --include=module-info.java . | sort -u | awk '{print $2}' | tr -d ';' | sort -u | wc -l
+输出：
+  37
+（33 模块 = 31 单包模块 + kernel/core 3 包 + core/session 3 包 → 37 包。）
+
+多包模块核验：
+  kernel/core    → kernel.scope / kernel.events / kernel.plugin（§2 行 `kernel/core` ✓）
+  core/session   → session / session.event / session.message（§2 行 `core/session` ✓）
+逐模块名对 §2 表 33 行（`module <name>` 实读）：bundle.base / core.agent.loop / core.agent /
+  core.plan / core.preset / core.session / core.system.prompt / core.todo / core.tools /
+  examples.agent.spine / examples.headless / fs.fs / fs.local / fs.tool / interaction.approval /
+  interaction.ask / interaction.commands / kernel.brand / kernel.config / kernel（core/core）/
+  llm.deepseek / llm.llm / llm.openai.compat / llm.replay / sandbox.local / sandbox.policy /
+  sandbox.sandbox / session.persistence.jsonl / session.persistence / shell.docker /
+  shell.local / shell.shell / shell.tool——逐行相符。
+examples 两模块不在发布面（Central 上传面排除）——与 §2 尾注相符。
+
+== 2. 事件 schema：sealed permits 与 codec 注册面（12 §4） ==
+
+命令（permits 展平取项）：
+  awk '/public sealed interface SessionEvent permits/,/\{/' core/session/src/main/java/io/javanatic/harness/session/event/SessionEvent.java | tr -d '\n' | grep -o "permits.*{" | tr ',' '\n' | tr -d '{'
+输出（16 项）：
+  TurnStart, TurnEnd, StepStart, StepEnd, UserMessageEvent, AssistantMessageEvent,
+  LlmRequestEvent, ToolCallEvent, ToolResultEvent, CompactionStart, CompactionSummary,
+  CompactionEnd, RequestHeader, ProjectInstructions, SessionEndSeedEvent, ExtensionEvent
+
+判定：**GAP-1 缺登记**——`ProjectInstructions`（it21 项目说明事实：log-only、ignorable、
+type `project/instructions`）在实现 permits 内、`03:48` 与 `03:146` 在案，12 §4 列表未列
+（原 15 项）。已补：§4 列表 `RequestHeader` 与 `SessionEndSeedEvent` 之间插入
+`ProjectInstructions`（与源码顺序一致）。
+
+codec 注册面核验（ServiceLoader 落盘清单实读，与 §4「现有 codec 实例」行相符）：
+  AssistantChunkCodec（agent-loop）/ PlanModeCodec（plan）/ TodoWriteCodec（todo）/
+  CommandRunCodec + CommandDoneCodec（commands）——assistant/chunk、plan、todo、command 齐。
+
+== 3. 配置键：插件 config 读取点（12 §5） ==
+
+命令：
+  grep -rn "ConfigValues\." --include="*.java" kernel core llm fs shell sandbox session interaction bundle examples | grep -v "/test/"
+关键输出行（14 可配行的读取点，逐行）：
+  persistence-jsonl  root                    JsonlPersistencePlugin.java:37
+  llm-openai-compat  name/baseUrl/apiKeyEnv/apiKey   OpenAiCompatPlugin.java:65-68
+  loop-guard         maxTurns/maxStepsPerTurn/maxBudgetTokens  LoopGuardPlugin.java:57-59
+  compaction         maxContextTokens/contextWindow/thresholdRatio/retainTokens/retries/
+                     summarizationProvider/summarizationModel  CompactionPlugin.java:164-182
+  plan               section                 PlanModePlugin.java:68
+  sandbox-policy     mode/workspace          SandboxPolicyPlugin.java:61-62
+  fs-local           root/maxReadBytes/maxListEntries/searchMaxMatches  FsLocalPlugin.java:37-42
+  shell-tool         workspace/timeoutSeconds  ShellToolPlugin.java:64/72
+  shell-local        maxOutputBytes          LocalShellPlugin.java:44
+  shell-docker       image/maxOutputBytes     DockerShellPlugin.java:78/81
+  todo               allowParallelInProgress  TodoPlugin.java:65
+  presets            root                    PresetPlugin.java:41
+  agent-loop         cwd/instructionsFile    AgentLoopPlugin.java:105/116
+  approval-ask       idleTimeoutSeconds      ApprovalAskPlugin.java:50
+（11 无配 id 在读取点清单零出现：session-store / agents / system-prompt / llm /
+  approval-auto / approval-deny / tools / sandbox-local / fs-tool / ask-user / commands。）
+
+判定：**GAP-2 多登记**——12 §5 presets 行写 `root` / `presets`；`presets` 键全仓无读取点
+（`"presets"` 仅出现为插件 id 本身：PresetPlugin.java:12/:34；自 fcdcb2b 首版起即只读
+`root`；`AgentPresets.KEY` = 服务键非 config 键）。按 §5 前言「实际键（读取点实核）」删去
+`presets`。反向核验：读取点清单逐键都在 §5 表内——无未登记键读取。
+
+bundle 行核验：
+命令：
+  grep -c "plugin:" bundle/base/src/main/resources/META-INF/harness/bundle.yml
+输出：
+  25
+id 逐行对照：14 可配 + 11 无配，与 §5 尾注相符（ServiceLoader 发现总数 25 同）。
+
+== 4. CLI 面：jh --help 与 §6 冻结清单（12 §6） ==
+
+命令：
+  ./dist/jh/target/jlink-image/bin/jh --help
+输出（EXIT=0）：全量 usage 文本在案（见下方逐项对照；跳转 traceback 无）。
+
+冻结清单逐项对照（16/16 全在；实测旗标解析面 = HeadlessMain.java:276-322 全集）：
+  --workspace=<dir> / --verify / --policy=STANDARD|PRODUCTION / --approval=auto|ask|deny /
+  --approval-timeout=<秒> / --budget=<tokens> / --docker [--image=<镜像>] /
+  --resume=<sessionId> / --sessions[=<N>] / --provider=<名> / --model=<名> /
+  --base-url=<url> / --api-key-env=<变量名> / --api-key=<字面量> /
+  --profile=<文件|名字> / --help
+退出码表：help 0–5 六档与 §6 表逐行相符（含 5 = 等待人工答复、stdout = 提问文本）；
+  REPL 命令面 /help /exit /cancel 相符；`--sessions` 互斥（任务文本 / --resume / --verify）
+  在 help 与解析器同文案；未知 `--` 参数 fail loud（`未知参数: <arg>`，:316-317）——无隐藏旗标。
+
+判定：**GAP-3 精确化（轻）**——`--help` 实态含 `-h` 短别名（自 it13 8d3159f 起、先于
+0.1.0 的既有事实），§6 冻结清单只列 `--help`；已补记 `--help`（`-h` 同）。
+
+== 5. 破坏面登记核对（v0.1.0 → HEAD） ==
+
+命令：
+  git log --oneline v0.1.0..HEAD --grep='!'
+输出：
+  5d18585 refactor(shell)!: platformize the shell provider (bash-local -> local) with pwsh dispatch (it25 S-b)
+判定：唯一 `!` 提交（shell 坐标/插件 id/工具名迁移 + ShellUnavailableException 新增）；
+  12 §5（shell-local 行改名注记）与 embedding §7 版本面均在案；ShellUnavailableException
+  属导出包 `shell.shell` 内新增类（加性，§3 seam 表「不逐类穷尽」面，05 §6 与 embedding §7
+  有契约文字）。
+
+it17–it25 其余增量/迁移条目逐条在案核验（对照实现实况）：
+  it17 stdout/退出码契约 §6 ✓；it18 取消信号（require/ask 加 signal）§3 ✓；
+  it19 写者锁 §6 ✓；it20 统计行 §6 ✓；it21 workspace 四处同源 §5 agent-loop 行 ✓；
+  it22 等待界（stdin(Duration)/effectiveIdleTimeout/idleTimeoutSeconds）§3+§5 ✓、
+  ofExempt/concluding/ask_user §3 ✓、exit 5 §6 ✓；it23 键白名单 fail loud §5 ✓；
+  it24 BackendStatus.Ready 签名扩展 + 链仲裁 + sandboxLine/emitSandboxObservations §3 ✓；
+  it25 UTF-8 输出固定 §6 ✓。
+结论：无未登记破坏面；三处补丁（GAP-1/2/3）随本轮提交落 12 文档。
