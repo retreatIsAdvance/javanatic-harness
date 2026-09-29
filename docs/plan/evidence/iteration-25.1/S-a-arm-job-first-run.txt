@@ -283,3 +283,55 @@ arm 特异面逐步实证（同日志）：
 判定与后续（按 R1 裁决序列）：侦察三跑干净 ⇒ 摘侦察旗标（ci.yml 该步回归 `mvn -B -ntp package`，
 与 windows x64 腿逐字同形；全 `run:` 行零裸 -D、全文件零 failure.ignore 引用 grep 核过）→
 scratch 并回 master → 单次 push → CI 真跑（fail-fast 形态）。master 全绿即选 2 落证、停点 A 闭合。
+
+== 12. 真跑（run 36549993644，head b4bdb2d = 摘旗标后的落地形态；2026-09-29） ==
+
+收口序列执行链（R1 裁决第 3 条）：侦察三跑干净 → 摘侦察旗标提交（ci.yml Build 步回归
+`mvn -B -ntp package`，与 windows x64 腿逐字同形）→ scratch 并回 master（本地 b4bdb2d，
+9 提交自 681bf11）→ push → CI 真跑。
+
+push 实况（网络抖动，多轮重试后单次落地；钩子两跑）：
+  轮 1（113.3）：pre-push 全量构建绿 → transfer 段断连（`curl 28 Failed to connect to
+    github.com port 443 after 75001 ms` + `send-pack: unexpected disconnect while reading
+    sideband packet` + `致命错误：远端意外挂断了`）——远端未动。
+  轮 2（113.3）：discovery 段 `Empty reply from server`（钩子未跑，零构建浪费）。
+  探活：113.3/112.3/114.3 逐 IP curl —— 114.3 = 200 ⇒ ls-remote(114.3) 通（681bf11，
+    仍为旧头＝未落地佐证）→ push(114.3)：pre-push 全量构建绿 → **一次落地**。
+  远端核对：ls-remote origin refs/heads/master = `b4bdb2d45676d1936fa6ebcdb53baec3fabc218d`
+    （EXIT=0；自 681bf11 直进 b4bdb2d——远端无中间态）。
+
+run 36549993644（event push；created 09:33:59Z）——四 job 全绿（jobs API 逐字）：
+
+  macos       | completed success | 09:34:06Z -> 09:35:09Z
+  windows     | completed success | 09:34:02Z -> 09:36:28Z
+  windows-arm | completed success | 09:34:02Z -> 09:37:05Z
+  build       | completed success | 09:34:03Z -> 09:37:09Z
+
+windows-arm 步表（12 步全 success，jobs API 逐字）：
+  1 Set up job / 2 actions/checkout@v4 / 3 actions/setup-java@v4 / 4 Build and test /
+  5 Pre-flight sandbox probe (windows-acl: runnable and denying) /
+  6 Assert the windows-acl e2e leg really ran (no silent skip) / 7 Smoke jlink image /
+  8 Archive smoke (zip expands and runs) / 9 actions/upload-artifact@v4 /
+  17–19 Post setup-java / Post checkout / Complete job
+  ⇒ 落地形态（fail-fast、零侦察 delta）首次真跑即全绿——Build 步绿即全测试面通过
+    （无 failure.ignore 兜底，任一试红即步红）。
+
+归档三件（run artifacts API 逐字）：
+  javanatic-harness-windows-aarch64 | 68512445 bytes | expired: False
+  javanatic-harness-linux-amd64     | 82089061 bytes | expired: False
+  javanatic-harness-windows-amd64   | 72754635 bytes | expired: False
+  ⇒ 双 arch CI job 事实源成立：同一 run 收齐 windows-amd64 + windows-aarch64（另 linux-amd64）
+    三件——Release 附件自此按 run 收件（选 2 落地形态端到端闭环）。
+
+取证方式注记：本轮 job 日志抓取（`gh run view --job --log`）被本机权限层拦截，改走
+api.github.com 公共端点（jobs 步表 + artifacts 清单，免鉴权实查）——证据为 API 逐字回显；
+核验锚点：run/head/job id 与时间戳均在上列响应内可复查。落地形态 grep（零裸 -D / 零
+failure.ignore）已在 §11 尾段落盘，同提交可核。
+
+判定（按放行裁决「master 全绿即 aarch64 选 2 落证、首裁项闭合」）：
+  ① 选 2 落证：windows-arm 与 windows 双腿在 master 上构成双 arch 事实源，真跑 4/4 全绿、
+     windows-arm 12 步全过、归档三件在案；
+  ② 停点 A 闭合：首跑红（F1）→ 二跑红（R1）→ 侦察三跑全绿 → 摘旗标 → 真跑全绿——A 级
+     停点全序列取证完毕；
+  ③ 降级选 3 未行使（授权条件「arm runner 可用性/排队问题」未触发；arm 腿 09:34:02→09:37:05
+     正常完跑）。

@@ -1,4 +1,4 @@
-# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 已摘旗标并回 master、真跑待观；2026-09-29））
+# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 摘旗标并回 master、真跑全绿（run 36549993644，四 job 全绿 + 三件归档在案）→ **停点 A 闭合、首裁项闭合**；2026-09-29））
 
 模块：发布面文档（`README.md` / `README.zh-CN.md` / `docs/release.md` / `docs/design/12-api-stability.md` / `docs/design/README.md`）· 根 POM 与全仓 POM（版本翻转）· `.github/workflows/`（tag→Release 附件工作流定义）· aarch64 交付面（裁决后落地）
 
@@ -64,7 +64,7 @@
 3. **收口序列不变**：侦察三跑干净 → 摘旗标 → scratch 并回 master → 单次 push → 真跑；master 三+一全绿即 aarch64 交付（选 2）落证、首裁项闭合。
 4. **纪律不变**：任一轮红即停取证；master 收口前零合并。
 
-二/三跑证据：`docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt` §10（二跑实况与 R1/R2 待裁）· §11（三跑全绿实况与判定）。
+二/三/真跑证据：`docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt` §10（二跑实况与 R1/R2 待裁）· §11（三跑全绿实况与判定）· §12（真跑全绿、选 2 落证、停点 A 闭合）。
 
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
@@ -83,7 +83,7 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| `.github/workflows/ci.yml:142` windows job（镜像源） | 追加 `windows-arm` job：八步镜像 + 三 arch 特异点 + 归档/上传通配钉 `windows-aarch64` | ☐ |
+| `.github/workflows/ci.yml:142` windows job（镜像源） | 追加 `windows-arm` job：八步镜像 + 三 arch 特异点 + 归档/上传通配钉 `windows-aarch64`（已落地，真跑全绿） | ☑ |
 | `README.md:159` / `README.zh-CN.md:149` 平台段 | 平台反转 + pwsh 前提（双语同步） | ☐ |
 | `docs/design/12-api-stability.md` §2 导出面 | 全量扫描逐条核对（缺口随扫随补） | ☐ |
 | `docs/release.md` §5 注（tag→Release 点名推迟） | 附件自动化在案化（定义落盘） | ☐ |
@@ -93,7 +93,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **进行中**（三跑全绿（run `36548135323`）→ 已摘侦察旗标、并回 master；真跑待观——2026-09-29） |
+| A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **通过**（2026-09-29——真跑 run `36549993644` 四 job 全绿、windows-arm 12 步全过、归档三件在案；选 2 落证、首裁项闭合；S-a §12） |
 | B｜发布面成文（对外承诺面：12 扫描结论 + release notes + README×2 反转稿） | `12-api-stability.md` §2 / `release-notes-0.2.0.md` / README×2 | 未到 |
 | C｜收口前（版本翻转 + 干跑 + 附件工作流定义落盘后，发布执行交接前） | 全仓 POM / `release.md` / 附件工作流 / 全量证据 | 未到 |
 
@@ -101,7 +101,7 @@
 
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
-| `S-a-arm-job-first-run.txt`（停点 A） | 选 2 落地形态 + scratch 侦察跑（run id / 各 job 结论 / arm job 逐步状态 / 关键输出行 / EXIT 回显） |
+| `S-a-arm-job-first-run.txt`（停点 A） | 选 2 落地形态 + 侦察三跑 + 真跑（run id / 各 job 结论 / arm job 逐步状态 / 归档三件 / 关键输出行 / EXIT 回显；真跑证据走 jobs/artifacts API 逐字） |
 | `S-d-release-engineering.txt`（随包落盘） | 12 全量扫描结论 + release notes/迁移路径 + release.md + 附件工作流 + aarch64 落地 |
 
 ## 验收（证据 = 实际执行的命令与结果）
@@ -111,7 +111,7 @@
 - [ ] 12 全量扫描：导出面逐条核对、无未登记破坏面
 - [ ] release notes 成文（含已知残余清单）
 - [ ] README×2 平台段与 pwsh 前提与实况一致
-- [ ] aarch64 交付裁决落地（选 2：双 arch CI job 事实源；降级预授权 = 选 3）
+- [x] aarch64 交付裁决落地（选 2：双 arch CI job 事实源；降级预授权 = 选 3）——真跑 run `36549993644` 四 job 全绿、windows-arm 12 步全过、`javanatic-harness-windows-aarch64` 归档 68,512,445B 在案（S-a §12）；降级选 3 未行使（授权条件未触发）
 - [ ] tag→Release 附件工作流定义落盘（真执行用户侧）
 - [ ] 版本翻转与发布前预检（干跑绿；真 deploy/tag/Publish 用户侧）
 - [ ] S-b·S-c 挂账记 post-0.2 backlog（只记不动）
