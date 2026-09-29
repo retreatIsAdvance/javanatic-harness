@@ -9,8 +9,10 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,12 +29,25 @@ class LocalShellPlatformTest {
         assertThat(platform.argv("echo hi")).containsExactly("bash", "-c", "echo hi");
     }
 
+    /**
+     * Windows argv：命令文本经 {@code -EncodedCommand}（UTF-16LE base64 单 token）装载。
+     * 裸文本装载跨 provider→助手一跳时会撞宿主 JVM 的 ProcessBuilder 引号口径——含引号的
+     * 命令串两态互斥失效（it25 探针 P6/P7：pwsh 腿 exit=1、stderr 空、命令根本没执行，
+     * 即 S-0 首跑 e2e 之谜）；编码后线路上无引号无空白，两跳都字节保真（P10 实测）。
+     */
     @Test
-    void windowsArgvPinsPwshWithProfileAndInteractiveSuppressed() {
+    void windowsArgvCarriesTheCommandEncodedIntoAQuoteFreeToken() {
         Path pwsh = Path.of("C:", "Program Files", "PowerShell", "7", "pwsh.exe");
         ShellPlatform platform = ShellPlatform.of(ShellPlatform.WIN32, Optional.of(pwsh));
-        assertThat(platform.argv("echo hi"))
-            .containsExactly(pwsh.toString(), "-NoProfile", "-NonInteractive", "-Command", "echo hi");
+        String command = "cmd.exe /d /c \"echo 拒绝访问 > C:\\dir with space\\x.txt\"";
+        List<String> argv = platform.argv(command);
+        assertThat(argv.subList(0, 4))
+            .containsExactly(pwsh.toString(), "-NoProfile", "-NonInteractive", "-EncodedCommand");
+        assertThat(argv).hasSize(5);
+        String carrier = argv.getLast();
+        assertThat(carrier).matches("[A-Za-z0-9+/=]+");
+        assertThat(new String(Base64.getDecoder().decode(carrier), StandardCharsets.UTF_16LE))
+            .isEqualTo(command);
     }
 
     /** pwsh 缺席 = fail-loud：消息点名解释器、给安装指引、指路 --docker（无 5.1 兜底）。 */

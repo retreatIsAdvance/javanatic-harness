@@ -81,7 +81,7 @@ public final class SpineMain {
             List.of(
                 new StreamChunk.Delta("先读一下笔记。"),
                 new StreamChunk.DeltaToolUse(CallId.of("c1"), "fs_read",
-                    "{\"path\":\"" + note + "\"}"),
+                    "{\"path\":\"" + jsonPath(note) + "\"}"),
                 new StreamChunk.Finish(FinishReason.TOOL_USE)),
             List.of(
                 new StreamChunk.Delta("笔记内容是:" + NOTE),
@@ -111,6 +111,11 @@ public final class SpineMain {
             handle.disposeAndAwait();
             return events;
         }
+    }
+
+    /** 路径嵌入 JSON 字符串字面量：Windows 分隔符反斜杠须转义（原样拼接成非法转义，JSON 解析必败）。 */
+    private static String jsonPath(Path path) {
+        return path.toString().replace("\\", "\\\\");
     }
 
     /** 事件的一行人读摘要（ExtensionEvent 走默认分支——可扩展联合的文档化默认）。 */

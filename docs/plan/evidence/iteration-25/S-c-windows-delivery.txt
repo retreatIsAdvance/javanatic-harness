@@ -1,0 +1,228 @@
+# it25 S-c 证据：Windows 交付（windows 归档真构建 + CI windows job + 归档冒烟 + locale 修复实证）
+#
+# 对象：S-c 工作树（未提交；本机全量 596/0/0/23）。范围 = windows 归档真构建与解压冒烟、
+#   真 Windows 全 reactor 复跑（r2 十二类红 → 全绿）、locale/方言面取证、CI windows job 落地。
+# 场所：UTM Win11 25H2 ARM64 VM（uuid 91EA42FC-F894-4E2A-AF34-EA6393127351）——用户 j'h
+#   （本机管理员、EnableLUA=0）、chcp 936（GBK 控制台）、JDK 25.0.4.1（C:\jh\jdk）、
+#   pwsh 7.6.6（C:\jh\pwsh\pwsh.exe）、无网络（离线 maven：vm-min-settings.xml +
+#   -Dmaven.repo.local=C:\jh\sc\m2min）。
+# 投递/执行/回读：utmctl file push 载荷 → schtasks（jh-sc2-run1，/ru "j'h" /it 交互会话）
+#   跑 C:\jh-payload\mkr2.cmd → runc2.cmd（wipe src + 解压载荷）→ mksc2.cmd（离线 package +
+#   EncProbe 编译 + smoke.ps1 + 打包结果）→ DONE.txt；回读 = utmctl file pull + iconv
+#   GBK→UTF-8 入库。exec 不回传 stdout，一律文件回读；OSStatus -10004 为装饰性报错（rc=0 即成功）。
+# 本文件＝收官轮（round-3b，2026-09-29 10:13 起）实跑输出摘录：每段给出命令、决定性输出行
+#   与真实 EXIT 回显。行尾 CR 与尾随空白已去；环境来源细节（镜像站/代理）不入档。
+
+== 1. 环境事实 ==
+
+[runc2] begin 2026/09/29 周二 10:13:55.49
+Microsoft Windows [版本 10.0.26200.8037]；活动代码页 936（GBK 控制台——§6 方言面因此成立）
+openjdk version "25.0.4.1" 2026-08-18 LTS；pwsh 7.6.6（C:\jh\pwsh\pwsh.exe，PATH 首命中）
+VM 无网络：maven 全程 -o（离线），离线仓 = C:\jh\sc\m2min（载荷 sc-m2.tar.gz 展开）
+
+== 2. 载荷来源与投递（含 AppleDouble 坑：根因 / 现场 / 修法 / 失败轮的正面证明） ==
+
+载荷（本地打包，逐件哈希与 VM 侧核对）：
+  8e028651f9aefad5ff03522cf382f2cdb8e12e2ace9ef00f60524d1d461090eb  sc-src.tar.gz（工作树，LF）
+  0ef2ee8f11c8068c0f63aaf6c29a53cf833d01205f3c9b374136d91f0ff732f7  smoke.ps1（本轮新版：Encode-Argv + --argv-b64 三腿）
+  7b7ced3256d3c10c7a930e292fc594060312f56f0056ab65d6f216242cbf9f00  mkr2.cmd
+  f7437c60d2d3a73166e9cc6cc3c16dd6a7e02794fc1ea82cb7a5f623c0e97456  mksc2.cmd
+  dd93be4739f37711883ed98257526930abc667cf488c6916aa8ec8f3e12b7f81  EncProbe.java
+  9b1db9b1fec9e89c14ddaf0cf5595987fea137807ec55fbee602b128e661062c  sc-m2.tar.gz（离线仓；自 r2 起同件）
+  b82e735ccdaaea55693b0f5e106a1fa76118f82abd291ccbf2075af2a537aab4  sc-maven.tar.gz（maven 发行；自 r2 起同件）
+保真：本地 shasum 与 VM certutil 两侧同名同值（[hash] payload tars 段逐字）：
+
+  SHA256 的 C:\jh-payload\sc-src.tar.gz 哈希:
+  8e028651f9aefad5ff03522cf382f2cdb8e12e2ace9ef00f60524d1d461090eb
+  CertUtil: -hashfile 命令成功完成。
+
+AppleDouble 坑（首版载荷 3a559473… == r2 记录值，本轮失败根因）：
+  现场：VM 构建 10 秒内 exit=1——checkstyle 解析崩于
+    C:\jh\sc\src\kernel\brand\src\main\java\._module-info.java: IllegalStateException
+    ... no viable alternative at input 'Mac'
+  根因：macOS 默认 bsdtar 把 xattr 存为 PAX 记录（首版载荷 gzcat | strings | grep -c xattr
+    = 2444 条）⇒ Windows 解压物化 AppleDouble 旁车 `._*`（magic 00 05 16 07，file pull 回
+    本地 xxd 坐实）⇒ checkstyle 把旁车当 Java 源解析。
+  修法（本档所用打包命令）：
+    COPYFILE_DISABLE=1 tar -czf sc-src.tar.gz --no-xattrs --no-mac-metadata \
+      --exclude='./.git' --exclude='./.idea' --exclude='./.vscode' \
+      --exclude='./target' --exclude='./target' .        ⇒ 打包后 xattr 记录 = 0
+  正面证明：失败一轮的 run.txt / build1.txt 完整（[extract] exit=0、maven 真起、checkstyle
+    真跑）——执行链本身无恙，红只归载荷携带的旁车；该轮同证「DONE 快 ≠ 必失败，须先看
+    build1.txt 再判读」。
+
+== 3. 收官轮全链取证（构建 / 归档 / 冒烟 / 断言） ==
+
+构建与归档（build1.txt 逐字摘）：
+  [build] maven offline package (tests ignored-on-failure) 10:14:01.58 [cwd=C:\jh\sc\src]
+  [build] exit=0
+  [archive]
+  javanatic-harness-0.2.0-SNAPSHOT-windows-aarch64.zip
+  javanatic-harness-0.2.0-SNAPSHOT-windows-aarch64.tar.gz
+  49a0c578eb676b65db7d23f9b395ce495e1556cce7fcdae27d04835bc84be0be  ← zip（VM certutil）
+  98ea576c3519db8f3015510c4aa8e21a73d45c80cef6a722ac4a77873b8df0c9  ← tar.gz（VM certutil）
+  [smoke] 10:16:33.12   [smoke] exit=0   [pack] result tgz 10:19:57.94
+
+全 reactor（83 份类报告口径，smoke 汇总）：run=586  fail=0  err=0  skip=54（BUILD SUCCESS）
+  JUnit XML 汇总（VM 侧逐类收集 83 from 30 report dirs）：0 FAIL 行（smoke 汇总扫描）。
+
+冒烟腿（smoke.ps1，全部落盘文件回读；EXIT 回显逐字）：
+  A-help      exit=0   归档解压 jh.bat --help（全 flag 用法输出，stdout 纯 UTF-8 可解）
+  A2-sessions exit=0   归档 jh --sessions（列举面）stdout 纯 UTF-8 可解
+  B-verify    exit=0   归档 jh.bat --verify（全组合 boot；沙箱行见下）
+  C-probe     exit=0   镜像 java.exe -m …WindowsAclExecMain --probe（真建低完整性令牌 + 真限 + 真拒写）
+                       stderr 含 `windows-acl: ready` 与 `PARTIAL` 两断言面
+  D-deny      exit=1   受限档真跑拒绝腿（--argv-b64 载体）：工作区外真拒写
+  D2-inside   exit=0   同载体正对照：工作区内真写成功（文件回读 content=[ok]）
+  E-native    exit=1   原生工具（pwsh Set-Content -ErrorAction Stop）真拒写
+  F-cmd       exit=1   cmd 工具外部路径 `找不到文件`
+  G1/G2       exit=0   EncProbe：G1 默认（out/err/native=GBK）、G2 -Dstdout/stderr.encoding=UTF-8
+  H-env       exit=0   环境变量面取样
+
+analyze.py（16 断言全 PASS；关键逐字）：
+  PASS A-help exit 0 / stdout valid UTF-8
+  PASS B-verify exit 0 / stdout valid UTF-8
+  PASS C-probe exit 0 / ready+PARTIAL
+  PASS D-deny non-zero exit=1
+  PASS D-deny stderr GBK-decodable
+  PASS D-deny GBK contains 拒绝访问
+  PASS D-deny invalid as pure UTF-8 (defect face)
+  PASS D2-inside exit 0      ← 载体（--argv-b64）端到端真跑通的功能门
+  PASS F-cmd non-zero / GBK text '找不到文件'
+  PASS G2 stdout valid UTF-8
+
+B-verify 沙箱落点行（真源在 stderr，JUL 日志；zh-CN 前缀 `信息: ` 为本地化产物）：
+  sandbox: confining policy "workspace-write" is enforced by backend "windows-acl"
+  (enforcement PARTIAL); windows-acl: ready — low integrity token (S-1-16-4096) +
+  recursive per-object labels; enforcement PARTIAL (writable surface = every low-labeled
+  object on this host; labeling follows hardlinks, so an object linked into the tree is
+  labeled too, even outside it; labels persist, no revert in 0.2)
+  ⇒ CI 断言取 `(enforcement PARTIAL)` 前的 ASCII 段做 -SimpleMatch 子串；因落 stderr，
+    CI 步骤必须 2>&1 合流后再 grep（B-verify.out 无此行，收尾前一次空 grep 即此坑）。
+
+五验收面（D1）在真 Windows 的键类真跑事实（类报告逐字）：
+  HeadlessFakeServerE2ETest      1/0/0/0   ← 任务面（假服务端 SSE 驱动完整 turn，进程内）
+  HeadlessResumeTest             3/0/0/0   ← 恢复面
+  HeadlessSigintTest             8/0/0/4   ← 取消面（Signal.raise("INT") 真腿 4 条在 Windows 直跑）
+  HeadlessCrashResumeE2ETest     2/0/0/1
+  HeadlessStdStreamsTest         2/0/0/0   ← locale 修复后的 UTF-8 输出面
+  WindowsAclTest                22/0/0/2   （2 跳 = MAC 门两条，理当跳）
+  SandboxLocalTest              32/0/0/18  （含 windowsAclCommandDeniedOutsideStillMarksSandboxDenied 真跑）
+  LocalShellExecutorWindowsTest  5/0/0/0   ← pwsh 宿主分派全腿
+  LocalShellPlatformTest         7/0/0/1   （1 跳 = MAC/LINUX 门的 hostDispatchesPosixOnPosixHosts）
+  HostileInstructionsTest        1/0/0/1   （POSIX 门；Windows 真腿归 CI job，见 §5）
+  ShellToolEndToEndTest          3/0/0/3   （全门跳——三用例分属 MAC/POSIX 门）
+  LocalShellExecutorTest         6/0/0/6   （POSIX 类整体门）
+  DockerShellTest               11/0/0/8   （无 daemon/镜像 ⇒ 如实跳过；门在 daemonUp）
+
+== 4. r2 红 → round-3b 绿对照（12 类；逐类失败方法名取自 r2 build-out 全文） ==
+
+r2 = 载荷 3a559473…（pre-decode-fix 源；AppleDouble 修复前）；round-3b = 载荷 8e028651…。
+
+类                               r2（run/fail/err/skip）  失败方法（r2）与根因归类
+--------------------------------------------------------------------------------------------
+SandboxLocalTest                 32/6/5/9    darwinChain* ×4、linuxChain* ×3、landlock* ×2、
+                                              seatbeltWrapAdmits*、win32ChainProbeFailure*、
+                                              win32ChainReports*、windowsAclCommandDenied*（真跑）
+                                              → (b) 平台门缺失（darwin/linux 链腿在 Windows 真跑
+                                                而败；已按 @EnabledOnOs({MAC,LINUX}) 归一）+
+                                                (a) 两跳引号 + GBK 解码面（windowsAclCommandDenied*）
+WindowsAclTest                   20/1/2      innerQuotesSurviveTheTwoHopQuoting
+                                              → (a) hop-1/hop-2 引号 mangle（F1/F2）
+FsToolEndToEndTest               10/7/0/0    七条（ambiguousEdit / boundedReads / editOfNeverTouched /
+                                              externallyModified / fsToolsExecuteThroughPipeline /
+                                              protectionSurvivesResume / staleReadAlsoRejectsWrite）
+                                              → (e) fs 路径分隔符面
+StreamRendererTest                8/4/0/0    四条（errorToolResult* / fragmentsToolLines* /
+                                              panelLineBreaksOpenStreamLine / turnEndPrintsStatsLine*）
+                                              → (d) 行尾面（PrintStream.println 平台行分隔符；断言面按 \n 归一）
+HelperLaunchTest                  5/3/0/0    classpathFormForUnnamedModule / imageFormWhenModulePathAbsent /
+                                              modulePathFormWhenModulePathPresent
+                                              → (c) classpath 分隔符（; vs :）断言面缺陷
+LocalFsTest                      30/2/0/1    searchDoesNotFollowSymlinks / searchFindsLiteralLinesInPathLineOrder
+                                              → (e) fs 路径分隔符/realpath 渲染面
+AppBootTest                      21/1/0/3    verifyEmitsWarningForNonReadyChainAndStillPasses
+                                              → (b) 平台链形状面（win32 落 windows-acl 后该预警场景不成立）
+LandlockTest                     14/1/0/4    hostHelperCommandIsSelfConsistent
+                                              → (c) 断言面写死 POSIX 分隔符（"…/bin/java"；与 S-a 修正同族）
+DockerShellTest                  11/1/0/8    cwdOutsideWorkspaceFailsLoudWithoutDaemon
+                                              → (c) 断言面路径方言
+HeadlessStdStreamsTest            2/1/0/0    utf8StreamEncodesNonAsciiAsUtf8Bytes
+                                              → (d) locale 面（入口 UTF-8 wrap 的未修前现场）
+SpineMainTest                     1/1/0/0    verticalSliceLogsFullContract
+                                              → (f) JSON 路径转义（反斜杠入 JSON 字符串）
+ProductionScenarioTest            1/1/0/0    productionScenarioCompactsRestartsAndRebuildsEveryAnchor
+                                              → (d)/(e) 行尾/路径渲染面
+--------------------------------------------------------------------------------------------
+round-3b 全绿：0 FAIL / 0 ERROR（83 类），skip 面全部有门归因（§3 表）。
+
+根因收敛（三类机器层缺陷 + 三类断言面缺陷）：
+  (a) 两跳引号 mangle：hop-1 provider→助手（ProcessBuilder 引号口径）/ hop-2 助手→pwsh
+      （-Command 内联被 cmd 口径改写）⇒ 修法 = F1 助手 --argv-b64 单参 base64 载体 +
+      F2 ShellPlatform 改 -EncodedCommand（base64(UTF-16LE)）；旧形态 fail loud 不改判。
+  (d) 消费侧解码/行尾面 ⇒ S-c1 locale 修复（HeadlessMain 入口 UTF-8 wrap + 助手 JVM
+      -Dstderr.encoding 旗标 + 消费侧按宿主编码解码 + 断言面按 \n 归一）。
+  (e) 路径分隔符渲染 ⇒ fs 面统一 '/'（root.relativize(...).replace(File.separatorChar,'/')）。
+  (b) 平台门缺失 ⇒ 按链归属加 @EnabledOnOs 门，Windows 真腿由本迭代新增的 windows 真腿承接。
+  (c) 断言面宿主方言写死 ⇒ 改按 Path 语义/平台无关断言（Landlock/WindowsAcl 的
+      hostHelperCommandIsSelfConsistent 同族；HelperLaunch classpath 分隔符；DockerShell 路径）。
+  (f) JSON 转义 ⇒ SpineMain jsonPath() 转义反斜杠。
+
+== 5. 本机全量 + CI windows job ==
+
+本机（macOS，含 S-c 全部修正）：mvn -o package 绿——30 个模块汇总行合计 596/0/0/23，
+  BUILD SUCCESS（Total time 56.611 s，2026-09-29T10:07:51+08:00）。
+  ⇒ 本机 596 与 VM 586 的口径差 = 平台门跳/跑组合不同 + 报告收集面不同（类报告 vs 模块汇总），
+    两侧 fail=0/err=0 为同源同真。
+
+CI windows job（.github/workflows/ci.yml，追加于 macos 之后；YAML 三 job 解析通过）：
+  build job（ubuntu）另有一处随动：landlock 断言清单加入
+    landlockDevNullWriteIsMeasuredForAdjudication（D4 挂账要求；「真跑了且没跳过」）。
+  windows job 步骤序（8 步）：
+    1 Build and test（mvn -B -ntp package；validate 内置 spotless:check + checkstyle:check）
+    2 前置硬门：镜像 java.exe 跑 WindowsAclExecMain --probe（-Dstderr.encoding=UTF-8，
+      2>&1 | Tee-Object；断言 exit 0 + `windows-acl: ready` + `PARTIAL` 三面）
+    3 硬门配套断言（跳过不算绿）：PowerShell 原生解析三份 surefire XML，要求 Windows 腿
+      「跑了且没跳过」——
+        SandboxLocalTest: windowsAclCommandDeniedOutsideStillMarksSandboxDenied +
+                          realWindowsAclReportsReadyWithPartialEnforcement
+        WindowsAclTest:   helperProbeOnWindowsSpeaksOnlyProtocolVerdicts /
+                          readOnlyRunDeniesWriteOutsideTheLabeledSurface /
+                          workspaceWriteRunAdmitsInsideAndDeniesOutside /
+                          stdioPassesThroughToTheLowIntegrityChild /
+                          innerQuotesSurviveTheTwoHopQuoting / childExitCodePropagatesUnchanged /
+                          sessionTempIsARedirectedPrivateDirUnderTheGivenParent
+        LocalShellExecutorWindowsTest: 五条全列（captures… / env… / timeout… / cancel… / confining…）
+        （win32ChainReportsReadyWithPartialEnforcementAndCapabilityLine 是 MAC/LINUX 门，
+          在 Windows 本就该跳——不列入，避免把设计内跳过误判为静默绿）
+    4 Smoke jlink image（jh.bat --help；--verify 2>&1 | Tee-Object；-SimpleMatch 断言 §3 落点行）
+    5 Archive smoke（Expand-Archive windows zip → jh.bat --help/--verify + 同口径断言）
+    6 upload-artifact：javanatic-harness-windows-amd64（windows zip + tar.gz；缺件即红）
+  断言名字面已对着真实 surefire 报告核过：三份文件 missing=[]；macOS 上恰为 2/7/5 条被跳
+  （即 Windows 上应有 2+7+5 全真跑），故该步在 windows 上是真门、在别的平台不会被误红。
+
+== 6. locale 与方言面（GBK 控制台 zh-CN 逐字） ==
+
+G1（默认编码，JVM 未加旗标）：out=GBK err=GBK native=GBK（非 ASCII 面乱码——负对照）
+G2（-Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8）：out=UTF-8 err=UTF-8 native=GBK，
+  正文 `中文—em-dash 样本` 纯 UTF-8 可解（stdout 断言 PASS）
+D-deny stderr：GBK 可解且含 `拒绝访问`；同时**纯 UTF-8 不可解**——「拒绝方言按平台记录」
+  的缺陷面登记（seam 契约不变：逐行、大小写不敏感 contains、exit≠0 门控）
+F-cmd stderr：GBK `找不到文件`（cmd 原生工具本地化文形）
+E-native（pwsh -ErrorAction Stop 拒写）：exit=1，stderr GBK 可解（含 ANSI 色码字面）
+⇒ S-c 监视项（方言端到端复验）达成：命令真拒写 → sandboxDenied 标记在 zh-CN GBK 形态下
+  真命中（SandboxLocalTest#windowsAclCommandDeniedOutsideStillMarksSandboxDenied 由 r2 红转绿）。
+
+== 7. 遗留与首跑观察项 ==
+
+1. D4（landlock /dev/null 实测）：事实唯 CI 首轮可出——本机无 landlock 宿主；ubuntu job
+   断言清单已列入该用例名（「真跑了且没跳过」），选项 A/B 仍待 CI 事实后终裁。
+2. CI 首跑观察项（首轮 CI 出事实，不做预判）：
+   - windows-latest 上低完整性令牌/探针可用性（job 第 2 步硬门即此事实面）；
+   - windows-latest 是否允许非提权建符号链接——影响 LocalFsTest 的 4 组建链用例
+     （VM 侧 admin 宿主真跑绿；HostileInstructionsTest 的建链腿已按先例 POSIX 门）；
+   - windows 归档命名 windows-${os.arch}：GH x64 runner ⇒ windows-amd64（VM ARM64 侧为
+     windows-aarch64，两归档同构、仅架构面不同）。
+3. 挂账（本迭代不做，勿顺手动）：matchesDialect / StreamDrain 去重抽取；ShellPlatform
+   enum/sealed 化；ShellToolPlugin `tool` 改名；windows-acl 两洞消除（洞 2 = NTFS 硬链接
+   别名越界，0.2 不做既定，当前如实外显）。

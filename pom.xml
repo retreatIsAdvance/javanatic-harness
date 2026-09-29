@@ -321,7 +321,10 @@
         </pluginManagement>
         <plugins>
             <!-- 白空格/结尾换行/无用 import 的格式门禁（引擎无关步骤，稳定支持新 JDK）。
-                 自动修复：mvn spotless:apply -->
+                 自动修复：mvn spotless:apply
+                 行尾钉死 LF（= .editorconfig end_of_line）：不钉时 spotless 默认 GIT_ATTRIBUTES，
+                 仓库无 .gitattributes 且无 .git 元数据（源码 tar 形态）时退化为 PLATFORM_NATIVE，
+                 Windows 上即期望 CRLF → LF 源码全量假红（S-c VM 首跑实证）。 -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
@@ -333,6 +336,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <lineEndings>UNIX</lineEndings>
                     <java>
                         <removeUnusedImports/>
                         <trimTrailingWhitespace/>

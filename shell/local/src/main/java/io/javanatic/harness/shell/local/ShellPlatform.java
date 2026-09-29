@@ -3,9 +3,11 @@ package io.javanatic.harness.shell.local;
 import io.javanatic.harness.shell.shell.ShellUnavailableException;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -13,7 +15,8 @@ import java.util.Optional;
 
 /**
  * 平台 argv 分派：POSIX = {@code [bash, -c, cmd]}；Windows = {@code [pwsh, -NoProfile,
- * -NonInteractive, -Command, cmd]}。两平台键（win32 / posix）——解释器差异只在此处，
+ * -NonInteractive, -EncodedCommand, base64]}（命令文本 UTF-16LE base64 装载，见
+ * {@link #encodedCommand}）。两平台键（win32 / posix）——解释器差异只在此处，
  * executor、沙箱包装与契约层平台无关。
  *
  * <p>pwsh 缺席 = fail-loud（{@link ShellUnavailableException}）：Windows PowerShell 5.1
@@ -70,9 +73,20 @@ final class ShellPlatform {
                 "shell interpreter unavailable: pwsh (PowerShell 7) not found on PATH — install it "
                     + "(winget install Microsoft.PowerShell) or run with --docker "
                     + "(the container backend needs no host shell)"));
-            return List.of(shell.toString(), "-NoProfile", "-NonInteractive", "-Command", command);
+            return List.of(shell.toString(), "-NoProfile", "-NonInteractive", "-EncodedCommand",
+                encodedCommand(command));
         }
         return List.of("bash", "-c", command);
+    }
+
+    /**
+     * 命令文本 → pwsh {@code -EncodedCommand} 载体（UTF-16LE 的 base64）。裸文本装载
+     * 跨 provider→助手一跳会撞宿主 JVM 的 ProcessBuilder 引号口径（含引号参数两态互斥
+     * 失效，it25 探针 P6/P7 复现 e2e 之谜）；载体单 token 无引号无空白，两跳都字节保真
+     * （P10 实测 pwsh 真跑通）。
+     */
+    static String encodedCommand(String command) {
+        return Base64.getEncoder().encodeToString(command.getBytes(StandardCharsets.UTF_16LE));
     }
 
     /** PATH 条目按序扫描 pwsh.exe，首命中即用（Windows 命令解析同序）；无命中为空。 */

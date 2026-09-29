@@ -11,7 +11,7 @@ import java.util.Objects;
  * 一次命令执行的请求。超时默认集中在此处（30s）——组合或调用方需要不同值时显式传入。
  *
  * @param command shell 命令串（非空；由 provider 决定解释器，shell-local 按平台分派
- *                POSIX = bash -c、Windows = pwsh -Command）
+ *                POSIX = bash -c、Windows = pwsh -EncodedCommand）
  * @param cwd     工作目录（绝对路径；目录不存在由进程启动 fail loud）
  * @param timeout 超时（null = 30s 默认；到时击杀进程树）
  * @param env     附加环境变量（追加到继承环境之上；null = 无）

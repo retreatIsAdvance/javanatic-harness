@@ -41,7 +41,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * 平台链与 argv 形状的断言<b>平台无关</b>（darwin 上可全跑——it12 的教训：
  * 形状断言挂在真后端 OS 上等于本机之外一行验不到）；真强制 e2e 按平台分挂：
  * 本机 darwin 验 seatbelt、CI ubuntu 验 bwrap 与 landlock 兜底腿（宿主自身
- * 不满足者自跳过，CI job 预探保证跳过面在 CI 不可达）。
+ * 不满足者自跳过，CI job 预探保证跳过面在 CI 不可达）。注入伪助手的仲裁组
+ * 按 POSIX 门（写死 {@code /bin/sh} 形态；Windows 上真机制由 WindowsAclTest 覆盖）。
  */
 class SandboxLocalTest {
 
@@ -119,7 +120,9 @@ class SandboxLocalTest {
         String wwProfile = ww.argv().get(2);
         assertThat(WritableRoots.of(workspaceWrite)).isNotEmpty();
         for (Path root : WritableRoots.of(workspaceWrite)) {
-            assertThat(wwProfile).contains("(subpath \"" + root + "\")");
+            // Windows 宿主 root 渲染为反斜杠，产品经 sbplString 转义（\ → \\）后才进 SBPL
+            String sbplRoot = root.toString().replace("\\", "\\\\").replace("\"", "\\\"");
+            assertThat(wwProfile).contains("(subpath \"" + sbplRoot + "\")");
         }
     }
 
@@ -247,6 +250,7 @@ class SandboxLocalTest {
     }
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void linuxChainFailsClosedWhenAllCandidatesUnusable() {
         // landlock 助手形态不可判定（空 Optional）= 第二候选也不可用——本机事实无关
         SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
@@ -260,6 +264,7 @@ class SandboxLocalTest {
     }
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void darwinChainFailsClosedWhenSeatbeltUnusable() {
         SandboxProvider provider = provider(
             new SandboxLocalPlugin("darwin", "/nonexistent/sandbox-exec", "bwrap"));
@@ -289,6 +294,7 @@ class SandboxLocalTest {
     }
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void linuxChainReportsProbeFailedNamingBothCandidateLegs() {
         SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
             "/nonexistent/bwrap", Optional.empty()));
@@ -302,6 +308,7 @@ class SandboxLocalTest {
     }
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void darwinChainReportsProbeFailedWhenSeatbeltUnusable() {
         SandboxProvider provider = provider(
             new SandboxLocalPlugin("darwin", "/nonexistent/sandbox-exec", "bwrap"));
@@ -319,10 +326,13 @@ class SandboxLocalTest {
             .isEqualTo(new BackendStatus.Ready("seatbelt", SandboxEnforcement.FULL, ""));
     }
 
-    // ---- linux 第二候选仲裁（注伪助手：darwin 上可验 fallback 与诊断回收） ----
-    // 注伪助手只替「助手命令」，真结论（ABI/rights/真拒写）由 LandlockTest 与 CI 腿验
+    // ---- linux 第二候选仲裁（注伪助手：POSIX 宿主上可验 fallback 与诊断回收） ----
+    // 注伪助手只替「助手命令」，真结论（ABI/rights/真拒写）由 LandlockTest 与 CI 腿验。
+    // Windows 宿主不可跑：探针首腿（bwrap/seatbelt）内部以 Path.of("/") 造哑根，
+    // 在 Windows 渲染为 \ 被 SandboxPolicy 拒——产品不可达（chainFor("win32") 无此腿）。
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void linuxChainFallsBackToLandlockWhenBwrapUnusable() {
         SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
             "/nonexistent/bwrap", Optional.of(List.of("/usr/bin/true"))));
@@ -340,6 +350,7 @@ class SandboxLocalTest {
     }
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void landlockCapabilityLineIsRecoveredIntoReadyDetail() {
         SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
             "/nonexistent/bwrap", Optional.of(List.of("/bin/sh", "-c",
@@ -353,6 +364,7 @@ class SandboxLocalTest {
     }
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void landlockProbeFailureIsNamedWithExitCodeAndLine() {
         SandboxProvider provider = provider(new SandboxLocalPlugin("linux", "/usr/bin/sandbox-exec",
             "/nonexistent/bwrap", Optional.of(List.of("/bin/sh", "-c",
@@ -364,10 +376,13 @@ class SandboxLocalTest {
                     .contains("landlock probe failed (exit 11 — landlock: ABI too old (no REFER))"));
     }
 
-    // ---- win32 候选仲裁（注伪助手：darwin 上可验 PARTIAL 回收与失败点名） ----
-    // 注伪助手只替「助手命令」，真机制（低完整性令牌/打标/真拒写）由 WindowsAclTest 与 VM 腿验
+    // ---- win32 候选仲裁（注伪助手：POSIX 宿主上可验 PARTIAL 回收与失败点名） ----
+    // 注伪助手只替「助手命令」，真机制（低完整性令牌/打标/真拒写）由 WindowsAclTest 与 VM 腿验。
+    // 注伪助手形态是 /bin/sh -c（POSIX 面）：Windows 宿主上探针无从启动——真机制覆盖面在其
+    // 平台的 WindowsAclTest 完整存在，故此处按 POSIX 门。
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void win32ChainReportsReadyWithPartialEnforcementAndCapabilityLine() {
         SandboxProvider provider = provider(new SandboxLocalPlugin("win32", "/usr/bin/sandbox-exec",
             "bwrap", Optional.empty(), Optional.of(List.of("/bin/sh", "-c",
@@ -385,6 +400,7 @@ class SandboxLocalTest {
     }
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void win32ChainProbeFailureIsNamedWithExitCodeAndLine() {
         SandboxProvider provider = provider(new SandboxLocalPlugin("win32", "/usr/bin/sandbox-exec",
             "bwrap", Optional.empty(), Optional.of(List.of("/bin/sh", "-c",
@@ -614,5 +630,39 @@ class SandboxLocalTest {
                 assertThat(ready.enforcement()).isEqualTo(SandboxEnforcement.PARTIAL);
                 assertThat(ready.detail()).contains("enforcement PARTIAL");
             });
+    }
+
+    /**
+     * 产品路径真拒写 → 方言命中（S-c 监视项端到端复验面）：命令经 shell 分派（Windows =
+     * pwsh）落到原生工具，拒绝文由原生工具按宿主本地化产出——zh-CN 宿主为 GBK 字节，
+     * 消费侧解码面不得让 {@code sandboxDenied} 标记落空（S-b leg9b 的六个替换字符即此
+     * 风险现场）。授权侧（真写成功）同腿正对照。
+     */
+    @Test
+    @EnabledOnOs(OS.WINDOWS)
+    void windowsAclCommandDeniedOutsideStillMarksSandboxDenied() throws Exception {
+        SandboxProvider provider = provider(new SandboxLocalPlugin());
+        SandboxPolicy policy = new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace);
+        ShellResult inside = run(provider, "cmd.exe /d /c \"echo ok > in.txt\"", policy, workspace);
+        assertThat(inside.exitCode()).isZero();
+        assertThat(inside.sandboxDenied()).isFalse();
+        assertThat(Files.readString(workspace.resolve("in.txt")).strip()).isEqualTo("ok");
+
+        Path outside = Files.createTempDirectory(Path.of(System.getProperty("user.home")),
+            "jh-sandbox-outside");
+        try {
+            ShellResult denied = run(provider,
+                "cmd.exe /d /c \"echo no > " + outside.resolve("x.txt") + "\"", policy, workspace);
+            assertThat(denied.exitCode()).isNotZero();
+            // 诊断留痕（run-2 取证：空 stderr 之谜——确认拒绝文落 stdout 还是 stderr）
+            assertThat(denied.sandboxDenied())
+                .as("exit=%s stdout=[%s] stderr=[%s]",
+                    denied.exitCode(), denied.stdout().strip(), denied.stderr().strip())
+                .isTrue();
+            assertThat(Files.exists(outside.resolve("x.txt"))).isFalse();
+        } finally {
+            Files.deleteIfExists(outside.resolve("x.txt"));
+            Files.delete(outside);
+        }
     }
 }

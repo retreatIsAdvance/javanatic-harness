@@ -9,8 +9,9 @@ import java.util.List;
  * 按运行事实构造，目标 argv 由 {@link WindowsAcl#runArgs} 逐参传递。
  *
  * <p>用法：{@code WindowsAclExecMain --probe} 或
- * {@code WindowsAclExecMain --mode read-only -- <command> [args...]} 或
- * {@code WindowsAclExecMain --mode workspace-write --temp <dir> [--root <path>]... -- <command> [args...]}。
+ * {@code WindowsAclExecMain --mode read-only --argv-b64 <base64>} 或
+ * {@code WindowsAclExecMain --mode workspace-write --temp <dir> [--root <path>]... --argv-b64 <base64>}
+ * （argv 单参载体格式见 {@link WindowsAcl#encodeArgv}）。
  * 退出码协议见 {@link WindowsAcl} 的 EXIT_* 常量；任何非零都是 fail-closed，
  * 诊断（含 fail 原因）在 stderr——provider 首探缓存取最后一行作 detail。
  */

@@ -349,10 +349,13 @@ class AppBootTest {
     @Test
     void verifyEmitsWarningForNonReadyChainAndStillPasses() throws Exception {
         String originalOs = System.getProperty("os.name");
+        String originalJavaHome = System.getProperty("java.home");
         try {
-            // 注伪平台：真组合（含 sandbox-local/sandbox-policy 行）在 win32 链上
-            // 发 NoBackend 预警——预警是观测面，verify 仍过（exit 码不变）
+            // 注伪平台 + 注伪 java.home（不存在目录）：win32 链在真 Windows 上助手可启动 ⇒ Ready
+            // 无预警（原断言在 Windows 假红）。断助手启动面（java.home 只被 HelperLaunch 调用期读）
+            // 使链在任何宿主确定性非 Ready——锚点（非 Ready ⇒ 预警且 verify 仍过）同形可验。
             System.setProperty("os.name", "Windows 11");
+            System.setProperty("java.home", dir.resolve("no-such-jdk").toString());
             Path profile = profile("");
             try (Runtime rt = AppBoot.boot(new AppBoot.BootOptions(profile, rootOverlays(),
                     true, Policy.STANDARD))) {
@@ -362,6 +365,7 @@ class AppBootTest {
             }
         } finally {
             System.setProperty("os.name", originalOs);
+            System.setProperty("java.home", originalJavaHome);
         }
     }
 

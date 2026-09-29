@@ -101,6 +101,66 @@ class WindowsAclTest {
         assertThat(parsed.argv()).containsExactly("echo", "--", "x");
     }
 
+    /**
+     * 载体不变式（it25 探针 P1/P9 实测）：provider→助手一跳的发送方是宿主 JVM 的
+     * ProcessBuilder——含引号参数在 LEGACY 口径下被吃引号劈段、WIN32_SAFE 口径下
+     * {@code \"} 字面泄漏（两态互斥失效），只有「无引号无空白」的单 token 两态都保真
+     * （P0b/P0c：含空白的路径 token 与尾反斜杠也保真，但命令串的引号是常态）。
+     * 故 argv 整体进单参 base64 载体：引号/空白/非 ASCII/换行都压进字母表安全的 token。
+     */
+    @Test
+    void runArgsCarriesArgvAsOneQuoteFreeBase64Token() {
+        List<String> tricky = List.of("cmd.exe", "/d", "/c",
+            "echo \"quoted arg\" > \"C:\\dir with space\\out.txt\"", "", "中文 参数", "--", "line\nbreak");
+        List<String> wire = WindowsAcl.runArgs(WindowsAcl.MODE_WORKSPACE_WRITE,
+            List.of(Path.of("C:\\work\\ws")), Path.of("C:\\Temp"), tricky);
+        assertThat(wire).contains("--argv-b64");
+        assertThat(wire.getLast()).matches("[A-Za-z0-9+/=]+");
+        assertThat(wire).noneMatch(token -> token.indexOf('"') >= 0);
+        assertThat(WindowsAcl.parse(wire).orElseThrow().argv()).containsExactlyElementsOf(tricky);
+    }
+
+    /**
+     * blob 载体的准入纪律：结构损坏一律拒绝不猜（非 base64 / 长度字段超界 / 尾部残渣 /
+     * 空载体）；旧「{@code --} 逐参」形态不再是协议（fail loud，无兼容解析）。
+     */
+    @Test
+    void malformedArgvCarriersAreRejectedNotGuessed() {
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--argv-b64", "!!not-base64!!")))
+            .isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--argv-b64",
+            base64(new byte[] {0, 0, 0, 8, 'a', 'b'})))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--argv-b64",
+            base64(new byte[] {0, 0, 0, 1, 'a', 'x'})))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--argv-b64", ""))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--argv-b64",
+            rawBlob(new byte[] {'a'}), "trailing"))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--", "true"))).isEmpty();
+    }
+
+    /** 原始字节直接 Base64（手工造结构损坏载体的用武之地）。 */
+    private static String base64(byte[] bytes) {
+        return java.util.Base64.getEncoder().encodeToString(bytes);
+    }
+
+    /** 手工 blob：逐元素 {@code [4 字节大端长度][UTF-8 字节]} 串联后 Base64（与被测编码同构）。 */
+    private static String rawBlob(byte[]... elements) {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        for (byte[] element : elements) {
+            out.write(element.length >>> 24);
+            out.write(element.length >>> 16);
+            out.write(element.length >>> 8);
+            out.write(element.length);
+            out.write(element, 0, element.length);
+        }
+        return base64(out.toByteArray());
+    }
+
+    /** 单元素合法 blob（解出即 {@code [arg]}）。 */
+    private static String blobOf(String arg) {
+        return rawBlob(arg.getBytes(StandardCharsets.UTF_8));
+    }
+
     @Test
     void probeArgsRoundTrip() {
         WindowsAcl.Invocation parsed = WindowsAcl.parse(WindowsAcl.probeArgs()).orElseThrow();
@@ -113,22 +173,23 @@ class WindowsAclTest {
     void malformedInvocationIsRejectedNotGuessed() {
         assertThat(WindowsAcl.parse(List.of())).isEmpty();
         assertThat(WindowsAcl.parse(List.of("--mode"))).isEmpty();
-        assertThat(WindowsAcl.parse(List.of("--mode", "danger-full-access", "--", "true"))).isEmpty();
-        assertThat(WindowsAcl.parse(List.of("--mode", "read-only"))).isEmpty();
-        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--"))).isEmpty();
-        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--root", "C:\\ws", "--", "true")))
+        assertThat(WindowsAcl.parse(List.of("--mode", "danger-full-access", "--argv-b64", blobOf("true"))))
             .isEmpty();
-        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--temp", "C:\\T", "--", "true")))
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only"))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--argv-b64"))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--root", "C:\\ws", "--argv-b64", blobOf("true"))))
+            .isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--temp", "C:\\T", "--argv-b64", blobOf("true"))))
             .isEmpty();
         // workspace-write 必须带 --temp（会话临时目录的父——接口承诺 TEMP/TMP 重定向）
-        assertThat(WindowsAcl.parse(List.of("--mode", "workspace-write", "--root", "C:\\ws", "--", "true")))
+        assertThat(WindowsAcl.parse(List.of("--mode", "workspace-write", "--root", "C:\\ws",
+            "--argv-b64", blobOf("true")))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--mode", "read-only",
+            "--argv-b64", blobOf("true")))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--temp", "C:\\T", "--temp", "C:\\T2",
+            "--mode", "workspace-write", "--argv-b64", blobOf("true")))).isEmpty();
+        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--nope", "x", "--argv-b64", blobOf("true"))))
             .isEmpty();
-        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--mode", "read-only", "--", "true")))
-            .isEmpty();
-        assertThat(WindowsAcl.parse(
-            List.of("--temp", "C:\\T", "--temp", "C:\\T2", "--mode", "workspace-write", "--", "true")))
-            .isEmpty();
-        assertThat(WindowsAcl.parse(List.of("--mode", "read-only", "--nope", "x", "--", "true"))).isEmpty();
         assertThat(WindowsAcl.parse(List.of("--probe", "extra"))).isEmpty();
     }
 

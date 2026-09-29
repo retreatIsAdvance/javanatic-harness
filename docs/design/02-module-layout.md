@@ -67,7 +67,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | 角色 | 职责 |
 |---|---|---|
 | `harness-shell-shell` | Definition | `ShellExecutor` 接口（request/result 分离，逐调用携带 `SandboxPolicy`）|
-| `harness-shell-local` | Provider | 本机 shell 实现（插件 id `shell-local`，it25 S-b 由 `bash-local` 泛化）——平台分派：POSIX=`bash -c`、Windows=`pwsh -NoProfile -NonInteractive -Command`（宿主无 pwsh → execute 期 `ShellUnavailableException` fail-closed）；受限档经 `SandboxProvider.confine` 包装 argv |
+| `harness-shell-local` | Provider | 本机 shell 实现（插件 id `shell-local`，it25 S-b 由 `bash-local` 泛化）——平台分派：POSIX=`bash -c`、Windows=`pwsh -NoProfile -NonInteractive -EncodedCommand <base64(UTF-16LE)>`（it25 S-c：无引号载体过 hop-2 不失真；宿主无 pwsh → execute 期 `ShellUnavailableException` fail-closed）；受限档经 `SandboxProvider.confine` 包装 argv |
 | `harness-shell-docker` | Provider | docker 容器实现（插件 id `shell-docker`，it12.5）——环境级隔离，**挂载面即可写面**（容器根恒只读）；与 shell-local 互斥，换 Provider 不动 seam |
 | `harness-shell-tool` | Consumer | `shell` 工具（it25 S-b 由 `bash` 改名）|
 

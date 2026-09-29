@@ -269,7 +269,7 @@ class DockerShellTest {
         ShellExecutor executor = new DockerShellExecutor("docker", IMAGE, 64 * 1024);
         assertThatThrownBy(() -> run(executor, "echo hi",
             new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace),
-            Path.of("/").resolve("elsewhere")))
+            workspace.resolveSibling("elsewhere")))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("inside the workspace");
     }

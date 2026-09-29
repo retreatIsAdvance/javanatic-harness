@@ -1,6 +1,6 @@
 /**
  * harness-shell-local — local shell provider (plugin id "shell-local"): argv is
- * dispatched per platform (POSIX = bash -c, Windows = pwsh -Command; missing
+ * dispatched per platform (POSIX = bash -c, Windows = pwsh -EncodedCommand; missing
  * pwsh fails loud); bounded direct run with process-tree kill, output cap and
  * timeout; restricted policies wrap argv via SandboxProvider.confine
  * (fail-closed without a provider).

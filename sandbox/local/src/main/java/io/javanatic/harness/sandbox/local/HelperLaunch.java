@@ -9,11 +9,13 @@ import java.util.Optional;
 /**
  * 本模块两个助手（{@link LandlockExecMain} / {@link WindowsAclExecMain}）的
  * 启动命令构造面（it25 S-a 抽取自 Landlock，避免两份漂移）：固定带
- * {@code -XX:-UsePerfData}（避免助手 JVM 启动落 hsperfdata 侧文件）与
- * {@code --enable-native-access}（FFM 受限方法授权；具名模块点模块名，
- * unnamed 用 ALL-UNNAMED）。启动形态按运行事实三选一（非猜测）：classpath 态
- * → {@code -cp}；模块路径态 → {@code --module-path + -m}；镜像态（两者皆空，
- * 模块在镜像内）→ {@code -m}。
+ * {@code -XX:-UsePerfData}（避免助手 JVM 启动落 hsperfdata 侧文件）、
+ * {@code -Dstderr.encoding=UTF-8}（助手诊断永远 UTF-8——消费侧 shell 执行器按
+ * UTF-8 解码子进程 stderr，zh-CN 宿主的 GBK 原生编码会把中文诊断打成乱码，
+ * it25 S-c）与 {@code --enable-native-access}（FFM 受限方法授权；具名模块点
+ * 模块名，unnamed 用 ALL-UNNAMED）。启动形态按运行事实三选一（非猜测）：
+ * classpath 态 → {@code -cp}；模块路径态 → {@code --module-path + -m}；
+ * 镜像态（两者皆空，模块在镜像内）→ {@code -m}。
  */
 final class HelperLaunch {
 
@@ -31,7 +33,8 @@ final class HelperLaunch {
     static Optional<List<String>> command(String javaHome, String classPath, String modulePath,
                                           String moduleName, Class<?> mainClass) {
         List<String> command = new ArrayList<>(List.of(
-            Path.of(javaHome, "bin", "java").toString(), "-XX:-UsePerfData"));
+            Path.of(javaHome, "bin", "java").toString(), "-XX:-UsePerfData",
+            "-Dstderr.encoding=UTF-8"));
         if (moduleName == null) {
             if (classPath == null || classPath.isEmpty()) {
                 return Optional.empty();

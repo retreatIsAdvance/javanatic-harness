@@ -166,12 +166,12 @@ class ProductionScenarioTest {
         return List.of(
             List.of(new StreamChunk.Delta("读"),
                 new StreamChunk.DeltaToolUse(CallId.of("c1"), "fs_read",
-                    "{\"path\":\"" + note + "\"}"),
+                    "{\"path\":\"" + jsonPath(note) + "\"}"),
                 new StreamChunk.Usage(new TokenUsage(60, STEP_OUTPUT, 0)),
                 new StreamChunk.Finish(FinishReason.TOOL_USE)),
             List.of(new StreamChunk.Delta("写"),
                 new StreamChunk.DeltaToolUse(CallId.of("c2"), "fs_write",
-                    "{\"path\":\"" + written + "\",\"content\":\"written by scenario\"}"),
+                    "{\"path\":\"" + jsonPath(written) + "\",\"content\":\"written by scenario\"}"),
                 new StreamChunk.Usage(new TokenUsage(150, STEP_OUTPUT, 0)),
                 new StreamChunk.Finish(FinishReason.TOOL_USE)),
             summaryScript("S1"),
@@ -185,13 +185,18 @@ class ProductionScenarioTest {
         return List.of(
             List.of(new StreamChunk.Delta("读"),
                 new StreamChunk.DeltaToolUse(CallId.of("c3"), "fs_read",
-                    "{\"path\":\"" + written + "\"}"),
+                    "{\"path\":\"" + jsonPath(written) + "\"}"),
                 new StreamChunk.Usage(new TokenUsage(150, STEP_OUTPUT, 0)),
                 new StreamChunk.Finish(FinishReason.TOOL_USE)),
             summaryScript("S2"),
             List.of(new StreamChunk.Delta("第二轮完成"),
                 new StreamChunk.Usage(new TokenUsage(60, STEP_OUTPUT, 0)),
                 new StreamChunk.Finish(FinishReason.STOP)));
+    }
+
+    /** JSON 字符串字面量内的路径：Windows 分隔符反斜杠直拼成非法转义（`C:\U…`），解析必败。 */
+    private static String jsonPath(Path path) {
+        return path.toString().replace("\\", "\\\\");
     }
 
     private static List<StreamChunk> summaryScript(String marker) {

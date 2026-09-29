@@ -232,8 +232,9 @@ public final class SandboxLocalPlugin implements Plugin {
     }
 
     /**
-     * windows-acl 包装：{@code <助手命令> --mode <模式词> [--temp <父>] [--root <p>]... -- argv}
-     * ——助手构造低完整性令牌、递归打标后以令牌生子（{@link WindowsAcl} 类注）。
+     * windows-acl 包装：{@code <助手命令> --mode <模式词> [--temp <父>] [--root <p>]...
+     * --argv-b64 <blob>}——助手构造低完整性令牌、递归打标后以令牌生子
+     * （{@link WindowsAcl} 类注；argv 单参载体见 {@link WindowsAcl#encodeArgv}）。
      *
      * <p>可写根<b>只有 workspace 根</b>（与 landlock 的 {@link WritableRoots} 授予面
      * 有意不同源）：Windows 上宿主临时区是整机共享的 Medium 面，整树打标是越界足迹；

@@ -167,6 +167,7 @@ class StreamRendererTest {
 
     private String text() {
         out.flush();
-        return bytes.toString(StandardCharsets.UTF_8);
+        // breakLine 走 PrintStream.println → 平台行分隔符（Windows = CRLF）；断言面按 \n 归一
+        return bytes.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }

@@ -79,7 +79,7 @@ class LandlockTest {
     @Test
     void hostHelperCommandIsSelfConsistent() {
         List<String> command = Landlock.hostHelperCommand().orElseThrow();
-        assertThat(command).first().asString().endsWith("/bin/java");
+        assertThat(command).first().asString().endsWith(Path.of("bin", "java").toString());
         assertThat(command).contains("-XX:-UsePerfData");
         assertThat(command).anyMatch(token -> token.startsWith("--enable-native-access="));
         assertThat(command).last().asString().endsWith(LandlockExecMain.class.getName());

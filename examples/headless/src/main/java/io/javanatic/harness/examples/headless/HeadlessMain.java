@@ -46,9 +46,12 @@ import io.javanatic.harness.tools.ToolDefinition;
 import io.javanatic.harness.tools.ToolRegistry;
 
 import java.io.BufferedReader;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
@@ -204,8 +207,24 @@ public final class HeadlessMain {
         }
     }
 
+    /**
+     * 入口标准流 UTF-8 化（it25 S-c locale 修复）：Windows 上 System.out/err 默认随
+     * 原生编码（zh-CN = GBK），重定向/管道消费方按 UTF-8 解码即乱码；固定 UTF-8
+     * 令 jh 自身输出面在任何宿主一致。只覆盖本进程自身写出的文本——外部系统工具
+     * 按各自编码产出的字节（如 cmd 的本地化错误文）不在此列。
+     */
+    static void installUtf8StdStreams() {
+        System.setOut(utf8PrintStream(new FileOutputStream(FileDescriptor.out)));
+        System.setErr(utf8PrintStream(new FileOutputStream(FileDescriptor.err)));
+    }
+
+    static PrintStream utf8PrintStream(OutputStream target) {
+        return new PrintStream(target, true, StandardCharsets.UTF_8);
+    }
+
     /** @param args 任务文本与 flags（完整清单见 {@link #USAGE}） */
     public static void main(String[] args) throws Exception {
+        installUtf8StdStreams();
         RunnerOptions options;
         try {
             options = parse(args);

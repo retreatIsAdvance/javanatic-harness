@@ -12,6 +12,7 @@ import io.javanatic.harness.shell.shell.ShellResult;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * 本机 shell 执行：argv 由 {@link ShellPlatform} 按平台分派（POSIX = bash -c，
- * Windows = pwsh -Command），有界直跑。生产语义：
+ * Windows = pwsh -EncodedCommand），有界直跑。生产语义：
  * <ul>
  *   <li>取消/超时 = 击杀进程树（{@code ProcessHandle.descendants()} 先于本体；
  *       快速退出进程已脱管的孙进程杀不到——真隔离归 sandbox 切片）</li>
@@ -96,24 +97,45 @@ final class LocalShellExecutor implements ShellExecutor {
             stderr.await();
         }
         boolean denied = process.exitValue() != 0
-            && matchesDialect(stderr.text(), denialSignatures);
+            && matchesDialect(stderr.bytes(), denialSignatures,
+                dialectCharsets(System.getProperty("native.encoding")));
         return new ShellResult(process.exitValue(), stdout.text(), stderr.text(),
             Duration.ofNanos(System.nanoTime() - startNanos),
             stdout.truncated() || stderr.truncated(), denied);
     }
 
-    /** 拒绝方言匹配：stderr <b>逐行</b>大小写不敏感包含任一签名（dsh「within each
-     * stderr line」契约——整流 contains 会把无关长行里的偶现串误标）。 */
-    private static boolean matchesDialect(String stderr, List<String> signatures) {
-        for (String line : stderr.split("\\R", -1)) {
-            String lowered = line.toLowerCase(java.util.Locale.ROOT);
-            for (String signature : signatures) {
-                if (lowered.contains(signature.toLowerCase(java.util.Locale.ROOT))) {
-                    return true;
+    /** 拒绝方言匹配：stderr <b>原始字节</b>按候选解码集试解后<b>逐行</b>大小写不敏感
+     * 包含任一签名（dsh「within each stderr line」契约——整流 contains 会把无关长行
+     * 里的偶现串误标）。候选集含 native 编码：拒绝由原生控制台程序给出，zh-CN GBK
+     * 的「拒绝访问」按 UTF-8 解成 U+FFFD，仅 UTF-8 候选必漏标（it25 首轮 VM 实态）。 */
+    static boolean matchesDialect(byte[] stderr, List<String> signatures, List<Charset> charsets) {
+        for (Charset charset : charsets) {
+            for (String line : new String(stderr, charset).split("\\R", -1)) {
+                String lowered = line.toLowerCase(java.util.Locale.ROOT);
+                for (String signature : signatures) {
+                    if (lowered.contains(signature.toLowerCase(java.util.Locale.ROOT))) {
+                        return true;
+                    }
                 }
             }
         }
         return false;
+    }
+
+    /** 候选解码集：UTF-8 恒定在列；{@code native.encoding}（JDK 18+ 平台原生编码，
+     * Windows zh-CN = GBK）可解析且非 UTF-8 时追加。空/空白/未知一律退化 UTF-8。 */
+    static List<Charset> dialectCharsets(String nativeEncoding) {
+        if (nativeEncoding == null || nativeEncoding.isBlank()) {
+            return List.of(StandardCharsets.UTF_8);
+        }
+        try {
+            Charset nativeCharset = Charset.forName(nativeEncoding.trim());
+            return nativeCharset.equals(StandardCharsets.UTF_8)
+                ? List.of(StandardCharsets.UTF_8)
+                : List.of(StandardCharsets.UTF_8, nativeCharset);
+        } catch (IllegalArgumentException unknownCharset) {
+            return List.of(StandardCharsets.UTF_8);
+        }
     }
 
     /** 击杀进程树：孙进程先于本体（否则父死孙脱管，descendants 不可达）。幂等。 */
@@ -171,8 +193,12 @@ final class LocalShellExecutor implements ShellExecutor {
             }
         }
 
+        byte[] bytes() {
+            return buffer.toByteArray();
+        }
+
         String text() {
-            return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+            return new String(bytes(), StandardCharsets.UTF_8);
         }
 
         boolean truncated() {

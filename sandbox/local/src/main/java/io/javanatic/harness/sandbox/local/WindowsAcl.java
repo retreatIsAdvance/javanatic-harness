@@ -1,5 +1,6 @@
 package io.javanatic.harness.sandbox.local;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.foreign.Arena;
@@ -17,6 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -80,11 +82,11 @@ final class WindowsAcl {
     private static final String ROOT_FLAG = "--root";
     private static final String TEMP_FLAG = "--temp";
     private static final String PROBE_FLAG = "--probe";
-    private static final String SEPARATOR = "--";
+    private static final String ARGV_B64_FLAG = "--argv-b64";
 
     static final String USAGE = "usage: WindowsAclExecMain --probe"
-        + " | --mode read-only -- <command> [args...]"
-        + " | --mode workspace-write --temp <dir> [--root <path>]... -- <command> [args...]";
+        + " | --mode read-only --argv-b64 <base64>"
+        + " | --mode workspace-write --temp <dir> [--root <path>]... --argv-b64 <base64>";
 
     // ---- 退出码协议（probe 由 provider 解读；run 的正常出口是子进程退出码） ----
 
@@ -187,8 +189,9 @@ final class WindowsAcl {
     }
 
     /**
-     * run 指令：{@code --mode <m> [--temp <dir>] [--root <p>]... -- <argv>}
-     * （路径不经 shell，逐参传递）。
+     * run 指令：{@code --mode <m> [--temp <dir>] [--root <p>]... --argv-b64 <blob>}
+     * （目标 argv 经 {@link #encodeArgv} 压成单 token 载体——provider→助手一跳的
+     * ProcessBuilder 会吃掉含引号参数，见 {@link #encodeArgv} 的实测注）。
      *
      * @param mode 模式词
      * @param roots workspace-write 的可写根（read-only 须为空）
@@ -208,9 +211,60 @@ final class WindowsAcl {
             args.add(ROOT_FLAG);
             args.add(root.toString());
         }
-        args.add(SEPARATOR);
-        args.addAll(argv);
+        args.add(ARGV_B64_FLAG);
+        args.add(encodeArgv(argv));
         return List.copyOf(args);
+    }
+
+    /**
+     * argv → 单参 base64 载体：逐元素 {@code [4 字节大端长度][UTF-8 字节]} 串联后整体
+     * Base64（blob 的字母表无引号、无空白）。
+     *
+     * <p>为什么必须编码（it25 探针 P1/P9 实测）：provider→助手一跳的发送方是宿主 JVM 的
+     * {@code ProcessBuilder}——含引号参数在 LEGACY 口径下被吃引号劈段、WIN32_SAFE 口径下
+     * {@code \"} 字面泄漏（两态互斥失效），只有「无引号无空白」的单 token 两态都保真。
+     * 目标 argv 是任意命令串（引号是其常态），故整体编码而非逐参小心引号。
+     */
+    static String encodeArgv(List<String> argv) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (String arg : argv) {
+            byte[] bytes = arg.getBytes(StandardCharsets.UTF_8);
+            out.write(bytes.length >>> 24);
+            out.write(bytes.length >>> 16);
+            out.write(bytes.length >>> 8);
+            out.write(bytes.length);
+            out.write(bytes, 0, bytes.length);
+        }
+        return Base64.getEncoder().encodeToString(out.toByteArray());
+    }
+
+    /**
+     * 单参载体 → argv（{@link #encodeArgv} 的逆）。任何结构缺陷返回 empty——
+     * 非 base64、长度字段越界、尾部残渣等一律拒绝不猜（调用方 fail loud 打 USAGE）。
+     */
+    static Optional<List<String>> decodeArgv(String blob) {
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(blob);
+        } catch (IllegalArgumentException notBase64) {
+            return Optional.empty();
+        }
+        List<String> argv = new ArrayList<>();
+        int index = 0;
+        while (index < bytes.length) {
+            if (index + 4 > bytes.length) {
+                return Optional.empty();
+            }
+            long length = ((bytes[index] & 0xFFL) << 24) | ((bytes[index + 1] & 0xFFL) << 16)
+                | ((bytes[index + 2] & 0xFFL) << 8) | (bytes[index + 3] & 0xFFL);
+            index += 4;
+            if (length > bytes.length - index) {
+                return Optional.empty();
+            }
+            argv.add(new String(bytes, index, (int) length, StandardCharsets.UTF_8));
+            index += (int) length;
+        }
+        return Optional.of(argv);
     }
 
     /** 解析后的助手指令。 */
@@ -226,7 +280,8 @@ final class WindowsAcl {
     /**
      * 解析助手指令；任何形态外输入返回 empty（调用方打印 USAGE 退出 EXIT_USAGE）——
      * fail loud 不猜。形态纪律：read-only 无根无 temp；workspace-write 恰有一个 temp
-     * （会话临时目录的父，接口承诺它承担 TEMP/TMP 重定向）。
+     * （会话临时目录的父，接口承诺它承担 TEMP/TMP 重定向）；argv 载体恰出现一次且为
+     * 末 token（{@link #decodeArgv} 结构校验，空 argv 无意义即拒绝）。
      *
      * @param args 助手 argv（不含 JVM 参数）
      * @return 合法指令；非法 empty
@@ -239,10 +294,18 @@ final class WindowsAcl {
         Path temp = null;
         boolean tempSeen = false;
         List<Path> roots = new ArrayList<>();
+        List<String> argv = null;
         int index = 0;
         while (index < args.size()) {
             String token = args.get(index);
-            if (SEPARATOR.equals(token)) {
+            if (ARGV_B64_FLAG.equals(token)) {
+                if (index + 2 != args.size()) {
+                    return Optional.empty();
+                }
+                argv = decodeArgv(args.get(index + 1)).orElse(null);
+                if (argv == null) {
+                    return Optional.empty();
+                }
                 break;
             }
             if (MODE_FLAG.equals(token)) {
@@ -269,10 +332,9 @@ final class WindowsAcl {
             }
             index++;
         }
-        if (mode == null || index >= args.size() || index + 1 >= args.size()) {
+        if (mode == null || argv == null || argv.isEmpty()) {
             return Optional.empty();
         }
-        List<String> argv = args.subList(index + 1, args.size());
         if (MODE_READ_ONLY.equals(mode) && (tempSeen || !roots.isEmpty())) {
             return Optional.empty();
         }
@@ -317,11 +379,11 @@ final class WindowsAcl {
      * argv → CreateProcessW 命令行（<b>cmd 口径</b>）：空串/含空白/含双引号的参数加
      * 双引号包裹，其余原样；<b>有意不做 MSVCRT 反斜杠转义</b>。
      *
-     * <p>命令串跨两跳、两跳各按接收方口径引号：provider→助手必须保 argv 原样，由
-     * Java 的 ProcessBuilder 按 MSVCRT 转义承担（助手的解析方是 JVM）；助手→目标
-     * 这一跳的接收方是 cmd.exe，它不认反斜杠转义（{@code \"} 会被当字面反斜杠），
-     * 而它剥外壳引号的规则（无 /S、首字符为引号即去首尾引号）正好吃掉本层包裹、
-     * 原样保留内层引号——故本层「只包裹不转义」才是把命令串完整交给 cmd 的形状。
+     * <p>命令串跨两跳：provider→助手一跳归 {@link #encodeArgv} 的单参 base64 载体
+     * （实测该跳的 ProcessBuilder 吃引号参数，两态互斥失效）；本层只负责助手→目标这一跳，
+     * 接收方是 cmd.exe，它不认反斜杠转义（{@code \"} 会被当字面反斜杠），而它剥外壳引号
+     * 的规则（无 /S、首字符为引号即去首尾引号）正好吃掉本层包裹、原样保留内层引号——
+     * 故本层「只包裹不转义」才是把命令串完整交给 cmd 的形状。
      *
      * <p>边界：参数含内嵌引号且目标不是 cmd 而是 MSVCRT 程序时 argv 保真不成立
      * （Windows 无通用口径，与 ProcessBuilder 同界）；Windows 路径不含引号字符，

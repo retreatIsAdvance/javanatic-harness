@@ -330,7 +330,10 @@ final class LocalShellExecutor implements ShellExecutor {
     //    写满管道缓冲死锁子进程);超限截断置标记、继续读丢弃。
     // 平台分派(it25 S-b):解释器由 ShellPlatform 按宿主决定,不在执行器里写死——
     //    POSIX   = ["bash","-c",command](现状语义不变)
-    //    Windows = ["<pwsh.exe>","-NoProfile","-NonInteractive","-Command",command]
+    //    Windows = ["<pwsh.exe>","-NoProfile","-NonInteractive","-EncodedCommand",
+    //               base64(UTF-16LE(command))](it25 S-c:载体无引号无空白,过
+    //               provider→助手→pwsh 两跳不失真;-Command 内联形态会让
+    //               hop-2 的 cmd 口径包裹式引号改写 command,已证伪)
     //    宿主无 pwsh 时 execute 期抛 ShellUnavailableException(fail-closed,不静默
     //    退化到 5.1:引号/转义/错误文形全变,标记与断言会跟着撒谎)。
     ShellResult execute(ShellRequest req, AbortSignal signal) throws Exception { /* ... */ }
@@ -477,7 +480,10 @@ denied`；功能探针 `bwrap --ro-bind / / --dev /dev --die-with-parent -- true
 只授不拒；**入选门槛 = 内核接受的 rights 子集含 `WRITE_EFFECTS_V1` + `REFER` +
 `TRUNCATE`**（缺者 fail-closed 等 bwrap 腿——ABI 1–2 能清空只读文件、跨目录 rename
 不受控）；拒绝方言 `Permission denied`（EACCES，无 EROFS 面）；助手命令带
-`-XX:-UsePerfData` 与 `--enable-native-access`（classpath/模块路径/镜像三形态按运行
+`-XX:-UsePerfData`、`-Dstderr.encoding=UTF-8`（助手诊断恒 UTF-8——消费侧 shell
+执行器按 UTF-8 解码子进程 stderr，zh-CN 宿主的 GBK 原生编码会把中文诊断打成
+乱码，it25 S-c；win32 助手共用同一构造面 `HelperLaunch`）与 `--enable-native-access`
+（classpath/模块路径/镜像三形态按运行
 事实择一，classpath 取助手类 code source——surefire 的 `java.class.path` 是空 booter
 jar）；机制结论（ABI/rights/正对照）来自探针内实测而非版本猜测；助手退出码协议即诊断
 词表——0 通过 / 10 平台或内核不支持 / 11 ABI 不足 / 12 机制未真拒写 / 13 应用失败 /

@@ -146,7 +146,7 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 
 **规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。以上未来阶段均未开工；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。
 
-**平台支持面（当前树——0.2.0 系列，尚未发布）**：macOS 与 Linux 可用（含同机沙箱）。macOS 自带 seatbelt、开箱即用。Linux 走平台链：装了 bubblewrap 用 bwrap，没装则落自带 Landlock 助手（内核 ABI ≥ 3——无须额外安装，归档自带的 JVM 先自限制再 exec 目标），两条都不可用时受限档 fail-closed，`--verify` 点名原因与出路。v0.1.0 发布只附了 macOS 归档，Linux 归档在 0.2.0 挂上 Release 之前以 CI artifact 供取件。**Windows 暂不在支持面**——同机沙箱后端（windows-acl）与 shell 平台化（POSIX bash / Windows pwsh，it25 S-b）已入 0.2.0 迭代树，但 Windows 归档与其 CI job 仍未落地，故 Windows 暂不在支持面。
+**平台支持面（当前树——0.2.0 系列，尚未发布）**：macOS 与 Linux 可用（含同机沙箱）。macOS 自带 seatbelt、开箱即用。Linux 走平台链：装了 bubblewrap 用 bwrap，没装则落自带 Landlock 助手（内核 ABI ≥ 3——无须额外安装，归档自带的 JVM 先自限制再 exec 目标），两条都不可用时受限档 fail-closed，`--verify` 点名原因与出路。v0.1.0 发布只附了 macOS 归档，Linux 归档在 0.2.0 挂上 Release 之前以 CI artifact 供取件。**Windows 暂不在支持面**——同机沙箱后端（windows-acl：低完整性强制，PARTIAL 覆盖面如实登记）、shell 平台化（POSIX bash / Windows pwsh）与 Windows 归档及其 CI job 均已入 0.2.0 迭代树，归档构建与冒烟已在真 Windows 宿主验证；Windows 随 0.2.0 发布进入支持面。
 
 R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 

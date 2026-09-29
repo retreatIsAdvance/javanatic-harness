@@ -90,7 +90,7 @@ public final class ShellToolPlugin implements Plugin {
         ShellExecutor shell = scope.require(ShellExecutor.KEY);
         SandboxPolicyService policies = scope.require(SandboxPolicyService.KEY);
         ToolDefinition tool = new ToolDefinition("shell",
-            "在工作目录执行 shell 命令（POSIX: bash -c；Windows: pwsh -Command）",
+            "在工作目录执行 shell 命令（POSIX: bash -c；Windows: pwsh）",
             new ValueSchema.Object("参数", Map.of("command", COMMAND)),
             RenderIntent.TERMINAL,
             (args, ctx) -> {

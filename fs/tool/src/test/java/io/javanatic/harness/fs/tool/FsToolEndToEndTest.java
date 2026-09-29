@@ -61,10 +61,10 @@ class FsToolEndToEndTest {
             Session session = Session.create(Session.newId("e2e"), null, null);
             executor.execute(List.of(
                 new ToolUseBlock(CallId.of("w1"), "fs_write",
-                    "{\"path\":\"" + file + "\",\"content\":\"hello fs\"}")),
+                    json(file, "content", "hello fs"))),
                 session, 0, 0, rt.root(), AbortSignal.never());
             List<LoggedEvent<ToolResultEvent>> reads = executor.execute(List.of(
-                new ToolUseBlock(CallId.of("r1"), "fs_read", "{\"path\":\"" + file + "\"}")),
+                new ToolUseBlock(CallId.of("r1"), "fs_read", json(file))),
                 session, 0, 1, rt.root(), AbortSignal.never());
 
             assertThat(reads.getFirst().event().block().content()).isEqualTo("hello fs");
@@ -98,7 +98,7 @@ class FsToolEndToEndTest {
             Session session = Session.create(Session.newId("bounded"), null, null);
             List<LoggedEvent<ToolResultEvent>> results = executor.execute(List.of(
                 new ToolUseBlock(CallId.of("r1"), "fs_read", "{\"path\":\"big.txt\"}"),
-                new ToolUseBlock(CallId.of("l1"), "fs_list", "{\"path\":\"" + dir + "\"}"),
+                new ToolUseBlock(CallId.of("l1"), "fs_list", json(dir)),
                 new ToolUseBlock(CallId.of("e1"), "fs_edit",
                     "{\"path\":\"big.txt\",\"old_string\":\"hello\",\"new_string\":\"x\"}")),
                 session, 0, 0, rt.root(), AbortSignal.never());
@@ -182,7 +182,7 @@ class FsToolEndToEndTest {
             run(executor, session, rt, new ToolUseBlock(CallId.of("w1"), "fs_write",
                 json(file, "content", "v1")));
             run(executor, session, rt, new ToolUseBlock(CallId.of("r1"), "fs_read",
-                "{\"path\":\"" + file + "\"}"));
+                json(file)));
 
             Files.writeString(file, "external");   // 模型视角之外的外部修改
 
@@ -193,7 +193,7 @@ class FsToolEndToEndTest {
             assertThat(Files.readString(file)).isEqualTo("external");   // 拒而未写
 
             run(executor, session, rt, new ToolUseBlock(CallId.of("r2"), "fs_read",
-                "{\"path\":\"" + file + "\"}"));
+                json(file)));
             ToolResultBlock edited = run(executor, session, rt, new ToolUseBlock(CallId.of("e2"),
                 "fs_edit", json(file, "old_string", "external", "new_string", "v3")));
             assertThat(edited.isError()).isFalse();
@@ -249,7 +249,7 @@ class FsToolEndToEndTest {
             run(executor, session, rt, new ToolUseBlock(CallId.of("w1"), "fs_write",
                 json(file, "content", "v1")));
             run(executor, session, rt, new ToolUseBlock(CallId.of("r1"), "fs_read",
-                "{\"path\":\"" + file + "\"}"));
+                json(file)));
             seed = session.events().stream().map(entry -> (SessionEvent) entry.event()).toList();
         }
         Files.writeString(file, "external");
@@ -329,10 +329,15 @@ class FsToolEndToEndTest {
     }
 
     private static String json(Path path, String... keyValues) {
-        StringBuilder json = new StringBuilder("{\"path\":\"").append(path).append('"');
+        StringBuilder json = new StringBuilder("{\"path\":\"").append(escaped(path)).append('"');
         for (int i = 0; i < keyValues.length; i += 2) {
             json.append(",\"").append(keyValues[i]).append("\":\"").append(keyValues[i + 1]).append('"');
         }
         return json.append('}').toString();
+    }
+
+    /** JSON 字符串字面量内的路径：Windows 分隔符反斜杠直拼成非法转义（`C:\U…`），解析必败。 */
+    private static String escaped(Path path) {
+        return path.toString().replace("\\", "\\\\");
     }
 }

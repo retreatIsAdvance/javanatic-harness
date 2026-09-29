@@ -2,6 +2,7 @@ package io.javanatic.harness.fs.local;
 
 import io.javanatic.harness.fs.FsService;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -304,7 +305,8 @@ public final class LocalFs implements FsService {
                 return;
             }
             String content = new String(bytes, StandardCharsets.UTF_8);
-            String relative = root.relativize(file).toString();
+            // 结果路径契约：相对 root、以 / 分隔——Windows 原生分隔符归一，否则同一棵树输出随平台而异
+            String relative = root.relativize(file).toString().replace(File.separatorChar, '/');
             int line = 1;
             int start = 0;
             while (true) {

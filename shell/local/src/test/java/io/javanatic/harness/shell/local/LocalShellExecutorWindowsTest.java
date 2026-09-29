@@ -26,7 +26,7 @@ import java.util.function.BooleanSupplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Windows 腿的真执行（pwsh -Command）：输出/退出码/环境透传/超时与取消的进程树击杀。
+/** Windows 腿的真执行（pwsh -EncodedCommand）：输出/退出码/环境透传/超时与取消的进程树击杀。
  * 只在 Windows 宿主（S-c CI job / 参照 VM）跑；argv 形状与 fail-loud 归
  * {@link LocalShellPlatformTest}，POSIX 腿归 {@link LocalShellExecutorTest}。 */
 @EnabledOnOs(OS.WINDOWS)
