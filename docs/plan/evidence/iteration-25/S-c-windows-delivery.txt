@@ -226,3 +226,13 @@ E-native（pwsh -ErrorAction Stop 拒写）：exit=1，stderr GBK 可解（含 A
 3. 挂账（本迭代不做，勿顺手动）：matchesDialect / StreamDrain 去重抽取；ShellPlatform
    enum/sealed 化；ShellToolPlugin `tool` 改名；windows-acl 两洞消除（洞 2 = NTFS 硬链接
    别名越界，0.2 不做既定，当前如实外显）。
+
+== 8. 收口评审补丁（4 项，一行级，主行为零改动） ==
+
+评审 817bdba 通过后所落：①`WindowsAcl.decodeArgv` 长度前缀字面量 `4` 两处提常量
+  `LENGTH_PREFIX_BYTES`（`encodeArgv` 本无字面量，注释随动）；②AppleDouble 坑按犯错回填
+  规则入 AGENTS.md 已知坑（打包配方 + `grep -c xattr` = 0 自检）；③ubuntu job landlock
+  前置探针补 `-Dstderr.encoding=UTF-8`（与 05 §6 文档化启动形态一致，附「手搓命令不得与
+  产品启动面漂移」注释）；④windows job 冒烟两处 `jh.bat --help` 后补 `$LASTEXITCODE`
+  检查（此前只查 `--verify`）。复绿：本机全量 package 596/0/0/23（BUILD SUCCESS，54s，
+  零红腿）；CI YAML 校验 jobs=build/macos/windows、步数 11/4/8、无尾随空白。

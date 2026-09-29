@@ -84,6 +84,9 @@ final class WindowsAcl {
     private static final String PROBE_FLAG = "--probe";
     private static final String ARGV_B64_FLAG = "--argv-b64";
 
+    /** argv 载体的逐元素长度前缀字节数（4 字节大端长度 ‖ UTF-8 字节，见 {@link #encodeArgv}）。 */
+    private static final int LENGTH_PREFIX_BYTES = 4;
+
     static final String USAGE = "usage: WindowsAclExecMain --probe"
         + " | --mode read-only --argv-b64 <base64>"
         + " | --mode workspace-write --temp <dir> [--root <path>]... --argv-b64 <base64>";
@@ -252,12 +255,12 @@ final class WindowsAcl {
         List<String> argv = new ArrayList<>();
         int index = 0;
         while (index < bytes.length) {
-            if (index + 4 > bytes.length) {
+            if (index + LENGTH_PREFIX_BYTES > bytes.length) {
                 return Optional.empty();
             }
             long length = ((bytes[index] & 0xFFL) << 24) | ((bytes[index + 1] & 0xFFL) << 16)
                 | ((bytes[index + 2] & 0xFFL) << 8) | (bytes[index + 3] & 0xFFL);
-            index += 4;
+            index += LENGTH_PREFIX_BYTES;
             if (length > bytes.length - index) {
                 return Optional.empty();
             }

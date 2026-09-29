@@ -188,6 +188,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - Windows FFM（it25 S-0 真 VM 实测；全 12 条见 docs/plan/evidence/iteration-25/S-0-windows-acl-shape.txt §四）：advapi32 **不导出** `LocalFree`（绑 kernel32）；捕获态段 **12 字节**（`Linker.Option.captureStateLayout()`，不是 POSIX 的 4）；`AllocateAndInitializeSid` 吃 8 个 sub-authority；语句上下文裸 `invokeExact` 编成 (…)void——返回值必须承接（否则当场 WrongMethodType）；restricting SIDs 的 `SID_AND_ATTRIBUTES.Attributes` 须为 0（SE_GROUP_ENABLED → errno 87）；`OpenWindowStationW`/`OpenDesktopW` **直接返回句柄**（无 out 参数）。
 - Windows 受限令牌：`WRITE_RESTRICTED` 令牌 + `CREATE_NO_WINDOW` 的子进程**必死 0xC0000142**（STATUS_DLL_INIT_FAILED；同令牌不设该旗标则能启动）——唯一能启动的 restricting SID = Administrators，但写限制随即形同虚设 ⇒ win32 受限形状已改低完整性（Low IL + 逐对象打标，打标不回溯既有子项）；不要回头再试 WRITE_RESTRICTED。
 - Windows 真跑通道（it25 起）：本机 UTM Win11 ARM VM 经 `utmctl`（路径与 uuid 见 docs/plan/iteration-25.md S-0 节）——`exec --cmd` 的 argv 须分元素传、跑在 SYSTEM/session 0 且 stdout 会陈旧 ⇒ 载荷 `file push` 送入、结果一律 `file pull` 取回；guest 内用 schtasks 拉起到交互会话；控制台 GBK——**取回文本按来源选编码**：jh 自身输出自 it25 S-c 起恒 UTF-8（入口 wrap + 助手 `-Dstderr.encoding`，见 12 §6 / 05 §6），cmd/系统工具的输出仍是 GBK（`iconv -f GBK -t UTF-8`）。
+- macOS 打包 → Windows 解压的载荷陷阱（it25 S-c 实撞）：macOS 默认 bsdtar 把 xattr 存 PAX 记录 ⇒ Windows 解压物化 AppleDouble 旁车 `._*` 源文件（checkstyle 首撞即崩 `._module-info.java`，`no viable alternative at input 'Mac'`）；打包用 `COPYFILE_DISABLE=1 tar -czf … --no-xattrs --no-mac-metadata --exclude='./.git' --exclude='./target' … .`，打包后自检 `gzcat <tar.gz> | strings | grep -c xattr` = 0。
 
 ## 修改本文件
 

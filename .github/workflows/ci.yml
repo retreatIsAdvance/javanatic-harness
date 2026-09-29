@@ -43,11 +43,13 @@ jobs:
       # 前置硬门 2（it24）：landlock 助手必须在本 runner 内核上真跑通——同 bwrap 门之理，
       # 否则下面两条 assumeTrue(landlockUsable()) 的 e2e 会静默跳过。走 jlink 镜像的模块
       # 形态真跑助手 --probe（真建 ruleset + 真拒写 + 真 exec），非 0 即红；结论行原样入日志。
+      # JVM 参数与文档化的助手启动形态一致（HelperLaunch / 05 §6：-XX:-UsePerfData +
+      # -Dstderr.encoding=UTF-8 + --enable-native-access）——手搓命令不得与产品启动面漂移。
       - name: "Pre-flight sandbox probe (landlock: runnable and denying)"
         run: |
           set -o pipefail
           img=dist/jh/target/jlink-image
-          "$img/bin/java" -XX:-UsePerfData \
+          "$img/bin/java" -XX:-UsePerfData -Dstderr.encoding=UTF-8 \
             --enable-native-access=io.javanatic.harness.sandbox.local \
             -m io.javanatic.harness.sandbox.local/io.javanatic.harness.sandbox.local.LandlockExecMain \
             --probe 2>&1 | tee "$RUNNER_TEMP/landlock-probe.txt"
@@ -204,6 +206,7 @@ jobs:
         shell: pwsh
         run: |
           & ./dist/jh/target/jlink-image/bin/jh.bat --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & ./dist/jh/target/jlink-image/bin/jh.bat --verify 2>&1 | Tee-Object "$env:RUNNER_TEMP/jh-verify-host.txt"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (-not (Select-String -Path "$env:RUNNER_TEMP/jh-verify-host.txt" -SimpleMatch 'sandbox: confining policy "workspace-write" is enforced by backend "windows-acl" (enforcement PARTIAL)' -Quiet)) {
@@ -221,6 +224,7 @@ jobs:
           Expand-Archive -Path $zip.FullName -DestinationPath $dest -Force
           $dist = Get-ChildItem $dest -Directory | Select-Object -First 1
           & "$($dist.FullName)/bin/jh.bat" --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & "$($dist.FullName)/bin/jh.bat" --verify 2>&1 | Tee-Object "$env:RUNNER_TEMP/jh-verify-archive.txt"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (-not (Select-String -Path "$env:RUNNER_TEMP/jh-verify-archive.txt" -SimpleMatch 'sandbox: confining policy "workspace-write" is enforced by backend "windows-acl" (enforcement PARTIAL)' -Quiet)) {
