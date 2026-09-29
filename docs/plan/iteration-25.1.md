@@ -1,4 +1,4 @@
-# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；当前段：停点 A「arm job 首跑」——scratch 侦察跑））
+# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A 首跑红 → 裁决 F1（arm 腿改 microsoft）+ 规则回填；当前段：侦察二跑））
 
 模块：发布面文档（`README.md` / `README.zh-CN.md` / `docs/release.md` / `docs/design/12-api-stability.md` / `docs/design/README.md`）· 根 POM 与全仓 POM（版本翻转）· `.github/workflows/`（tag→Release 附件工作流定义）· aarch64 交付面（裁决后落地）
 
@@ -48,6 +48,15 @@
 
 **缺口标注（随停点 A 提请裁决）**：裁决第 3 条所称「此前回填的侦察跑规则」在仓内（AGENTS.md / docs / .github，`侦察|recon|failure.ignore` 全词检索）与记忆中均未见原文——本次按其表述内容执行；该规则是否回填、落点（AGENTS.md CI 段 / 10-testing）待裁决。
 
+**停点 A 裁决（2026-09-29，首跑红后；裁决文本四条）**：
+
+1. **归因核可**：首跑红（run `36543615310`）根因为 temurin 无 windows-aarch64 的 JDK 25（Adoptium API 独立复核为空集）——证伪源头为上游「放行裁决」的输入事实，非实现缺陷。**采 F1**：arm job `distribution: temurin → microsoft`；`ci.yml` 注释同步校正为 microsoft 清单实况（setup-java 运行时读其 main 清单，25.0.x win32/aarch64 在案）。F2（zulu，引入第三家 JDK 族）弃；F3（raw 下载）/F4（降级选 3）维持不采。
+2. **规则回填**：AGENTS.md 已知坑补「新平台/新 CI job 首落地先侦察跑」条目（含 it25 六轮与本轮实证出处）——书面缺口补齐。
+3. **收口序列**：F1 落 scratch → 侦察二跑（`-Dmaven.test.failure.ignore=true` 本轮生效，收全测试面）→ 干净则摘侦察旗标、scratch 并回 master、单次 push → CI 真跑。master 全绿即 aarch64 选 2 落证、首裁项闭合。
+4. **纪律不变**：侦察/真跑任一轮红即停取证；master 在收口前零合并。
+
+首跑证据档：`docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt`（run/失败全文/三特异点对账/厂商探针/源码线索/F 选项）。
+
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
 - **ADDED**：
@@ -75,7 +84,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **进行中**（scratch 侦察跑，2026-09-29） |
+| A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **进行中**（首跑红 → 裁决 F1 已落；侦察二跑，2026-09-29） |
 | B｜发布面成文（对外承诺面：12 扫描结论 + release notes + README×2 反转稿） | `12-api-stability.md` §2 / `release-notes-0.2.0.md` / README×2 | 未到 |
 | C｜收口前（版本翻转 + 干跑 + 附件工作流定义落盘后，发布执行交接前） | 全仓 POM / `release.md` / 附件工作流 / 全量证据 | 未到 |
 

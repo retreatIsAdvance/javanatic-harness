@@ -191,6 +191,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - macOS 打包 → Windows 解压的载荷陷阱（it25 S-c 实撞）：macOS 默认 bsdtar 把 xattr 存 PAX 记录 ⇒ Windows 解压物化 AppleDouble 旁车 `._*` 源文件（checkstyle 首撞即崩 `._module-info.java`，`no viable alternative at input 'Mac'`）；打包用 `COPYFILE_DISABLE=1 tar -czf … --no-xattrs --no-mac-metadata --exclude='./.git' --exclude='./target' … .`，打包后自检 `gzcat <tar.gz> | strings | grep -c xattr` = 0。
 - AssertJ `PathAssert` 的路径断言（`startsWith` 等）对 **actual 也做 realpath**——已删/自清理路径作 actual 必抛 `UncheckedIOException(NoSuchFileException)`（it25 三跑 CI 实证：会话 TEMP `jh-sbx-*` 助手退出即自删）；与 S-a 探针 `temp-proof.txt` 观测面同族（通类风险＝以会自己清场的对象作断言面，`S-a-windows-acl.txt` §2）——改纯 JDK 谓词（`Path.startsWith` 等不触盘；产品探针 `WindowsAcl:578` 即此形）。
 - pwsh 原生实参：**未加引号、`-` 开头且含点号的 token 会被参数 token 解析在点号处截断**成两个实参（it25 五跑 CI 实证 run 36530292970：`-Dstderr.encoding=UTF-8` → `-Dstderr` + `.encoding=UTF-8`，java 把后者当主类——产品零缺陷、纯 CI 脚本面；`-XX:-UsePerfData` 无点号故完好）。手搓带点 token 的命令行（如 ci.yml 探针步）一律走**实参数组 + splat**（`$args=@('…'); & exe @args`）——数组元素是已解析字符串，不再过令牌解析。
+- 新平台/新 CI job 首落地先「侦察跑」（it25 实证：windows job 六轮才绿——CRLF 检出层 → 8.3 短名断言 → DockerShellTest 门 → pwsh splat → 全绿，见 `docs/plan/iteration-25.md`；it25.1 aarch64 腿首跑即红于装配面——setup-java/temurin 无 windows-aarch64 的 JDK 25，见 `docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt`）：scratch 分支把 Build 步改 `-Dmaven.test.failure.ignore=true`，一轮收全清单（装配红与测试红分相、压缩轮次）；红即停-取证-再议，干净后摘旗标、并回主线——**master 落地形态不带该 flag**（失败即停）。
 
 ## 修改本文件
 
