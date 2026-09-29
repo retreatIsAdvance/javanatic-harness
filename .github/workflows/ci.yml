@@ -263,7 +263,10 @@ jobs:
   # aarch64 发布件事实源（it25.1 aarch64 裁决·选 2）：双 arch CI job 各出一件，同一事实源；
   # VM 手工产物降级为证据引用、永不作发布件（不可 CI 复现的产物不进发布面）。
   # 镜像 windows 腿八步，三个 arch 特异点预先在案：
-  # ① setup-java 需 architecture: aarch64（temurin 有 windows-aarch64 JDK 25——ARM64 VM 已证产品面）；
+  # ① setup-java 需 architecture: aarch64，发行面 = microsoft：temurin 无 windows-aarch64 JDK 25
+  #    （首跑实证 run 36543615310：SemVer '25' 不可满足、最高 23.0.2+7；Adoptium API 空）；microsoft
+  #    可解（setup-java 运行时读其 main 清单，25.0.x win32/aarch64 在案，端点 200）——详见证据档
+  #    docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt §5/§6；
   # ② 归档名由 dist/jh 的 windows-${os.arch} profile（pom.xml:142）自动得 windows-aarch64，与 VM
   #    命名一致；归档冒烟与上传通配钉死 -windows-aarch64- 面——若运行时是 x64 JDK（镜像漂移/仿真），
   #    jlink 会产出 amd64 件，通配失配即 fail loud，不会以 aarch64 名义混入发布面；
@@ -274,7 +277,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: microsoft
           java-version: '25'
           architecture: aarch64
           cache: maven
