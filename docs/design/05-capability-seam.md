@@ -527,13 +527,14 @@ bwrap 定位不到或不可用的宿主形态（NixOS 这类发行版布局：�
 系统 PATH——与「未安装」同一探针结论）同理——`bwrap probe failed` 在诊断里实名登记，
 链按序落到 landlock（CI 的干净容器冒烟即该形态的真跑登记：容器内无 bwrap，
 `--verify` 必现该点名行）；
-landlock 腿的写授权只到可写根——**预期** `/dev/null` 不在 `WritableRoots` 内 ⇒ 该腿下
-`cmd > /dev/null` 被拒（EACCES；与 seatbelt 的 `(literal "/dev/null")` 放行、bwrap
-的新 devtmpfs 不同，差异如实记此、不假装同构；此为 allow-list 语义的直接推论——
-**推论待实测**：D4 测量项已落地
+landlock 腿的写授权只到可写根——`/dev/null` 不在 `WritableRoots` 内 ⇒ 该腿下
+`cmd > /dev/null` **被拒（EACCES）**；与 seatbelt 的 `(literal "/dev/null")` 放行、bwrap
+的新 devtmpfs 不同，差异如实记此、不假装同构。此为 allow-list 语义的直接推论，
+**已实测坐实**：D4 测量项
 （`SandboxLocalTest#landlockDevNullWriteIsMeasuredForAdjudication`，正对照 + 放行/拒绝
-两分支取证、不带预判），本机无 landlock 宿主（容器内核未编译 landlock）⇒ 事实唯真
-landlock 宿主可出，裁决随 S-c 首轮 CI runner（ABI v7）回填）；denial 标记以 `exit≠0` 为门
+两分支取证）在真 landlock 宿主（CI ubuntu runner，ABI v7）真跑得 `[D4] landlock leg
+/dev/null write: DENIED (exit 1, sandboxDenied=true)`（run 36515333691）；终裁（2026-09-29）
+= 选项 A「维持拒绝、按平台差异如实文档」；denial 标记以 `exit≠0` 为门
 （§5 docker 同款 seam 属性，修正归 seam 层）。
 
 **消费端接线**：shell——`ShellRequest` 携带非空策略，shell-local 对受限档 wrap argv 再
