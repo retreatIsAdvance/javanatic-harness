@@ -1,0 +1,4 @@
+# LF 意图三落点互指：编辑器层 = .editorconfig（end_of_line = lf）；门禁层 = 根 POM
+# spotless <lineEndings>UNIX</lineEndings>；本文件补检出层——Windows checkout 默认
+# core.autocrlf=true 会把工作树拉成 CRLF ⇒ spotless 全量红（it25 CI 首跑 36515333691 实证）。
+* text=auto eol=lf
