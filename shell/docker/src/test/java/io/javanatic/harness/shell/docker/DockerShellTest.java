@@ -106,7 +106,12 @@ class DockerShellTest {
         }
     }
 
+    // 容器 e2e 六条为 POSIX 宿主面：台账「不做 Windows 容器（shell-docker 维持 POSIX
+    // 主机面）」；windows-latest runner 有 daemon 无 agent-runner:latest，装载即 fail-loud
+    // （四跑实证 run 36528314889）——宿主门与 daemonUnreachableFailsLoudAtApply 先例同形；
+    // fail-loud 面另由不限平台三用例（镜像缺失/CLI 不可用/越界 cwd）覆盖。
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void mountSurfaceMatrixWorkspaceWriteAndReadOnly() throws Exception {
         assumeTrue(daemonUp(), "docker daemon not running");
         try (Runtime rt = new Runtime()) {
@@ -136,6 +141,7 @@ class DockerShellTest {
 
     /** 透传档：DANGER 不挂 --read-only——容器根可写、区内写照旧落宿主,均不标拒绝。 */
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void dangerModeOpensContainerRootAndWorkspace() throws Exception {
         assumeTrue(daemonUp(), "docker daemon not running");
         try (Runtime rt = new Runtime()) {
@@ -158,6 +164,7 @@ class DockerShellTest {
 
     /** 击杀链路：超时杀容器内进程组（含后台子进程）,容器复用无残留。 */
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void timeoutKillsInContainerProcessGroup() throws Exception {
         assumeTrue(daemonUp(), "docker daemon not running");
         try (Runtime rt = new Runtime()) {
@@ -182,6 +189,7 @@ class DockerShellTest {
      * checkAbort 轮询覆盖等待间隙，两者都走同一击杀）。
      */
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void abortKillsInContainerProcessGroup() throws Exception {
         assumeTrue(daemonUp(), "docker daemon not running");
         try (Runtime rt = new Runtime()) {
@@ -213,6 +221,7 @@ class DockerShellTest {
 
     /** 并发配对：4 线程各 4 次——结果与调用无串线；create-once：同键容器数恒 1。 */
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void concurrencyPairedAndCreateOnce() throws Exception {
         assumeTrue(daemonUp(), "docker daemon not running");
         try (Runtime rt = new Runtime()) {
@@ -245,6 +254,7 @@ class DockerShellTest {
 
     /** R3 泄漏：scope close 后本组合容器清零;不同工作区 = 不同容器。 */
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void scopeCloseRemovesContainersAcrossWorkspaces() throws Exception {
         assumeTrue(daemonUp(), "docker daemon not running");
         Path second = Files.createTempDirectory("jh-docker-ws2");

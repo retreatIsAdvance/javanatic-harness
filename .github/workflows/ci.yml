@@ -53,23 +53,34 @@ jobs:
             --enable-native-access=io.javanatic.harness.sandbox.local \
             -m io.javanatic.harness.sandbox.local/io.javanatic.harness.sandbox.local.LandlockExecMain \
             --probe 2>&1 | tee "$RUNNER_TEMP/landlock-probe.txt"
-      # 硬门 2 的配套断言：跳过不算绿——直接解析 surefire XML，要求两条 landlock e2e
-      # 「跑了且没跳过」（比数 count 稳：同文件里 mac 用例在 linux 上本就该跳）。
-      - name: "Assert the landlock e2e leg really ran (no silent skip)"
+      # 硬门 2 的配套断言：跳过不算绿——直接解析 surefire XML，要求 landlock 与
+      # docker 容器 e2e「跑了且没跳过」（比数 count 稳：同文件里 mac/OS 门用例在
+      # linux 上本就该跳；docker 六条只在 POSIX 宿主承诺——linux 侧必须真跑）。
+      - name: "Assert the landlock and docker e2e legs really ran (no silent skip)"
         run: |
           python3 - <<'PY'
           import sys, xml.etree.ElementTree as ET
-          report = "sandbox/local/target/surefire-reports/TEST-io.javanatic.harness.sandbox.local.SandboxLocalTest.xml"
-          want = {"landlockReadOnlyDeniesRealWriteWithDialectMarker",
-                  "landlockWorkspaceWriteAllowsInsideAndDeniesOutside",
-                  "landlockDevNullWriteIsMeasuredForAdjudication"}
-          root = ET.parse(report).getroot()
-          ran = {c.get("name") for c in root.iter("testcase")}
-          skipped = {c.get("name") for c in root.iter("testcase") if c.find("skipped") is not None}
-          missing = sorted(want - ran)
-          if missing or (want & skipped):
-              sys.exit(f"landlock leg not really run: missing={missing} skipped={sorted(want & skipped)}")
-          print("landlock e2e ran for real:", ", ".join(sorted(want)))
+          legs = [
+              ("sandbox/local/target/surefire-reports/TEST-io.javanatic.harness.sandbox.local.SandboxLocalTest.xml",
+               {"landlockReadOnlyDeniesRealWriteWithDialectMarker",
+                "landlockWorkspaceWriteAllowsInsideAndDeniesOutside",
+                "landlockDevNullWriteIsMeasuredForAdjudication"}),
+              ("shell/docker/target/surefire-reports/TEST-io.javanatic.harness.shell.docker.DockerShellTest.xml",
+               {"mountSurfaceMatrixWorkspaceWriteAndReadOnly",
+                "dangerModeOpensContainerRootAndWorkspace",
+                "timeoutKillsInContainerProcessGroup",
+                "abortKillsInContainerProcessGroup",
+                "concurrencyPairedAndCreateOnce",
+                "scopeCloseRemovesContainersAcrossWorkspaces"}),
+          ]
+          for report, want in legs:
+              root = ET.parse(report).getroot()
+              ran = {c.get("name") for c in root.iter("testcase")}
+              skipped = {c.get("name") for c in root.iter("testcase") if c.find("skipped") is not None}
+              missing = sorted(want - ran)
+              if missing or (want & skipped):
+                  sys.exit(f"leg not really run in {report}: missing={missing} skipped={sorted(want & skipped)}")
+              print("leg ran for real:", report, "->", ", ".join(sorted(want)))
           PY
       # dist 镜像冒烟（it13）：jlink 产物直接可跑——help 纯 CLI、verify 全组合 boot。
       # it24 补断言：bwrap 门上过真强制后，沙箱落点必须是点名 bwrap 的 INFO 行
@@ -138,8 +149,10 @@ jobs:
           java-version: '25'
           cache: maven
       # validate 阶段内置 spotless:check + checkstyle:check，与本地 pre-push 同口径；
-      # 测试平台分区（S-b）后全 reactor 在 Windows 可跑：Windows 腿真跑，POSIX 腿按
-      # @EnabledOnOs 跳（跳过面由下面两条断言步兜底，防静默绿）。
+      # 测试平台分区（S-b/S-c）后全 reactor 在 Windows 可跑：Windows 腿真跑，POSIX 腿按
+      # @EnabledOnOs 跳——含 shell/docker 容器 e2e 六条（台账「不做 Windows 容器」；
+      # windows-latest 有 daemon 无镜像，装载即 fail-loud——四跑实证）与 mac-only 用例；
+      # 跳过面由下面两条断言步兜底（防静默绿）。
       - name: Build and test
         run: mvn -B -ntp package
       # 前置硬门（S-c）：windows-acl 助手必须在本 runner 上真跑通——同 bwrap/landlock

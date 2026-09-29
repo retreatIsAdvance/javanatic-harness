@@ -350,3 +350,78 @@ runner 通过（三跑复证）⇒ 低完整性令牌在该 runner 可用（比�
 步骤本身两跑均止于测试步未跑，待四跑。② fs-local 30/0/0/1（1 跳，跳过用例名不在控制台
 日志内）+ shell-local 平台分区明细 LocalShellExecutorWindowsTest 5/0/0/0 绿 → 部分正向；
 ③ 归档冒烟/命名步两跑均未跑 → 未能回答（待四跑）。
+
+四跑（run 36528314889）回答面：① 探针步仍未跑（实质正向保持——真执法腿全谱复证
+22/0/0/2）；② 正向（fs-local / shell-local 全绿）；③ 仍未能回答（打包链四步连续 4 轮未跑）
+——四跑新红（`DockerShellTest` 宿主镜像面）与裁决 B 见 §11。
+
+== 11. CI 四跑事实（run 36528314889，head bb4aebd，2026-09-29）与 DockerShellTest 宿主镜像面裁决 ==
+
+Job 结论：build ✓（05:53:29→05:56:17，ubuntu；含 landlock 断言步）；macos ✓
+（05:53:32→05:54:33）；windows ✗（05:53:29→05:54:47，1m18s）。windows job 步骤面：
+1–3 绿（setup/checkout/setup-java），4 "Build and test" failure，其后 5–9 全 skipped
+（Pre-flight sandbox probe / windows-acl e2e 断言 / jlink 冒烟 / 归档冒烟 / upload）——
+打包链四步连续 4 轮未跑。
+
+两段断言修复坐实绿（windows 腿）：`WindowsAclTest 22/0/0/2`（run 2 串面 / run 3 FS 面
+两处修复后全绿，含全部执法腿）；sandbox/local 模块 73/0/0/24（SandboxLocalTest
+32/0/0/18 + LandlockTest 14/0/0/4 + HelperLaunchTest 5/0/0/0 + WindowsAclTest）；fs-local
+30/0/0/1、shell-local 全绿（LocalShellExecutorWindowsTest 5/0/0/0、LocalShellPlatformTest
+7/0/0/1）。
+
+新红：`DockerShellTest`——`Tests run: 11, Failures: 0, Errors: 6, Skipped: 1, Time elapsed:
+3.127 s`；6 条 ERROR（windows 日志 /private/tmp/it25-run4-windows.log 行 2460-2545）：
+
+  timeoutKillsInContainerProcessGroup（:164）/ scopeCloseRemovesContainersAcrossWorkspaces
+  （:252）/ concurrencyPairedAndCreateOnce（:219）/ dangerModeOpensContainerRootAndWorkspace
+  （:142）/ abortKillsInContainerProcessGroup（:188）/
+  mountSurfaceMatrixWorkspaceWriteAndReadOnly（:113）——
+  IllegalStateException: Plugin failed and rolled back: shell-docker ←
+  Caused by: shell-docker: image not present locally: agent-runner:latest — docker pull
+  agent-runner:latest（no auto-pull: first call must not stall on the network）
+    at DockerShellPlugin.probeImage(DockerShellPlugin.java:114)
+    at DockerShellPlugin.apply(DockerShellPlugin.java:85)
+    at PluginLoader.loadAllUnder(PluginLoader.java:91)
+
+机制事实（归因）：runner **有** daemon——`probeDaemon`（`docker version --format
+{{.Server.Version}}`）已过，失败点在其后的 `probeImage`；且 `@BeforeAll
+cleanOrphanedContainers` 的 `daemonUp()` 为真（`docker ps` 侧无异常）。缺的是
+`agent-runner:latest` 镜像。产品 fail-loud 按设计（无 auto-pull：首次调用不得堵网络），
+零缺陷。S-c 证据原记「DockerShellTest 11/0/0/8（无 daemon/镜像 ⇒ 如实跳过；门在
+daemonUp）」——在真 Windows VM 为真（无 docker），在 windows-latest runner 为假
+（有 daemon 无镜像）；平台分区假设破缺面 = 测试面（宿主门只门了 daemon，未门镜像）。
+ubuntu build job 对照：DockerShellTest 11/0/0/0（7.123 s，真容器，CI 预置步骤拉
+ubuntu:24.04 → tag agent-runner:latest）。
+
+裁决（2026-09-29，用户）：**采 B**——六条容器 e2e 加 `@EnabledOnOs({OS.MAC, OS.LINUX})`
++ 理由注释（引台账不做行「不做…Windows 容器（shell-docker 维持 POSIX 主机面）…」+
+四跑事实：windows-latest 有 daemon 无镜像；与类内 daemonUnreachable 先例同形）。
+A（windows job 预置镜像）违反迭代不做行、C（assumeTrue 双条件门）有 ubuntu 静默绿
+缺陷——均不采。跨平台 4 腿（cwdOutsideWorkspaceFailsLoudWithoutDaemon /
+unusableCliFailsLoudAtApply / missingImageFailsLoudAtApply / dialectMatchingIsLineScoped）
+不限平台照跑（四跑已绿），fail-loud 面继续覆盖。
+
+落地（本提交）：① DockerShellTest 六条门（主源码零改动）；② ubuntu job 断言步扩展为
+「landlock + docker e2e 真跑了且没跳过」——6 条 docker 腿名并入解析 surefire XML 的断言
+集（跳过不算绿）；③ ci.yml windows job 注释按净分区状态订正（windows 腿真跑、POSIX 腿
+按 @EnabledOnOs 跳——含 docker 六条；跳过面由断言步兜底）。
+
+push 前扫雷（Windows 未跑的 11 模块测试面 POSIX 假设扫查；/bin/、ln -sf、sh -c、bash、
+/tmp 字面、CRLF、docker）：**无新增修复**——命中仅既知门/纯数据串：HostileInstructionsTest
+既知 POSIX 门、AppBootTest 插件 id 清单（shell-docker 行 `disabled: true`，不装载）、
+HeadlessOptionsTest "--docker" 串、审批测试具名 "bash"/"rm -rf /" 数据串、CRLF 族全部经
+`System.lineSeparator()` 或 `replace("\r\n","\n")`、HeadlessCrashResumeE2ETest assumePosix
+（it19 既知）。
+
+突变（断言脚本；夹具 = 本机真 XML——docker 11 腿实跑、landlock 三腿在 darwin 自跳过，
+故按 ubuntu 样去掉 skipped 子元素）：ubuntu 样夹具 exit 0（9 腿逐一打印 "leg ran for
+real"）；M1 删 `abortKillsInContainerProcessGroup` 腿 → exit 1
+`missing=['abortKillsInContainerProcessGroup']`；M2 给 `mountSurfaceMatrix...` 注入
+`<skipped/>` → exit 1 `skipped=['mountSurfaceMatrixWorkspaceWriteAndReadOnly']`；还原
+exit 0。另：ci.yml 步骤文本按 YAML 去缩进后逐字过 bash 复跑（exit 0）——排除
+heredoc/缩进面风险。聚焦复绿（本机 darwin，daemon 24.0.6 + 镜像在场）：
+`mvn -B -pl shell/docker -am test` → DockerShellTest 11/0/0/0（12.18 s，BUILD SUCCESS）。
+
+五跑预判：windows DockerShellTest 应为 11/0/0/7（6 条宿主门 + daemonUnreachable 的
+OS 门；跨平台 4 腿照跑）；红只可能来自打包链四步首验（jlink amd64 / jh.bat / 归档冒烟 /
+upload）。
