@@ -54,10 +54,17 @@ class DockerShellTest {
     @BeforeAll
     static void cleanOrphanedContainers() throws Exception {
         if (daemonUp()) {
-            // 清理历史孤儿（JVM 崩溃可能留下）——泄漏断言只看本次运行
-            new ProcessBuilder("sh", "-c",
-                "docker ps -aq --filter name=jh-shell- | xargs -r docker rm -f").start()
-                .waitFor(30, TimeUnit.SECONDS);
+            // 清理历史孤儿（JVM 崩溃可能留下）——泄漏断言只看本次运行。
+            // 不借 sh/xargs：ids 在 Java 侧拆分再批量 rm（Windows 宿主无 sh，平台可分挂）
+            Process ps = new ProcessBuilder("docker", "ps", "-aq", "--filter", "name=jh-shell-")
+                .start();
+            String ids = new String(ps.getInputStream().readAllBytes(), StandardCharsets.UTF_8).strip();
+            ps.waitFor(30, TimeUnit.SECONDS);
+            if (!ids.isEmpty()) {
+                List<String> rm = new ArrayList<>(List.of("docker", "rm", "-f"));
+                rm.addAll(List.of(ids.split("\\R")));
+                new ProcessBuilder(rm).start().waitFor(30, TimeUnit.SECONDS);
+            }
         }
     }
 
@@ -326,7 +333,7 @@ class DockerShellTest {
             .isFalse();
         assertThat(DockerShellExecutor.matchesDialect(
             "denied: Permission denied\n", DockerShellExecutor.DOCKER_DENIALS)).isTrue();
-        // \R 而非 \n：容器 stderr 的行界可能是 CRLF——行级语义与平台无关（与 bash-local 同款拼写）
+        // \R 而非 \n：容器 stderr 的行界可能是 CRLF——行级语义与平台无关（与 shell-local 同款拼写）
         assertThat(DockerShellExecutor.matchesDialect(
             "bash: /etc/x: Read-only file system\r\n", DockerShellExecutor.DOCKER_DENIALS)).isTrue();
         assertThat(DockerShellExecutor.matchesDialect(

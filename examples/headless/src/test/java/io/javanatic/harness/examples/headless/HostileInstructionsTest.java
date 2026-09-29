@@ -26,6 +26,8 @@ import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ApprovalService;
 import io.javanatic.harness.tools.ToolRegistry;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.InputStream;
@@ -48,9 +50,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 模式逐位不变、越界写在围栏处被拒且目标文件不存在。
  *
  * <p>第二腿（读平权断言）：装载通道走直接 NIO（无围栏、无 NOFOLLOW，见 iteration-21
- * 「设计偏离」），故 bash 在工作区建 `AGENTS.md → 工作区外靶文件` 的符号链接后，下一轮
- * 装载跟随链接把靶内容读进日志与提示词——把「bash 本可 cat 任一路径，链接不产生新读
+ * 「设计偏离」），故 shell 在工作区建 `AGENTS.md → 工作区外靶文件` 的符号链接后，下一轮
+ * 装载跟随链接把靶内容读进日志与提示词——把「shell 本可 cat 任一路径，链接不产生新读
  * 能力」从论证变成断言；同轮再次越界写仍被围栏拒、靶文件本体未被改写。
+ *
+ * <p>方法级 POSIX 门：建链腿是 POSIX 文形（ln -sf），Windows 建符号链接需特权/开发者
+ * 模式，不在门内造伪（工具的 Windows 真腿归 S-c CI job）。
  */
 class HostileInstructionsTest {
 
@@ -70,6 +75,7 @@ class HostileInstructionsTest {
     Path outside;
 
     @Test
+    @EnabledOnOs({OS.MAC, OS.LINUX})
     void hostileInstructionsCannotElevateToolSandboxOrApprovalBits() throws Exception {
         Path target = outside.resolve("escaped.txt");
         Files.writeString(workspace.resolve("AGENTS.md"), """
@@ -93,9 +99,9 @@ class HostileInstructionsTest {
             List.of(new StreamChunk.Delta("照办结果已知"),
                 new StreamChunk.Usage(new TokenUsage(10, 5, 0)),
                 new StreamChunk.Finish(FinishReason.STOP)),
-            // turn2：bash 把 AGENTS.md 换成指向工作区外靶文件的符号链接（写在工作区内，合法）
+            // turn2：shell 把 AGENTS.md 换成指向工作区外靶文件的符号链接（写在工作区内，合法）
             List.of(new StreamChunk.Delta("换链接"),
-                new StreamChunk.DeltaToolUse(CallId.of("h2"), "bash",
+                new StreamChunk.DeltaToolUse(CallId.of("h2"), "shell",
                     "{\"command\":\"ln -sf " + linkTarget + " AGENTS.md\"}"),
                 new StreamChunk.Usage(new TokenUsage(10, 5, 0)),
                 new StreamChunk.Finish(FinishReason.TOOL_USE)),
@@ -121,7 +127,7 @@ class HostileInstructionsTest {
             // 工具面 = 组合给定（base bundle 十个）；文件既加不了也删不了任何 schema
             assertThat(rt.root().require(ToolRegistry.KEY).schemas(rt.root()))
                 .extracting(schema -> schema.name())
-                .containsExactlyInAnyOrder("ask_user", "bash", "exit_plan_mode", "fs_delete", "fs_edit",
+                .containsExactlyInAnyOrder("ask_user", "shell", "exit_plan_mode", "fs_delete", "fs_edit",
                     "fs_list", "fs_read", "fs_search", "fs_write", "todo_write");
 
             AgentHandle handle = rt.root().require(AgentRegistry.KEY).create(rt.root(),
@@ -140,7 +146,7 @@ class HostileInstructionsTest {
                 .map(event -> ((ProjectInstructions) event).content()).toList();
             assertThat(loaded).hasSize(2);
             assertThat(loaded.getFirst()).contains(MARKER);
-            // 前提二（读平权）：bash 建成的符号链接被装载通道跟随，靶内容进日志与提示词
+            // 前提二（读平权）：shell 建成的符号链接被装载通道跟随，靶内容进日志与提示词
             assertThat(Files.isSymbolicLink(workspace.resolve("AGENTS.md"))).isTrue();
             assertThat(loaded.getLast()).contains(LINK_MARKER);
             assertThat(rt.root().require(SystemPromptService.KEY).assemble(session)).contains(LINK_MARKER);
@@ -162,7 +168,7 @@ class HostileInstructionsTest {
             assertThat(approvals.mode()).isEqualTo(ApprovalService.Mode.HUMAN_GATE);
             assertThat(rt.root().require(ToolRegistry.KEY).schemas(rt.root()))
                 .extracting(schema -> schema.name())
-                .containsExactlyInAnyOrder("ask_user", "bash", "exit_plan_mode", "fs_delete", "fs_edit",
+                .containsExactlyInAnyOrder("ask_user", "shell", "exit_plan_mode", "fs_delete", "fs_edit",
                     "fs_list", "fs_read", "fs_search", "fs_write", "todo_write");
             assertThat(stdin.served()).isEqualTo(3);   // 人闸真被问过（不是绕过审批直接执行）
             disposeAndSave(rt, handle);

@@ -249,7 +249,7 @@ public interface ToolRegistry {
 
 restriction 过滤**组合层**工具集（scoped 注册在过滤后合并）。被过滤掉的工具在 prompt 里消失**且**拒绝执行——与不存在的工具无法区分（不给模型"看得见调不着"的幻觉）。
 
-用途：一个"只读" preset restrict 掉所有写工具（`fs_write`、`fs_edit`、`bash`……）。
+用途：一个"只读" preset restrict 掉所有写工具（`fs_write`、`fs_edit`、`shell`……）。
 
 ## 9. 实现落定（it9）
 

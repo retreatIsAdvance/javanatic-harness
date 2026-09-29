@@ -67,9 +67,9 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | 模块 | 角色 | 职责 |
 |---|---|---|
 | `harness-shell-shell` | Definition | `ShellExecutor` 接口（request/result 分离，逐调用携带 `SandboxPolicy`）|
-| `harness-shell-bash-local` | Provider | 本地 bash 实现（插件 id `shell-bash-local`）；受限档经 `SandboxProvider.confine` 包装 argv |
-| `harness-shell-docker` | Provider | docker 容器实现（插件 id `shell-docker`，it12.5）——环境级隔离，**挂载面即可写面**（容器根恒只读）；与 bash-local 互斥，换 Provider 不动 seam |
-| `harness-shell-tool` | Consumer | `bash` 工具 |
+| `harness-shell-local` | Provider | 本机 shell 实现（插件 id `shell-local`，it25 S-b 由 `bash-local` 泛化）——平台分派：POSIX=`bash -c`、Windows=`pwsh -NoProfile -NonInteractive -Command`（宿主无 pwsh → execute 期 `ShellUnavailableException` fail-closed）；受限档经 `SandboxProvider.confine` 包装 argv |
+| `harness-shell-docker` | Provider | docker 容器实现（插件 id `shell-docker`，it12.5）——环境级隔离，**挂载面即可写面**（容器根恒只读）；与 shell-local 互斥，换 Provider 不动 seam |
+| `harness-shell-tool` | Consumer | `shell` 工具（it25 S-b 由 `bash` 改名）|
 
 #### Sandbox（沙箱）
 
@@ -151,7 +151,7 @@ flowchart TD
 
     subgraph shell[Shell]
         shelldef[harness-shell-shell]
-        bash[harness-shell-bash-local]
+        local[harness-shell-local]
         docker[harness-shell-docker]
         shelltool[harness-shell-tool]
     end
@@ -203,7 +203,7 @@ flowchart TD
     llmdef --> replay
     fsdef --> fslocal
     fsdef --> fstool
-    shelldef --> bash
+    shelldef --> local
     shelldef --> docker
     shelldef --> shelltool
     persistdef --> jsonl
@@ -213,7 +213,7 @@ flowchart TD
     replay --> base
     fslocal --> base
     fstool --> base
-    bash --> base
+    local --> base
     docker --> base
     shelltool --> base
     jsonl --> base
@@ -771,7 +771,7 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `llm/llm-replay` | `llm.replay` | ✅ |
 | `fs/fs` + `fs/fs-local` | `fs.fs` + `fs.local` | ✅ |
 | `fs/tool-fs` | `fs.tool` | ✅ |
-| `shell/shell` + `shell/bash-local` | `shell.shell` + `shell.bash-local` | ✅ |
+| `shell/shell` + `shell/bash-local` | `shell.shell` + `shell.local` | ✅ |
 | `shell/tool-bash` | `shell.tool` | ✅ |
 | `sandbox/sandbox` + `sandbox/sandbox-local` | `sandbox.sandbox` + `sandbox.local` | ✅（简化）|
 | `session/session-persistence` + `-jsonl` | `session.persistence`（+codec SPI）+ `persistence-jsonl` | ✅（JSONL only）|

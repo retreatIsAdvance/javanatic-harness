@@ -127,10 +127,10 @@ class HeadlessCrashResumeE2ETest {
             "--workspace=" + workspace);
         Path log = awaitSessionLog();
         awaitLogContains(log, "\"type\":\"tool/call\""); // 盘上事实:工具批已落账(屏障已过)
-        awaitUntil("bash 副作用未出现", () -> Files.exists(runs)); // 盘上事实:工具在飞
-        // 待 bash 真正 fork 出 sleep(消竞态)再快照后代:SIGKILL 不级联子进程,
-        // bash/sleep 会成机器级孤儿——测尾回收,不给同机他测留残渣
-        awaitUntil("bash 未进入 sleep(工具在途)", () -> hasSleepDescendant(child.process()));
+        awaitUntil("shell 副作用未出现", () -> Files.exists(runs)); // 盘上事实:工具在飞
+        // 待 POSIX 腿的 shell(POSIX=bash)真正 fork 出 sleep(消竞态)再快照后代:
+        // SIGKILL 不级联子进程,shell/sleep 会成机器级孤儿——测尾回收,不给同机他测留残渣
+        awaitUntil("shell 未进入 sleep(工具在途)", () -> hasSleepDescendant(child.process()));
         List<ProcessHandle> spawned = child.process().descendants().toList();
         child.process().destroyForcibly(); // SIGKILL:无收敛、无落账机会
         try {
@@ -204,7 +204,7 @@ class HeadlessCrashResumeE2ETest {
     private static String toolCallSse(String callId, String command) {
         String arguments = "{\"command\":" + jsonString(command) + "}";
         return "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":"
-            + jsonString(callId) + ",\"function\":{\"name\":\"bash\",\"arguments\":\"\"}}]}}]}\n\n"
+            + jsonString(callId) + ",\"function\":{\"name\":\"shell\",\"arguments\":\"\"}}]}}]}\n\n"
             + "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,"
             + "\"function\":{\"arguments\":" + jsonString(arguments) + "}}]}}]}\n\n"
             + "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\n"

@@ -55,7 +55,7 @@ rows:
   - plugin: fs-local
     config:
       root: ${cwd}
-  - plugin: shell-bash-local
+  - plugin: shell-local
   - plugin: persistence-jsonl
     config:
       root: ${home}/.harness/sessions
@@ -289,10 +289,10 @@ agent-loop {cwd=/path/to/workspace}
 ## 9. 自定义示例：换 shell provider / 改沙箱档
 
 ```yaml
-# ~/.harness/profiles/headless/patch.yml —— 环境级隔离：本机 bash → docker 容器
+# ~/.harness/profiles/headless/patch.yml —— 环境级隔离：本机 shell → docker 容器
 # （与 CLI `--docker [--image=…]` 的 overlay 等价，it12.5/it13）
 rows:
-  - plugin: shell-bash-local
+  - plugin: shell-local
     disabled: true                    # 同一 seam 只留一个 ShellExecutor
   - plugin: shell-docker
     config:

@@ -10,8 +10,8 @@
         <version>0.2.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>harness-shell-bash-local</artifactId>
-    <name>harness-shell-bash-local</name>
+    <artifactId>harness-shell-local</artifactId>
+    <name>harness-shell-local</name>
 
     <dependencies>
         <dependency>

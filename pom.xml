@@ -198,7 +198,7 @@
             </dependency>
             <dependency>
                 <groupId>io.github.retreatisadvance</groupId>
-                <artifactId>harness-shell-bash-local</artifactId>
+                <artifactId>harness-shell-local</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

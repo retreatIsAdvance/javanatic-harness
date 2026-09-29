@@ -104,7 +104,7 @@ Kotlin 的 `sealed class` + `when` 确实更优雅，coroutines 的结构化并�
         ┌──────────────────┬───────────┼────────────┬─────────────────┐
         ▼                  ▼           ▼            ▼                 ▼
   harness.core.*     harness.llm  harness.fs   harness.shell    harness.bundle.*
-  (session/tools/    (deepseek/   (local/      (bash-local/     (base/headless)
+  (session/tools/    (deepseek/   (local/      (local/          (base/headless)
    agent/loop/...)    replay)      tool)        tool)
         │                  │           │            │
         ▼                  ▼           ▼            ▼

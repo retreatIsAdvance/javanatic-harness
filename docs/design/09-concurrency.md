@@ -119,7 +119,7 @@ List<LoggedEvent<ToolResultEvent>> execute(List<ToolCallEvent> calls, AbortSigna
 - **join 全部再传播（it18）**：传播发生时本批全部工具线程已停止——`whenIdle()` 完成 ⇒ 无工具线程在跑（含取消路径）。早抛会在取消/失败时撇下仍在跑的兄弟，破坏该静止语义。
 - **选择规则**：`AbortedException` 按输入序首个优先——取消不被兄弟失败掩盖，turn 才收敛成 `Aborted`；其余失败按输入序首个，`Error` result 已由 `executeOne` 落账，能传到这里的是框架自身异常（无 `CompletedFuture` 包装等）。
 - **不引入 `--enable-preview`**：MVP 零 preview 依赖，分发与工具链最简。
-- **为何曾经考虑 StructuredTaskScope**：为了"任一失败取消其余 + 作用域退出自动 join"。前者被错误即数据消解（失败不中断同伴，这正是期望语义——一个 bash 失败不该浪费掉并行的 fs_read 结果）；后者由"submit 全部 → join 全部"的顺序结构等价给出。
+- **为何曾经考虑 StructuredTaskScope**：为了"任一失败取消其余 + 作用域退出自动 join"。前者被错误即数据消解（失败不中断同伴，这正是期望语义——一个 shell 命令失败不该浪费掉并行的 fs_read 结果）；后者由"submit 全部 → join 全部"的顺序结构等价给出。
 - **将来 JEP 505 final 后**：可换 `StructuredTaskScope.Open` 获得 join 的取消传播与线程转储归组——纯实现替换，语义不变，单文件迁移（11 §8）。
 
 ## 6. 并发安全：哪些是线程安全的

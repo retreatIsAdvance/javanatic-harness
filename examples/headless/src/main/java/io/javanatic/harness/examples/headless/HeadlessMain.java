@@ -994,9 +994,9 @@ public final class HeadlessMain {
             new ConfigRowSpec.Replace("persistence-jsonl",
                 Map.of("root", sessions.toString()), null)));
         if (options.docker()) {
-            // 环境级隔离：禁本机 bash 行(disabled 是表达式串,"true" 求值为裸真操作数 →
+            // 环境级隔离：禁本机 shell 行(disabled 是表达式串,"true" 求值为裸真操作数 →
             // resolve 期整行滤除),启容器执行(镜像本机须在场——不自动拉取)
-            overlays.add(new ConfigRowSpec.Replace("shell-bash-local", Map.of(), "true"));
+            overlays.add(new ConfigRowSpec.Replace("shell-local", Map.of(), "true"));
             overlays.add(new ConfigRowSpec.Replace("shell-docker",
                 Map.of("image", options.image() == null ? "ubuntu:24.04" : options.image()), null));
         }

@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * docker 容器执行 Provider（id "shell-docker"，环境级隔离）——ShellExecutor 的
- * 第二个 Provider，与 shell-bash-local 互斥（同 scope 重复 provide 由 kernel
+ * 第二个 Provider，与 shell-local 互斥（同 scope 重复 provide 由 kernel
  * fail loud；per-agent scope 挂载覆盖是 it9 合法形态）。
  *
  * <p><b>apply 期双探针 fail loud</b>（行启用即执行意图，最早可解析点）：
@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class DockerShellPlugin implements Plugin {
 
-    /** 数据组合路径的文档化默认（256 KiB 单流上限，与 bash-local 一致）。 */
+    /** 数据组合路径的文档化默认（256 KiB 单流上限，与 shell-local 一致）。 */
     public static final long DEFAULT_MAX_OUTPUT_BYTES = 256 * 1024;
 
     /** docker CLI 默认拼写（交 PATH 解析）。 */

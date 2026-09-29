@@ -118,7 +118,7 @@ sandbox/            on-host process confinement: Definition + seatbelt/bwrap pro
                     (darwin/linux tested; windows designed-first)
 llm/                seam + replay (the keyless test foundation) + openai-compat (generic adapter) + deepseek (real provider)
 fs/ shell/          the capability trio (all implemented; shell has two mutually exclusive providers —
-                    local bash and docker containers, see it12.5)
+                    local shell (bash on POSIX, pwsh on Windows) and docker containers, see it12.5)
 session/            persistence seam (JsonValue tree + codec SPI) + JSONL backend (R1 closed loop)
 interaction/        approval three modes (auto/ask/deny, it7) + command surface (registry/slash parsing/event pairs, it14)
 dist/               jlink runtime image orchestration: produces bin/jh (unpack and run, no hand-built
@@ -156,7 +156,7 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 
 **Planning principle**: maintainer-led scenarios, real-task acceptance, and community feedback for calibration—not a prerequisite to begin. These future stages have not started; scope, dependencies, and acceptance gates live in the overall plan, with each iteration requiring its own scope confirmation and review checkpoints.
 
-**Platform support (current tree — 0.2.0 series, not yet released)**: macOS and Linux, including on-host sandboxing. macOS ships seatbelt and works out of the box. On Linux the platform chain takes the first usable backend: bwrap when the host has bubblewrap installed, otherwise the bundled Landlock helper (kernel ABI ≥ 3 — nothing extra to install; the archive's own JVM self-confines and then execs the target), and hosts where neither is usable fail closed with a named reason and a way out in `--verify`. The v0.1.0 release shipped the macOS archive only; Linux archives ride every CI run as an artifact until 0.2.0 attaches them to a Release. **Windows is not in the support surface yet** — the on-host sandbox backend (windows-acl) has landed in the 0.2.0 iteration tree, but the shell platform split (pwsh provider) and the Windows archive are still pending, so Windows stays outside the support surface for now.
+**Platform support (current tree — 0.2.0 series, not yet released)**: macOS and Linux, including on-host sandboxing. macOS ships seatbelt and works out of the box. On Linux the platform chain takes the first usable backend: bwrap when the host has bubblewrap installed, otherwise the bundled Landlock helper (kernel ABI ≥ 3 — nothing extra to install; the archive's own JVM self-confines and then execs the target), and hosts where neither is usable fail closed with a named reason and a way out in `--verify`. The v0.1.0 release shipped the macOS archive only; Linux archives ride every CI run as an artifact until 0.2.0 attaches them to a Release. **Windows is not in the support surface yet** — the on-host sandbox backend (windows-acl) and the shell platform split (POSIX bash / Windows pwsh, it25 S-b) have landed in the 0.2.0 iteration tree, but the Windows archive and its CI job are still pending, so Windows stays outside the support surface for now.
 
 R1–R4 tests travel with each slice, never backfilled at the end ([10-testing.md](docs/design/10-testing.md)).
 

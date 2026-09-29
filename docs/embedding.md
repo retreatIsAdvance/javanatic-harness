@@ -37,8 +37,9 @@
     </dependency>
     <!-- 其余 15 条见 integration/consumer-sample/pom.xml：kernel-core / kernel-config /
          core-tools / core-session / llm-llm / core-agent / core-system-prompt /
-         llm-openai-compat / fs-local / fs-tool / shell-bash-local / shell-tool /
-         session-persistence-jsonl / interaction-approval / core-preset -->
+         llm-openai-compat / fs-local / fs-tool / shell-local / shell-tool /
+         session-persistence-jsonl / interaction-approval / core-preset
+         （0.1.0 用户把 shell-local 换成 harness-shell-bash-local，见 §7 版本面） -->
 </dependencies>
 ```
 
@@ -157,6 +158,7 @@ try (Runtime runtime = AppBoot.boot(options)) {              // 装配 + 治理�
 | workspace 四处同源装配期断言（§6） | ❌ | ✅ |
 | `AppBoot.bootReported`（组合自述计数：行/发现/未引用） | ❌ | ✅ |
 | `ToolDefinition.ofExempt(...)`（免审批声明） | ❌ | ✅ |
-| `ask_user` 工具（`interaction.ask` 模块 + `ask-user` 行）与 `fs_search`（有界搜索，it21） | ❌（组合面 9 个工具） | ✅（11 个工具） |
+| `ask_user` 工具（`interaction.ask` 模块 + `ask-user` 行）与 `fs_search`（有界搜索，it21） | ❌（tool 面 8 个：fs 5 + `bash` + `todo_write` + `exit_plan_mode`） | ✅（tool 面 10 个：fs 5 + `fs_search` + `shell` + `todo_write` + `exit_plan_mode` + `ask_user`） |
+| shell provider 坐标 / plugin id / tool 名（it25 S-b 泛化） | `harness-shell-bash-local` / `shell-bash-local` / `bash` | `harness-shell-local` / `shell-local` / `shell`（POSIX 语义不变；Windows 走 pwsh，无 pwsh 则 execute 期 fail-closed） |
 
 升级到 0.2.0 时按上表逐项核对；发布件升级路径与 release notes 见 [docs/release.md](release.md)。

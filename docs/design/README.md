@@ -74,7 +74,7 @@
 - Core（session/system-prompt/tools/agent/agent-loop）
 - LLM seam（Definition 阻塞 Stream + DeepSeek Provider + Replay Provider）
 - FS seam（Definition + Local Provider + Tool Consumer）
-- Shell seam（Definition + Bash-Local Provider + Tool Consumer）
+- Shell seam（Definition + Local Provider + Tool Consumer）
 - Sandbox seam（Definition + Local）
 - Session Persistence（SessionStore + SessionEventCodec SPI + JSONL backend）
 - Interaction（**Approval 三模式真实实现** + 命令面 registry/slash 解析，it14）

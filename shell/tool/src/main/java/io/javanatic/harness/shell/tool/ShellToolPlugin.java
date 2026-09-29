@@ -22,8 +22,8 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * shell Consumer（id "shell-tool"，requires "tools" + "shell-bash-local"
- * + "sandbox-policy"）：把 bash 注册为工具。工作目录与超时是组合身份（构造注入），
+ * shell Consumer（id "shell-tool"，requires "tools" + "shell-local"
+ * + "sandbox-policy"）：把 shell 注册为工具（解释器按平台分派，见 shell-local）。工作目录与超时是组合身份（构造注入），
  * 模型只递命令——timeout 不暴露为模型参数（schema 仅 required 词表；模型影响力
  * 有界）。文件效果策略逐调用解析（SandboxPolicyService——含计划模式压只读），
  * 拒绝时结果带沙箱标记（模型能分辨「被沙箱拒」与「命令失败」）。
@@ -31,7 +31,7 @@ import java.util.Set;
  */
 public final class ShellToolPlugin implements Plugin {
 
-    private static final ValueSchema.Str COMMAND = new ValueSchema.Str("要执行的 bash 命令");
+    private static final ValueSchema.Str COMMAND = new ValueSchema.Str("要执行的 shell 命令");
 
     /** 数据组合路径的超时文档化默认（60s）。 */
     public static final long DEFAULT_TIMEOUT_SECONDS = 60;
@@ -81,7 +81,7 @@ public final class ShellToolPlugin implements Plugin {
 
     @Override
     public Set<String> requires() {
-        return Set.of("tools", "shell-bash-local", "sandbox-policy");
+        return Set.of("tools", "shell-local", "sandbox-policy");
     }
 
     @Override
@@ -89,7 +89,8 @@ public final class ShellToolPlugin implements Plugin {
         ToolRegistry registry = scope.require(ToolRegistry.KEY);
         ShellExecutor shell = scope.require(ShellExecutor.KEY);
         SandboxPolicyService policies = scope.require(SandboxPolicyService.KEY);
-        ToolDefinition bash = new ToolDefinition("bash", "在工作目录执行 bash 命令",
+        ToolDefinition tool = new ToolDefinition("shell",
+            "在工作目录执行 shell 命令（POSIX: bash -c；Windows: pwsh -Command）",
             new ValueSchema.Object("参数", Map.of("command", COMMAND)),
             RenderIntent.TERMINAL,
             (args, ctx) -> {
@@ -103,7 +104,7 @@ public final class ShellToolPlugin implements Plugin {
                     : ToolExecutionResult.error(format(result));
             },
             false);
-        scope.onClose(registry.register(scope, bash));
+        scope.onClose(registry.register(scope, tool));
     }
 
     private static String format(ShellResult result) {

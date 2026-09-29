@@ -4,6 +4,7 @@
 #   候选腿：主仓工作树 `mvn install` 进隔离本地仓（不碰本机仓库）→ 示例编译 + 治理自证运行 exit 0
 #   发布腿：隔离本地仓为空、只取 Maven Central 的 0.1.0 发布件 → 同源复验（交集面）
 #           取件走 settings-central.xml（公共代理）：公司 mirror 对 0.1.0 的 16 个 jar 持续 404（pom 正常）
+#           坐标差：shell provider 在 it25 S-b 改名（harness-shell-local），发布腿覆写回旧名（见 leg()）
 #   负例：坏版本 / 去显式版本 / 坏治理配置 / 生产档撞 AUTO 审批——各须构建必败或 boot 必抛，诊断可读
 #
 # 用法：integration/verify-consumer.sh [candidate|release|all]   （缺省 all）
@@ -78,8 +79,14 @@ leg() { # leg <name> <version>
     local repo="$WORK/repo-$name"
     local started=$SECONDS
     local -a settings=()
-    if [ "$name" = release ] && [ -f "$RELEASE_SETTINGS" ]; then
-        settings=(-s "$RELEASE_SETTINGS")
+    local -a shell_coord=()
+    if [ "$name" = release ]; then
+        # 0.1.0（Central）只有 it25 S-b 改名前的 shell provider 坐标；示例 pom 默认新名，
+        # 发布腿显式覆写（两条腿同源源码，只有坐标单点不同）
+        shell_coord=(-Dharness.shell.artifactId=harness-shell-bash-local)
+        if [ -f "$RELEASE_SETTINGS" ]; then
+            settings=(-s "$RELEASE_SETTINGS")
+        fi
     fi
     note "== 腿 $name：harness.version=$version，隔离本地仓 $repo =="
     if [ "$name" = candidate ]; then
@@ -87,10 +94,12 @@ leg() { # leg <name> <version>
             "$MVN" -B -ntp -f "$ROOT/pom.xml" -DskipTests -Dmaven.repo.local="$repo" install
     fi
     run "$name：示例编译" "$WORK/compile-$name.log" \
-        "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} -f "$SAMPLE/pom.xml" -Dmaven.repo.local="$repo" \
+        "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} ${shell_coord[@]+"${shell_coord[@]}"} \
+        -f "$SAMPLE/pom.xml" -Dmaven.repo.local="$repo" \
         -Dharness.version="$version" compile
     run "$name：运行类路径" "$WORK/classpath-$name.log" \
-        "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} -f "$SAMPLE/pom.xml" -Dmaven.repo.local="$repo" \
+        "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} ${shell_coord[@]+"${shell_coord[@]}"} \
+        -f "$SAMPLE/pom.xml" -Dmaven.repo.local="$repo" \
         -Dharness.version="$version" \
         org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
         -Dmdep.includeScope=runtime -Dmdep.outputFile="$WORK/classpath-$name.txt"

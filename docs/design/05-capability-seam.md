@@ -235,7 +235,7 @@ public record SearchResult(List<Match> matches, boolean truncated) {}
 ### Provider（`harness.fs.local`，plugin id `fs-local`）
 
 `Files.*` 的直接包装，无并发包装（阻塞语义，虚拟线程下安全）。有界化（it20）：
-读取/编辑以 `maxReadBytes`（默认 256 KiB，与 shell-bash-local `maxOutputBytes` 对称）、
+读取/编辑以 `maxReadBytes`（默认 256 KiB，与 shell-local `maxOutputBytes` 对称）、
 列举以 `maxListEntries`（默认 1000）为界——读截断在文内标记、编辑超限 fail loud、
 列举截断以 `Listing.truncated` 标志承载，不静默丢数据；同一组上限经行配置可调（12 §5）。
 编辑语义（it21）：`oldString` 须唯一匹配——0 次 = `not found`；≥2 次 fail loud，
@@ -315,10 +315,10 @@ public record ShellResult(int exitCode, String stdout, String stderr, Duration d
                           boolean outputTruncated, boolean sandboxDenied) {}
 ```
 
-### Provider（`harness.shell.bash-local`，plugin id `shell-bash-local`）
+### Provider（`harness.shell.local`，plugin id `shell-local`；it25 S-b 由 `harness.shell.bash-local` 泛化）
 
 ```java
-final class LocalBashExecutor implements ShellExecutor {
+final class LocalShellExecutor implements ShellExecutor {
     // 生产语义(it6 落地,与初稿差异三处):
     // 1. 取消经 AbortSignal.onCancel(默认方法钩子)即时击杀 + 等待循环轮询
     //    checkAbort 双保险——初稿的 signal.controller() 不存在(it3 定型的
@@ -328,16 +328,28 @@ final class LocalBashExecutor implements ShellExecutor {
     //    真隔离(setsid)归 sandbox 切片。
     // 3. stdout/stderr 并发排水并各设上限(初稿 waitFor 后 readAllBytes 会
     //    写满管道缓冲死锁子进程);超限截断置标记、继续读丢弃。
+    // 平台分派(it25 S-b):解释器由 ShellPlatform 按宿主决定,不在执行器里写死——
+    //    POSIX   = ["bash","-c",command](现状语义不变)
+    //    Windows = ["<pwsh.exe>","-NoProfile","-NonInteractive","-Command",command]
+    //    宿主无 pwsh 时 execute 期抛 ShellUnavailableException(fail-closed,不静默
+    //    退化到 5.1:引号/转义/错误文形全变,标记与断言会跟着撒谎)。
     ShellResult execute(ShellRequest req, AbortSignal signal) throws Exception { /* ... */ }
 }
 ```
+
+平台化的三个观测面按平台登记（**换宿主 = 换方言**，不外推）：**拒绝方言**——沙箱拒写的
+stderr 文形随后端与该平台记录（seam 契约不变：逐行、大小写不敏感 contains、exit≠0 门控，
+[§6](#6-完整-seamsandbox同机进程约束与-approval审批)）；**退出码**——`$?`/`$LASTEXITCODE`
+的取值面与「最后一条语句抹平退出码」的残余一致（§5 docker 残余）；
+**引号**——POSIX 单双引号 vs PowerShell 单引号字面/双引号可展开。组合与 boot 在无 pwsh 的
+Windows 上不受影响——fail-loud 点在 execute，不在装载期。
 
 ### Provider（`harness.shell.docker`，plugin id `shell-docker`，it12.5）
 
 **seam 不动的第二个 Provider**：同一 `ShellExecutor` 契约、同一 `ShellRequest/ShellResult`，
 隔离强度从「同机进程约束」升到「环境级」——换的是实现，消费方（`shell-tool`）与
 Definition 一字不改，选择完全落在组合数据上（base 里 `disabled: true`，
-headless `--docker` overlay 禁 bash-local 行、启本行）。
+headless `--docker` overlay 禁 shell-local 行、启本行）。
 
 ```java
 final class DockerShellExecutor implements ShellExecutor {
@@ -371,7 +383,7 @@ final class DockerShellExecutor implements ShellExecutor {
 - **无资源限额**（`--cpus`/`--memory`），挂账。
 - **denial 标记以 `exit≠0` 为门**：模型若把越界写成 `echo x > /etc/y; echo $?`，
   wrapper 退出码被自己的最后一条语句抹平成 0，标记随之丢失（EROFS 仍在 stderr 里，
-  模型读得到，但结构化的 `sandboxDenied` 位没了）。这是 bash-local 同款的 seam 属性，
+  模型读得到，但结构化的 `sandboxDenied` 位没了）。这是 shell-local 同款的 seam 属性，
   不是 docker 特有；修正归 seam 层（分类器产出 typed code），不属本切片。
 - JVM 崩溃可留孤儿容器：`jh-shell-` 前缀可 grep 清理。
 
@@ -448,7 +460,7 @@ public sealed interface BackendStatus {
 
 **WritableRoots 单一来源**：workspace-write = workspace 根 + 平台临时区（realpath 规范化
 去重——darwin `/tmp` 即 `/private/tmp`；Windows 不加 `/tmp`，盘符相对路径若被创建会
-成为真实授予）。Seatbelt 授予与进程内 fs 围栏（fs-tool）都从这里取——「bash 能写而
+成为真实授予）。Seatbelt 授予与进程内 fs 围栏（fs-tool）都从这里取——「shell 能写而
 写工具不能」的不对称不可能出现。
 
 Provider（id `sandbox-local`）按**平台链**组形（dsh 对齐：平台→候选链；**选择期
@@ -518,7 +530,7 @@ landlock 腿的写授权只到可写根——**预期** `/dev/null` 不在 `Writ
 landlock 宿主可出，裁决随 S-c 首轮 CI runner（ABI v7）回填）；denial 标记以 `exit≠0` 为门
 （§5 docker 同款 seam 属性，修正归 seam 层）。
 
-**消费端接线**：shell——`ShellRequest` 携带非空策略，bash-local 对受限档 wrap argv 再
+**消费端接线**：shell——`ShellRequest` 携带非空策略，shell-local 对受限档 wrap argv 再
 spawn；`ShellResult.sandboxDenied` 标记「沙箱拒了文件效果」（stderr 命中本后端方言 +
 非零退出）——模型能分辨拒绝与命令失败。fs——fs-tool 变异工具在 READ_ONLY（含计划
 模式）下直接拒（进程内围栏，模式级；WORKSPACE_WRITE 的路径边界由 fs-local root 与
@@ -528,7 +540,7 @@ sandbox workspace 对齐保证，漂移由装配期四键断言 fail loud——i
 
 ### Approval Definition（`harness.interaction.approval`）—— 不是 stub
 
-对一个执行 bash 的 harness，审批是安全边界，MVP 就有真实实现：
+对一个执行 shell 命令的 harness，审批是安全边界，MVP 就有真实实现：
 
 ```java
 public interface ApprovalService {
@@ -752,8 +764,8 @@ public record ToolDefinition(
 | LLM | `llm.llm` | `deepseek`, `replay` | agent-loop | ✅ |
 | Tools | `core.tools` | （registry+executor 内建） | 各 tool 模块 | ✅ |
 | FS | `fs.fs` | `local` | `fs.tool` | ✅ |
-| Shell | `shell.shell` | `bash-local` | `shell.tool` | ✅ |
-| Sandbox | `sandbox.sandbox` | `local`（OFF 透传）| bash/terminal/fs | ✅ stub |
+| Shell | `shell.shell` | `local` | `shell.tool` | ✅ |
+| Sandbox | `sandbox.sandbox` | `local`（OFF 透传）| shell/terminal/fs | ✅ stub |
 | Session Persistence | `session.persistence` | `jsonl` | persistence 插件 | ✅ |
 | Approval | `interaction.approval` | `auto` / `ask` / `deny` | ToolExecutor 固定 stage | ✅ **真实** |
 | Commands | `interaction.commands` | （registry 内建） | headless REPL | ✅ |

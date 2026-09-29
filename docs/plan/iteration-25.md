@@ -1,4 +1,4 @@
-# 迭代 25 — Windows 与 0.2 发布验收（状态：四确认与裁决已落盘（2026-09-28）；S-0 探针首跑已收口（真 VM 取证，形状订正：WRITE_RESTRICTED → 低完整性）；**S-a（windows-acl 后端与 FFM 绑定）停点获条件放行（2026-09-28）——放行条件项（WindowsAclTest 两处断言面缺陷，主源码零改动）已修正并经突变 M6/M7 红→还原复绿（聚焦四类 70/0/0/15 + AppBootTest 21/0/0/0），三处顺手带上（05 §6 退出码去 11 / `PROBE_TIMEOUT_SECONDS` 全局影响入增量表 / AGENTS.md FFM 豁免条款）已落，收口单提交已出**——真 VM 全链取证（探针七腿 + 真跑六题 + 两洞实测）+ 突变红/绿对 + 全量 package 573/0/0/17 绿 + 被测类一致性复校（a5-classes 同构不受本次修正影响）；**D4 维持「待 S-c 首轮 CI 事实再裁、不带预判」——选项 A/B 随 packet 呈报**；S-b / S-c / S-d 未启；未推送）
+# 迭代 25 — Windows 与 0.2 发布验收（状态：四确认与裁决已落盘（2026-09-28）；S-0 探针首跑已收口（真 VM 取证，形状订正：WRITE_RESTRICTED → 低完整性）；**S-a（windows-acl 后端与 FFM 绑定）停点获条件放行（2026-09-28）——放行条件项（WindowsAclTest 两处断言面缺陷，主源码零改动）已修正并经突变 M6/M7 红→还原复绿（聚焦四类 70/0/0/15 + AppBootTest 21/0/0/0），三处顺手带上（05 §6 退出码去 11 / `PROBE_TIMEOUT_SECONDS` 全局影响入增量表 / AGENTS.md FFM 豁免条款）已落，收口单提交已出**——真 VM 全链取证（探针七腿 + 真跑六题 + 两洞实测）+ 突变红/绿对 + 全量 package 573/0/0/17 绿 + 被测类一致性复校（a5-classes 同构不受本次修正影响）；**D4 维持「待 S-c 首轮 CI 事实再裁、不带预判」——选项 A/B 随 packet 呈报**；**S-b（shell 平台化与契约迁移面）停点获放行（2026-09-29）——三处放行条件已落（design README 漏迁移订正 / AGENTS.md 四模块计数 / 分区归因改写），收口单提交已出**：改名泛化（`shell/bash-local` → `shell/local`：包/插件 id/工具名/坐标）+ 平台分派（POSIX=bash / Windows=pwsh，缺席 fail-loud）+ 测试四类分区（+ 第五类随动）+ 迁移涟漪（consumer-sample / verify-consumer / embedding / 文档面）；**真 VM 全链 15 腿全过**（载荷三向哈希一致 + treehash 66/66 与 VM 同构 + 分区集 JUnit 12 找到 / 1 跳 / 11 过）；**真 Windows 首跑暴露产品缺陷 1 处已修**（`System.getenv()` Map 视图精确键名 vs Windows 惯名 `Path` ⇒ pwsh 永不入候选；主源码唯一改动 = `ShellPlatform.pathEntries(Map)` 大小写不敏感 + 回归用例，突变 M-Sb6 红→复绿）；突变 M-Sb1–M-Sb6 红/绿对；消费方双腿绿（candidate 失败项 0 / release 旧坐标覆写失败项 0）；全量 package **586/0/0/22** 绿；S-c 待启（#97）；S-d 未启；未推送）
 
 模块：`sandbox/local`（win32 链 + windows-acl 后端 + FFM Win32 绑定/助手）· `shell/bash-local` → `shell/local`（平台分派 + 工具名/坐标迁移）· `examples/headless`（入口 UTF-8 wrap）· `dist/jh`（windows 归档真构建）· `.github/workflows/ci.yml`（windows job）· 测试平台分区四类（增强 1）· `integration/consumer-sample` + `integration/verify-consumer.sh` + `docs/embedding.md`（3a 改名涟漪）· `bundle/base`（bundle.yml 行）· `docs/design/{02,05,07,10,12,README}` · `README{,.zh-CN}.md` · `docs/release.md`
 
@@ -85,7 +85,8 @@
 - ADDED：
   - `sandbox/local`：windows-acl 后端（FFM advapi32/kernel32 类型化绑定 + 负向/正向探针 + 受限令牌建子进程）
   - `sandbox/local`：低完整性打标面（`ConvertStringSecurityDescriptorToSecurityDescriptorW` + `SetNamedSecurityInfoW(LABEL_SECURITY_INFORMATION)`；会话可写区逐对象打标 + 还原）——S-0 订正后的 win32 形状（见上「S-0 首跑实探结论」）
-  - `shell/local`（由 `shell/bash-local` 改名泛化）：平台分派（POSIX=bash / Windows=pwsh）+ 工具名 `shell`
+  - `shell/local`（由 `shell/bash-local` 改名泛化）：平台分派（POSIX=bash / Windows=pwsh）+ 工具名 `shell`；`ShellPlatform`（宿主探测 + argv 分派 + PATH 扫描，含大小写不敏感 `pathEntries(Map)` 测试缝）
+  - `shell/shell`：公共类型 `ShellUnavailableException`（解释器缺席的 fail-loud 契约面；`LocalShellExecutor` 抛出、工具面透传文案）
   - CI windows job（`.github/workflows/ci.yml`）+ 四类测试平台分区
   - tag→GitHub Release 附件工作流（tag 触发；真执行用户侧）
   - `examples/headless`：入口 UTF-8 wrap（locale 修复）
@@ -93,6 +94,8 @@
   - `PLATFORM_CHAINS`：`win32` `[]` → `[windows-acl]`
   - `sandbox/local` · 功能探针外层上限 `PROBE_TIMEOUT_SECONDS`：5 → 60（**全局影响**：该护栏对**所有**平台链生效——探针挂起时 fail-closed 的等待上界从 ≤5s 变 ≤60s，seatbelt/bwrap/landlock 腿同受此改；腿级裁决不受影响，它是外层防僵护栏，windows-acl 各腿另有腿内自带上限——最坏 ≈ 4×5s 腿 + 8s 嵌套会话腿）
   - 坐标迁移（0.2.0 迁移注记）：`harness-shell-bash-local` → `harness-shell-local`；插件 id `shell-bash-local` → `shell-local`；包 `shell.bash.local` → `shell.local`；工具名 `bash` → `shell`——同步面：`pom.xml:201`、`bundle/base/pom.xml:78`、`shell/tool/pom.xml:35`、`shell/bash-local/pom.xml:13-14`、`integration/consumer-sample/pom.xml:97`、`bundle.yml:52-53`、`dist/jh` 模块表、`12 §2/:40/:108`、`05:238/:318`、`07:58/:295`、`10:376`、`02:70`、`integration/verify-consumer.sh`、`docs/embedding.md`
+  - `integration/consumer-sample`：shell provider 坐标收敛为**单点属性** `<harness.shell.artifactId>`（默认新名）；`integration/verify-consumer.sh` 的 release 腿显式覆写回旧名（`-Dharness.shell.artifactId=harness-shell-bash-local`，两腿同源源码、只有坐标单点不同）——M-Sb5 突变证明该单点承重
+  - `docs/embedding.md`：依赖清单与工具面口径随改名订正（工具面逐名枚举：0.1.0 = 8 / 0.2.0 = 10）+ 新增迁移对照行（坐标 / plugin id / tool 名）
   - `Ready.detail`：windows-acl 行携带 PARTIAL + 两洞（结构保证，不冒充 FULL）
   - 测试平台分区四类（增强 1）
   - 文档同步：05 §6（三拓扑分别写明 + win32 链实况）、02 模块表、07/bundle 行、12 稳定面（迁移面）、README×2 平台段与归档指引、`docs/release.md`（windows 归档、附件自动化）、`docs/design/README.md`（it25 状态随收口）
@@ -104,20 +107,20 @@
 |---|---|---|
 | `sandbox/local` · `PLATFORM_CHAINS`(:48-51) + 新增 WindowsAcl 绑定/助手 | win32 链 + 受限令牌生子（拓扑见内容 1）+ 探针 | ✓（S-a，2026-09-28：新文件 `HelperLaunch`/`WindowsAcl`/`WindowsAclExecMain` + 测试 `HelperLaunchTest`/`WindowsAclTest`） |
 | `sandbox/local` · `SandboxLocalTest`（WINDOWS 腿 + `/dev/null` 实测项，D4） | 平台 e2e + it24 挂账实测 | ✓（S-a，2026-09-28：windows-acl Ready/PARTIAL 腿 + D4 测量项落地；**事实待 S-c 首轮 CI**——本机无 landlock 宿主） |
-| `shell/bash-local` → `shell/local`（pom / 包 / 模块名 / plugin id / 工具名 / 方言） | 平台分派 + 迁移涟漪 | 待 |
-| 四类测试平台分区（增强 1） | POSIX 门 | 待 |
-| `examples/headless` · `HeadlessMain` 入口 + 助手 JVM 旗标 | UTF-8 wrap | 待 |
-| `dist/jh` · pom 模块表 + `archive-windows` + assembly | windows 归档真构建 | 待 |
-| `.github/workflows/ci.yml` | + windows job（分区完成后） | 待 |
-| `integration/consumer-sample` + `verify-consumer.sh` + `docs/embedding.md` | 3a 改名随动 | 待 |
-| 文档同步面（05/02/07/10/12/README×2/release.md/design README/bundle.yml） | 迁移注记与平台段 | 待 |
+| `shell/bash-local` → `shell/local`（pom / 包 / 模块名 / plugin id / 工具名 / 方言） | 平台分派 + 迁移涟漪 | ✓（S-b，2026-09-28：`ShellPlatform` 平台分派（POSIX=bash / Windows=pwsh，缺席 `ShellUnavailableException` fail-loud）+ 新公共类型 `ShellUnavailableException`（shell/shell）+ 方言登记（退出码映射/引号/`$env:`/重定向 CRLF）；**真 VM 15 腿全过** + 进程树两形状实测（`descendants()` 足，Job Object 不需要）；主源码唯一改动 = 首跑暴露的 PATH 键名大小写缺陷修正 + 回归用例（见「修正」表）） |
+| 四类测试平台分区（增强 1） | POSIX 门 | ✓（S-b，2026-09-28：**分区净状态 = 四类全落**（+ 第五类随动）。**S-b 新加的门**：`ShellToolEndToEndTest` 类级 POSIX 门（夹具为 POSIX 文形）、`shell/local` 测试面双类分区（`LocalShellExecutorTest` POSIX / `LocalShellExecutorWindowsTest` Windows）、`HostileInstructionsTest` 建链腿方法级 POSIX 门（第五类，实探新发现）。**既有设施、非 S-b 新加**（只做改名随动 / 去 sh-xargs）：`HeadlessCrashResumeE2ETest#assumePosix`（it19，d3bab74）与 `DockerShellTest` 方法级门（it12.5，4371da2）；`DockerShellTest#cleanOrphanedContainers` 去 sh/xargs 改 Java 侧拆分（Windows 宿主无 sh）。VM 分区集 JUnit 12/1 跳/11 过、本机聚焦 18/0/0/5、全量 586/0/0/22） |
+| `examples/headless` · `HeadlessMain` 入口 + 助手 JVM 旗标 | UTF-8 wrap | 待（S-c；S-b 只落 leg9/leg9b 编码事实面：乱码由 cmd/系统工具承载，pwsh 错误文本机未本地化） |
+| `dist/jh` · pom 模块表 + `archive-windows` + assembly | windows 归档真构建 | 待（S-c） |
+| `.github/workflows/ci.yml` | + windows job（分区完成后） | 待（S-c；分区已完成 = 前置满足） |
+| `integration/consumer-sample` + `verify-consumer.sh` + `docs/embedding.md` | 3a 改名随动 | ✓（S-b，2026-09-28：坐标单点属性 `<harness.shell.artifactId>`（默认新名）+ release 腿显式覆写旧名（两腿同源）；embedding 依赖清单与工具面口径订正 + 0.1.0 注记；双腿真跑：candidate 失败项 0 / release 失败项 0） |
+| 文档同步面（05/02/07/10/12/README×2/release.md/design README/bundle.yml） | 迁移注记与平台段 | ✓（S-a 主体（05 §6 改写等）+ S-b 迁移注记随动：各面 shell-local/shell 新名与旧名对照；it25 状态行随 S-b packet 收口） |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行，全机械迭代写「无」）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | S-a：**windows-acl 后端与 FFM 绑定**（安全不变量承载：受限令牌构造、子进程唯一生成路径、探针正负对照、PARTIAL 两洞登记；**机制形状已订正为低完整性——见「S-0 首跑实探结论」节，含递归打标与还原决项**） | `sandbox/local` 新绑定 + 探针 + `PLATFORM_CHAINS` | **停点已达 → 条件放行（2026-09-28；放行条件项两处断言面缺陷已修正、突变 M6/M7 红→还原复绿、三处顺手带上已落——见「修正」表，主源码零改动）**：FFM 绑定（advapi32/kernel32 类型化，S-0 订正 12 条照做；绑定层测试仅 Windows 跑）+ `HelperLaunch` 共享助手启动面（landlock 腿随动）+ `WindowsAclExecMain` 协议 + provider 接线（win32 链 / `windowsAclWrap` / PARTIAL / 拒绝方言双形态）；**探针七腿于真 VM 全过**（真建真限真跑 + 正对照 + 真拒写 + 剥特权嵌套会话；exit=0，结论行 = Ready.detail 来源）；真跑六题（read-only 拒写 / stdio 直通 / workspace 新写与既有追加 / 禁写越界 / TEMP 改道 / `&` 与内引号 / 退出码 7）+ 打标成本实测（≈0.23 ms/文件）；**两洞真 VM 实测**——洞 1 成立（可写面 = 主机一切 Low 对象，foreign 目录 leg9 直证），洞 2 **成立且推翻 S-0 推论**（递归打标跟随硬链接，链入树外部目标被标 Low，leg10 直证）；突变 M1–M3（本机生产面 3 条）+ M5（VM TEMP/TMP 占位化）+ 容器门移除对，全红 → 还原复绿；回归：聚焦四类 69/0/0/15 + `AppBootTest` 21/0/0/0 + 全量 package **573/0/0/17**（30 个含测试模块，跳过皆平台分区）+ 被测类一致性复校（重编后仍 27 类同构）；**D4：测量项落地但本机无 landlock 宿主 ⇒ 事实唯 CI 可出（待 S-c 首轮回填），选项 A/B 随 packet 呈报** |
-| S-b：**shell 平台化与契约迁移面**（跨模块：工具名 / 插件 id / 坐标 / 分区 / 文档同步面） | `shell/local` + 分区 + 迁移面 | 待 |
+| S-b：**shell 平台化与契约迁移面**（跨模块：工具名 / 插件 id / 坐标 / 分区 / 文档同步面） | `shell/local` + 分区 + 迁移面 | **停点获放行（2026-09-29）——三处放行条件已落（design README 漏迁移 / AGENTS.md 计数 / 分区归因改写），收口单提交已出**：改名泛化全落（包 `io.javanatic.harness.shell.local` / 插件 id `shell-local` / 工具名 `shell` / artifactId `harness-shell-local`；`ShellUnavailableException` 新公共类型；工具面文案与提示词涟漪）；平台分派（POSIX=bash / Windows=pwsh `-NoProfile -NonInteractive -Command`，pwsh 缺席 fail-loud——无 5.1 静默兜底）；**真 VM 全链 15 腿全过**（leg0a 缺席拒/leg0b 就位 READY、真执行与方言、进程树两种孙进程形状 40/41ms 消失、fail-closed 腰带、编码 leg9/leg9b、迁移 ids、分区集 JUnit）；**产品缺陷 1 处经真 Windows 首跑暴露并修复**（PATH 键名大小写，见「修正」表；主源码唯一改动）；突变 M-Sb1–M-Sb6 红/绿对；消费方双腿（candidate/release）失败项均 0；全量 package 586/0/0/22 绿；载荷三向哈希一致 + treehash 66/66 与 VM 同构；证据档 `S-b-shell-platform.txt` |
 | （S-c / S-d 不设停点：机械为主；S-d 可分离见 D2） | | |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-25/）
@@ -127,7 +130,7 @@
 | `S-0-windows-probe.java` + `S-0-windows-probe.txt` | 首步实探（增强 4）：Signal INT / pwsh / encoding / FFM API 全谱（符号 + 令牌 + 生子 + 正负写腿）；**真 Windows 首跑已落盘（2026-09-28，UTM VM）**——探针六次真跑（前五次各自暴露一处套件缺陷并订正，见证据档第三节）；run6 输出 GBK→UTF-8 原样落盘：Signal INT handler 触发、pwsh 缺失（PS 5.1）、FFM 符号全在场、`failures=1`（受限写腿 0xC0000142 → 触发形状追查） |
 | `S-0-windows-acl-shape.java` + `S-0-windows-acl-shape.txt` | S-0 形状追查（轮次 8–12 原始输出逐字 + 结论）：WRITE_RESTRICTED 形状作废（0xC0000142 全谱；Administrators 可过启动但写限制失效——P4 直证）、低完整性形状成立（L2/L3/L4 正负对照 + 纯 FFM 打标 + 递归打标义务 + 两洞重述 + 未实测边界 + FFM 订正清单 12 条） |
 | `S-a-windows-acl.txt` | S-a 停点（已达）：探针七腿真 VM 取证（真建真限真跑 + 正对照 + 真拒写 + 剥特权嵌套会话）+ 真跑六题 + 打标成本实测 + **两洞实测**（洞 1 成立 / 洞 2 成立且推翻 S-0 推论）+ 突变红/绿对（M1–M3 本机 + M5 VM + 容器门移除）+ 被测类一致性核对（27 类与工作树构建逐字节同构）+ **D4 订正**：`/dev/null` 为「测量项已落地、事实待 S-c 首轮 CI」（本机无 landlock 宿主；边界与选项 A/B 见该档 §7）+ 附录 A/B（收官轮全文 / 红跑片段） |
-| `S-b-shell-platform.txt` | S-b 停点：pwsh 执行真跑 + 方言 + 进程树 + 分区 + 迁移面核对 |
+| `S-b-shell-platform.txt` | S-b 停点（已放行 2026-09-29）：**已落盘**——环境事实 + 载荷保真（构建配方/三向哈希/treehash 66/66 与 VM 同构/被测类一致性）§1–2；pwsh 分派两腿（缺席 fail-loud / 就位 READY）§3；真执行与方言（退出码三题/引号/`$env:`/重定向 CRLF）§4；进程树四腿（timeout/cancel 两形状/timeout-tree）§5；编码 leg9/leg9b（GBK 乱码负对照）§6；fail-closed 腰带 §7；迁移 ids §8；分区与三处复绿（VM 12/1/11 + 本机 18/0/0/5 + 全量 586/0/0/22）§9；突变 M-Sb1–M-Sb6 §10；首跑红现场与产品修正（PATH 大小写）§11；消费方双腿 §12；POSIX 对照 §13；边界 §14；附录 A/B（收官轮全文 / 红跑片段） |
 | `S-c-windows-delivery.txt` | windows 归档 + CI windows job + 归档冒烟 + locale 修复实证 |
 | `S-d-release-engineering.txt` | 发布工程核对（12 全量扫描 + notes/迁移路径 + release.md + 附件工作流） |
 
@@ -149,7 +152,13 @@
 |---|---|---|
 | （S-a 提交） | **探针嵌套会话腿首跑红**（真 VM，`leg0 exit=12`）：TEMP 重定向的观测面原本取 `%TEMP%` 下的 `temp-proof.txt`，而嵌套助手退出时**按设计**删掉自己的会话临时目录（`jh-sbx-*`）⇒ 文件随之消失、断言恒搜不到（重定向其实生效——机制无缺陷，是探针自身选错了观测面）。通类风险：以「会自己清场」的对象作断言面 | 观测面改为子进程**报回**的 `%TEMP%` 值记在会话根（`temp-seen.txt`），「往 `%TEMP%` 写文件」排为命令串最后一条（退出码即该条成败）；断言改查「记下的值落在 `--temp` 父下的 `jh-sbx-*` 目录 + 退出码 0」。M5 突变（TEMP/TMP 覆写占位化）证明该断言承载真事实（leg0 exit=12 + leg5 退回宿主 TEMP），还原复绿（`S-a-windows-acl.txt` §2 前史 + 附录 B） |
 | （S-a 提交，放行条件项 1） | `WindowsAclTest#hostHelperCommandIsSelfConsistent` 的 `endsWith("/bin/java")` **写死 POSIX 分隔符且无 OS 门**——该断言面的宿主恰含 Windows（本机制真腿唯一落点），Windows 上 `Path` 渲染为反斜杠 ⇒ 首次 windows 真跑必红（与机制无关，纯断言面缺陷；本机 darwin 上原断言恒绿，属假绿掩盖） | 改按 `Path` 语义断言：`Path.of(首参).getFileName()=="java"` + 父目录名 `"bin"`（平台无关，且较原断言多验一层父目录）；突变 M6（期望文件名扰动为 `java-x`）→ 必红（`WindowsAclTest 20/1/0/7`，`expected: "java-x"`），还原后 md5 一致、聚焦复绿 |
-| （S-a 提交，放行条件项 2） | `WindowsAclTest#launch` 把助手 stdout/stderr **一律按 UTF-8 解码**后才做方言匹配——子进程 stderr 按控制台码页字节透传，zh-CN chcp 936（参照 VM 实测形态）的「拒绝访问」是 GBK 字节，UTF-8 解码成乱码 ⇒ `dialectSeen` 永不命中，**两条方言绑定腿在参照 VM 上必红**。根因（自指）：断言面声称「locale 不符即红」，自身解码却先坏了 zh-CN | `ProcessResult` 改持原始字节、解码推迟到断言点；`dialectSeen` 按两种控制台码页（UTF-8 / GBK）都试解后匹配（**断言强度不变**，未弱化）；新增纯函数锚点 `dialectMatchingHoldsForBothConsoleCodepages`（en-US ASCII 形态 + zh-CN GBK 形态 + 非方言反例，任意宿主全跑）；突变 M7（解码收窄回单 UTF-8）→ 该锚点必红（GBK 形态），还原后 md5 一致、聚焦复绿 |
+| （S-b 提交） | **pwsh 在 Windows 上永不入候选**（真 Windows 首跑暴露，机制其余部分无恙）：`ShellPlatform.pathEntries()` 以 `System.getenv().getOrDefault("PATH","")` 取 PATH，而 `System.getenv()` 的 **Map 视图按精确键名查找**（只有 `System.getenv(name)` 访问器大小写不敏感），Windows 系统变量惯名为 `Path` ⇒ 恒得空表 ⇒ pwsh 探不到、首条命令必 fail-loud（leg0b 在 pwsh 已装且 `where` 命中的前提下仍拒，探针三行直证：`env[Path]=<…>` / `get(PATH)` 有值 / `isRegularFile(pwsh.exe)=true`）。通类风险：大小写敏感的 Map 视图 + 平台惯名差异；本机 darwin 上 PATH 恰为精确大写，单测全绿属假绿掩盖——缺陷只由真宿主暴露 | `pathEntries` 增显式环境映射版（`pathEntries(Map<String,String>)`，`equalsIgnoreCase` 匹配键名），`host()` 传 `System.getenv()`；新增回归用例 `pathEntriesIsCaseInsensitiveAcrossWindowsAndPosixKeyShapes`（Path/PATH/无关键三形态，任意宿主全跑）；宿主探测仍在执行期。突变 M-Sb6（改回精确 `env.get("PATH")`）→ 该用例必红（`Expecting actual: []`），还原 md5 一致复绿 18/0/0/5（`S-b-shell-platform.txt` §10/§11） |
+| （S-b 提交，迁移涟漪遗漏 1） | `RealModelAgentE2ETest` 内嵌提示词仍写 "Use the **bash** tool"——工具名改名后真模型 run 会调不存在的工具（该用例在 macOS 本机默认跳过，仅真模型腿可见） | 提示词改 "Use the **shell** tool"；本次同为迁移面（工具名）的随动修正 |
+| （S-b 提交，迁移涟漪遗漏 2） | `docs/embedding.md` 两处口径漂移：①15 依赖清单仍列 `shell-bash-local`；②工具面计数「9 个 / 11 个」与实况不符（0.1.0 = 8 个、0.2.0 = 10 个）——0.2.0 迁移指南是消费方对照表，口径错会误导升级 | 依赖清单改新名 + 0.1.0 注记（旧名换用之）；工具面改逐名枚举（fs 5 + shell + todo_write + exit_plan_mode = 8；+ fs_search + ask_user = 10）；新增表行「shell provider 坐标 / plugin id / tool 名（it25 S-b 泛化）」 |
+| （S-b 提交，放行条件 1） | `docs/design/README.md:77` 交付清单仍写「Shell seam（Definition + **Bash-Local** Provider + Tool Consumer）」——3a 改名在活文档的**唯一漏迁移**，且该文件在台账声明的同步面内（`docs/design/{02,05,07,10,12,README}`） | 改「Local Provider」（与相邻 FS seam 行同构）；随 S-b 收口提交落 |
+| （S-b 提交，放行条件 2） | `AGENTS.md:21`「`shell` 三模块」计数过期——docker 模块加入后实为四模块（shell/shell、local、tool、docker）；该行恰在本次被编辑 | 改「四模块」；计数口径与同段 fs/sandbox 各行的「N 模块」写法一致 |
+| （S-b 提交，派生发现） | 分区清点原列四类，实探又见**第五类**：`HostileInstructionsTest` 的建链腿（`ln -sf` + 符号链接读平权断言）在 Windows 上必红（POSIX 文形；Windows 建符号链接需特权/开发者模式） | 该用例加方法级 POSIX 门（`@EnabledOnOs({OS.MAC,OS.LINUX})`，附理由注释：工具的 Windows 真腿归 S-c CI job）——**S-b 新加**。归因澄清（防误读）：`HeadlessCrashResumeE2ETest#assumePosix()`（it19，d3bab74）与 `DockerShellTest` 方法级门（it12.5，4371da2）是**既有设施**，S-b 只做改名随动（前者 `shell` 文案与 SSE 工具名）与 `DockerShellTest#cleanOrphanedContainers` 去 sh/xargs（改 Java 侧拆分，Windows 宿主无 sh）；「四类已分区」的**净状态**为真，不得读作 S-b 新加全部门 |
+| （S-b 取证工具，不改产品） | 证据侧 treehash 两处不可比（同一批 .class 在两宿主摘要不同）：①相对路径分隔符 `\\`/`/` 直接入摘要；②按 `Path` 自然序排序（WindowsPath 大小写不敏感 vs UnixPath 逐字节） | 汇总前分隔符归一并改为**按行文本排序**，另加 `treelist` 腿逐文件可 diff——修后 VM/本机摘要一致（`83a09b17…`）、66/66 行全同（`S-b-shell-platform.txt` §2） |
 
 ## 设计偏离（如有）
 

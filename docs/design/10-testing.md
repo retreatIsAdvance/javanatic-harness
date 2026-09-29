@@ -373,7 +373,7 @@ class ProfileBundleTest {
     void patchReplacesRowConfig() {
         List<ConfigRow> base = List.of(
             new ConfigRow("fs-local", Map.of("root", "/a"), false),
-            new ConfigRow("shell-bash-local", Map.of(), false));
+            new ConfigRow("shell-local", Map.of(), false));
         Patch patch = new Patch(List.of(
             new PatchRow("fs-local", /*replace*/ true, Map.of("root", "/b"), false)));
 
@@ -428,7 +428,7 @@ dsh CI 要求 100% per-file。JH 不强求，但：
 
 - **kernel 模块**（scope/events/plugin）：目标 95%+（核心基础设施）
 - **core 模块**（session/agent-loop/tools）：目标 90%+（主干逻辑）
-- **provider 模块**（llm-deepseek/fs-local/bash-local）：目标 80%+（外部依赖多，靠 e2e 补）
+- **provider 模块**（llm-deepseek/fs-local/shell-local）：目标 80%+（外部依赖多，靠 e2e 补）
 
 JaCoCo 报告 + CI gate。
 

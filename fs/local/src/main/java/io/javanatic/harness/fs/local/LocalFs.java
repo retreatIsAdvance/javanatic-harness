@@ -20,7 +20,7 @@ import java.util.TreeSet;
 /** Files.* 的直接包装：阻塞语义、fail loud。根目录限制在此强制(生产策略,05 §4)：真实路径围栏,符号链接不豁免。有界读取/列举/搜索防大输出撑爆内存与上下文(it20/it21)。 */
 public final class LocalFs implements FsService {
 
-    /** 单次读取/编辑的字节上限（文档化默认：256 KiB，与 shell-bash-local `maxOutputBytes` 对称）。 */
+    /** 单次读取/编辑的字节上限（文档化默认：256 KiB，与 shell-local `maxOutputBytes` 对称）。 */
     public static final long DEFAULT_MAX_READ_BYTES = 256 * 1024;
 
     /** 单次列举的条目上限（文档化默认）。 */

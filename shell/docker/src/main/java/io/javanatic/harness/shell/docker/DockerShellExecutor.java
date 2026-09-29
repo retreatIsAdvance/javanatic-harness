@@ -229,7 +229,7 @@ final class DockerShellExecutor implements ShellExecutor {
         }
     }
 
-    /** 拒绝方言匹配：stderr 逐行大小写不敏感包含任一签名（与 bash-local 同款）。 */
+    /** 拒绝方言匹配：stderr 逐行大小写不敏感包含任一签名（与 shell-local 同款）。 */
     static boolean matchesDialect(String stderr, List<String> signatures) {
         for (String line : stderr.split("\\R", -1)) {
             String lowered = line.toLowerCase(Locale.ROOT);
@@ -242,7 +242,7 @@ final class DockerShellExecutor implements ShellExecutor {
         return false;
     }
 
-    /** 单流排水：上限内缓冲，超限读丢弃，UTF-8 解码（与 LocalBashExecutor 同款）。 */
+    /** 单流排水：上限内缓冲，超限读丢弃，UTF-8 解码（与 LocalShellExecutor 同款）。 */
     static final class StreamDrain {
         private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         private final InputStream in;

@@ -63,7 +63,7 @@ done
 
 - shell 命令 60s 硬超时（组合期上限，不可由模型调大）。实测（本机备料演练）：冷启动预热 ~9s、模块 `test`（48 例）~4s、半热全量 `package` ~37s——任务文本里的模块级命令都在安全区内；唯一可能触顶的是全冷状态下的全量构建（如任务 09 若选择跑全量核对），触顶按「未达成 + 备注原因」记录（maven 增量不丢进度，重试通常更快）。
 - 工作区 = case 目录（`--workspace`）；fs 围栏与沙箱授予面都钉在此目录。maven 只读本地仓库、写 case 内 `target/`，不触发围栏。
-- 提示词里的 `working directory` 与 shell 实际 cwd 是两处取值：前者 = jh 进程的 `user.dir`（`AgentLoopImpl` 的 request-context 落账），后者 = `--workspace`（`ShellToolPlugin` → `LocalBashExecutor`）。从 case 目录外启动 jh 时两者不一致——首轮任务 07 实测：agent 信提示词、把 `mvn` 跑在 `~/jh-baseline`（无 pom）→ reactor 报错 → 停问未达成；任务 06 的 agent 亦先绕行多步。口径：启动前 `cd` 进工作区（§4 模板已含）；「提示词改钉 `--workspace`」记为下一迭代问题清单候选。
+- 提示词里的 `working directory` 与 shell 实际 cwd 是两处取值：前者 = jh 进程的 `user.dir`（`AgentLoopImpl` 的 request-context 落账），后者 = `--workspace`（`ShellToolPlugin` → `LocalShellExecutor`）。从 case 目录外启动 jh 时两者不一致——首轮任务 07 实测：agent 信提示词、把 `mvn` 跑在 `~/jh-baseline`（无 pom）→ reactor 报错 → 停问未达成；任务 06 的 agent 亦先绕行多步。口径：启动前 `cd` 进工作区（§4 模板已含）；「提示词改钉 `--workspace`」记为下一迭代问题清单候选。
 - 模块测试含环境敏感用例：`examples/headless` 的 `HeadlessVerifyTest.missingTaskWithKeyAbsentFailsLoud` 要求 key **缺席**——在 key 已导出的 shell 里该用例预期失败（expected 2, got 0，与任务改动无关）。判定口径：以剔除该用例后全绿为准；`unset DEEPSEEK_API_KEY` 复跑可验证全绿（首轮任务 04 实测：带 key 49 例 1 失败 → unset 后 49 例全绿）。
 - 嵌套沙箱边界：agent 的 shell 工具运行在本机 seatbelt 沙箱内；在其中跑 maven，`sandbox/local` 的 4 个 macOS seatbelt e2e（`@EnabledOnOs(OS.MAC)`、无 assume 门控）需要**嵌套** sandbox-exec，宿主一律拒绝（`sandbox_apply: Operation not permitted`, rc 71）→ 预期红（与任务改动无关）。沙箱外同命令实测全绿（首轮任务 06：沙箱内 1 失败 3 错误 → 沙箱外 exit 0）。判定口径：以沙箱外复跑为准；任务文本带 `-am` 且依赖链含 `sandbox/local` 时注意此条。
 - 会话（JSONL）落 `~/.harness/sessions/<sessionId>/`，与工作区无关；`--resume` 靠会话 id。

@@ -10,8 +10,8 @@ import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.event.ToolResultEvent;
 import io.javanatic.harness.session.message.CallId;
 import io.javanatic.harness.session.message.ToolUseBlock;
-import io.javanatic.harness.shell.bash.local.BashLocalOptions;
-import io.javanatic.harness.shell.bash.local.BashLocalPlugin;
+import io.javanatic.harness.shell.local.LocalShellOptions;
+import io.javanatic.harness.shell.local.LocalShellPlugin;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
 import io.javanatic.harness.plan.PlanModePlugin;
 import io.javanatic.harness.sandbox.local.SandboxLocalPlugin;
@@ -25,6 +25,8 @@ import io.javanatic.harness.tools.ToolRegistry;
 import io.javanatic.harness.tools.ToolsPlugin;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
@@ -34,30 +36,32 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** bash 工具经完整 R2 pipeline(装载→注册→审批→执行→落账)。 */
+/** shell 工具经完整 R2 pipeline(装载→注册→审批→执行→落账)。命令夹具是 POSIX
+ * 文形（bash 命令串）——类级门定 POSIX 宿主；第三例另加 macOS 门（Seatbelt 面）。 */
+@EnabledOnOs({OS.MAC, OS.LINUX})
 class ShellToolEndToEndTest {
 
     @TempDir
     Path workspace;
 
     @Test
-    void bashToolExecutesThroughPipelineAndLeavesAuditTrail() throws Exception {
+    void shellToolExecutesThroughPipelineAndLeavesAuditTrail() throws Exception {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
                 new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
                 new SystemPromptPlugin(),
                 new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
                 new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
-                new BashLocalPlugin(new BashLocalOptions(64 * 1024)),
+                new LocalShellPlugin(new LocalShellOptions(64 * 1024)),
                 new ShellToolPlugin(workspace, Duration.ofSeconds(10))));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             ToolRegistry registry = rt.root().require(ToolRegistry.KEY);
             assertThat(registry.schemas(rt.root()).stream().map(schema -> schema.name()).toList())
-                .contains("bash");
+                .contains("shell");
 
             Session session = Session.create(Session.newId("st"), null, null);
             List<LoggedEvent<ToolResultEvent>> results = executor.execute(
-                List.of(new ToolUseBlock(CallId.of("c1"), "bash",
+                List.of(new ToolUseBlock(CallId.of("c1"), "shell",
                     "{\"command\":\"echo tool-ran > proof.txt && cat proof.txt\"}")),
                 session, 0, 0, rt.root(), AbortSignal.never());
 
@@ -79,12 +83,12 @@ class ShellToolEndToEndTest {
                 new SystemPromptPlugin(),
                 new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
                 new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
-                new BashLocalPlugin(new BashLocalOptions(64 * 1024)),
+                new LocalShellPlugin(new LocalShellOptions(64 * 1024)),
                 new ShellToolPlugin(workspace, Duration.ofSeconds(10))));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
             Session session = Session.create(Session.newId("st2"), null, null);
             List<LoggedEvent<ToolResultEvent>> results = executor.execute(
-                List.of(new ToolUseBlock(CallId.of("c1"), "bash",
+                List.of(new ToolUseBlock(CallId.of("c1"), "shell",
                     "{\"command\":\"echo bad >&2; exit 7\"}")),
                 session, 0, 0, rt.root(), AbortSignal.never());
 
@@ -95,24 +99,24 @@ class ShellToolEndToEndTest {
     }
 
 
-    /** plan 模式下 bash 写文件被 Seatbelt 拒——结果带沙箱标记（模型可分辨）。 */
+    /** plan 模式下 shell 写文件被 Seatbelt 拒——结果带沙箱标记（模型可分辨）。 */
     @Test
-    @org.junit.jupiter.api.condition.EnabledOnOs(org.junit.jupiter.api.condition.OS.MAC)
-    void planModeBashWriteDeniedWithSandboxMarker() throws Exception {
+    @EnabledOnOs(OS.MAC)
+    void planModeShellWriteDeniedWithSandboxMarker() throws Exception {
         try (Runtime rt = new Runtime()) {
             new PluginLoader().loadAll(rt, List.of(
                 new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
                 new SystemPromptPlugin(),
                 new PlanModePlugin("Plan mode guidance (test)."), new SandboxLocalPlugin(),
                 new SandboxPolicyPlugin(new SandboxPolicy(SandboxMode.WORKSPACE_WRITE, workspace)),
-                new BashLocalPlugin(new BashLocalOptions(64 * 1024)),
+                new LocalShellPlugin(new LocalShellOptions(64 * 1024)),
                 new ShellToolPlugin(workspace, Duration.ofSeconds(10))));
             ToolExecutor executor = rt.root().require(ToolExecutor.KEY);
 
             Session session = Session.create(Session.newId("planned"), null, null);
             session.append(new PlanModeEvent(1, true));
             List<LoggedEvent<ToolResultEvent>> results = executor.execute(
-                List.of(new ToolUseBlock(CallId.of("w1"), "bash",
+                List.of(new ToolUseBlock(CallId.of("w1"), "shell",
                     "{\"command\":\"echo x > denied.txt\"}")),
                 session, 0, 0, rt.root(), AbortSignal.never());
 

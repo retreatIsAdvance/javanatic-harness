@@ -69,7 +69,7 @@ class AppBootTest {
         Map<String, ?> discovered = new PluginLoader().discover();
         for (String id : List.of("session-store", "persistence-jsonl", "agents", "loop-guard",
             "system-prompt", "llm", "llm-openai-compat", "approval-auto", "approval-ask",
-            "approval-deny", "tools", "fs-local", "fs-tool", "shell-bash-local",
+            "approval-deny", "tools", "fs-local", "fs-tool", "shell-local",
             "shell-tool", "shell-docker", "todo", "plan", "commands", "sandbox-local", "sandbox-policy",
             "presets", "compaction", "agent-loop")) {
             assertThat(discovered).containsKey(id);

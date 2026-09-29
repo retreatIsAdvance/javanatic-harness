@@ -1,4 +1,4 @@
-package io.javanatic.harness.shell.bash.local;
+package io.javanatic.harness.shell.local;
 
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
@@ -9,6 +9,8 @@ import io.javanatic.harness.shell.shell.ShellRequest;
 import io.javanatic.harness.shell.shell.ShellResult;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
@@ -23,8 +25,10 @@ import java.util.function.BooleanSupplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** 本机 bash 执行:输出/退出码/超时击杀/取消击杀进程树/输出上限截断/环境透传。 */
-class LocalBashExecutorTest {
+/** POSIX 腿的真执行（bash）:输出/退出码/超时击杀/取消击杀进程树/输出上限截断/环境透传。
+ * Windows 腿归 {@link LocalShellExecutorWindowsTest}，argv 形状归 {@link LocalShellPlatformTest}。 */
+@EnabledOnOs({OS.MAC, OS.LINUX})
+class LocalShellExecutorTest {
 
     @TempDir
     Path cwd;
@@ -33,7 +37,7 @@ class LocalBashExecutorTest {
     private static final SandboxPolicy UNCONFINED =
         new SandboxPolicy(SandboxMode.DANGER_FULL_ACCESS, Path.of("/"));
 
-    private final LocalBashExecutor executor = new LocalBashExecutor(new BashLocalOptions(64 * 1024), null);
+    private final LocalShellExecutor executor = new LocalShellExecutor(new LocalShellOptions(64 * 1024), null);
 
     /** 测试用可取消信号:checkAbort 与 onCancel 双通道(与 AbortController 语义一致)。 */
     private static final class Cancellable implements AbortSignal {
@@ -105,7 +109,7 @@ class LocalBashExecutorTest {
 
     @Test
     void oversizedOutputTruncatedToCap() throws Exception {
-        LocalBashExecutor capped = new LocalBashExecutor(new BashLocalOptions(1000), null);
+        LocalShellExecutor capped = new LocalShellExecutor(new LocalShellOptions(1000), null);
         ShellResult result = capped.execute(
             request("head -c 200000 /dev/zero | tr '\\0' 'a'"), AbortSignal.never());
         assertThat(result.stdout()).hasSize(1000);

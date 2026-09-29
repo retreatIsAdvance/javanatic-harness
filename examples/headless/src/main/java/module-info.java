@@ -18,7 +18,7 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.fs.local;
     requires io.javanatic.harness.fs.tool;
     requires io.javanatic.harness.shell.shell;
-    requires io.javanatic.harness.shell.bash.local;
+    requires io.javanatic.harness.shell.local;
     requires io.javanatic.harness.shell.tool;
     requires io.javanatic.harness.session.persistence;
     requires io.javanatic.harness.session.persistence.jsonl;

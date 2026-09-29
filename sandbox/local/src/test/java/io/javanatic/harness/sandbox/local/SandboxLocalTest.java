@@ -12,7 +12,7 @@ import io.javanatic.harness.sandbox.sandbox.SandboxPolicy;
 import io.javanatic.harness.sandbox.sandbox.SandboxProvider;
 import io.javanatic.harness.sandbox.sandbox.SandboxUnavailableException;
 import io.javanatic.harness.sandbox.sandbox.WritableRoots;
-import io.javanatic.harness.shell.bash.local.BashLocalPlugin;
+import io.javanatic.harness.shell.local.LocalShellPlugin;
 import io.javanatic.harness.shell.shell.ShellExecutor;
 import io.javanatic.harness.shell.shell.ShellRequest;
 import io.javanatic.harness.shell.shell.ShellResult;
@@ -61,7 +61,7 @@ class SandboxLocalTest {
         try (Runtime rt = new Runtime()) {
             rt.root().provide(SandboxProvider.KEY, provider);
             rt.root().provide(ConfigService.KEY, id -> Map.of());
-            new PluginLoader().loadAll(rt, List.of(new BashLocalPlugin()));
+            new PluginLoader().loadAll(rt, List.of(new LocalShellPlugin()));
             ShellExecutor executor = rt.root().require(ShellExecutor.KEY);
             return executor.execute(
                 new ShellRequest(command, cwd, Duration.ofSeconds(15), null, policy),
@@ -601,8 +601,9 @@ class SandboxLocalTest {
     }
 
     // ---- 真强制 e2e：windows-acl（VM/CI windows job） ----
-    // Windows 侧真腿不经 bash（bash-local 平台化是 S-b）——真跑在 WindowsAclTest 直跑
-    // 助手；此处验链仲裁在真 Windows 把 windows-acl 报成 Ready/PARTIAL（探针即机制自检）
+    // 真强制腿在 WindowsAclTest 直跑助手（不经 shell provider——shell-local 的平台分派
+    // 归其自身测试，it25 S-b）；此处验链仲裁在真 Windows 把 windows-acl 报成
+    // Ready/PARTIAL（探针即机制自检）
 
     @Test
     @EnabledOnOs(OS.WINDOWS)

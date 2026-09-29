@@ -16,7 +16,7 @@
 
     <modules>
         <module>shell</module>
-        <module>bash-local</module>
+        <module>local</module>
         <module>tool</module>
         <module>docker</module>
     </modules>

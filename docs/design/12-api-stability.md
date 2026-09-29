@@ -37,7 +37,7 @@
 | fs/local | `fs.local` |
 | fs/tool | `fs.tool` |
 | shell/shell | `shell.shell` |
-| shell/bash-local | `shell.bash.local` |
+| shell/local | `shell.local` |
 | shell/docker | `shell.docker` |
 | shell/tool | `shell.tool` |
 | session/persistence | `session.persistence` |
@@ -105,7 +105,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | sandbox-policy | `mode` / `workspace` | 沙箱档与围栏根 |
 | fs-local | `root` / `maxReadBytes` / `maxListEntries` / `searchMaxMatches` | fs 围栏根（安全边界值）；读取/编辑上限、列举上限与搜索命中上限（默认 256 KiB / 1000 / 200，超限截断标记 / fail loud）|
 | shell-tool | `workspace` / `timeoutSeconds` | shell 围栏与超时 |
-| shell-bash-local | `maxOutputBytes` | 输出截断 |
+| shell-local | `maxOutputBytes` | 输出截断（it25 S-b 由 `shell-bash-local` 改名，坐标 `harness-shell-local`）|
 | shell-docker | `image` / `maxOutputBytes` | 镜像须本机在场（不自动拉取）|
 | todo | `allowParallelInProgress` | 并行 in_progress 开关 |
 | presets | `root` / `presets` | preset 组合 |

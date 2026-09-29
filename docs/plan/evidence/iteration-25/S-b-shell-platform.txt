@@ -1,0 +1,568 @@
+# it25 S-b 证据：shell 平台化（shell/local：POSIX=bash / Windows=pwsh）+ 契约迁移面
+#   真 VM 真跑 / 方言 / 进程树 / 分区 / 迁移核对 / 消费方双腿 / 突变红绿对
+#
+# 对象：S-b 工作树（未提交）。改名面 = shell/bash-local → shell/local（包 io.javanatic.harness.
+#   shell.local、插件 id shell-local、工具名 shell、artifactId harness-shell-local）。
+#   产品代码改动仅一处：ShellPlatform 的 PATH 键名大小写缺陷（§11，含首跑红现场与修后复绿）。
+# 场所：UTM Win11 25H2 ARM64 VM（uuid 91EA42FC-F894-4E2A-AF34-EA6393127351）——用户 j'h
+#   （本机管理员、EnableLUA=0）、chcp 936、JDK 25.0.4.1（C:\jh\jdk）。
+# 投递/执行/回读：utmctl file push 载荷（sb-payload.zip + PowerShell-7.6.6-win-arm64.zip +
+#   driver cmd）→ schtasks（/ru "j'h" /it 交互会话）跑 C:\jh-payload\mksb2.cmd → utmctl
+#   file pull + iconv GBK→UTF-8 入库；VM 内原始日志 C:\jh\mx\sb\all.txt。执行器 SbRunner
+#   （源 runnersrc/SbRunner.java，包 io.javanatic.harness.shell.local——与被测类同包，直用
+#   package-private 的 ShellPlatform / LocalShellExecutor）每腿以 [leg:<name>] PASS/FAIL 收尾。
+# 本文件＝实跑输出摘录：每段给出命令、决定性输出行与真实 EXIT 回显；附录 A 为收官轮全文，
+#   附录 B 为红跑决定性片段。全档行尾 CR 与尾随空白已去；环境来源细节（镜像站/代理）不入档。
+
+== 1. 环境事实（[env] 段，收官轮逐字） ==
+
+[env] run-date 2026/09/28 周一 16:45:16.12
+win-088t9s8v0lt\j'h
+活动代码页: 936（GBK 控制台——§6 的乱码负对照因此成立）
+Microsoft Windows [版本 10.0.26200.8037]
+openjdk version "25.0.4.1" 2026-08-18 LTS（Microsoft-14951896，JDK 由载荷 zip 就地展开）
+
+pwsh 真缺席（leg0a 前置，安装前）：
+  信息: 用提供的模式无法找到文件。      ← where pwsh（信息行）
+  [env] where-pwsh-exit=1
+  [env] pwsh-exe-exists-exit=1          ← dir /b C:\jh\pwsh\pwsh.exe 探不到
+  （mksb2.cmd 先 rmdir /s /q C:\jh\pwsh 预清——上一轮实验残留不会污染 leg0a）
+
+pwsh 就位（install 段，收官轮）：
+  [install] tar exit=0
+  C:\jh\pwsh\pwsh.exe                   ← where-after-install exit=0
+  7.6.6                                 ← $PSVersionTable.PSVersion
+  gb2312                                ← [Console]::OutputEncoding.WebName
+  zh-CN / zh-CN                         ← Get-Culture / CurrentUICulture
+  [install] version-probe exit=0
+
+== 2. 载荷来源与保真（构建配方 / 哈希三向一致 / treehash 66 文件同一） ==
+
+配方（本机 darwin，从工作树构建；模块 = kernel/brand、kernel/core、llm/llm、sandbox/sandbox、
+shell/shell、shell/local）：各模块 target/classes → payload/mods/<artifact-suffix>；并合
+classpath 目录 payload/classes = 各模块类文件（不含任何 module-info.class）+ shell/local 的
+module-info.class（66 个 .class）；zip 自 payload/ 内平铺打包（classes mods tests runner
+runnersrc junit-console.jar assertj.jar）。首轮曾因 zip 带 payload/ 前导目录致 VM 侧
+jar xf 落错层级（ClassNotFoundException 全腿红，见附录 B 前史）——改平铺后复验。
+
+三向一致：
+  sb-payload.zip      sha256=3e1f9acde1a39381bfa08fa89622e33510e89b201a4d56bc53d897aaeac3627b
+    ├─ VM 侧 certutil -hashfile（回读 sbziphash.txt）：3e1f9acd…（同值）
+    └─ push→pull 回拉副本（pushback4.zip）：3e1f9acd…（逐字节同）
+  PowerShell-7.6.6-win-arm64.zip  sha256=bbde9dda31d148415eccb5fbe1638e6400a144187b006e5b3fd8ec2f39d781be
+    （VM 侧 certutil 同值；官方 win-arm64 分发包）
+
+treehash（classes 树 66 文件，逐文件 sha256「相对路径 + 空格 + 十六进制」按行文本排序后聚合）：
+  VM 侧：  [treehash] root=classes files=66 sha256=83a09b172f7b4b54f487e8685787228b58c4bc9748d9d4849c65735510f398e9
+  本机同载荷：同值（§13）。
+  treelist 逐文件 66/66 行完全一致（pull 回读 tr -d '\r' 后 diff 无输出）。
+
+被测类一致性复校（突变 M-Sb6 破坏→还原循环之后，本机 2026-09-28）：
+  shell/local/target/classes 6 文件（LocalShellExecutor、LocalShellExecutor$StreamDrain、
+  LocalShellOptions、LocalShellPlugin、ShellPlatform、module-info）与 VM 运行快照
+  payload/classes 逐字节同一（逐文件 sha256 全 same）——「VM 上跑的就是当前工作树的构建」。
+
+== 3. pwsh 分派两腿：缺席 fail-loud / 就位 READY（leg0a / leg0b） ==
+
+命令（mksb2/sb.cmd；-cp %OUT%\classes;%OUT%\runner）：
+  java … io.javanatic.harness.shell.local.SbRunner %WORK% argv
+
+leg0a（安装前，pwsh 真缺席）：
+  [argv] os.name=Windows 11
+  [argv] ShellUnavailableException=shell interpreter unavailable: pwsh (PowerShell 7) not found
+         on PATH — install it (winget install Microsoft.PowerShell) or run with --docker
+         (the container backend needs no host shell)
+  [argv] verdict=FAIL-LOUD pwsh-absent
+  [leg0a] exit=0
+
+leg0b（安装并 set PATH=%PWSH%;%PATH% 后）：
+  [argv] argv=[C:\jh\pwsh\pwsh.exe, -NoProfile, -NonInteractive, -Command, Write-Output probe]
+  [argv] verdict=READY pwsh-on-path
+  [leg0b] exit=0
+
+判读：缺席不发生静默降级（无 5.1 兜底——Windows PowerShell 5.1 的引号/编码/退出码方言与 7
+不同，静默代跑会把契约漂移藏进运行结果）；就位后 argv 形状与设计逐字一致（-NoProfile
+-NonInteractive -Command）。宿主探测发生在执行期（argv 构造），不在装配期——组合与启动
+不受 pwsh 缺席影响。
+
+== 4. 真执行与方言（leg1 exec / leg2 exitcode / leg3 dialect） ==
+
+leg1（真执行：stdout/stderr/退出码/时长/行尾）：
+  [exec] exit=3 expect=3
+  [exec] stdout=hello\r\n
+  [exec] stderr=oops\r\n
+  [exec] durationMs=572 truncated=false denied=false
+  [exec] lineSeparator=\r\n
+  [leg1] exit=0
+
+leg2（退出码方言三题）：
+  [exitcode] explicit-exit exit=7 expect=7                 ← `exit 7` 原样上浮
+  [exitcode] native-no-mapping exit=1 (… native=9)         ← `cmd /d /c exit 9`：原生命令非零码
+                                                             不回传为 pwsh 进程退出码（观测 exit=1）
+  [exitcode] native-mapped exit=9 expect=9                 ← if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } 显式上浮
+  [leg2] exit=0
+
+leg3（引号 / 变量 / && / 重定向字节）：
+  [dialect] env-access stdout=bare=[]\r\nenv=[passed]\r\n
+      ← 同一命令串 `"bare=[$JH_TEST_VAR] env=[$env:JH_TEST_VAR]"`：POSIX 的 $VAR 不展开（裸 []），
+        pwsh 须 $env:VAR（[passed]；环境经 ShellRequest env 传入）
+  [dialect] quoting stdout=single=$env:JH_TEST_VAR\r\ndoubled=it's\r\ninterp=\r\n
+      ← 单引号字面（$env: 不展开）；'' 转义出 it's；双引号可插值（此腿未置该变量故空）
+  [dialect] andAnd exit=0 stdout=a\r\nb\r\n               ← pwsh 7 原生支持 &&
+  [dialect] redirect exit=0 bytes=780d0a size=3           ← 'x' > file：UTF-8（无 BOM）内容 + CRLF 行尾
+  [leg3] exit=0
+
+判读：同一契约面（ShellResult：exitCode/stdout/stderr/duration/lineSeparator）在两方言下
+语义不同但形状统一；方言差异事实登记在此，契约断言在分区后的 JUnit 面（§9）。
+
+== 5. 进程树清理（leg4 timeout / leg5/6 cancel / leg7 timeout-tree） ==
+
+leg4（超时击杀）：
+  [timeout] TimeoutException=shell timeout after PT0.1S elapsedMs=184 (expect < 5000)
+  [leg4] exit=0
+
+leg5（取消，同控制台孙进程）：
+  [cancel-inner] grandchild pid=9092 alive-before=true parentPid=8084 parentCmd=<none>
+  [cancel-inner] after-cancel grandchild-gone=true ms=41
+  [leg5] exit=0
+
+leg6（取消，新控制台窗口孙进程——Start-Process 不带 -NoNewWindow）：
+  [cancel-detached] grandchild pid=10460 alive-before=true parentPid=6644 parentCmd=<none>
+  [cancel-detached] after-cancel grandchild-gone=true ms=40
+  [leg6] exit=0
+
+leg7（超时路径扫树——与取消腿并行的第二条击杀路径）：
+  [timeout-tree] TimeoutException=shell timeout after PT3S
+  [timeout-tree] grandchild pid=6440 gone-after-timeout=true
+  [leg7] exit=0
+
+判读：`descendants()` 语义在 Windows 上足以覆盖两种孙进程形状（同控制台子进程与新控制台
+窗口进程）——**Job Objects / taskkill /T /F 备选不需要落码**（S-b 四个确认里挂的「实探后
+定形」在此结清）。真孙进程 = pwsh 经 Start-Process 起 pwsh（pid 落文件），断言「取消/超时
+后进程表中消失、且限时内（40/41ms；超时腿 time 上限 3s 加扫描等待）」。
+
+== 6. 编码方言（leg9 pwsh / leg9b cmd 负对照） ==
+
+leg9（pwsh 侧）：
+  [encode] native.encoding=GBK file.encoding=UTF-8 sun.jnu.encoding=GBK
+  [encode] exit=1
+  [encode] stderr.visible=\u001b[31;1mGet-ChildItem: \u001b[31;1mCannot find path 'C:\jh\nope-sb'
+           because it does not exist.\u001b[0m\r\n
+  [encode] stderr.replacementChars=0 (pwsh 错误文：本机为英文 ASCII，故 0)
+  [leg9] exit=0
+
+leg9b（负对照：cmd 内建错误文按控制台代码页出字节）：
+  [encode-cmd] exit=1
+  [encode-cmd] stderr.visible=\ufffd\u04b2\ufffd\ufffd\ufffd\ufffd\u013c\ufffd\r\n
+  [encode-cmd] stderr.replacementChars=6 (本地化 GBK 错误文经 UTF-8 解码 = 乱码，S-c locale 修复的动因)
+  [leg9b] exit=0
+
+判读：本机 pwsh 7.6.6 的错误文未随 culture(zh-CN) 本地化（英文 ASCII，故 leg9 无乱码）——
+乱码面由 cmd/系统工具承载，leg9b 直证（GBK 字节经 UTF-8 解码 → 替换字符）。与 S-a 修正 2
+的 zh-CN 形态同族：S-c 的 locale 修复（入口 UTF-8 wrap + 助手 JVM 旗标）落地后须按「监视项」
+端到端复验一次方言匹配（后续表在案）。
+
+== 7. fail-closed 腰带（leg8 belt） ==
+
+confining 策略（read-only）+ 未组 sandbox provider 的执行请求：
+  [belt] SandboxUnavailableException=sandbox mode "read-only" is requested but no sandbox backend
+         is usable on this host; refusing to run the command unconfined — no sandbox provider
+         composed (compose sandbox-local before shell-local)
+  [belt] markerExists=false expect=false
+  [leg8] exit=0
+
+判读：不满足约束时**拒绝在未受限形态下执行**（命令未运行——副作用标记文件不存在），
+fail-closed 文案点名组合次序（compose sandbox-local before shell-local）。
+
+== 8. 迁移面核对（leg10 ids，VM 内真读模块描述符） ==
+
+命令：java … SbRunner %WORK% ids %CP%（对 VM 内 C:\jh\mx\sb\classes 读 module-info.class +
+META-INF/services 行）：
+  [ids] classesDir=C:\jh\mx\sb\classes
+  [ids] pluginId=shell-local
+  [ids] defaultMaxOutputBytes=262144
+  [ids] module=io.javanatic.harness.shell.local
+  [ids] provides=io.javanatic.harness.kernel.plugin.Plugin with [io.javanatic.harness.shell.local.LocalShellPlugin]
+  [ids] service=io.javanatic.harness.shell.local.LocalShellPlugin
+  [leg10] exit=0
+
+判读：模块名 / 插件 id / provides / services 四面在新名下真实一致。工具名 `shell` 的核对面在
+JUnit 分区集（ShellToolEndToEndTest，§9 本机）与迁移涟漪的消费方双腿（§12）。坐标面
+（harness-shell-local）在 bundle/consumer 的解析中真用（§12）。
+
+== 9. 测试平台分区（四类 + 五类随动）与三处复绿 ==
+
+分区实况（工作树当前形态）：
+- 类级：「MAC/LINUX」= LocalShellExecutorTest、ShellToolEndToEndTest；「WINDOWS」=
+  LocalShellExecutorWindowsTest（新类，5 例——Windows 上真跑 pwsh 夹具）
+- 用例级（@EnabledOnOs）：LocalShellPlatformTest#hostDispatchesPosixOnPosixHosts（MAC/LINUX）、
+  HostileInstructionsTest 1 例（MAC/LINUX；第五类随动）、DockerShellTest 1 例（MAC/LINUX）
+- assumePosix()：HeadlessCrashResumeE2ETest 的 SIGKILL 用例（真 shell 子进程 + sleep 后代探测）
+- DockerShellTest#cleanOrphanedContainers：去 sh/xargs，Java 侧 docker ps/rm——Windows 宿主
+  无 sh，@BeforeAll 在 daemonUp 门之前不再爆
+
+VM 侧 JUnit（leg11，选集 = Windows 腿类 + 平台类）：
+  ConsoleLauncher execute -cp "%CP%;%TESTS%" --select-class
+    io.javanatic.harness.shell.local.LocalShellExecutorWindowsTest --select-class
+    io.javanatic.harness.shell.local.LocalShellPlatformTest --details=summary
+  12 tests found / 1 skipped / 11 successful / 0 failed（2452 ms）——跳过 1 = POSIX 门用例
+  [leg11] exit=0
+
+本机聚焦（darwin，mvn -pl shell/local test）：
+  LocalShellPlatformTest 7 / LocalShellExecutorTest 6 / LocalShellExecutorWindowsTest 5 skipped
+  ⇒ Tests run: 18, Failures: 0, Errors: 0, Skipped: 5 —— BUILD SUCCESS
+
+全量 package（darwin，本工作树）：
+  Tests run: **586, Failures: 0, Errors: 0, Skipped: 22**（30 个含测试模块）——BUILD SUCCESS
+  （49.2s；跳过 = 平台分区：Windows 腿 5 全跳 + 既有 linux/windows 腿 17）
+  （与 S-a 报告 573/0/0/17 之差 = shell/local 分区三类 18 例取代旧 LocalBashExecutorTest 6 例
+   （净 +12）为主因 + 分区随动 1 例）
+
+== 10. 突变红/绿对（M-Sb1–M-Sb6） ==
+
+M-Sb1（缺席 fail-loud → 静默 5.1 兜底）：LocalShellPlatformTest 1 失败 / BUILD FAILURE → 还原复绿。
+M-Sb2（PATH 扫描不再命中 pwsh）：LocalShellPlatformTest 1 失败 / BUILD FAILURE → 还原复绿。
+M-Sb3（Windows 腿平台门移除）：darwin 上必红（BUILD FAILURE）→ 还原复绿。
+M-Sb4（工具名 shell → bash，ShellToolPlugin）：ShellToolEndToEndTest 3 失败 / BUILD FAILURE → 还原复绿。
+M-Sb5（consumer-sample 默认坐标 → 改名前的 harness-shell-bash-local）：
+  候选腿「示例编译」即拒（依赖解析失败：…:harness-shell-bash-local:jar:0.2.0-SNAPSHOT was not
+  found），失败项 **7**（编译拒 + 连带自证 4 项 + 负例跳过计数）→ 还原（md5 一致：e7e3eac9…）後
+  复绿：失败项 **0**（59s，四负例全过）。
+M-Sb6（pathEntries 大小写不敏感 → 改回精确 env.get("PATH")，即缺陷原形）：
+  LocalShellPlatformTest.pathEntriesIsCaseInsensitiveAcrossWindowsAndPosixKeyShapes 1 失败
+  （期望 [/one, /two] 实得 []），Tests run: 18, Failures: 1 / BUILD FAILURE → 还原
+  （md5 一致：661bf2e3…）复绿 18/0/0/5 BUILD SUCCESS。
+
+突变回执原样落盘（M-Sb1–4 见 /private/tmp/sb/mutations.txt 摘录；M-Sb5/6 见 m-sb5-red.txt、
+m-sb5-green.txt、m-sb6-red.txt、m-sb6-green.txt）。
+
+== 11. 首跑红现场与产品代码修正（唯一的 S-b 主源码改动） ==
+
+现场（第二真跑 16:34，pwsh 已装且 where 命中，leg0b 仍 fail-loud）：
+  [install] where-after-install exit=0（C:\jh\pwsh\pwsh.exe）
+  [leg0b] ShellUnavailableException=… pwsh (PowerShell 7) not found on PATH …
+  [leg0b] verdict=FAIL-LOUD pwsh-absent        ← 缺陷现场：pwsh 在场却探不到
+同轮探针（16:36，同 VM）：
+  [probe] env[Path]=<C:\WINDOWS\system32;…;C:\Users\j'h\AppData\Local\Microsoft\WindowsApps>
+  [probe] get(PATH)=<…>  /  get(Path)=<…>        ← System.getenv(name) 访问器大小写不敏感
+  [probe] isRegularFile(C:\jh\pwsh\pwsh.exe)=true
+  [probe] host-argv EX=…ShellUnavailableException…
+
+根因：`System.getenv()` 的 Map 视图按**精确键名**查找（只有 `System.getenv(name)` 访问器
+大小写不敏感）。Windows 系统变量惯名为 `Path`；旧代码 `System.getenv().getOrDefault("PATH","")`
+在 Windows 上恒为空表 ⇒ pwsh 永不入候选 ⇒ 首条命令必 fail-loud（机制其余部分无恙——本机
+darwin 上 PATH 恰为精确大写，故单测全绿，缺陷只由真 Windows 首跑暴露）。
+
+修法（主源码唯一改动）：`ShellPlatform.pathEntries()` 增显式环境映射参数版
+（`pathEntries(Map<String,String>)`，键名 equalsIgnoreCase 匹配），`host()` 经 `System.getenv()`
+传入；新增回归用例 `pathEntriesIsCaseInsensitiveAcrossWindowsAndPosixKeyShapes`（Path/PATH/
+无关键三形态）。突变 M-Sb6 证明该用例承载真事实（§10）。收官轮 16:45 leg0b READY（§3）。
+
+== 12. 消费方双腿（consumer-sample；candidate = 本工作树，release = 已发布 0.1.0） ==
+
+candidate 腿（隔离本地仓 = 本工作树 install；新坐标 harness-shell-local）：
+  ok ×7（install/示例编译/运行类路径/治理自证/自证通过/自有工具可见/自有工具可执行）
+  + 四负例全 ok（坏版本 / 去显式版本 / 坏治理配置 / 生产档撞 AUTO 审批均按预期拒）
+  用时 59s；失败项：0；harness.version=0.2.0-SNAPSHOT
+
+release 腿（隔离本地仓初始为空；只取 Central 的 0.1.0；settings-central.xml 公共代理）：
+  坐标覆写 -Dharness.shell.artifactId=harness-shell-bash-local（0.1.0 只有旧名——两腿同源
+  源码、坐标单点不同，见 integration/verify-consumer.sh leg()）
+  ok ×6（示例编译/运行类路径/治理自证/自证通过/自有工具可见/自有工具可执行）
+  用时 35s；失败项：0；取件来源：_remote.repositories 显示 harness-bundle-base-0.1.0.jar 来自
+  public-central
+
+判读：0.2.0 新坐标可消费（candidate）；0.1.0 旧坐标不回归（release）——迁移注记（0.2.0 破坏面）
+在工具链层面真验。M-Sb5 证明该坐标单点是承重件（§10）。
+
+== 13. POSIX 对照（同一 runner、同一载荷，本机 darwin） ==
+
+命令：java -cp payload/classes:payload/runner …SbRunner <work> <leg>（legs argv/exec/exitcode/
+dialect/belt/ids/treehash/treelist；与 VM 侧同一二进制、同一命令串）
+  [argv] os.name=Mac OS X
+  [argv] argv=[bash, -c, Write-Output probe]              ← POSIX=bash 形状
+  [exec] exit=2 expect=3（bash: syntax error——命令串是 pwsh 语法，本腿即方言对照）
+  [exec] lineSeparator=\n                                  ← 对照 VM 的 \r\n
+  [exitcode] explicit-exit exit=7 expect=7（同）
+  [exitcode] native-no-mapping exit=127（sh: 未找到命令——pwsh 侧为 1）
+  [dialect] env-access/quoting 空输出、andAnd exit=127、redirect size=0（pwsh 语法串在 bash 下不成立）
+  [belt] 同文案（平台无关，拒跑）；[ids] 全同；[treehash] sha256=83a09b17…（与 VM 同值）
+判读：分派面（argv）与数据面（exit/stdout/lineSeparator）按平台分形，契约面（ShellResult、
+fail-closed、迁移 ids）平台无关；方言实验串在异平台按预期不成立（断言不在 runner 而在分区后
+的 JUnit 面）。本腿为「同一载荷两平台同源」的对照证据。
+
+== 14. 边界与未测项（诚实登记） ==
+
+- Windows 侧未跑：真归档冒烟（jh.bat --help/--verify + 受限命令拒写）与 locale 修复端到端
+  → 归 S-c；CI windows job 属 S-c（分区完成后才开，增强 1 顺序依赖已满足）。
+- pwsh 错误文本地化随宿主语言包而异：本机为英文（leg9 replacementChars=0），GBK 乱码面以
+  cmd 负对照（leg9b）呈现；S-c 的 locale 修复复验须含 zh-CN 形态（后续表监视项）。
+- 进程树清理未覆盖：多级（>2 层）孙进程与 Win 服务宿主进程形态（本次两形状 = 同控制台与新
+  控制台窗口，皆过）；Job Object 备选未采纳（无需）。
+- consumer release 腿不进 CI（公网依赖不作门禁，it23 裁定沿用）；本档为本地真跑。
+- 全量 package 的 586/573 差值口径：按模块汇总行统计（30 模块）；不逐项追平单例差。
+
+== 附录 A：VM 收官轮原始日志全文（GBK→UTF-8；行尾 CR/尾随空白已去） ==
+
+（源：C:\jh\mx\sb\all.txt，pull 回读转码；下同）
+
+[env] run-date 2026/09/28 周一 16:45:16.12
+win-088t9s8v0lt\j'h
+活动代码页: 936
+
+Microsoft Windows [版本 10.0.26200.8037]
+[env] java
+openjdk version "25.0.4.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Microsoft-14951896 (build 25.0.4.1+1-LTS)
+OpenJDK 64-Bit Server VM Microsoft-14951896 (build 25.0.4.1+1-LTS, mixed mode, sharing)
+[env] pwsh-probe-before-install
+信息: 用提供的模式无法找到文件。
+[env] where-pwsh-exit=1
+系统找不到指定的文件。
+[env] pwsh-exe-exists-exit=1
+[leg0a] argv leg pre-install (pwsh truly absent) 16:45:16.39
+[leg:argv] begin
+[argv] os.name=Windows 11
+[argv] ShellUnavailableException=shell interpreter unavailable: pwsh (PowerShell 7) not found on PATH — install it (winget install Microsoft.PowerShell) or run with --docker (the container backend needs no host shell)
+[argv] verdict=FAIL-LOUD pwsh-absent
+[leg:argv] PASS
+[leg0a] exit=0
+[leg0h] treehash vm-side payload classes
+[leg:treehash] begin
+[treehash] root=classes files=66 sha256=83a09b172f7b4b54f487e8685787228b58c4bc9748d9d4849c65735510f398e9
+[leg:treehash] PASS
+[leg0h] exit=0
+[leg0i] treelist vm-side payload classes
+[leg:treelist] begin
+[treelist] root=classes files=66
+[treelist] io/javanatic/harness/kernel/brand/Id$Brand.class ebe4c108b8a519d9b1e76ff7dbfe6fb29c062ce41712294a10f172ac77576323
+[treelist] io/javanatic/harness/kernel/brand/Id.class 283d99ffb81d49a6442cc90146557c2a305592f90cfd6bc86f34e5b9b429d2c9
+[treelist] io/javanatic/harness/kernel/events/EventKey$Mode.class 4ddd482fd035392c337dbcf8fb4f81012765133e64a3bfe807a7cbca019a7983
+[treelist] io/javanatic/harness/kernel/events/EventKey.class 6a65010e47bf590511f0616f288ecfaa5b96cfd1b96647936fb18d43222371c3
+[treelist] io/javanatic/harness/kernel/events/EventListener.class dc68a01f44634f5d0b802bd331730dcfddfa8758c24f84c26a73f6358facdd54
+[treelist] io/javanatic/harness/kernel/events/Events$Registration.class 0deac07a516a238b953f623b3dd85b67446c5af0aa633c5cc00c2c5a32c19805
+[treelist] io/javanatic/harness/kernel/events/Events.class 524379cfb055d5cad13407a9b474ea567236794931cdfe0a1bbe98938702a743
+[treelist] io/javanatic/harness/kernel/events/Next.class 9c1b663d8af18d502505c3895a89f11fc7e65f2019515508028f67afb9e37bf9
+[treelist] io/javanatic/harness/kernel/events/ScopedEvents.class d9391594ae2417f1390a938811d013b650ebac233c878d08365eca02d9619d08
+[treelist] io/javanatic/harness/kernel/events/ScopedEventsImpl.class 370e841dcd00c317709993ec0514401aa17287f6027f0ff3fbd8809adf38e611
+[treelist] io/javanatic/harness/kernel/events/WaterfallArgs.class d0f584c9f2be4df7bf5505503b0228dee201a1e9b7b3189cbd62fad6ceb88306
+[treelist] io/javanatic/harness/kernel/events/WaterfallListener.class 73348ca608519972e540ba272980955c32c69a798bddeb3ac2afd020adf3dcce
+[treelist] io/javanatic/harness/kernel/plugin/Plugin.class e8f4ec759a4cea5ed3d040884f83022385258d07b65775a24bb0abcad2c3c0f6
+[treelist] io/javanatic/harness/kernel/plugin/PluginLoader.class 31dbd4837040002a2555317f27d53c03b7f475d50cd352952804d4c19280c13e
+[treelist] io/javanatic/harness/kernel/scope/Disposable.class 491c292b1afb3dbcc021119a549be209f6778fcfe2a59658bca793ebb61e53a9
+[treelist] io/javanatic/harness/kernel/scope/Effect.class d6c0a5b3c4356e73d34e3e1948f4d726cb3754dd7ef508174eec7490048e37b5
+[treelist] io/javanatic/harness/kernel/scope/PluginScope.class 010a393174df0724440180e4f75f3f6481864e1b456b8ad2f7b6e8ea5c999060
+[treelist] io/javanatic/harness/kernel/scope/Runtime.class 44bcca8751bd98083386ed5a1a3e7ccd3c1284f829ff340e14bbf88fb7414320
+[treelist] io/javanatic/harness/kernel/scope/Scope.class e4fe9fc83262d43e841c2a70e7ed7659ceaf35e91ce3fc75d36cbd1f37f00b44
+[treelist] io/javanatic/harness/kernel/scope/ScopeImpl$Status.class 20059a235e9e5140bb8d95a5f4eb5bce320225cf91af02eae98c8e80e7755558
+[treelist] io/javanatic/harness/kernel/scope/ScopeImpl.class 68215ddca5e9e5cfbac2980fff2045cc858c369e3dab6724a3b90659e6d69c4a
+[treelist] io/javanatic/harness/kernel/scope/ServiceKey.class ffe42ed6b966b2206259082f11eee7d542ea95fd2a3eb703f83a6f3e150a6cbe
+[treelist] io/javanatic/harness/kernel/scope/ServiceNotAvailableException.class 45de281540a12d786baadc276dadabd34f6d71420f4ab601529d3a9aaf62c1e4
+[treelist] io/javanatic/harness/llm/AbortSignal.class 31c76601965a016ffeb12b8c72bf085597f221f9a6ad1334ada579e5b74e2fb0
+[treelist] io/javanatic/harness/llm/AbortedException.class 634661505666388d34dc8e9513ed295230e0e4853a1a1971d8433620c28ab637
+[treelist] io/javanatic/harness/llm/ChunkAssembly$Assembled.class 2a8edc8da5bb0fd679b48ed4cc243938dbf1877a7a389af49d278d009cdd4fc2
+[treelist] io/javanatic/harness/llm/ChunkAssembly$ToolBuilder.class 19159cb727236609b4bd81573d208378b4789596d7b11e09cafed65397ee4bff
+[treelist] io/javanatic/harness/llm/ChunkAssembly$ToolCall.class dfd00ae73a110427350d94627be161d14481ad458cf4a7a3b80ae2fd71caa23b
+[treelist] io/javanatic/harness/llm/ChunkAssembly.class bc551f9b3f7d08d187ed8cade33cc5de0bfa1b36144bccd622bc67ad60687c49
+[treelist] io/javanatic/harness/llm/FinishReason.class 67059544cd2336b101eb7aa90b8eb20787c613a7abd77f5327e3ddac3ef99205
+[treelist] io/javanatic/harness/llm/LlmAdapter.class 23c851dc4a376c06146a11d75ee2b597e0ec237e4821588caab04c15802fa7fb
+[treelist] io/javanatic/harness/llm/LlmCallConfig.class 095b565f0196a3e632687868dbc12ff361aa00bf5e1da4263e8f5a4e2f89bc3e
+[treelist] io/javanatic/harness/llm/LlmCallException$Kind.class a94a88a56a93354cbdd8a9035e777a2362eb8191cfa76f44c3158a63c2cc0bc4
+[treelist] io/javanatic/harness/llm/LlmCallException.class d4c8ca12d2811a9fca2b979b14955478d8f0647ba2014824dd861c34812173fd
+[treelist] io/javanatic/harness/llm/LlmPlugin.class bbdcc5fe0fd0b9160207489192e072ffdfb990a6452931d3e1b67abec17adb3f
+[treelist] io/javanatic/harness/llm/LlmRequest.class 1d36d3c0ba3ceabae752d30e1043b153f0b7dd2a2e21aefa5df74d985eb663a9
+[treelist] io/javanatic/harness/llm/LlmService.class a7541137a198cfe048fc2703333a3fdc4908301a8a27306d422601a0a55e53a0
+[treelist] io/javanatic/harness/llm/RoutingLlmService.class 6af6018dcd9cdfa7bab2803ea4a00092fc926e19dba6b237e85e4b42d3cc11ae
+[treelist] io/javanatic/harness/llm/StreamChunk$Delta.class 9c0074b04f8a9a0bfeacceb582f5ca0ad7831a34548020cb4706337fcb6e2dc3
+[treelist] io/javanatic/harness/llm/StreamChunk$DeltaToolUse.class 18b2e01192b4325a5d16678fed1a01ead31a5a725d441de3c56ff8b4a9b46180
+[treelist] io/javanatic/harness/llm/StreamChunk$Finish.class 3de0065aab7e7307587574b9e86d2212be6b71370651be8700e0171ff099802c
+[treelist] io/javanatic/harness/llm/StreamChunk$Usage.class d85c566d169b17de346982163f57689df782636a1728226f9a95f5009028ca82
+[treelist] io/javanatic/harness/llm/StreamChunk.class 0470f34149755d3277a0f3653a4ab5a300e38fd7bab22426e374f8398665b08d
+[treelist] io/javanatic/harness/llm/ToolSchema.class 55c356ad4d635dda66ebe57651940456ca5ecbca0a14149fded50bc11b4d453f
+[treelist] io/javanatic/harness/sandbox/sandbox/BackendStatus$NoBackend.class 63db1cdf84a7a71703cd385dc74bf23f74e2070aceece7c4f3756c083fd1f4a0
+[treelist] io/javanatic/harness/sandbox/sandbox/BackendStatus$ProbeFailed.class 2218925f72e2ee7393fadf95a5ad50a763185be5f2ead596b9238d2debd73d1d
+[treelist] io/javanatic/harness/sandbox/sandbox/BackendStatus$Ready.class fda9267f8f7c285829773574638340613561985f269c6d44bc31f2521405ed25
+[treelist] io/javanatic/harness/sandbox/sandbox/BackendStatus.class cf1d8f1cd39656e2e463c8d05dcf1f35eb287493d1b3ba29cd07adb5f6cbc577
+[treelist] io/javanatic/harness/sandbox/sandbox/ConfinedArgv.class a6442b76676377a82fdd8df50a9fc820527281e87ddf246bc42e9a441dbb6ed1
+[treelist] io/javanatic/harness/sandbox/sandbox/SandboxEnforcement.class d5e5867eabaf30f9939b6a7f61c9490bfb37b5b73fcf749517e015daa2260057
+[treelist] io/javanatic/harness/sandbox/sandbox/SandboxMode.class 3c94e3eec5aa450ae93e704b28a586b25597e396463c672d53eeb5089b388150
+[treelist] io/javanatic/harness/sandbox/sandbox/SandboxPolicy.class 7c8c6d36cc05d44e17e4e7c9d72b509375cccbc5acb7db758e344b79debe93fe
+[treelist] io/javanatic/harness/sandbox/sandbox/SandboxPolicyService.class b3bfc1fbd312df852ad6614a05f6a1928f79ca07bf15e54bff4068dcc0fe8b80
+[treelist] io/javanatic/harness/sandbox/sandbox/SandboxProvider.class 1e448d8e8071928ca1058d20df1fe36f095cced7e0daea7845056dc957779293
+[treelist] io/javanatic/harness/sandbox/sandbox/SandboxUnavailableException.class e490f9feb4e79499e88293298f23db27c20823c845a2f26cc0a6925e563a5a88
+[treelist] io/javanatic/harness/sandbox/sandbox/WritableRoots.class 466a21817897af61e40032cf97018a82a03a64997af8b626fdeee8701c39cdd1
+[treelist] io/javanatic/harness/shell/local/LocalShellExecutor$StreamDrain.class 8c95fd4b3ee2f23a501a37fdf365f79bfaaf96063abef8b961d9bc36610f30a2
+[treelist] io/javanatic/harness/shell/local/LocalShellExecutor.class acda71f1c6a1ec5db05f6c2933f7aca7d7cc6ed4b58ba56299a1918d8bd349e0
+[treelist] io/javanatic/harness/shell/local/LocalShellOptions.class 0757e147c8d9bab81c8663dae291a31e5d1a64acac968d7289410639e24f0ed6
+[treelist] io/javanatic/harness/shell/local/LocalShellPlugin.class 441d5e57963154f4b51f5f82e648f111106eb79dd78ca5db182e0ef32cf81699
+[treelist] io/javanatic/harness/shell/local/ShellPlatform.class 97eb86689f202676fc4245f076a93b407c52b4aa97146c34d9b788a9f0bb38c0
+[treelist] io/javanatic/harness/shell/shell/ShellExecutor.class bd6a2e9a01d1548ca1623478dfb50b4f9cdbc2c6b302bd944f4564de9b416983
+[treelist] io/javanatic/harness/shell/shell/ShellRequest.class cc91a6e9ab2bfa2e1f33dda69609124613868fdbf6d9ce9f6d35993b146a042a
+[treelist] io/javanatic/harness/shell/shell/ShellResult.class 4204a4addc735fdbc509c98cdebf4f13925c6042838eb52bc6de1e56326ff244
+[treelist] io/javanatic/harness/shell/shell/ShellUnavailableException.class 03e63644f6b76260cc54fe6d88c88af6eb0617349668b503c7a8776ce20f2ae1
+[treelist] module-info.class 49b493ef94ea72dd377bd31f9ab0dacbbcdb92f2aa432180fb7924c2f050b75e
+[leg:treelist] PASS
+[leg0i] exit=0
+[install] extract pwsh 7.6.6 win-arm64 16:45:16.89
+[install] tar exit=0
+C:\jh\pwsh\pwsh.exe
+[install] where-after-install exit=0
+7.6.6
+gb2312
+zh-CN
+zh-CN
+[install] version-probe exit=0
+[leg0b] argv leg post-install 16:45:20.69
+[leg:argv] begin
+[argv] os.name=Windows 11
+[argv] argv=[C:\jh\pwsh\pwsh.exe, -NoProfile, -NonInteractive, -Command, Write-Output probe]
+[argv] verdict=READY pwsh-on-path
+[leg:argv] PASS
+[leg0b] exit=0
+[leg1] exec (stdout/stderr/exit/duration/lineSeparator)
+[leg:exec] begin
+[exec] exit=3 expect=3
+[exec] stdout=hello\r\n
+[exec] stderr=oops\r\n
+[exec] durationMs=572 truncated=false denied=false
+[exec] lineSeparator=\r\n
+[leg:exec] PASS
+[leg1] exit=0
+[leg2] exitcode dialect
+[leg:exitcode] begin
+[exitcode] explicit-exit exit=7 expect=7
+[exitcode] native-no-mapping exit=1 (pwsh $LASTEXITCODE= native=9)
+[exitcode] native-mapped exit=9 expect=9
+[leg:exitcode] PASS
+[leg2] exit=0
+[leg:dialect] begin
+[dialect] env-access stdout=bare=[]\r\nenv=[passed]\r\n (POSIX $VAR 展开 / pwsh 需 $env:VAR)
+[dialect] quoting stdout=single=$env:JH_TEST_VAR\r\ndoubled=it's\r\ninterp=\r\n
+[dialect] andAnd exit=0 stdout=a\r\nb\r\n
+[dialect] redirect exit=0 bytes=780d0a size=3
+[leg:dialect] PASS
+[leg3] exit=0
+[leg4] timeout kill 16:45:25.46
+[leg:timeout] begin
+[timeout] TimeoutException=shell timeout after PT0.1S elapsedMs=184 (expect < 5000)
+[leg:timeout] PASS
+[leg4] exit=0
+[leg5] cancel kill-tree inner (same-console grandchild) 16:45:25.82
+[leg:cancel-inner] begin
+[cancel-inner] grandchild pid=9092 alive-before=true parentPid=8084 parentCmd=<none>
+[cancel-inner] after-cancel grandchild-gone=true ms=41
+[leg:cancel-inner] PASS
+[leg5] exit=0
+[leg6] cancel kill-tree detached (new-console grandchild) 16:45:26.68
+[leg:cancel-detached] begin
+[cancel-detached] grandchild pid=10460 alive-before=true parentPid=6644 parentCmd=<none>
+[cancel-detached] after-cancel grandchild-gone=true ms=40
+[leg:cancel-detached] PASS
+[leg6] exit=0
+[leg7] timeout kill-tree (grandchild swept by timeout path) 16:45:27.50
+[leg:timeout-tree] begin
+[timeout-tree] TimeoutException=shell timeout after PT3S
+[timeout-tree] grandchild pid=6440 gone-after-timeout=true
+[leg:timeout-tree] PASS
+[leg7] exit=0
+[leg8] fail-closed belt (confining without provider)
+[leg:belt] begin
+[belt] SandboxUnavailableException=sandbox mode "read-only" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined — no sandbox provider composed (compose sandbox-local before shell-local)
+[belt] markerExists=false expect=false
+[leg:belt] PASS
+[leg8] exit=0
+[leg9] encode (GBK stderr through UTF-8 decode)
+[leg:encode] begin
+[encode] native.encoding=GBK file.encoding=UTF-8 sun.jnu.encoding=GBK
+[encode] exit=1
+[encode] stderr.visible=\u001b[31;1mGet-ChildItem: \u001b[31;1mCannot find path 'C:\jh\nope-sb' because it does not exist.\u001b[0m\r\n
+[encode] stderr.replacementChars=0 (pwsh 错误文：本机为英文 ASCII，故 0)
+[leg:encode] PASS
+[leg9] exit=0
+[leg9b] encode-cmd negative control (localized GBK stderr)
+[leg:encode-cmd] begin
+[encode-cmd] exit=1
+[encode-cmd] stderr.visible=\ufffd\u04b2\ufffd\ufffd\ufffd\ufffd\u013c\ufffd\r\n
+[encode-cmd] stderr.replacementChars=6 (本地化 GBK 错误文经 UTF-8 解码 = 乱码，S-c locale 修复的动因)
+[leg:encode-cmd] PASS
+[leg9b] exit=0
+[leg10] migration ids (plugin id / module / services)
+[leg:ids] begin
+[ids] classesDir=C:\jh\mx\sb\classes
+[ids] pluginId=shell-local
+[ids] defaultMaxOutputBytes=262144
+[ids] module=io.javanatic.harness.shell.local
+[ids] provides=io.javanatic.harness.kernel.plugin.Plugin with [io.javanatic.harness.shell.local.LocalShellPlugin]
+[ids] service=io.javanatic.harness.shell.local.LocalShellPlugin
+[leg:ids] PASS
+[leg10] exit=0
+[leg11] junit windows+platform classes 16:45:32.91
+
+Test run finished after 2452 ms
+[         5 containers found      ]
+[         0 containers skipped    ]
+[         5 containers started    ]
+[         0 containers aborted    ]
+[         5 containers successful ]
+[         0 containers failed     ]
+[        12 tests found           ]
+[         1 tests skipped         ]
+[        11 tests started         ]
+[         0 tests aborted         ]
+[        11 tests successful      ]
+[         0 tests failed          ]
+
+[leg11] exit=0
+[cleanup] leftovers
+信息: 没有运行的任务匹配指定标准。
+错误: 没有找到进程 "pwsh.exe"。
+[cleanup] taskkill exit=128
+[run] end 2026/09/28 周一 16:45:36.38
+
+== 附录 B：红跑决定性片段（前史 / 缺陷现场 / 突变） ==
+
+B1 前史（首跑 16:31，zip 前导目录缺陷——取证工具自身缺陷，非产品缺陷）：
+  [leg0b] argv leg post-install 16:31:33.81
+  错误: 找不到或无法加载主类 io.javanatic.harness.shell.local.SbRunner
+  原因: java.lang.ClassNotFoundException: io.javanatic.harness.shell.local.SbRunner
+  [leg0b] exit=1 …（leg1–leg9 同形）
+  修法：zip 自 payload/ 内平铺（去 payload/ 前导），本机先解包自检后再推。
+
+B2 缺陷现场（第二跑 16:34：pwsh 已装、where 命中，leg0b 仍拒）：
+  [install] where-after-install exit=0
+  [leg0b] ShellUnavailableException=… pwsh (PowerShell 7) not found on PATH …
+  [leg0b] verdict=FAIL-LOUD pwsh-absent
+  [leg1] Exception in thread "main" …ShellUnavailableException…（后续腿同形）
+  同轮探针（16:36）决定性三行：
+  [probe] env[Path]=<C:\WINDOWS\system32;…;C:\Users\j'h\AppData\Local\Microsoft\WindowsApps>
+  [probe] get(PATH)=<…> / get(Path)=<…>
+  [probe] isRegularFile(C:\jh\pwsh\pwsh.exe)=true
+  [probe] host-argv EX=…ShellUnavailableException…
+  根因与修法 = §11；修后收官轮 leg0b READY（§3）。
+
+B3 突变（摘要，原样日志见 /private/tmp/sb 同名文件）：
+  M-Sb1/M-Sb2：LocalShellPlatformTest 1/1 失败（各自断言面）
+  M-Sb3：BUILD FAILURE（darwin 上 Windows 腿无门必红）
+  M-Sb4：ShellToolEndToEndTest 3/3 失败
+  M-Sb5 红：consumer-sample 依赖解析拒（…harness-shell-bash-local:jar:0.2.0-SNAPSHOT was not
+    found），汇总「失败项：7」；绿：还原后「失败项：0」
+  M-Sb6 红：pathEntriesIsCaseInsensitiveAcrossWindowsAndPosixKeyShapes — Expecting actual: [] to
+    contain exactly [/one, /two]，Tests run: 18, Failures: 1；绿：还原后 18/0/0/5
+
+== 15. 放行与三处放行条件（2026-09-29） ==
+S-b 停点获放行（裁定：改名迁移 / 平台分派 / 分区 / 迁移涟漪 / 消费方双腿 / VM 15 腿取证 / 突变对全部认可）。
+三处放行条件已落（docs-only，主源码零改动）：
+  ① docs/design/README.md:77「Bash-Local Provider」→「Local Provider」（3a 改名在活文档的唯一漏迁移）
+  ② AGENTS.md:21「shell 三模块」→「四模块」（docker 加入后计数已过期）
+  ③ 台账归因改写：四类分区记净状态；it19 的 assumePosix / it12.5 的 DockerShellTest 方法级门为既有
+     设施（S-b 只做改名随动 / 去 sh-xargs），不得读作 S-b 新加的门
+修正后本机聚焦复绿（非受限环境，无沙箱伪红）：
+  shell/local 18/0/0/5 + sandbox/local 70/0/0/15 + shell/tool 3/0/0/0 + shell/docker 11/0/0/0
+  + bundle/base 30/0/0/0 + examples/headless 77/0/0/0 = 209/0/0/20，BUILD SUCCESS（30.6s）
+  原样日志：/private/tmp/sb/sb-focus-regreen.txt
+
+== 附：本档对应的工作树文件（供复核） ==
+- shell/local/src/main/java/io/javanatic/harness/shell/local/ShellPlatform.java（§11 修正）
+- shell/local/src/test/java/io/javanatic/harness/shell/local/LocalShellPlatformTest.java（大小写回归用例）
+- integration/consumer-sample/pom.xml:29-34（坐标单点属性）、integration/verify-consumer.sh:83-90（release 腿覆写）
+- docs/plan/iteration-25.md 修正表（S-b 行）

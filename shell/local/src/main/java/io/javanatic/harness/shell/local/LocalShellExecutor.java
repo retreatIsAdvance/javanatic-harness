@@ -1,4 +1,4 @@
-package io.javanatic.harness.shell.bash.local;
+package io.javanatic.harness.shell.local;
 
 import io.javanatic.harness.llm.AbortedException;
 import io.javanatic.harness.llm.AbortSignal;
@@ -21,7 +21,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * 本机 bash 执行：`bash -c <command>`，有界直跑。生产语义：
+ * 本机 shell 执行：argv 由 {@link ShellPlatform} 按平台分派（POSIX = bash -c，
+ * Windows = pwsh -Command），有界直跑。生产语义：
  * <ul>
  *   <li>取消/超时 = 击杀进程树（{@code ProcessHandle.descendants()} 先于本体；
  *       快速退出进程已脱管的孙进程杀不到——真隔离归 sandbox 切片）</li>
@@ -30,7 +31,7 @@ import java.util.concurrent.TimeoutException;
  *   <li>取消经 onCancel 即时击杀 + 等待循环轮询 checkAbort 双保险</li>
  * </ul>
  */
-final class LocalBashExecutor implements ShellExecutor {
+final class LocalShellExecutor implements ShellExecutor {
 
     /** 等待分片：轮询 checkAbort 的兜底粒度。 */
     private static final long WAIT_SLICE_MS = 20;
@@ -38,24 +39,31 @@ final class LocalBashExecutor implements ShellExecutor {
     /** 排水线程收尾上限：进程死后流关闭，正常瞬时完成。 */
     private static final long DRAIN_JOIN_MS = 5000;
 
-    private final BashLocalOptions options;
+    private final LocalShellOptions options;
     private final SandboxProvider sandbox;
+    private final ShellPlatform platform;
 
     /** @param sandbox 沙箱 provider（null = 组合未提供——受限请求时 fail-closed 抛出） */
-    LocalBashExecutor(BashLocalOptions options, SandboxProvider sandbox) {
+    LocalShellExecutor(LocalShellOptions options, SandboxProvider sandbox) {
+        this(options, sandbox, ShellPlatform.host());
+    }
+
+    /** 测试注伪：对平台 argv 形状断言，免真宿主依赖。 */
+    LocalShellExecutor(LocalShellOptions options, SandboxProvider sandbox, ShellPlatform platform) {
         this.options = options;
         this.sandbox = sandbox;
+        this.platform = platform;
     }
 
     @Override
     public ShellResult execute(ShellRequest request, AbortSignal signal) throws Exception {
         Objects.requireNonNull(signal, "signal");
-        List<String> argv = new ArrayList<>(List.of("bash", "-c", request.command()));
+        List<String> argv = new ArrayList<>(platform.argv(request.command()));
         List<String> denialSignatures = List.of();
         if (request.policy().confining()) {
             if (sandbox == null) {
                 throw new SandboxUnavailableException(request.policy().mode(),
-                    "no sandbox provider composed (compose sandbox-local before shell-bash-local)");
+                    "no sandbox provider composed (compose sandbox-local before shell-local)");
             }
             ConfinedArgv confined = sandbox.confine(argv, request.policy());
             argv = confined.argv();
@@ -75,7 +83,7 @@ final class LocalBashExecutor implements ShellExecutor {
                 signal.checkAbort();
                 if (System.nanoTime() >= deadline) {
                     killTree(process);
-                    throw new TimeoutException("bash timeout after " + request.timeout());
+                    throw new TimeoutException("shell timeout after " + request.timeout());
                 }
                 process.waitFor(WAIT_SLICE_MS, TimeUnit.MILLISECONDS);
             }
@@ -125,7 +133,7 @@ final class LocalBashExecutor implements ShellExecutor {
         private StreamDrain(InputStream in, long maxBytes) {
             this.in = in;
             this.maxBytes = maxBytes;
-            this.thread = Thread.ofVirtual().name("jh-bash-drain").unstarted(this::run);
+            this.thread = Thread.ofVirtual().name("jh-shell-drain").unstarted(this::run);
         }
 
         static StreamDrain start(InputStream in, long maxBytes) {

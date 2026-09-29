@@ -25,6 +25,13 @@
         <maven.compiler.release>25</maven.compiler.release>
         <!-- 版本单点：0.1.0 = Central 发布件；0.x.0-SNAPSHOT = 工作树 install 的候选件 -->
         <harness.version>0.2.0-SNAPSHOT</harness.version>
+        <!--
+          shell provider 坐标单点（it25 S-b 改名 harness-shell-bash-local → harness-shell-local）：
+            候选腿 = 工作树 install 的新坐标（默认值）
+            发布腿 = Central 0.1.0 只存在改名前的旧坐标，verify-consumer.sh 以
+                     -Dharness.shell.artifactId=harness-shell-bash-local 覆写（两条腿同源源码）
+        -->
+        <harness.shell.artifactId>harness-shell-local</harness.shell.artifactId>
     </properties>
 
     <dependencies>
@@ -94,7 +101,7 @@
         </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
-            <artifactId>harness-shell-bash-local</artifactId>
+            <artifactId>${harness.shell.artifactId}</artifactId>
             <version>${harness.version}</version>
         </dependency>
         <dependency>
