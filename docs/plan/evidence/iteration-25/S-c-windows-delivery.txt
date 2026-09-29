@@ -218,11 +218,15 @@ E-native（pwsh -ErrorAction Stop 拒写）：exit=1，stderr GBK 可解（含 A
 1. D4（landlock /dev/null 实测）：事实唯 CI 首轮可出——本机无 landlock 宿主；ubuntu job
    断言清单已列入该用例名（「真跑了且没跳过」），选项 A/B 仍待 CI 事实后终裁。
 2. CI 首跑观察项（首轮 CI 出事实，不做预判）：
-   - windows-latest 上低完整性令牌/探针可用性（job 第 2 步硬门即此事实面）；
+   - windows-latest 上低完整性令牌/探针可用性（job 第 2 步硬门即此事实面）；**已回填
+     （六跑 run 36534900915）：探针步真跑 exit 0 + `windows-acl: ready — low integrity
+     token (S-1-16-4096) … PARTIAL (…)` 结论行（见 §13）**；
    - windows-latest 是否允许非提权建符号链接——影响 LocalFsTest 的 4 组建链用例
      （VM 侧 admin 宿主真跑绿；HostileInstructionsTest 的建链腿已按先例 POSIX 门）；
    - windows 归档命名 windows-${os.arch}：GH x64 runner ⇒ windows-amd64（VM ARM64 侧为
-     windows-aarch64，两归档同构、仅架构面不同）。
+     windows-aarch64，两归档同构、仅架构面不同）。**已回填（六跑）：`javanatic-harness-
+     0.2.0-SNAPSHOT-windows-amd64.{tar.gz,zip}` 真构建 + 归档冒烟解压真跑 + upload
+     `javanatic-harness-windows-amd64`（ID 11018380547，72,753,440 B）（见 §13）**。
 3. 挂账（本迭代不做，勿顺手动）：matchesDialect / StreamDrain 去重抽取；ShellPlatform
    enum/sealed 化；ShellToolPlugin `tool` 改名；windows-acl 两洞消除（洞 2 = NTFS 硬链接
    别名越界，0.2 不做既定，当前如实外显）。
@@ -282,6 +286,8 @@ D4 事实与终裁（ubuntu job 真跑，逐字）：
      HostileInstructionsTest 建链腿已按先例 POSIX 门）；
   ③ 归档名 windows-${os.arch}：GH x64 runner ⇒ windows-amd64（VM ARM64 侧为 windows-aarch64，
      两归档同构、仅架构面不同）。
+  （①③ 已回填——六跑 run 36534900915，见 §7 与 §13；② 建链特权面维持环境口径：CI runner
+   用户为 `runneradmin`，非「非提权用户」语境，不出此面事实。）
 
 == 10. CI 二/三跑事实（run 36517435784 / 36526729984，head 9e7308c / 7bcfa5e，2026-09-29）与红腿裁决（断言面修复，两段） ==
 
@@ -488,3 +494,50 @@ access，探针半绿）；C（.cmd 包装仿 VM 形态）弃——笨重且背�
 首验——e2e 断言（surefire 点名 14 腿）/ jlink 冒烟（jh.bat --help/--verify + windows-acl
 落点行）/ 归档冒烟（zip 解压即跑）/ upload（windows zip+tar.gz）。红面若仍落在纯 CI
 脚本/打包链且产品零涉，按裁决链就地修复+推送连跑；产品面红必停。
+
+== 13. CI 六跑全绿（run 36534900915，head 0a350a6，2026-09-29）：windows 全 8 步首验 + 观察项①③回填 ==
+
+触发：0a350a6 push（五跑红腿修复：step 5 实参数组 + splat）。run 结论 success
+（created 07:08:34Z → updated 07:11:32Z）。三 job 结论（gh api 逐字）：
+  [build  ] success 07:08:37Z → 07:11:31Z（2m54s；15 步全绿——含 bwrap/landlock 探针、
+             docker 镜像预置、landlock+docker 点名断言步、归档冒烟容器步、候选腿）
+  [windows] success 07:08:37Z → 07:11:31Z（2m54s；8 步全绿——六跑为本 job 全链首验）
+  [macos  ] success 07:08:40Z → 07:09:44Z（1m4s；Build and test + jlink 冒烟绿）
+
+windows job 逐步骤事实（本 job 首次全链走完；行号取自本地下载件）：
+  1 "Build and test"：BUILD SUCCESS 46/46（Total time 02:20 min；dist-jh 21.435 s，行
+    3532/3534）——jlink 镜像与 `javanatic-harness-0.2.0-SNAPSHOT-windows-amd64.tar.gz` /
+    `.zip` 双归档在 runner（x64）上真构建（行 3482-3483）。关键类：WindowsAclTest
+    22/0/0/2；SandboxLocalTest 32/0/0/18；LocalShellExecutorWindowsTest 5/0/0/0；
+    LocalFsTest 30/0/0/1（唯一跳 = `@EnabledOnOs(MAC)` 的 /tmp 别名腿）；DockerShellTest
+    11/0/0/7（六宿主门 + daemonUnreachable OS 门——与四跑裁决的预测一致）。
+  2 探针步（修后形态首跑，观察项①回填）：脚本以实参数组 + splat 形态入日志（行
+    3541-3555），stderr 逐字：
+      Access is denied.                                       （真拒写腿，行 3561）
+      windows-acl: ready — low integrity token (S-1-16-4096) + recursive per-object
+        labels; enforcement PARTIAL (writable surface = every low-labeled object on
+        this host; labeling follows hardlinks, so an object linked into the tree is
+        labeled too, even outside it; labels persist, no revert in 0.2)  （行 3562）
+    exit 0 + ready/PARTIAL 断言过 ⇒ windows-latest 上低完整性令牌真建、真限、真拒写。
+  3 e2e 点名断言步（首验）：三份 surefire XML「真跑了且没跳过」（行 3602-3604）——
+      SandboxLocalTest 2 case(s) / WindowsAclTest 7 case(s) /
+      LocalShellExecutorWindowsTest 5 case(s)
+  4 jlink 冒烟（首验）：`jh.bat --help` exit 0；`--verify` 打出落点行（行 3697）：
+      INFO: sandbox: confining policy "workspace-write" is enforced by backend
+        "windows-acl" (enforcement PARTIAL); windows-acl: ready — …（同 §3 落点行）
+    Select-String 断言过。
+  5 归档冒烟（首验）：`javanatic-harness-*-windows-*.zip` 命中（即 windows-amd64）→
+    Expand-Archive → `jh.bat --help`/`--verify` 同口径断言过（落点行 3800）——VM 侧
+    A–H 腿的 CI 孪生（「归档解压即跑」真腿）。
+  6 upload-artifact（首验）：`javanatic-harness-windows-amd64` 上传完成（Artifact ID
+    11018380547，72,753,440 B，sha256 d712c5a5…；行 3839-3840）。
+
+观察项回填（§7 第 2 条 / §9 二跑观察项）：
+  ① 探针可用性：已回填——见上 2（首验真跑 + ready/PARTIAL 行）。
+  ③ 归档命名：已回填——见上 6（windows-amd64 真构建 + 真上传）。
+  （② 建链特权面维持环境口径：runner 用户为 `runneradmin`，非「非提权用户」语境。）
+
+判据核对（五跑红腿裁决第 4 条绿分支「六跑全绿」三事）：
+  - 勾验收两行（已支持平台回归 / 全量 package 绿）→ 同批台账 docs 提交 ✓
+  - §7 ①③ 回填 ✓（本档 §7/§9 注 + 本节）
+  - 进 S-d 征询 = 下一停点（待用户放行；push 亦待新鲜点名授权）
