@@ -285,10 +285,8 @@ jobs:
       # 测试平台分区与 windows 腿一致：Windows 腿真跑，POSIX 腿按 @EnabledOnOs 跳——
       # 含 shell/docker 容器 e2e 六条（台账「不做 Windows 容器」）与 mac-only 用例；
       # 跳过面由下面两条断言步兜底（防静默绿）。
-      # 【侦察跑临时形态——仅本 scratch 分支】ignored 测试失败以一次收全清单（首跑即首验面·裁决第 3 条）；
-      # master 落地形态不带该 flag（失败即停）。
       - name: Build and test
-        run: mvn -B -ntp package '-Dmaven.test.failure.ignore=true'
+        run: mvn -B -ntp package
       # 前置硬门：windows-acl 助手必须在本 runner 上真跑通——同 windows 腿之理，否则
       # Windows 腿的 e2e（真拒写 → sandboxDenied 命中）会静默跳过。走 jlink 镜像的模块
       # 形态真跑助手 --probe（真建低完整性令牌 + 真限 + 真拒写）；诊断行原样入日志，
