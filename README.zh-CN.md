@@ -146,13 +146,21 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 
 **规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。以上未来阶段均未开工；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。
 
-**平台支持面（当前树——0.2.0 系列，尚未发布）**：macOS 与 Linux 可用（含同机沙箱）。macOS 自带 seatbelt、开箱即用。Linux 走平台链：装了 bubblewrap 用 bwrap，没装则落自带 Landlock 助手（内核 ABI ≥ 3——无须额外安装，归档自带的 JVM 先自限制再 exec 目标），两条都不可用时受限档 fail-closed，`--verify` 点名原因与出路。v0.1.0 发布只附了 macOS 归档，Linux 归档在 0.2.0 挂上 Release 之前以 CI artifact 供取件。**Windows 暂不在支持面**——同机沙箱后端（windows-acl：低完整性强制，PARTIAL 覆盖面如实登记）、shell 平台化（POSIX bash / Windows pwsh）与 Windows 归档及其 CI job 均已入 0.2.0 迭代树，归档构建与冒烟已在真 Windows 宿主验证；Windows 随 0.2.0 发布进入支持面。
+**平台支持面（0.2.0）**：macOS、Linux 与 Windows 三平台可用（含同机沙箱）——沙箱是平台候选链，取宿主上第一个可用后端：
+
+| 平台 | 后端（链） | 强制强度 | 前提 |
+|---|---|---|---|
+| macOS | seatbelt | FULL | — |
+| Linux | bwrap → landlock | FULL | 装了 bubblewrap 用 bwrap；没装则落自带 Landlock 助手（内核 ABI ≥ 3——无须额外安装）；两条都不可用则 fail-closed，`--verify` 点名原因与出路 |
+| Windows | windows-acl | PARTIAL——低完整性强制，覆盖面如实登记（见 [release notes](docs/release-notes-0.2.0.md)） | **PowerShell 7+（`pwsh`）必需**——自带 shell 经 pwsh 执行；Windows PowerShell 5.1 不支持；pwsh 缺席则执行期 fail-closed 点名 |
+
+三平台预构建归档在 [v0.2.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0)提供：macOS/aarch64 由构建宿主产出；Linux/amd64 与 Windows（amd64 / aarch64）由 CI 构建并冒烟（Linux 在干净 `ubuntu:24.04` 容器内）。
 
 R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 
 ## API 稳定面
 
-0.1.0 冻结其对外面——JPMS 导出包、seam 契约、事件 schema、插件配置键与 CLI。完整清单见 [docs/design/12-api-stability.md](docs/design/12-api-stability.md)：**0.1.x 修补不破上述任何面；破坏性变更随 0.2.0 并附 release notes 与迁移路径。**
+0.1.0 冻结其对外面——JPMS 导出包、seam 契约、事件 schema、插件配置键与 CLI。完整清单见 [docs/design/12-api-stability.md](docs/design/12-api-stability.md)：**0.1.x 修补不破上述任何面；破坏性变更随 0.2.0 并附 [release notes](docs/release-notes-0.2.0.md) 与迁移路径。**
 
 ## 许可
 

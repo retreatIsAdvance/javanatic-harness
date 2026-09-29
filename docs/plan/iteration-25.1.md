@@ -1,4 +1,4 @@
-# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 摘旗标并回 master、真跑全绿（run 36549993644，四 job 全绿 + 三件归档在案）→ **停点 A 闭合、首裁项闭合**；2026-09-29））
+# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 摘旗标并回 master、真跑全绿（run 36549993644，四 job 全绿 + 三件归档在案）→ **停点 A 闭合、首裁项闭合**；停点 B 三件套就绪、报批待放行（12 扫描 6973e2a + release notes 稿 + README×2 反转稿；2026-09-29）））
 
 模块：发布面文档（`README.md` / `README.zh-CN.md` / `docs/release.md` / `docs/design/12-api-stability.md` / `docs/design/README.md`）· 根 POM 与全仓 POM（版本翻转）· `.github/workflows/`（tag→Release 附件工作流定义）· aarch64 交付面（裁决后落地）
 
@@ -73,7 +73,8 @@
   - `docs/release-notes-0.2.0.md`（计划落点，评审可改）——0.2.0 迁移路径 + 已知残余清单。
   - tag→Release 附件工作流定义（第 6 项工作时定落点：ci.yml 增补或新 workflow）。
 - **MODIFIED**：
-  - `README.md` / `README.zh-CN.md` 平台段：Windows 由「随 0.2.0 进入支持面」反转为实况支持矩阵（seatbelt / bwrap→landlock / windows-acl PARTIAL 如实）+ pwsh 7+ 安装前提（PS 5.1 不支持）。
+  - `README.md` / `README.zh-CN.md` 平台段：Windows 由「随 0.2.0 进入支持面」反转为实况支持矩阵（seatbelt / bwrap→landlock / windows-acl PARTIAL 如实）+ pwsh 7+ 安装前提（PS 5.1 不支持）；稳定面段「release notes」补指向 `docs/release-notes-0.2.0.md` 的链接。
+  - `docs/embedding.md` §7 尾行：release notes 指针改指 `docs/release-notes-0.2.0.md`（验收路径 README → release notes → 迁移对照闭环；小同步，随本迭代入账）。
   - `docs/design/12-api-stability.md`：全量扫描核对为主；仅当发现缺登记项时补。
   - `docs/release.md`：附件自动化由「点名推迟」改为在案（第 6 项落地时）。
   - 全仓 POM：`0.2.0-SNAPSHOT` → `0.2.0`（版本翻转，机械；tag 指向该提交）。
@@ -84,7 +85,7 @@
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
 | `.github/workflows/ci.yml:142` windows job（镜像源） | 追加 `windows-arm` job：八步镜像 + 三 arch 特异点 + 归档/上传通配钉 `windows-aarch64`（已落地，真跑全绿） | ☑ |
-| `README.md:159` / `README.zh-CN.md:149` 平台段 | 平台反转 + pwsh 前提（双语同步） | ☐ |
+| `README.md:159` / `README.zh-CN.md:149` 平台段 | 平台反转 + pwsh 前提（双语同步） | ☑（矩阵表 + pwsh 7+ 必需/5.1 不支持/缺席执行期 fail-closed；旧措辞全局清零，S-d §7） |
 | `docs/design/12-api-stability.md` §2 导出面 | 全量扫描逐条核对（缺口随扫随补）——33/33 模块 + 37/37 包相符；三处补丁：§4 补 `ProjectInstructions` 缺登记、§5 presets 行删多登记 `presets` 键、§6 补 `-h` alias（S-d §1–§5） | ☑ |
 | `docs/release.md` §5 注（tag→Release 点名推迟） | 附件自动化在案化（定义落盘） | ☐ |
 | 根 POM `version` + 全仓 POM | `0.2.0-SNAPSHOT` → `0.2.0`（+ 干跑预检） | ☐ |
@@ -94,7 +95,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **通过**（2026-09-29——真跑 run `36549993644` 四 job 全绿、windows-arm 12 步全过、归档三件在案；选 2 落证、首裁项闭合；S-a §12） |
-| B｜发布面成文（对外承诺面：12 扫描结论 + release notes + README×2 反转稿） | `12-api-stability.md` §2 / `release-notes-0.2.0.md` / README×2 | 未到 |
+| B｜发布面成文（对外承诺面：12 扫描结论 + release notes + README×2 反转稿） | `12-api-stability.md` §2 / `release-notes-0.2.0.md` / README×2 | **报批**（2026-09-29——三件套就绪：12 扫描 6973e2a + release notes 稿（v0.1.0 正文格式对齐、出口语义差集实读核对）+ README×2 反转稿；S-d §6/§7；待放行） |
 | C｜收口前（版本翻转 + 干跑 + 附件工作流定义落盘后，发布执行交接前） | 全仓 POM / `release.md` / 附件工作流 / 全量证据 | 未到 |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-25.1/）
@@ -109,8 +110,8 @@
 （放行 2026-09-29 启用；勾选与证据随工作推进落此。）
 
 - [x] 12 全量扫描：导出面逐条核对、无未登记破坏面——33 模块 / 37 包与 §2 表逐行相符；破坏面 = v0.1.0..HEAD 唯一 `!` 提交 `5d18585`（§5 + embedding §7 已在案）；三处补丁随扫随落（§4 补 `ProjectInstructions`、§5 删 `presets` 多登记键、§6 补 `-h` alias；S-d §1–§5）
-- [ ] release notes 成文（含已知残余清单）
-- [ ] README×2 平台段与 pwsh 前提与实况一致
+- [x] release notes 成文（含已知残余清单）——`docs/release-notes-0.2.0.md`（v0.1.0 Release 正文格式对齐；破坏性变更表含出口语义首行——v0.1.0 实读核对；已知残余 7 条在案；S-d §6）
+- [x] README×2 平台段与 pwsh 前提与实况一致——支持矩阵三平台 + pwsh 7+ 前提；旧措辞全局清零（S-d §7）
 - [x] aarch64 交付裁决落地（选 2：双 arch CI job 事实源；降级预授权 = 选 3）——真跑 run `36549993644` 四 job 全绿、windows-arm 12 步全过、`javanatic-harness-windows-aarch64` 归档 68,512,445B 在案（S-a §12）；降级选 3 未行使（授权条件未触发）
 - [ ] tag→Release 附件工作流定义落盘（真执行用户侧）
 - [ ] 版本翻转与发布前预检（干跑绿；真 deploy/tag/Publish 用户侧）

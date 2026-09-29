@@ -132,3 +132,60 @@ it17–it25 其余增量/迁移条目逐条在案核验（对照实现实况）�
   it24 BackendStatus.Ready 签名扩展 + 链仲裁 + sandboxLine/emitSandboxObservations §3 ✓；
   it25 UTF-8 输出固定 §6 ✓。
 结论：无未登记破坏面；三处补丁（GAP-1/2/3）随本轮提交落 12 文档。
+
+== 6. release notes 0.2.0 成文（docs/release-notes-0.2.0.md） ==
+
+落点：新文件 `docs/release-notes-0.2.0.md`（GitHub Release 正文采用稿；头注标明「评审
+可改；发布执行属用户侧」）。格式对齐 v0.1.0 Release 正文——公开 API 实读（EXIT=0）：
+
+命令：
+  curl -sS https://api.github.com/repos/retreatisadvance/javanatic-harness/releases/tags/v0.1.0
+关键输出行：
+  name: "javanatic-harness 0.1.0"；body = 英文导语 + 中文 ## Highlights / ## Get it / ## Docs；
+  assets: javanatic-harness-0.1.0-macos-aarch64.{tar.gz,zip}
+0.2.0 稿同构：英文导语 + 升级必读（破坏性变更表 + 纯增量）+ Highlights + 平台支持 +
+  Get it + 已知残余 + Docs。
+
+事实核对①：**出口语义差异**（升级面首行）——v0.1.0 源码实读（EXIT=0）：
+命令：
+  git show v0.1.0:examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java
+关键输出行：
+  任务路径 `agent.followup(...); agent.whenIdle().join(); ... return 0`——失败/取消一律
+  exit 0、无 stdout 契约（事件清单经 LOG 走 stderr）；run() 仅 0（verify/任务）、1
+  （VerifyFailedException）、2（usage/key 缺）。⇒ 3/4/5 全部为 0.2.0 新增（it17/it18/it22），
+  稿内列为破坏性变更表首行（升级脚本判读面）。
+
+事实核对②：**CLI 旗标差集**——v0.1.0 旗标集 15 项实读（--policy/--provider/--model/
+  --base-url/--api-key-env/--api-key/--profile/--workspace/--approval/--budget/--image/
+  --resume/--docker/--help/-h，git show 同一文件 :178-210）；树当前 16 项（§4 面）⇒
+  新增 = `--approval-timeout=`（it22 S-c）、`--sessions[=<N>]`（it22 S-a）；REPL 命令
+  0.1.0 = /help /exit，新增 `/cancel`（it22）——稿内「纯增量」节如实分列。
+
+事实核对③：迁移表逐行来源（12 在案条目）：审批 seam 两签名 + stdin(Duration) = §3:78/80；
+  BackendStatus.Ready = §3:84；键白名单 = §5:118；workspace 同源 = §5:112；工具面 8→10 与
+  shell 坐标族 = embedding §7:161-162；退出码表 = §6。已知残余 7 条来源：05 §6（两洞、
+  /dev/null D4-A、网络/限额、locale）+ ci.yml:97 注释（NixOS 形态）+ embedding §1（热插拔）。
+  内部链接为 docs/ 内相对路径（design/…、embedding.md、release.md）——README/notes/迁移对照
+  三件套互链闭合。
+
+== 7. README×2 平台反转 + pwsh 前提（口径反转纪律） ==
+
+编辑前旧措辞全局 grep（EXIT=0 命中 4 处正文）：
+  README.md:42/:159、README.zh-CN.md:42/:149（模式：暂不在支持面|not in the support
+  surface|joins the support surface|进入支持面|随 0.2.0|with the 0.2.0 release）。
+编辑后同 grep（EXIT=0）：正文命中清零；仅剩 it25.1 台账自身（工作项引文，属台账记录，
+  不为旧措辞残留）。:42 两处为归档段「Linux 附件随 0.2.0 挂上 Release」——发布后语义仍真，
+  保留未动。
+
+反转落点：README.md:159 / README.zh-CN.md:149 —— 旧段全文（「current tree — not yet
+released」+「Windows is not in the support surface yet」）⇒ 支持矩阵表（macOS seatbelt
+FULL / Linux bwrap→landlock FULL / Windows windows-acl PARTIAL 如实）+ 归档来源段。
+pwsh 前提双写明写：**PowerShell 7+（pwsh）必需——Windows PowerShell 5.1 不支持；
+  pwsh 缺席则执行期 fail-closed 点名**（S-0 真机事实；05 §6 execute 期 fail-loud 语义）。
+
+附带同步（验收路径闭环）：README×2 API 稳定面段「release notes」改为指向
+  docs/release-notes-0.2.0.md 的链接；embedding.md §7 尾行指针改为「发布件升级路径见
+  release.md，发布说明与已知残余见 release-notes-0.2.0.md」。
+
+包内提请（未改，待裁决）：README×2 Roadmap 行 `17–25 (planned)` 与平台段现在时口径
+  的张紧——真发布前不翻转（0.2.0 尚未 Publish）；停点 C/发布后翻 ✅ 或由用户裁决。

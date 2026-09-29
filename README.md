@@ -156,13 +156,21 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 
 **Planning principle**: maintainer-led scenarios, real-task acceptance, and community feedback for calibration—not a prerequisite to begin. These future stages have not started; scope, dependencies, and acceptance gates live in the overall plan, with each iteration requiring its own scope confirmation and review checkpoints.
 
-**Platform support (current tree — 0.2.0 series, not yet released)**: macOS and Linux, including on-host sandboxing. macOS ships seatbelt and works out of the box. On Linux the platform chain takes the first usable backend: bwrap when the host has bubblewrap installed, otherwise the bundled Landlock helper (kernel ABI ≥ 3 — nothing extra to install; the archive's own JVM self-confines and then execs the target), and hosts where neither is usable fail closed with a named reason and a way out in `--verify`. The v0.1.0 release shipped the macOS archive only; Linux archives ride every CI run as an artifact until 0.2.0 attaches them to a Release. **Windows is not in the support surface yet** — the on-host sandbox backend (windows-acl; low-integrity enforcement with its PARTIAL coverage registered honestly), the shell platform split (POSIX bash / Windows pwsh), and the Windows archive with its CI job have landed in the 0.2.0 iteration tree, with the archive build and smoke verified on a real Windows host. Windows joins the support surface with the 0.2.0 release.
+**Platform support (0.2.0)**: macOS, Linux and Windows, including on-host sandboxing — the sandbox is a platform chain, and the first usable backend on the host wins:
+
+| Platform | Backend (chain) | Enforcement | Prerequisite |
+|---|---|---|---|
+| macOS | seatbelt | FULL | — |
+| Linux | bwrap → landlock | FULL | bubblewrap if installed; otherwise the bundled Landlock helper (kernel ABI ≥ 3 — nothing extra to install); neither usable → fail closed, named reason and a way out in `--verify` |
+| Windows | windows-acl | PARTIAL — low-integrity enforcement, coverage registered honestly (see [release notes](docs/release-notes-0.2.0.md)) | **PowerShell 7+ (`pwsh`) required** — the shell runs through pwsh; Windows PowerShell 5.1 is not supported; pwsh missing → fail closed at execution time with a named reason |
+
+Prebuilt archives for all three platforms are on the [v0.2.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0): macOS/aarch64 built on the build host, Linux/amd64 and Windows (amd64 / aarch64) built and smoke-tested by CI (Linux in a clean `ubuntu:24.04` container).
 
 R1–R4 tests travel with each slice, never backfilled at the end ([10-testing.md](docs/design/10-testing.md)).
 
 ## API stability
 
-0.1.0 freezes its public surface — JPMS exports, seam contracts, the event schema, plugin config keys, and the CLI. The full list is [docs/design/12-api-stability.md](docs/design/12-api-stability.md): **0.1.x patch releases do not break it; breaking changes go to 0.2.0 with release notes and a migration path.**
+0.1.0 freezes its public surface — JPMS exports, seam contracts, the event schema, plugin config keys, and the CLI. The full list is [docs/design/12-api-stability.md](docs/design/12-api-stability.md): **0.1.x patch releases do not break it; breaking changes go to 0.2.0 with [release notes](docs/release-notes-0.2.0.md) and a migration path.**
 
 ## License
 
