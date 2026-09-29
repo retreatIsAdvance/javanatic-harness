@@ -425,3 +425,66 @@ heredoc/缩进面风险。聚焦复绿（本机 darwin，daemon 24.0.6 + 镜像�
 五跑预判：windows DockerShellTest 应为 11/0/0/7（6 条宿主门 + daemonUnreachable 的
 OS 门；跨平台 4 腿照跑）；红只可能来自打包链四步首验（jlink amd64 / jh.bat / 归档冒烟 /
 upload）。
+
+== 12. CI 五跑事实（run 36530292970，head d359f18，2026-09-29）与 windows 探针步 pwsh 实参裁决（方向 A） ==
+
+Job 结论：build ✓（06:17:13→06:20:18，3m5s，12 步全绿——含 bwrap 探针步的 AppArmor
+降级重试路径：首试失败 → 旋钮重试通过，设计内行为）；macos ✓（1m11s）；windows ✗
+（06:17:13→06:19:53，2m40s）。windows job 步骤面：1–3 绿；**4 "Build and test" 首次进绿**
+（BUILD SUCCESS，02:18 min，46/46 模块）；5「Pre-flight sandbox probe (windows-acl)」红
+（首跑即红——前四跑均止于测试步，此步从未执行）；6–9 全 skipped（e2e 断言 / jlink 冒烟 /
+归档冒烟 / upload）。日志：/private/tmp/it25-run5-windows.log 行 3530-3538（模块尾部 +
+BUILD SUCCESS）/ 3557-3559（红）。
+
+正面事实（四跑修复全部坐实）：
+- windows「Build and test」首绿：46/46 模块 SUCCESS，含 dist-jh SUCCESS [21.626 s]
+  （moditect create-runtime-image + assembly archive-runtime-image——windows jlink 镜像与
+  zip/tar.gz 双归档在 runner 上真构建）；11 个从未跑过的模块全绿（interaction-*/
+  bundle-base / examples-headless 12.586 s 等）。
+- windows DockerShellTest 11/0/0/7（六条 POSIX 门 + daemon 门先例如预测跳过；跨平台 4 腿
+  照跑）；WindowsAclTest 22/0/0/2；sandbox/local 模块全绿。
+- ubuntu build job 断言步（扩展版）在 CI 验证通过，两条 leg 行原样落日志：
+    leg ran for real: sandbox/local/target/surefire-reports/TEST-io.javanatic.harness.sandbox.local.SandboxLocalTest.xml -> landlockDevNullWriteIsMeasuredForAdjudication, landlockReadOnlyDeniesRealWriteWithDialectMarker, landlockWorkspaceWriteAllowsInsideAndDeniesOutside
+    leg ran for real: shell/docker/target/surefire-reports/TEST-io.javanatic.harness.shell.docker.DockerShellTest.xml -> abortKillsInContainerProcessGroup, concurrencyPairedAndCreateOnce, dangerModeOpensContainerRootAndWorkspace, mountSurfaceMatrixWorkspaceWriteAndReadOnly, scopeCloseRemovesContainersAcrossWorkspaces, timeoutKillsInContainerProcessGroup
+
+新红（第 5 步）逐字：
+  Error: Could not find or load main class .encoding=UTF-8
+  Caused by: java.lang.ClassNotFoundException: /encoding=UTF-8
+  ##[error]Process completed with exit code 1.
+
+机制（CI 脚本面；产品零缺陷）：runner 以 pwsh 执行该步（log 行 3552：`shell: C:\Program
+Files\PowerShell\7\pwsh.EXE -command ". '{0}'"`）。pwsh 参数 token 解析把未引号实参
+`-Dstderr.encoding=UTF-8` 在点号处截断为两个实参 `-Dstderr` + `.encoding=UTF-8`；java
+启动器把前者当无值系统属性（控制实验 `java -Dstderr -version` 正常）、把后者当主类 ⇒
+错误对。`-XX:-UsePerfData` 无点号故完好。本机精确复现：
+  java -Dstderr .encoding=UTF-8 --enable-native-access=io.javanatic.harness.sandbox.local -m io.javanatic.harness.sandbox.local/io.javanatic.harness.sandbox.local.WindowsAclExecMain --probe
+→ 与 CI 同形两行错误。ci.yml 源字节干净（hexdump：LF，非编码鬼影）；ubuntu 孪生步
+（bash，同参数，ci.yml:52）不受影响。VM 排练漏因：smoke.ps1 `Run-Leg` 把每条命令写进
+.cmd 由 cmd.exe 执行（C-probe / G2 EncProbe 两腿皆然）——从未过 pwsh 原生实参解析。
+扫查：windows job 仅第 5 步含未引号带点 token；7/8 步走 jh.bat `--help`/`--verify`（无点）。
+
+裁决（2026-09-29，用户）：**采 A**——step 5 改实参数组 + splat（单引号字面量元素；
+`$LASTEXITCODE` / Tee-Object / ready+PARTIAL 断言外层保持）。B（仅加引号）弃——治标且有
+漏引静默降级面（`--enable-native-access=…` 同样带点，若被截断则 JVM 静默失去 native
+access，探针半绿）；C（.cmd 包装仿 VM 形态）弃——笨重且背离与 ubuntu 孪生步的同形。
+
+落地（本提交）：① ci.yml step 5 实参数组 + splat + 步前注释记录 pwsh 坑与五跑实证；
+② AGENTS.md 已知坑回填一行（pwsh 带点 dash 实参截断 + 数组 splat 纪律）；③ 台账修正表行
++ 本节。
+
+机器校检（本机无 pwsh——pwsh 语义的首次真验证面 = 六跑；此处只做结构与同形校检）：
+  工具：/tmp/it25-step5-check.rb（ruby 标准库 YAML 解析 ci.yml；8 项结构断言：array
+  literal / splat call / dot token single-quoted / native-access token single-quoted /
+  module main pair single-quoted / no backtick continuation / exitcode gate /
+  ready+partial assertion；另取 windows 数组实参与 ubuntu 孪生步旗标序列比对——助手
+  类名归一化后逐位相同）
+  基线：8×OK + shape EQUAL + 两 helper 名在场 + twin untouched + steps=8 → EXIT=0
+  M1（删 `'-Dstderr.encoding=UTF-8',` 元素）→ `FAIL dot token single-quoted` +
+    `argument shape equality: DIFF` → EXIT=1
+  M2（删 `@probeArgs`：数组建而不 splat）→ `FAIL splat call present` → EXIT=1
+  还原（cp 备份）→ 8×OK + EXIT=0；shasum 前后一致（8815f34896254b00678a024bf0ca8150344133ef）
+
+六跑预判：windows 第 5 步应打出 `windows-acl: ready …PARTIAL` 探针结论行；随之 6–9 步
+首验——e2e 断言（surefire 点名 14 腿）/ jlink 冒烟（jh.bat --help/--verify + windows-acl
+落点行）/ 归档冒烟（zip 解压即跑）/ upload（windows zip+tar.gz）。红面若仍落在纯 CI
+脚本/打包链且产品零涉，按裁决链就地修复+推送连跑；产品面红必停。
