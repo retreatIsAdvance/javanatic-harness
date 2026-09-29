@@ -1,4 +1,4 @@
-# it25.1 停点 A 证据：windows-arm job 首跑（scratch 侦察跑——「首跑即首验面」·放行裁决第 3 条）
+# it25.1 停点 A 证据：windows-arm job 首跑与二跑（scratch 侦察跑——「首跑即首验面」·放行裁决第 3 条；F1 裁决后加二跑）
 #
 # 对象：CI 工作树（分支 recon/it25.1-arm-first-run，head b3cedae；C1 5a7e077 = windows-arm job
 #   镜像落盘，C2 b3cedae = 侦察跑临时形态（Build 步 -Dmaven.test.failure.ignore=true，仅
@@ -178,3 +178,50 @@ F4 | 降级选 3（0.2 只承诺 amd64）。
 已检索仓库（AGENTS.md / docs/ / .github/；词：侦察|recon|failure.ignore）与长期记忆——**未找到
 该规则的书面出处**；本轮按「内容」执行（scratch 分支临时形态）并在台账记缺口。是否回填、
 回填到哪（AGENTS.md 或 docs/），请裁决。
+
+== 10. 二跑（run 36546502989，head 02b7270 = F1 落 scratch 后；2026-09-29） ==
+
+时间线（watch log it25.1-arm-run2-watch.log 逐字）：
+  WATCH_START 09:02:33Z / RUN_ID=36546502989
+  09:02:37Z（轮询第一拍）windows-arm:completed/failure 已在列 ⇒ job 约 09:01:58Z 起、09:02:32Z 完（~34s）
+  09:05:26Z completed failure | build:completed/success, macos:completed/success,
+            windows:completed/success, windows-arm:completed/failure
+  WATCH_DONE
+  ⇒ 红仍唯一在 windows-arm；既有三腿全绿（未受 F1 改动扰动）。
+
+步表（run 2 jobs API 落盘 it25.1-run2-jobs.json；windows-arm 逐条）：
+  1 Set up job -> success · 2 checkout -> success
+  3 Run actions/setup-java@v4 -> **success**   ← F1 生效
+  4 Build and test -> **failure**              ← 红在此；5–9（探针/断言/jlink/归档/upload）全 skipped
+  17/18 Post… -> success · 19 Complete job -> success
+
+F1 绿证（job 日志 it25.1-arm2-job.log 逐字）：
+  Java 25.0.3 was downloaded
+  Creating toolchains.xml for JDK version 25 from microsoft
+  Java configuration:
+    Distribution: microsoft
+    Version: 25.0.3
+    Path: C:\hostedtoolcache\windows\Java_Microsoft_jdk\25.0.3\aarch64
+  ⇒ microsoft 发行 + aarch64 JDK 25.0.3 装配成功——与首跑证据档 §6 的解析路径预判一致。
+
+红根因（同日志逐字）——侦察 delta 自身形态缺陷（pwsh 点号截断的又一实例）：
+  ##[group]Run mvn -B -ntp package -Dmaven.test.failure.ignore=true
+  shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+  env: JAVA_HOME: C:\hostedtoolcache\windows\Java_Microsoft_jdk\25.0.3\aarch64
+  [INFO] Javanatic Harness .................................. FAILURE [  0.002 s]
+  [ERROR] Unknown lifecycle phase ".test.failure.ignore=true". You must specify a valid lifecycle
+          phase or a goal in the format <plugin-prefix>:<goal> ...
+  ⇒ pwsh 把未加引号的 `-Dmaven.test.failure.ignore=true` 在首点处截成两段：`-Dmaven`
+    （被 maven 按 -Dmaven=true 吃下）+ `.test.failure.ignore=true`（被当生命周期阶段 ⇒
+    LifecyclePhaseNotFoundException）；0.002s 即死 = 任何模块编译之前。
+    与 it25 五跑 `-Dstderr` + `.encoding=UTF-8` 同族（AGENTS.md 已知坑 pwsh 条）。
+  ⇒ 产品/测试面**未触**：红在 CI 脚本命令行解析层；landing 形态（`mvn -B -ntp package`，
+    与 windows x64 腿逐字同形）**零裸 -D token**——全 ci.yml 核过：run: 行上唯一裸 -D = 本行
+    侦察 delta（其余 -D 或在 bash 步 [line 52]、或在 pwsh 数组 splat [lines 172/303]、或为
+    -DestinationPath/-Directory 的 grep 误匹配 [lines 245/246/373/374]）。
+  ⇒ 侦察面价值核算：setup-java 装配（F1）已验绿；测试清单面未收（Build 未到编译）——
+    「一次收全清单」的收益本轮未兑现。
+
+待裁（随 packet）：R1 = 修 quoting（单引号 `'-Dmaven.test.failure.ignore=true'`）→ 侦察三跑、
+收全测试面（初判推荐——裁决序列本意即先收全清单）；R2 = 直接摘旗标、scratch 并回 master →
+真跑（fail-fast；在 VM 全 reactor 绿 + x64 腿绿的既证面下可接受，省一轮）。
