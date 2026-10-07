@@ -76,6 +76,19 @@ class HeadlessOptionsTest {
             "--profile=", "--policy=", "--verify");
     }
 
+    /** `--version`:与 --help 同形的纯增量旗标(无值、无需 key、exit 0 打印版本串)。 */
+    @Test
+    void versionFlagParsesAndUsageListsIt() {
+        assertThat(HeadlessMain.parse(new String[] {"--version"}).version()).isTrue();
+        assertThat(HeadlessMain.USAGE).contains("--version");
+    }
+
+    /** 版本串单源=构建期资源过滤(version.properties ← ${project.version});格式锚防未过滤/空资源漂移。 */
+    @Test
+    void versionConstantIsBuildInjected() {
+        assertThat(HeadlessMain.VERSION).matches("\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?");
+    }
+
     @Test
     void workspaceFlagRequiresExistingDirectory() {
         assertThat(HeadlessMain.parse(new String[] {"t", "--workspace=" + workspace}).workspace())

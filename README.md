@@ -160,11 +160,11 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 
 | Platform | Backend (chain) | Enforcement | Prerequisite |
 |---|---|---|---|
-| macOS | seatbelt | FULL | — |
+| macOS | seatbelt | FULL | Apple Silicon (aarch64 archive); no Intel Mac release yet |
 | Linux | bwrap → landlock | FULL | bubblewrap if installed; otherwise the bundled Landlock helper (kernel ABI ≥ 3 — nothing extra to install); neither usable → fail closed, named reason and a way out in `--verify` |
 | Windows | windows-acl | PARTIAL — low-integrity enforcement, coverage registered honestly (see [release notes](docs/release-notes-0.2.0.md)) | **PowerShell 7+ (`pwsh`) required** — the shell runs through pwsh; Windows PowerShell 5.1 is not supported; pwsh missing → fail closed at execution time with a named reason |
 
-Prebuilt archives for all three platforms are on the [v0.2.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0): macOS/aarch64 built on the build host, Linux/amd64 and Windows (amd64 / aarch64) built and smoke-tested by CI (Linux in a clean `ubuntu:24.04` container).
+Prebuilt archives for all three platforms are on the [v0.2.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0): all built and smoke-tested by CI — macOS/aarch64 (Apple Silicon; no Intel Mac release yet), Linux/amd64 (in a clean `ubuntu:24.04` container) and Windows (amd64 / aarch64).
 
 R1–R4 tests travel with each slice, never backfilled at the end ([10-testing.md](docs/design/10-testing.md)).
 

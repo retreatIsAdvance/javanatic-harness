@@ -150,11 +150,11 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 
 | 平台 | 后端（链） | 强制强度 | 前提 |
 |---|---|---|---|
-| macOS | seatbelt | FULL | — |
+| macOS | seatbelt | FULL | Apple Silicon（aarch64 归档）；Intel Mac 暂无发行面 |
 | Linux | bwrap → landlock | FULL | 装了 bubblewrap 用 bwrap；没装则落自带 Landlock 助手（内核 ABI ≥ 3——无须额外安装）；两条都不可用则 fail-closed，`--verify` 点名原因与出路 |
 | Windows | windows-acl | PARTIAL——低完整性强制，覆盖面如实登记（见 [release notes](docs/release-notes-0.2.0.md)） | **PowerShell 7+（`pwsh`）必需**——自带 shell 经 pwsh 执行；Windows PowerShell 5.1 不支持；pwsh 缺席则执行期 fail-closed 点名 |
 
-三平台预构建归档在 [v0.2.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0)提供：macOS/aarch64 由构建宿主产出；Linux/amd64 与 Windows（amd64 / aarch64）由 CI 构建并冒烟（Linux 在干净 `ubuntu:24.04` 容器内）。
+三平台预构建归档在 [v0.2.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0)提供：全部由 CI 构建并冒烟——macOS/aarch64（仅 Apple Silicon；Intel Mac 暂无发行面）、Linux/amd64（干净 `ubuntu:24.04` 容器内）与 Windows（amd64 / aarch64）。
 
 R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 

@@ -53,6 +53,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -67,6 +68,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -114,10 +116,12 @@ public final class HeadlessMain {
                                                 无 key 可跑;续跑用行内 id)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1;
                                                 通过时 stdout 打印 07 §6 治理摘要)
+          jh --version                         打印版本串(如 0.2.0;exit 0)
           jh --help                            显示本说明
 
         flags:
           -h, --help                 显示本说明(exit 0)
+          --version                  打印版本串(如 0.2.0)并退出(exit 0)
           --workspace=<dir>          工作区:须为已存在目录;提示词 cwd / fs 围栏 / shell
                                      workspace / 沙箱授予面四处都钉到此目录。缺省:新建临时目录
           --verify                   只跑组合期断言,不创建 agent、不需要 API key
@@ -164,7 +168,7 @@ public final class HeadlessMain {
           stderr         成功时另打一行轮末统计,与 REPL 同形:
                          stats: turn=… steps=… tokens_in=… tokens_out=… elapsed=…s
         退出码:
-          0  任务完成(或 --verify 通过 / --sessions 成功 / --help)
+          0  任务完成(或 --verify 通过 / --sessions 成功 / --help / --version)
           1  --verify 违规
           2  用法错误 / 缺少 API key
           3  任务失败(厂商错误 / 守卫或预算超限 / --resume 会话不存在或写者锁冲突;原因在 stderr)
@@ -183,11 +187,33 @@ public final class HeadlessMain {
     private HeadlessMain() {
     }
 
+    /** `--version` 版本串单源:构建期资源过滤注入(version.properties ← ${project.version})。 */
+    static final String VERSION = loadVersion();
+
+    private static String loadVersion() {
+        try (InputStream in = HeadlessMain.class.getResourceAsStream("version.properties")) {
+            if (in == null) {
+                throw new IllegalStateException(
+                    "版本资源缺失: version.properties 未随构建产物打包(构建损坏)");
+            }
+            Properties properties = new Properties();
+            properties.load(in);
+            String version = properties.getProperty("version");
+            if (version == null || version.isBlank()) {
+                throw new IllegalStateException("版本资源损坏: version.properties 缺 version 键");
+            }
+            return version;
+        } catch (IOException e) {
+            throw new UncheckedIOException("版本资源读取失败", e);
+        }
+    }
+
     /** 运行时配置（解析自 CLI;默认值集中在此——组合位的显式 resolve 点）。 */
     record RunnerOptions(String task, boolean verify, Policy policy, String provider, String model,
                          String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile,
                          String resume, boolean docker, String image, Path workspace, String approval,
-                         long budget, boolean help, OptionalInt sessions, OptionalInt approvalTimeout) {
+                         long budget, boolean help, boolean version, OptionalInt sessions,
+                         OptionalInt approvalTimeout) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -237,6 +263,10 @@ public final class HeadlessMain {
             System.out.println(USAGE);
             return;
         }
+        if (options.version()) {
+            System.out.println(VERSION);
+            return;
+        }
         Path workspace = options.workspace() != null
             ? options.workspace()
             : Files.createTempDirectory("jh-headless");
@@ -257,6 +287,7 @@ public final class HeadlessMain {
         boolean verify = false;
         boolean docker = false;
         boolean help = false;
+        boolean version = false;
         String image = null;
         Policy policy = Policy.STANDARD;
         String task = null;
@@ -275,6 +306,8 @@ public final class HeadlessMain {
         for (String arg : args) {
             if ("--help".equals(arg) || "-h".equals(arg)) {
                 help = true;
+            } else if ("--version".equals(arg)) {
+                version = true;
             } else if ("--verify".equals(arg)) {
                 verify = true;
             } else if (arg.startsWith("--policy=")) {
@@ -345,8 +378,8 @@ public final class HeadlessMain {
             model == null ? RunnerOptions.DEFAULT_MODEL : model,
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
-            apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, sessions,
-            approvalTimeout);
+            apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, version,
+            sessions, approvalTimeout);
     }
 
     private static String valueOf(String flag) {

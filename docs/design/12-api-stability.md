@@ -120,13 +120,13 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 ## 6. CLI 面（`jh`，dist/jh jlink 镜像）
 
-`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--approval-timeout=<秒>` / `--budget=` / `--docker [--image=]` / `--resume=` / `--sessions[=<N>]` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--help`（`-h` 同）。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）/ `/cancel`（it22：取消在途轮，同 Ctrl-C 收敛；空闲回「无进行中的轮」）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。`--sessions` 只读旁路（keyless、不建会话；与任务文本 / `--resume` / `--verify` 互斥——一次只做一件事）。
+`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--approval-timeout=<秒>` / `--budget=` / `--docker [--image=]` / `--resume=` / `--sessions[=<N>]` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--version` / `--help`（`-h` 同）。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）/ `/cancel`（it22：取消在途轮，同 Ctrl-C 收敛；空闲回「无进行中的轮」）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。`--version` 打印版本串（如 `0.2.0`；keyless、exit 0）。`--sessions` 只读旁路（keyless、不建会话；与任务文本 / `--resume` / `--verify` 互斥——一次只做一件事）。
 
 一次性任务的结果契约（it17 起，输出形状的稳定承诺）：
 
 | 退出码 | 语义 |
 |---|---|
-| 0 | 任务完成（本轮 `turn/end` Completed；`--verify` 通过 / `--help` 同） |
+| 0 | 任务完成（本轮 `turn/end` Completed；`--verify` 通过 / `--help` / `--version` 同） |
 | 1 | `--verify` 违规（不变） |
 | 2 | 用法错误 / 缺少 API key（不变） |
 | 3 | 任务失败（`turn/end` Error：厂商错误 / 守卫或预算超限 / `--resume` 写者锁冲突;无 turn/end 同归 3） |

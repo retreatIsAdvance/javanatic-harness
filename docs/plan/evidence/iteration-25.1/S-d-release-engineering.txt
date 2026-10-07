@@ -423,3 +423,68 @@ d｜清理（删远端 tag + 删草稿 Release；2026-10-07 05:2x–05:35Z）：
 rc1 闭环（2026-10-07）：a–d 全数落地——批次 5 笔与 rc1 tag 已推、四腿 + release-attach 首执行
   全绿、8 件（含 macOS 双件）核验、清理三口径复核、零新 run。收口提交（本档 §14 + 台账终笔）
   随收口 packet 呈报，待点名放行推送；真 v0.2.0 tag / Release / deploy / Publish 恒用户侧。
+
+== 15. tag 前收尾批（2026-10-07；head 00bf2c2）：notes 残余与 macOS 限定 · --version 旗标 ==
+
+范围（用户指令四项）：① notes 已知残余补两条（macOS Gatekeeper / musl-Alpine）+ 平台矩阵
+macOS 行架构限定 + README×2 平台段同步；② `--version` 旗标进 0.2.0（parser + USAGE +
+12 §6 16→17 + notes 纯增量行 + 聚焦测试）；③ 单笔提交（推送待点名）；④ 完成后静默至
+用户侧发布序列。另捕获停点 C 反转的两处同步面漏网（见 d）。
+
+a｜文档面（notes 三处 + README×2 + 12 §6）：
+  docs/release-notes-0.2.0.md：
+    L31 纯增量首条加 `--version`（keyless、exit 0）；
+    L46 「CI 四 job 出三件归档（linux-amd64 / windows-amd64 / windows-aarch64）」→
+      「出四件归档（macos-aarch64 / linux-amd64 / windows-amd64 / windows-aarch64）」
+      （停点 C 反转后 macos 腿已入 CI 归档面，旧计数漏网）；
+    L52 平台矩阵 macOS 行前提列 「—」→「Apple Silicon（aarch64 归档；Intel Mac 暂无发行面）」；
+    L94-95 已知残余新增 8（macOS Gatekeeper：quarantine 拦截；规避 `curl | tar xz` 或
+      `xattr -dr com.apple.quarantine <解压目录>`）与 9（musl/Alpine 不支持，glibc 假设）。
+  README.md L163／README.zh-CN.md L153：macOS 行同口径标注；
+  README.md L167／README.zh-CN.md L157：删「macOS/aarch64 built on the build host／由构建宿主产出」
+    旧句 →「all built and smoke-tested by CI -- macOS/aarch64（Apple Silicon；no Intel Mac
+    release yet）、Linux/amd64（ubuntu:24.04 容器内）、Windows（amd64 / aarch64）」
+    （与 ci.yml macos 腿 upload-artifact 实态、release.md §5「全平台归档由 CI 产出」对齐）。
+  docs/design/12-api-stability.md §6：冻结清单 16→17（`--profile=` / 插入 `--version` /
+    `--help`），并加语义句「`--version` 打印版本串（如 `0.2.0`；keyless、exit 0）」；
+    退出表 0 行「`--verify` 通过 / `--help` 同」→「/ `--help` / `--version` 同」。
+
+b｜--version：TDD 两周期 + 突变（日志 /tmp/jh-red-a.log、jh-green-a.log、jh-red-b.log、
+  jh-green-b.log、jh-mutation.log、jh-regreen.log；聚焦命令 = `mvn -B -o -pl examples/headless
+  -am -Dtest=HeadlessOptionsTest -Dsurefire.failIfNoSpecifiedTests=false test`）：
+  周期 A（parser+USAGE）：
+    RED：`HeadlessOptionsTest.java:[82,66] 找不到符号／符号: 方法 version()／位置: RunnerOptions`
+      （testCompile 失败，EXIT=1）；
+    GREEN：`Tests run: 21, Failures: 0, Errors: 0, Skipped: 0 -- in HeadlessOptionsTest`；
+      BUILD SUCCESS。
+  周期 B（VERSION 单源）：
+    RED：`HeadlessOptionsTest.java:[89,32] 找不到符号／符号: 变量 VERSION／位置: HeadlessMain`；
+    GREEN：22/0/0 BUILD SUCCESS。实现 = src/main/resources/io/javanatic/harness/examples/
+      headless/version.properties（`version=${project.version}`）+ POM 资源过滤（本模块首个
+      <build><resources>）+ loadVersion()（资源缺失/缺键 fail loud；类初始化期加载）。
+      过滤产物实读：`cat …/target/classes/…/version.properties` → `version=0.2.0`。
+  突变（删 parse 分支）：
+    `HeadlessOptionsTest.versionFlagParsesAndUsageListsIt:82 » IllegalArgument 未知参数:
+      --version`（22 run / 1 error）→ 还原 → 22/0/0 复绿。
+
+c｜全量 package + 镜像真跑（/tmp/jh-package.log）：
+  `mvn -B -o package`（离线；build 期无网络可达风险）→ BUILD SUCCESS；测试聚合（无锚点
+    grep）lines=84 tests=598 failures=0 errors=0 skipped=23——对照 §11 排练基线 84/596/23
+    （本档 L276），delta 恰为 +2（两条新用例），其余逐项一致（无旁损面）。
+  产物：dist/jh/target/javanatic-harness-0.2.0-macos-aarch64.tar.gz 35,509,973 B /
+    .zip 35,545,373 B；jlink 镜像在位。
+  真跑（dist/jh/target/jlink-image/bin/jh）：
+    `bin/jh --version` → stdout `0.2.0`（od -c 复核 = `0 . 2 . 0 \n` 单行纯文本），EXIT=0；
+    `bin/jh --help` 新增行列位核：用法块「jh --version」描述列 39（与 jh --verify/--help
+      齐）、flags 块「--version」列 29（与 -h, --help 齐）、退出码 0 行含 `--version`。
+
+d｜同步面捕获与环境事实：
+  停点 C 反转（macOS 归档入 CI）的同步面漏网两处本批并入订正：README×2「build host／构建
+    宿主」句与 notes L46「三件归档」旧计数——当时旧措辞 grep 词表
+    （手传|手工上传|不经 CI|不经CI|CI 无）未含「构建宿主｜build host｜三件归档」。
+  订正后复查：`grep -rn -E "构建宿主|build host|手传|手工上传|三件归档" --include="*.md" .`
+    （除历史证据档与台账历史行）→ 空输出。摘要 grep 复核：notes L46/L52/L94-95、README×2
+    两处均见新文本。
+  环境事实（本机，已录 memory）：版本翻转 0.2.0 后本地仓无 `harness-*:0.2.0` 制品，`-pl`
+    直跑（无 -am）向 aliyun/ane56 镜像拉不存在的 0.2.0 —— 静默挂起 20+ 分钟（CPU 仅 2.5s，
+    lsof 见 localhost:https ESTABLISHED），非 fail-fast；本批聚焦跑改 `-am`（+`-o`）解决。

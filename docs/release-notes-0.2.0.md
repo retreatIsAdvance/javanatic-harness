@@ -28,7 +28,7 @@ Java 接入面的逐项对照（含纯增量项）另见[接入指南 §7 版本
 
 ### 纯增量（不破坏 0.1.0 面）
 
-- **CLI 新旗标** `--approval-timeout=<秒>`（人闸等待界）与 `--sessions[=<N>]`（只读会话旁路，keyless；与任务文本 / `--resume` / `--verify` 互斥）；REPL 新命令 `/cancel`。
+- **CLI 新旗标** `--version`（打印版本串，如 `0.2.0`；keyless、exit 0）、`--approval-timeout=<秒>`（人闸等待界）与 `--sessions[=<N>]`（只读会话旁路，keyless；与任务文本 / `--resume` / `--verify` 互斥）；REPL 新命令 `/cancel`。
 - **等待答复闭环**：模型经 `ask_user` 提问停轮（exit 5），答复 = 下一轮 user message（`jh --resume=<id> "答复文本"`；REPL 下提问行后的下一行即答复）——无常驻等待、无第二输入通道（[12 §6](design/12-api-stability.md)）。
 - **工具契约**：`ToolDefinition.ofExempt(...)`（免审批声明）与 `ToolExecutionResult.concluding(content)`（正常成功但终结本 turn）。
 - **组合自述**：`AppBoot.bootReported`（行/发现/未引用计数）与 `AppBoot.sandboxLine(...)` / `emitSandboxObservations(...)`（沙箱落点观测；`--verify` 输出行，exit 码不变）。
@@ -43,13 +43,13 @@ Java 接入面的逐项对照（含纯增量项）另见[接入指南 §7 版本
 - **会话操作与人工协作（it22）**：`--sessions` 只读旁路看历史会话；`ask_user` + exit 5 一问一答闭环；审批等待界（非交互缺省 300s 按拒绝）；REPL `/cancel`。
 - **外部 Java 接入闭环（it23）**：示例工程 + 候选腿（工作树 install 进隔离仓）+ 发布腿（只从 Central 解析）+ 四负例；键名白名单 fail loud。
 - **Linux 沙箱与归档（it24）**：平台链 bwrap → landlock（无 bubblewrap 的宿主零安装——归档自带 landlock 助手，内核 ABI ≥ 3 即用）；`--verify` 打印沙箱落点行；Linux 归档在干净 `ubuntu:24.04` 容器内解压冒烟。
-- **Windows 支持与三平台交付（it25 / it25.1）**：windows-acl 低完整性沙箱（PARTIAL 如实）、shell 平台化（POSIX bash / Windows pwsh，无 pwsh 则执行期 fail-closed）、locale 修复；CI 四 job 出三件归档（linux-amd64 / windows-amd64 / windows-aarch64），双架构一个事实源。
+- **Windows 支持与三平台交付（it25 / it25.1）**：windows-acl 低完整性沙箱（PARTIAL 如实）、shell 平台化（POSIX bash / Windows pwsh，无 pwsh 则执行期 fail-closed）、locale 修复；CI 四 job 出四件归档（macos-aarch64 / linux-amd64 / windows-amd64 / windows-aarch64），双架构一个事实源。
 
 ## 平台支持（0.2.0）
 
 | 平台 | 沙箱后端（链） | 强制强度 | 前提 |
 |---|---|---|---|
-| macOS | seatbelt | **FULL** | — |
+| macOS | seatbelt | **FULL** | Apple Silicon（aarch64 归档；Intel Mac 暂无发行面） |
 | Linux | bwrap → landlock | **FULL** | 链取第一个可用后端：bwrap 在 PATH 优先；否则归档自带 landlock 助手（内核 ABI ≥ 3）；都不可用 fail closed（`--verify` 点名原因与出路） |
 | Windows | windows-acl | **PARTIAL**（覆盖见「已知残余」） | **PowerShell 7+（`pwsh`）必需**——Windows PowerShell 5.1 不支持；pwsh 缺席时 shell 执行期 fail-closed 点名 |
 
@@ -91,6 +91,8 @@ DEEPSEEK_API_KEY=sk-... bin/jh --workspace=<existing-dir> "task text"
 5. **bwrap 不在 PATH 的宿主形态**（如 NixOS / 精简镜像）链落 landlock；两者都不可用则 fail closed。
 6. **locale 边界**：jh 自身输出固定 UTF-8（it25 S-c 修复，Windows GBK 控制台与 Linux 非 UTF-8 locale 下不再降级）；外部工具自己写出的字节不随宿主编码转换（shell 执行面事实，[05 §6](design/05-capability-seam.md)）。
 7. **运行时热插拔不在 0.2.0 面内**：插件随构建产物进 classpath / module-path，由组合显式引用（[接入指南 §1](embedding.md)）。
+8. **macOS Gatekeeper 拦截**：浏览器下载的归档带隔离属性（quarantine），未签名二进制的首跑会被系统拦下；规避二选一——`curl | tar xz` 方式下载（无 quarantine），或 `xattr -dr com.apple.quarantine <解压目录>` 后再运行。
+9. **musl / Alpine 不支持**：归档按 glibc 目标构建（jlink 平台绑定），Alpine 等 musl 发行版不在 0.2.0 发行面内。
 
 ## Docs
 
