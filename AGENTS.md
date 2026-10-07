@@ -155,7 +155,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 ## 测试策略（[10](docs/design/10-testing.md)）
 
 - **测试描述行为**：行为变了改测试，PR 里说明为什么；不为实现细节写"正确性证明"。
-- **不变式配属性测试**（jqwik）：LIFO 回收序、envelope seq 单调等结构性质用 `@Property`，不是单个例子。
+- **不变式配属性测试**（jqwik）：LIFO 回收序、envelope seq 单调等结构性质用 `@Property`，不是单个例子；`.jqwik-database`（模糊缓存）不入库，已在 .gitignore。
 - **R1–R4 测试随切片走**，不做收尾补；每个改动的接受路径都要有拒绝无效用例的证明。
 - **keyless**：单元测试无网络、无 API key、可重复；未来真实 provider 测试无 key 自跳过。
 - **测试计数口径**：只数模块汇总行（`Tests run:` 不含 `-- in ` 后缀）或直接读 surefire XML；**不求和全部 `Tests run:` 行**——类行 + 模块行会双计（it19 实撞：832 实为 416），锚定行首 grep 还会漏掉与测试输出粘连的汇总行。
@@ -178,7 +178,6 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - ECJ/JDT 对「导出 API 引用他模块类型」报 *missing requires transitive*（IDE 告警 8390067）——非 transitive 政策（02 §748）的预期代价，不要用 `requires transitive` 消音；IDE 侧经 `java.settings.url` 忽略 APILeak。
 - javac 25：泛型推断下零参隐式 lambda 对 varargs 抽象方法编译失败（`() -> null` ✗）；用单参 lambda（`overrideArgs -> null` ✓，[Next 的 Javadoc](kernel/core/src/main/java/io/javanatic/harness/kernel/events/Next.java)）。
 - 内核绑定两纪律（it24 两轮 CI 实撞）：① FFM `MethodHandle.invokeExact` **不做隐式加宽**——实参静态类型须与句柄类型逐位一致：`int` fd 喂全 `long` 描述符的 downcall 在 FFM 层即抛 `WrongMethodTypeException`（**调用根本到不了内核**，异常却形似系统调用失败；首跑 → exit 13，见修正表），`invokeWithArguments`/JNA 之类的隐式转换封装只会把这类缺陷藏得更深，不用。② errno 断言要按**查序**分档，不能只写「看似合理」的那个码：landlock 的 `restrict_self` 先查 no_new_privs/CAP_SYS_ADMIN（普通 JVM 两者皆无 → EPERM）之后才校验 fd，而 `add_rule` 先校验 fd（EBADF）——只断言 EBADF 的用例在没有 landlock 的机器上假绿（ENOSYS）、在真有 landlock 的 runner 上红（EPERM），二跑实撞。纪律：**每条内核绑定至少一条真跑用例**（编译通过、平台无关单测都不算数），承载安全不变量的 syscall 蹦床尤需（`Landlock.java` 的 `SYSCALL` 声明上方有同义注释）；写断言前先读内核源码的检查顺序。
-- `.jqwik-database`（jqwik 模糊缓存）不入库，已在 .gitignore。
 - 事件订阅表遍历用 `CopyOnWriteArrayList`；waterfall 的 next 守卫包在 rest 上（invokeOnce），不在最外层。
 - checkstyle 不解析 `module-info.java`（已排除在门禁外）；首次使用 `import module`（JEP 511）前先升级 checkstyle 依赖，否则解析报错。
 - 跨模块改动的聚焦测试必须带 `-am`：裸 `mvn -pl <module> test` 会静默解析**本地仓库里的旧 SNAPSHOT**（有件 ≠ 件是新的）——新写的失败测试假红、形似代码缺陷（it18 S-a 实撞）；`-pl <module> -am test` 走 reactor 内解析才用最新源码。
@@ -191,6 +190,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - AssertJ `PathAssert` 的路径断言（`startsWith` 等）对 **actual 也做 realpath**——已删/自清理路径作 actual 必抛 `UncheckedIOException(NoSuchFileException)`（it25 三跑 CI 实证：会话 TEMP `jh-sbx-*` 助手退出即自删）；与 S-a 探针 `temp-proof.txt` 观测面同族（通类风险＝以会自己清场的对象作断言面，`S-a-windows-acl.txt` §2）——改纯 JDK 谓词（`Path.startsWith` 等不触盘；产品探针 `WindowsAcl:578` 即此形）。
 - pwsh 原生实参：**未加引号、`-` 开头且含点号的 token 会被参数 token 解析在点号处截断**成两个实参（it25 五跑 CI 实证 run 36530292970：`-Dstderr.encoding=UTF-8` → `-Dstderr` + `.encoding=UTF-8`，java 把后者当主类——产品零缺陷、纯 CI 脚本面；`-XX:-UsePerfData` 无点号故完好）。手搓带点 token 的命令行（如 ci.yml 探针步）一律走**实参数组 + splat**（`$args=@('…'); & exe @args`）——数组元素是已解析字符串，不再过令牌解析。下条侦察跑配方的 `-D` token 即此坑实例（回填时未与本条交叉核对，互指固化）。
 - 新平台/新 CI job 首落地先「侦察跑」（it25 实证：windows job 六轮才绿——CRLF 检出层 → 8.3 短名断言 → DockerShellTest 门 → pwsh splat → 全绿，见 `docs/plan/iteration-25.md`；it25.1 aarch64 腿首跑即红于装配面——setup-java/temurin 无 windows-aarch64 的 JDK 25，见 `docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt`）：scratch 分支把 Build 步改 `-Dmaven.test.failure.ignore=true`（pwsh 步必须单引号，见上条 pwsh 实参坑；bash 步无须），一轮收全清单（装配红与测试红分相、压缩轮次）；红即停-取证-再议，干净后摘旗标、并回主线——**master 落地形态不带该 flag**（失败即停）。
+- runner 镜像 Maven 升 3.10.0（ubuntu 20261004 起）双坑（it25.1 发布实撞；本地 3.8.8 门对两坑皆盲）：① POM `<dependencies>` 重复声明同一 (groupId:artifactId)——旧 Maven（≤3.9.x）仅打 WARNING（"must be unique … future Maven versions might no longer support building such malformed projects"）继续构建，3.10.0+ 改硬 ERROR 拒读 reactor（v0.2.0 tag 跑 build 腿红于 `core/session/pom.xml`；同日 master 跑落旧镜像四腿绿，差异纯在镜像——Runner Image 行 20260927.320 vs 20261004.327）。② 3.10.0 起 `project.build.outputTimestamp` 默认注值 `1980-02-01T00:00:00Z`（3.8.8 下为 null，`-X` 的 `(f) outputTimestamp` 可核）→ 开启 compiler 插件可复现构建补丁点 `patchJdkModuleVersion`（编译成功后读 `module-info.class`），旧钉 compiler 3.13.0 内置 asm 9.6（上限 major 66=V22）读不动 JDK 25 产物（major 69）⇒ **任何带 module-info 的模块重新编译即崩** `Unsupported class file major version 69`（修复：compiler 钉 3.14.1，自其起直挂 asm 9.8；门槛表 9.6=V22 / 9.7=V23 / 9.7.1=V24 / 9.8=V25 / 9.9=V26）。纪律：CI 同提交一绿一红先查镜像版本差；撞新镜像后必须用该版 Maven 真跑**干净全量**（删 target，非增量）再谈绿。
 
 ## 修改本文件
 

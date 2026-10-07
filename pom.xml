@@ -274,7 +274,10 @@
             <plugins>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.13.0</version>
+                    <!-- 3.13.0 内置 asm 9.6 读不动 JDK 25 字节码（major 69）：Maven 3.10.0
+                         起 outputTimestamp 默认开启可复现构建，编译后 module-info.class 补丁点即崩。
+                         3.14.1 起直挂 asm 9.8+（见 AGENTS.md 已知坑）。 -->
+                    <version>3.14.1</version>
                     <configuration>
                         <release>25</release>
                         <compilerArgs>
