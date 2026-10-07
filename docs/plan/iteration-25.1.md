@@ -1,4 +1,4 @@
-# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 摘旗标并回 master、真跑全绿（run 36549993644，四 job 全绿 + 三件归档在案）→ **停点 A 闭合、首裁项闭合**；停点 B 三件套就绪、报批待放行（12 扫描 6973e2a + release notes 稿 + README×2 反转稿；2026-09-29）→ **停点 B 通过（2026-10-07 裁决）**：三件套核可、push 授权行使——三笔 docs 落地（`b4bdb2d..8014f24`，pre-push 全量门禁绿）；**停点 C 放行**、范围照案 + 两附加要求（① rc1 tag（`v0.2.0-rc1`）排练先行——新 CI 面首执行不得是真发布；② 翻转提交前全量 package 必绿）；真 deploy/tag/Release/Publish 恒用户侧；Roadmap 翻转推迟 Publish 后、登 release.md §5 发布后清单）；**停点 C 范围执行完毕（2026-10-07）**：翻转 `060b7e9`（47→0 普查）、附件工作流 + release.md 在案化 `70caa0c`、backlog「后续」节 8 条、干跑 EXIT=0（1:21 min）+ 全量 package 绿（53.277 s，596/0/0/23）——**packet 呈报**，rc1 排练与收口推送待点名放行 → **停点 C 裁决（2026-10-07）有条件放行**：条件 2 补丁先行（macOS 归档纳入 CI 收件——macos 腿 upload-artifact + release-attach 四腿 / 8 件 + notes Get it「全平台归档由 CI 产出」；S-d §13），a–d 放行执行（批次推送 → rc1 tag 排练 → 核验 8 件 → 清理）；裁决 ④ 小项（embedding 版本面表题去 SNAPSHOT）登 `release.md` §5 item 4；rc1 闭环后出收口 packet））
+# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 摘旗标并回 master、真跑全绿（run 36549993644，四 job 全绿 + 三件归档在案）→ **停点 A 闭合、首裁项闭合**；停点 B 三件套就绪、报批待放行（12 扫描 6973e2a + release notes 稿 + README×2 反转稿；2026-09-29）→ **停点 B 通过（2026-10-07 裁决）**：三件套核可、push 授权行使——三笔 docs 落地（`b4bdb2d..8014f24`，pre-push 全量门禁绿）；**停点 C 放行**、范围照案 + 两附加要求（① rc1 tag（`v0.2.0-rc1`）排练先行——新 CI 面首执行不得是真发布；② 翻转提交前全量 package 必绿）；真 deploy/tag/Release/Publish 恒用户侧；Roadmap 翻转推迟 Publish 后、登 release.md §5 发布后清单）；**停点 C 范围执行完毕（2026-10-07）**：翻转 `060b7e9`（47→0 普查）、附件工作流 + release.md 在案化 `70caa0c`、backlog「后续」节 8 条、干跑 EXIT=0（1:21 min）+ 全量 package 绿（53.277 s，596/0/0/23）——**packet 呈报**，rc1 排练与收口推送待点名放行 → **停点 C 裁决（2026-10-07）有条件放行**：条件 2 补丁先行（macOS 归档纳入 CI 收件——macos 腿 upload-artifact + release-attach 四腿 / 8 件 + notes Get it「全平台归档由 CI 产出」；S-d §13），a–d 放行执行（批次推送 → rc1 tag 排练 → 核验 8 件 → 清理）；裁决 ④ 小项（embedding 版本面表题去 SNAPSHOT）登 `release.md` §5 item 4）→ **rc1 闭环（2026-10-07）**：a–d 全数落地——批次 5 笔 + rc1 tag 推送；run `37563836209` 四构建腿 + release-attach 首执行全绿、草稿 8 件（含 macOS 双件）核验、未公开（draft=true / published_at=null）；清理三口径复核 + 零新 run（S-d §14）；收口提交与 packet 呈报，待点名放行推送））
 
 模块：发布面文档（`README.md` / `README.zh-CN.md` / `docs/release.md` / `docs/design/12-api-stability.md` / `docs/design/README.md`）· 根 POM 与全仓 POM（版本翻转）· `.github/workflows/`（tag→Release 附件工作流定义）· aarch64 交付面（裁决后落地）
 
@@ -105,14 +105,14 @@
 |---|---|---|
 | A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **通过**（2026-09-29——真跑 run `36549993644` 四 job 全绿、windows-arm 12 步全过、归档三件在案；选 2 落证、首裁项闭合；S-a §12） |
 | B｜发布面成文（对外承诺面：12 扫描结论 + release notes + README×2 反转稿） | `12-api-stability.md` §2 / `release-notes-0.2.0.md` / README×2 | **通过**（2026-09-29 报批 → 2026-10-07 裁决核可：12 扫描三补丁为真漂移修复；release notes 破坏表首行独立复核成立（v0.1.0 `run()` 仅返回 0/2）；README×2 反转 + pwsh 前提在位、旧措辞清零；push 三笔 docs 落地 `b4bdb2d..8014f24`） |
-| C｜收口前（版本翻转 + 干跑 + 附件工作流定义落盘后，发布执行交接前） | 全仓 POM / `release.md` / 附件工作流 / 全量证据 | **放行**（2026-10-07 有条件放行——条件 2 补丁先落（macOS 归档纳入 CI 收件；S-d §13），a–d 执行中：批次推送 → rc1 tag → 排练核验（8 件）→ 清理；rc1 闭环后出收口 packet） |
+| C｜收口前（版本翻转 + 干跑 + 附件工作流定义落盘后，发布执行交接前） | 全仓 POM / `release.md` / 附件工作流 / 全量证据 | **通过**（2026-10-07 有条件放行 → rc1 全链闭环：run `37563836209` 四构建腿 + release-attach 首执行全绿；草稿 8 件含 macOS 双件核验、未公开（draft=true / published_at=null）；清理经三口径复核（release list 仅 `0.1.0` / ref API 404 / ls-remote 空）+ 零新 run；S-d §13/§14） |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-25.1/）
 
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
 | `S-a-arm-job-first-run.txt`（停点 A） | 选 2 落地形态 + 侦察三跑 + 真跑（run id / 各 job 结论 / arm job 逐步状态 / 归档三件 / 关键输出行 / EXIT 回显；真跑证据走 jobs/artifacts API 逐字） |
-| `S-d-release-engineering.txt`（随包落盘） | §1–§7：12 全量扫描结论 + release notes/迁移路径 + release.md + aarch64 落地；§8–§12（停点 C）：三笔推送落地 + 版本翻转 + 附件工作流/在案化 + 干跑/全量 package + rc1 排练计划；§13（停点 C 裁决条件 2 补丁：macOS 纳入 CI 收件）；§14 起（rc1 排练执行回显） |
+| `S-d-release-engineering.txt`（随包落盘） | §1–§7：12 全量扫描结论 + release notes/迁移路径 + release.md + aarch64 落地；§8–§12（停点 C）：三笔推送落地 + 版本翻转 + 附件工作流/在案化 + 干跑/全量 package + rc1 排练计划；§13（停点 C 裁决条件 2 补丁：macOS 纳入 CI 收件）；§14（rc1 排练执行回显：a–d 全链——批次/rc1 推送、排练核验、清理 + created_at 观测事实） |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -125,7 +125,7 @@
 - [x] tag→Release 附件工作流定义落盘（真执行用户侧）——`ci.yml` 追加 `release-attach`（v* tag：四腿绿后 8 件附入草稿 Release——macOS 腿为停点 C 裁决条件 2 纳入，mac 交付面回归 0.1.0 承诺；ruby YAML 实读 5 job 校验）+ `release.md` §5 在案化（S-d §10/§13）
 - [x] 版本翻转与发布前预检（干跑绿；真 deploy/tag/Publish 用户侧）——`versions:set` 0.2.0 + 示例/文档同步；翻转普查 0 残留（前 47）；提交 `060b7e9`；干跑 EXIT=0（1:21 min）（S-d §9/§11）
 - [x] S-b·S-c 挂账记 post-0.2 backlog（只记不动）——「后续」节 8 条（来源 it25 台账 + S-c 档 §7.3/§9）
-- [ ] 全量 package 绿（本机 + CI）——本机绿（53.277 s；596/0/0/23 与翻转前零漂移；S-d §11）；CI 腿随 rc1 排练/收口推送首跑（S-d §12）
+- [x] 全量 package 绿（本机 + CI）——本机绿（53.277 s；596/0/0/23 与翻转前零漂移；S-d §11）；CI 腿 = run `37563836209`（rc1）四构建腿全绿 + master run `37563721512` 四腿全绿（双 run 同 head `0480981`；S-d §14）
 
 ## 修正（如有）
 
