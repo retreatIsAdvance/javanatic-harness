@@ -109,7 +109,7 @@ jobs:
             grep -F 'bwrap probe failed' /tmp/verify.txt
             grep -E 'sandbox(:| warning:) confining policy' /tmp/verify.txt
           "
-      # Linux 归档取件（it24 验收①）：Release 附件自动化点名推迟 it25，本迭代先由 CI 供下载
+      # Linux 归档取件（it24 验收①）：平时供下载；v* tag 时由 release-attach job 附入 GitHub Release（it25.1）
       - uses: actions/upload-artifact@v4
         with:
           name: javanatic-harness-linux-amd64
@@ -252,7 +252,7 @@ jobs:
             Write-Error "archive verify did not report the windows-acl enforcement line"
             exit 1
           }
-      # Windows 归档取件（S-c 验收）：同 linux 之理，本迭代先由 CI 供下载
+      # Windows 归档取件（S-c 验收）：同 linux 之理，平时供下载；v* tag 时由 release-attach job 附入
       - uses: actions/upload-artifact@v4
         with:
           name: javanatic-harness-windows-amd64
@@ -378,7 +378,7 @@ jobs:
             Write-Error "archive verify did not report the windows-acl enforcement line"
             exit 1
           }
-      # aarch64 归档取件（it25.1 裁决：双 job 收件构成 Release 附件事实源）
+      # aarch64 归档取件（it25.1 裁决：双 job 收件构成 Release 附件事实源；v* tag 时由 release-attach job 附入）
       - uses: actions/upload-artifact@v4
         with:
           name: javanatic-harness-windows-aarch64
@@ -386,3 +386,39 @@ jobs:
             dist/jh/target/javanatic-harness-*-windows-aarch64.zip
             dist/jh/target/javanatic-harness-*-windows-aarch64.tar.gz
           if-no-files-found: error
+  # tag→Release 附件自动化（it25.1 回收 it24/it25 双重点名推迟项）：仅 v* tag 触发，从三条
+  # 构建腿收件——linux-amd64 / windows-amd64 / windows-aarch64（各 tar.gz + zip，共 6 件）；
+  # macOS 件不经 CI（jlink 镜像与平台绑定，发布执行者在构建平台产出后手传）。幂等草稿：无则建
+  # draft（--draft；Publish 恒用户侧、不可逆），有则复用；资产 --clobber 覆盖重传。
+  # 纪律：新 CI 面首执行不得是真发布——先以一次性 tag（v0.2.0-rc1）排练（it25.1 附加要求）。
+  release-attach:
+    needs: [build, windows, windows-arm]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Attach archives to the GitHub Release (draft)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          ver="${GITHUB_REF_NAME#v}"
+          ls -l assets
+          if ! gh release view "v$ver" > /dev/null 2>&1; then
+            notes="docs/release-notes-$ver.md"
+            if [ -f "$notes" ]; then
+              gh release create "v$ver" --draft --verify-tag \
+                --title "javanatic-harness $ver" --notes-file "$notes"
+            else
+              gh release create "v$ver" --draft --verify-tag \
+                --title "javanatic-harness $ver" \
+                --notes "Automated draft: CI attached the platform archives; add release notes before publishing."
+            fi
+          fi
+          gh release upload "v$ver" assets/* --clobber
