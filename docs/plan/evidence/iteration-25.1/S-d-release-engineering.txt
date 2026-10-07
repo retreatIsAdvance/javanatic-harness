@@ -5,6 +5,9 @@
 #   jh --help——12 §7 固化方法）。CLI 取证用 dist/jh/target/jlink-image/bin/jh
 #   （2026-09-29 17:33 本机全量 package 产物）。本文件随停点 B packet 落盘，逐段给
 #   命令、决定性输出行与 EXIT 回显。行尾空白已去。
+# §8 起为停点 C 接线（2026-10-07；head 推进 126db6d → 70caa0c）：三笔 docs 推送落地、
+#   版本翻转（060b7e9）、附件工作流 + release.md 在案化（70caa0c）、干跑 + 全量 package、
+#   rc1 排练计划（待点名放行）。
 #
 # 12 全量扫描结论（2026-09-29）：六面逐条核对。导出面 33 模块 / 37 包与 §2 表逐行相符；
 #   §3 seam 与 it18/it22/it24 迁移注记在案；§4 permits 缺 ProjectInstructions（it21）→ 补；
@@ -189,3 +192,113 @@ pwsh 前提双写明写：**PowerShell 7+（pwsh）必需——Windows PowerShel
 
 包内提请（未改，待裁决）：README×2 Roadmap 行 `17–25 (planned)` 与平台段现在时口径
   的张紧——真发布前不翻转（0.2.0 尚未 Publish）；停点 C/发布后翻 ✅ 或由用户裁决。
+  → **已裁决（2026-10-07，停点 B 裁决第 4 条）**：推迟到 Publish 后，登记进
+    `release.md` §5 发布后清单（收尾提交 = bump + Roadmap 行翻转 + notes 定稿）——
+    本节提请闭合；README 现文保持不翻转。
+
+== 8. 停点 B 裁决行使：三笔 docs 推送（2026-10-07） ==
+
+（§8 起为停点 C 接线；§1–§7 为停点 B 面，落盘时 head 126db6d；本节起 head 推进至 70caa0c。）
+
+裁决第 2 条行使：三笔 docs-only（126db6d / 6973e2a / 8014f24，其中 8014f24 = 推送梢）。
+push 实况（EXIT=0；/tmp/it25.1-push.log）：
+  To https://github.com/retreatIsAdvance/javanatic-harness.git
+     b4bdb2d..8014f24  8014f24c0ef7d2d1eb522fd3e5e74ed0d80431b1 -> master
+落地核验（ls-remote——落地唯一口径）：
+  8014f24c0ef7d2d1eb522fd3e5e74ed0d80431b1	refs/heads/master
+【实撞教训（已回填 memory）】pre-push hook（.githooks/pre-push:19 `exec mvn -B -q package`）
+  要求 mvn 在 PATH 上：前两次 push 因 `mvn: not found` 失败（输出易被误读为成功）；
+  export JAVA_HOME=$(/usr/libexec/java_home -v 25) + PATH 前置 maven 后第三次成功——
+  hook 真跑全量 package（约 60 s）后放行，未跳钩（--no-verify 始终未用）。
+
+CI 复跑（push 事件）：run 37560548570（本仓第 35 跑），head 8014f24——四 job 全绿
+  （GitHub API jobs 实读）：build / windows / windows-arm / macos 均 success
+  （2026-10-07T02:08:38Z–02:12:12Z）。该 run 无 release-attach job——工作流定义此刻
+  尚未推送（在 70caa0c）；其实执行 = rc1 排练（§12）。
+
+== 9. 版本翻转 0.2.0（commit 060b7e9） ==
+
+命令（EXIT=0；/tmp/it25.1-versions-set.log）：
+  mvn versions:set -DnewVersion=0.2.0 -DgenerateBackupPoms=false
+  → BUILD SUCCESS，Total time 0.976 s，Finished 2026-10-07T10:12:41+08:00
+非 reactor 点位手动同步（versions:set 不覆盖）：
+  integration/consumer-sample/pom.xml:12（注释 -Dharness.version=0.2.0）
+  integration/consumer-sample/pom.xml:27（<harness.version>0.2.0</harness.version>）
+  integration/consumer-sample/README.md:14（缺省 0.2.0）
+  docs/design/02-module-layout.md ×6 处 POM 片段（<version>0.2.0</version>）
+翻转普查（EXIT=0）：
+  grep -rl "0.2.0-SNAPSHOT" --include=pom.xml . | wc -l          → 0
+    （翻转前 47 = reactor 46 + 非 reactor 示例 1；示例不入 versions:set，手动同步）
+  grep -rl "<version>0.2.0</version>" --include=pom.xml . | wc -l → 46
+    （reactor 全覆盖；示例走 <harness.version> 属性，不计入本模式）
+提交：
+  060b7e9 chore(release): 0.2.0——49 files changed, 55 insertions(+), 55 deletions(-)
+  （47 pom = reactor 46 + consumer-sample；2 文档 = 02-module-layout.md + consumer-sample/README.md）
+
+== 10. tag→Release 附件工作流 + release.md 0.2.0 在案化（commit 70caa0c） ==
+
+工作流（.github/workflows/ci.yml）：追加 job release-attach（job 数 4 → 5）。
+  YAML 解析校验（本机无 PyYAML；ruby psych 实读，EXIT=0）：
+    jobs: ["build", "macos", "windows", "windows-arm", "release-attach"]
+    build: steps=11 | macos: 4 | windows: 8 | windows-arm: 8 | release-attach: 3
+    release-attach: needs=["build","windows","windows-arm"] |
+      if="startsWith(github.ref, 'refs/tags/v')" | perms={"contents"=>"write"}
+  语义：v* tag 且三构建腿全绿后，download-artifact v4（全收件、merge-multiple）收
+  三 artifact × {tar.gz,zip} = 6 件；gh CLI 幂等草稿（无则 create --draft --verify-tag、
+  有则复用）+ upload --clobber。notes 取 docs/release-notes-<ver>.md（v0.2.0 → 实文件
+  在场；rc1 → 占位分支）。macOS 不经 CI（jlink 平台绑定）手传；Publish 恒用户侧。
+  注入纪律复核：tag 值经 env GITHUB_REF_NAME 传入、全引号展开（"v$ver" 等）；
+  run 内无事件字段直插、无 eval。三处 upload-artifact 注释同步（linux/windows/aarch64）：
+  「平时供下载；v* tag 时由 release-attach 附入」。
+
+release.md 全文对齐 0.2.0（逐节编辑 16 处 + 2 处补正）：标题 / §0（坐标 41；+1 =
+  harness-interaction-ask）/ §1.2（全仓 48 POM）/ §3（翻转序列 0.2.0 + 非 reactor 同步注）/
+  §4（0.1.0 实测 650、0.2.0 预期 670；§4.2 叶数 31——补正）/ §5（附件自动化在案化——
+  原「点名推迟 it25」清零；rc1 排练纪律；发布后清单 5 条）/ §6（bump → 0.3.0-SNAPSHOT +
+  §5 指针）/ §7（缺陷修 0.2.1）。
+  旧措辞全局 grep：`推迟 it25|自动化留后续迭代|v0.1.0 && git push|newVersion=0.2.0-SNAPSHOT`
+  → 仅剩历史台账（it24/it16 台账之记录，非现行文案）；`0.1.1` 全仓 0 命中。
+  发布后清单 5 条 = 裁决三件套（bump / Roadmap 行翻转 / notes 定稿）+ 2 条扩展登记
+  （版本串同步面 / 发布腿重指）——扩展随停点 C packet 报请。
+提交：
+  70caa0c ci(release): attach archives to GitHub Release on v* tags——2 files changed,
+  79 insertions(+), 27 deletions(-)
+
+== 11. 停点 C 本地门：release 干跑 + 全量 package（EXIT=0 双绿） ==
+
+场所：70caa0c 工作树（版本翻转后）。构建输入（pom/java）自 70caa0c 冻结——两跑期间
+  在途变更仅 docs（台账/证据），不触构建面。前置：rm -rf dist/jh/target（§3.1 注2）。
+
+干跑（release 剖面；/tmp/it25.1-dryrun.log）：
+  mvn -B -ntp -P release -Dgpg.skip=true package   → BUILD SUCCESS，Total time 01:21 min
+  （Finished 2026-10-07T10:19:48+08:00；EXIT=0）
+  测试聚合（无锚点 grep）：lines=84 tests=596 failures=0 errors=0 skipped=23
+  sources/javadoc 附件面（盘上产物实读）：*-0.2.0-sources.jar ×33、*-0.2.0-javadoc.jar ×33
+    （33 = 发布面 31 叶 + examples 2——excludeArtifacts 只排上传面，不排 reactor 产物）
+  .asc 零件（预期：-Dgpg.skip=true；§2 注意——不得当签名证据）
+  注：干跑不产 central-bundle.zip（central-publishing 绑定 deploy 面）——bundle 项数
+    基线以真 deploy 日志/§4.1 为准。
+
+全量 package（默认剖面；/tmp/it25.1-package-postflip.log）：
+  mvn -B -ntp package                              → BUILD SUCCESS，Total time 53.277 s
+  （Finished 2026-10-07T10:20:42+08:00；EXIT=0）
+  测试聚合：lines=84 tests=596 failures=0 errors=0 skipped=23（与翻转前 10:04 预检
+    596/0/0/23 零漂移）
+  reactor 46 模块 SUCCESS；dist 归档实读（10:20 产物）：
+    javanatic-harness-0.2.0-macos-aarch64.tar.gz  35,508,697 B
+    javanatic-harness-0.2.0-macos-aarch64.zip     35,544,858 B
+  jlink-image/bin = java / jh / keytool 在位。
+CI 面（验收「全量 package 绿（本机 + CI）」的 CI 腿）：随 rc1 排练/收口推送首跑——
+  待点名放行（§12）。
+
+== 12. rc1 排练计划（新 CI 面首执行不得是真发布——待点名放行） ==
+
+一次性 tag v0.2.0-rc1 排练序列（锚在收口 HEAD；逐步点名）：
+  1. 收口批次（A+B+C）推送后，打 tag v0.2.0-rc1 并推送（另需点名）。
+  2. 观察全 run：build / macos / windows / windows-arm + release-attach（首执行）。
+     预期：release-attach 建 draft Release v0.2.0-rc1（notes 占位分支）并上传 6 件。
+  3. 核验（gh release view v0.2.0-rc1）：draft=true；assets=6；未公开。
+  4. 清理（另需点名）：删远端 tag v0.2.0-rc1 + 删 draft Release。
+  覆盖边界如实：rc1 排练走 notes 占位分支；真 v0.2.0 的 --notes-file 分支
+  （docs/release-notes-0.2.0.md 在场）无法在 rc1 预演——该分支首执行即真发布轮，
+  逻辑面同一（仅 notes 参数差异）。

@@ -1,4 +1,4 @@
-# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 摘旗标并回 master、真跑全绿（run 36549993644，四 job 全绿 + 三件归档在案）→ **停点 A 闭合、首裁项闭合**；停点 B 三件套就绪、报批待放行（12 扫描 6973e2a + release notes 稿 + README×2 反转稿；2026-09-29）））
+# 迭代 25.1 — 0.2.0 发布工程（S-d 甩出）（状态：**进行中**（放行 2026-09-29——四确认核可；aarch64 裁决 = 选 2「双 arch CI job 事实源」，降级选 3 预授权；停点 A：首跑红 → 裁决 F1（arm 腿改 microsoft）、二跑红 → 裁决 R1（侦察 delta 加单引号）→ 侦察三跑全绿（run 36548135323）→ 摘旗标并回 master、真跑全绿（run 36549993644，四 job 全绿 + 三件归档在案）→ **停点 A 闭合、首裁项闭合**；停点 B 三件套就绪、报批待放行（12 扫描 6973e2a + release notes 稿 + README×2 反转稿；2026-09-29）→ **停点 B 通过（2026-10-07 裁决）**：三件套核可、push 授权行使——三笔 docs 落地（`b4bdb2d..8014f24`，pre-push 全量门禁绿）；**停点 C 放行**、范围照案 + 两附加要求（① rc1 tag（`v0.2.0-rc1`）排练先行——新 CI 面首执行不得是真发布；② 翻转提交前全量 package 必绿）；真 deploy/tag/Release/Publish 恒用户侧；Roadmap 翻转推迟 Publish 后、登 release.md §5 发布后清单）；**停点 C 范围执行完毕（2026-10-07）**：翻转 `060b7e9`（47→0 普查）、附件工作流 + release.md 在案化 `70caa0c`、backlog「后续」节 8 条、干跑 EXIT=0（1:21 min）+ 全量 package 绿（53.277 s，596/0/0/23）——**packet 呈报**，rc1 排练与收口推送待点名放行））
 
 模块：发布面文档（`README.md` / `README.zh-CN.md` / `docs/release.md` / `docs/design/12-api-stability.md` / `docs/design/README.md`）· 根 POM 与全仓 POM（版本翻转）· `.github/workflows/`（tag→Release 附件工作流定义）· aarch64 交付面（裁决后落地）
 
@@ -66,6 +66,15 @@
 
 二/三/真跑证据：`docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt` §10（二跑实况与 R1/R2 待裁）· §11（三跑全绿实况与判定）· §12（真跑全绿、选 2 落证、停点 A 闭合）。
 
+**停点 B 裁决（2026-10-07）与停点 C 放行**（裁决文本四条）：
+
+1. **三件套核可**：12 扫描三补丁为真漂移修复；release notes 破坏表首行经独立复核成立（v0.1.0 `run()` 仅返回 0/2）；README×2 反转 + pwsh 前提在位、旧措辞清零。
+2. **push 授权行使**：三笔 docs-only（`126db6d` / `6973e2a` / `8014f24`）——落地 `b4bdb2d..8014f24` → master（pre-push 全量 package 门禁真跑绿）；CI 复跑监控中。
+3. **停点 C 放行、范围照案**：POM 翻转 0.2.0 + release 干跑 `-Dgpg.skip` + tag→Release 附件工作流定义 + `release.md` §5 在案化 + S-b·S-c 挂账登记 + 全量 package。两附加要求：① **tag 工作流先以一次性 tag（`v0.2.0-rc1`）排练**再等真 v0.2.0（新 CI 面首执行不得是真发布，侦察跑规则适用）；② **版本翻转提交前全量 package 必绿**。真 deploy / tag / Release / Publish 恒用户侧。
+4. **Roadmap 翻转推迟到 Publish 后**：登记进 `release.md` §5 发布后清单（收尾提交 = bump 回 SNAPSHOT + Roadmap 行翻转 + notes 定稿），随后续提交落。
+
+停点 C 证据落 `docs/plan/evidence/iteration-25.1/S-d-release-engineering.txt` §8 起；rc1 排练动作（tag 推送 / Release 收件核验 / 清理）待点名放行。
+
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
 - **ADDED**：
@@ -87,23 +96,23 @@
 | `.github/workflows/ci.yml:142` windows job（镜像源） | 追加 `windows-arm` job：八步镜像 + 三 arch 特异点 + 归档/上传通配钉 `windows-aarch64`（已落地，真跑全绿） | ☑ |
 | `README.md:159` / `README.zh-CN.md:149` 平台段 | 平台反转 + pwsh 前提（双语同步） | ☑（矩阵表 + pwsh 7+ 必需/5.1 不支持/缺席执行期 fail-closed；旧措辞全局清零，S-d §7） |
 | `docs/design/12-api-stability.md` §2 导出面 | 全量扫描逐条核对（缺口随扫随补）——33/33 模块 + 37/37 包相符；三处补丁：§4 补 `ProjectInstructions` 缺登记、§5 presets 行删多登记 `presets` 键、§6 补 `-h` alias（S-d §1–§5） | ☑ |
-| `docs/release.md` §5 注（tag→Release 点名推迟） | 附件自动化在案化（定义落盘） | ☐ |
-| 根 POM `version` + 全仓 POM | `0.2.0-SNAPSHOT` → `0.2.0`（+ 干跑预检） | ☐ |
+| `docs/release.md` §5 注（tag→Release 点名推迟） | 附件自动化在案化（定义落盘） | ☑（`release-attach` job + §5 重写；S-d §10） |
+| 根 POM `version` + 全仓 POM | `0.2.0-SNAPSHOT` → `0.2.0`（+ 干跑预检） | ☑（`060b7e9`；47→0 普查 + 干跑/本机 package 双绿；S-d §9/§11） |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | A｜aarch64 job 首跑（停-取证-再议；含降级选 3 的建议权） | `ci.yml` windows-arm job 全文 + 首跑证据 | **通过**（2026-09-29——真跑 run `36549993644` 四 job 全绿、windows-arm 12 步全过、归档三件在案；选 2 落证、首裁项闭合；S-a §12） |
-| B｜发布面成文（对外承诺面：12 扫描结论 + release notes + README×2 反转稿） | `12-api-stability.md` §2 / `release-notes-0.2.0.md` / README×2 | **报批**（2026-09-29——三件套就绪：12 扫描 6973e2a + release notes 稿（v0.1.0 正文格式对齐、出口语义差集实读核对）+ README×2 反转稿；S-d §6/§7；待放行） |
-| C｜收口前（版本翻转 + 干跑 + 附件工作流定义落盘后，发布执行交接前） | 全仓 POM / `release.md` / 附件工作流 / 全量证据 | 未到 |
+| B｜发布面成文（对外承诺面：12 扫描结论 + release notes + README×2 反转稿） | `12-api-stability.md` §2 / `release-notes-0.2.0.md` / README×2 | **通过**（2026-09-29 报批 → 2026-10-07 裁决核可：12 扫描三补丁为真漂移修复；release notes 破坏表首行独立复核成立（v0.1.0 `run()` 仅返回 0/2）；README×2 反转 + pwsh 前提在位、旧措辞清零；push 三笔 docs 落地 `b4bdb2d..8014f24`） |
+| C｜收口前（版本翻转 + 干跑 + 附件工作流定义落盘后，发布执行交接前） | 全仓 POM / `release.md` / 附件工作流 / 全量证据 | **报批**（2026-10-07：范围执行完毕——翻转 `060b7e9` / 工作流+在案化 `70caa0c` / backlog 8 条 / 干跑 + 本机 package 双绿，证据 S-d §8–§11；rc1 排练（S-d §12）与收口推送待点名放行——packet 呈报） |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-25.1/）
 
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
 | `S-a-arm-job-first-run.txt`（停点 A） | 选 2 落地形态 + 侦察三跑 + 真跑（run id / 各 job 结论 / arm job 逐步状态 / 归档三件 / 关键输出行 / EXIT 回显；真跑证据走 jobs/artifacts API 逐字） |
-| `S-d-release-engineering.txt`（随包落盘） | 12 全量扫描结论 + release notes/迁移路径 + release.md + 附件工作流 + aarch64 落地 |
+| `S-d-release-engineering.txt`（随包落盘） | §1–§7：12 全量扫描结论 + release notes/迁移路径 + release.md + aarch64 落地；§8–§12（停点 C）：三笔推送落地 + 版本翻转 + 附件工作流/在案化 + 干跑/全量 package + rc1 排练计划 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -113,10 +122,10 @@
 - [x] release notes 成文（含已知残余清单）——`docs/release-notes-0.2.0.md`（v0.1.0 Release 正文格式对齐；破坏性变更表含出口语义首行——v0.1.0 实读核对；已知残余 7 条在案；S-d §6）
 - [x] README×2 平台段与 pwsh 前提与实况一致——支持矩阵三平台 + pwsh 7+ 前提；旧措辞全局清零（S-d §7）
 - [x] aarch64 交付裁决落地（选 2：双 arch CI job 事实源；降级预授权 = 选 3）——真跑 run `36549993644` 四 job 全绿、windows-arm 12 步全过、`javanatic-harness-windows-aarch64` 归档 68,512,445B 在案（S-a §12）；降级选 3 未行使（授权条件未触发）
-- [ ] tag→Release 附件工作流定义落盘（真执行用户侧）
-- [ ] 版本翻转与发布前预检（干跑绿；真 deploy/tag/Publish 用户侧）
-- [ ] S-b·S-c 挂账记 post-0.2 backlog（只记不动）
-- [ ] 全量 package 绿（本机 + CI）
+- [x] tag→Release 附件工作流定义落盘（真执行用户侧）——`ci.yml` 追加 `release-attach`（v* tag：三腿绿后 6 件附入草稿 Release；ruby YAML 实读 5 job 校验）+ `release.md` §5 在案化（S-d §10）
+- [x] 版本翻转与发布前预检（干跑绿；真 deploy/tag/Publish 用户侧）——`versions:set` 0.2.0 + 示例/文档同步；翻转普查 0 残留（前 47）；提交 `060b7e9`；干跑 EXIT=0（1:21 min）（S-d §9/§11）
+- [x] S-b·S-c 挂账记 post-0.2 backlog（只记不动）——「后续」节 8 条（来源 it25 台账 + S-c 档 §7.3/§9）
+- [ ] 全量 package 绿（本机 + CI）——本机绿（53.277 s；596/0/0/23 与翻转前零漂移；S-d §11）；CI 腿随 rc1 排练/收口推送首跑（S-d §12）
 
 ## 修正（如有）
 
@@ -130,3 +139,16 @@
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
 | （随工作填写） | | | |
+
+## 后续（post-0.2 backlog——只记不动，本迭代禁顺手动）
+
+（来源：it25 台账「后续」节 + S-c 证据档 §7.3/§9；0.2 窗口外，只记不动。）
+
+- **协议词表共享抽取**：landlock 与 windows-acl 助手的退出码词表与「末行结论」解析面现为两份（it25 台账「后续」节）。
+- **`WindowsAcl.Invocation` sealed 化**：现为单个 record + `probe` 布尔判别（类型纪律 08 后续项）。
+- **`WindowsAcl.wide()` 改名**（UTF-16 缓冲助手，命名待细化）；**`isReparsePoint` 死参清理**（`capture` 参数未被使用——函数自建 capture 段）。
+- **windows-acl 两洞消除**：洞 1 = 可写面 = 主机一切 Low 标签对象；洞 2 = NTFS 硬链接别名越界（检测需 link count：`GetFileInformationByHandle`/`FileStandardInformation`；修法（跳过或拒绝）与 `WritableRoots` 语义同议）——0.2 不做既定，当前如实外显（`Ready.detail` + 05 §6）。
+- **`matchesDialect` / `StreamDrain` 去重抽取**（S-c 档 §7.3）。
+- **`ShellPlatform` enum/sealed 化**（S-c 档 §7.3）。
+- **`ShellToolPlugin` `tool` 改名**（S-c 档 §7.3）。
+- **CI 建链特权面环境口径**：windows-latest runner 用户为 `runneradmin`，非「非提权用户」语境——LocalFsTest 建链用例在此环境不产出「非提权」事实（S-c 档 §9）。

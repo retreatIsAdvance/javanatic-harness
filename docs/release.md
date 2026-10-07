@@ -126,6 +126,7 @@ git tag v0.2.0 && git push origin v0.2.0      # push 需放行；tag 指向须�
 - [ ] README×2 的 Roadmap 行翻转（`17–25 (planned)` / `17–25（计划）` → 实况）
 - [ ] release notes 定稿：`docs/release-notes-0.2.0.md` 发布前终读，如需最小修正随收尾提交
 - [ ] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面、`docs/design/02-module-layout.md` POM 片段
+- [ ] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.1.0` → 最新发布版（旧 shell 坐标覆写随之退役）
 
 ## 6. 发布后（main 前进）
 
