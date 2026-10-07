@@ -65,7 +65,7 @@ Maven Central — `io.github.retreatisadvance:harness-*:0.2.0`（索引收录可
 </dependency>
 ```
 
-预构建归档见下方 Assets（运行时装好，解压即用；macOS 归档随构建平台，Linux / Windows 三件由 CI 产出）：
+预构建归档见下方 Assets（运行时装好，解压即用；全平台归档由 CI 产出）：
 
 - `javanatic-harness-0.2.0-macos-aarch64.tar.gz` / `.zip`
 - `javanatic-harness-0.2.0-linux-amd64.tar.gz` / `.zip`

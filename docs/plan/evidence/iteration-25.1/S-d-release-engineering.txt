@@ -7,7 +7,7 @@
 #   命令、决定性输出行与 EXIT 回显。行尾空白已去。
 # §8 起为停点 C 接线（2026-10-07；head 推进 126db6d → 70caa0c）：三笔 docs 推送落地、
 #   版本翻转（060b7e9）、附件工作流 + release.md 在案化（70caa0c）、干跑 + 全量 package、
-#   rc1 排练计划（待点名放行）。
+#   rc1 排练计划。§13 起为停点 C 裁决（有条件放行）条件 2 补丁与 rc1 排练执行。
 #
 # 12 全量扫描结论（2026-09-29）：六面逐条核对。导出面 33 模块 / 37 包与 §2 表逐行相符；
 #   §3 seam 与 it18/it22/it24 迁移注记在案；§4 permits 缺 ProjectInstructions（it21）→ 补；
@@ -246,7 +246,8 @@ CI 复跑（push 事件）：run 37560548570（本仓第 35 跑），head 8014f2
   语义：v* tag 且三构建腿全绿后，download-artifact v4（全收件、merge-multiple）收
   三 artifact × {tar.gz,zip} = 6 件；gh CLI 幂等草稿（无则 create --draft --verify-tag、
   有则复用）+ upload --clobber。notes 取 docs/release-notes-<ver>.md（v0.2.0 → 实文件
-  在场；rc1 → 占位分支）。macOS 不经 CI（jlink 平台绑定）手传；Publish 恒用户侧。
+  在场；rc1 → 占位分支）。macOS 不经 CI（jlink 平台绑定）手传〔**停点 C 裁决条件 2 反转：
+  macOS 纳入 CI 收件——四条腿 / 8 件，见 §13**〕；Publish 恒用户侧。
   注入纪律复核：tag 值经 env GITHUB_REF_NAME 传入、全引号展开（"v$ver" 等）；
   run 内无事件字段直插、无 eval。三处 upload-artifact 注释同步（linux/windows/aarch64）：
   「平时供下载；v* tag 时由 release-attach 附入」。
@@ -296,9 +297,42 @@ CI 面（验收「全量 package 绿（本机 + CI）」的 CI 腿）：随 rc1 
 一次性 tag v0.2.0-rc1 排练序列（锚在收口 HEAD；逐步点名）：
   1. 收口批次（A+B+C）推送后，打 tag v0.2.0-rc1 并推送（另需点名）。
   2. 观察全 run：build / macos / windows / windows-arm + release-attach（首执行）。
-     预期：release-attach 建 draft Release v0.2.0-rc1（notes 占位分支）并上传 6 件。
-  3. 核验（gh release view v0.2.0-rc1）：draft=true；assets=6；未公开。
+     预期：release-attach 建 draft Release v0.2.0-rc1（notes 占位分支）并上传 6 件
+       〔**裁决修订 → 8 件（含 macOS 双件），见 §13**〕。
+  3. 核验（gh release view v0.2.0-rc1）：draft=true；assets=6〔**→ 8**〕；未公开。
   4. 清理（另需点名）：删远端 tag v0.2.0-rc1 + 删 draft Release。
   覆盖边界如实：rc1 排练走 notes 占位分支；真 v0.2.0 的 --notes-file 分支
   （docs/release-notes-0.2.0.md 在场）无法在 rc1 预演——该分支首执行即真发布轮，
   逻辑面同一（仅 notes 参数差异）。
+
+== 13. 停点 C 裁决（有条件放行）条件 2 补丁：macOS 归档纳入 CI 收件（2026-10-07） ==
+
+裁决要点（五条，2026-10-07）：① 三件套与 §5 五条清单核可（含两条执行期扩展）；rc1 不预演
+  `--notes-file` 分界的处理接受。② **条件 2** = 先落一笔补丁再推送——macos 腿加
+  upload-artifact（macos 双归档）+ release-attach `needs` += `macos` + notes Get it 措辞改
+  「全平台归档由 CI 产出」（mac 交付面回归 0.1.0 承诺；attach 逻辑零改动）；此笔进收口批次
+  （共 5 笔）。③ **a–d 全放行，序列照案**：a = 推 5 笔批次（探路+钉 IP 配方、pre-push 真跑、
+  ls-remote 唯一口径）→ b = 推 `v0.2.0-rc1` 锚收口 HEAD → c = 排练观察与核验（四构建腿 +
+  release-attach 首执行；draft=true / **8 件资产含 macos 双件** / 未公开）→ d = 删远端 tag +
+  删草稿 Release（tag 删除不触发工作流——`on: push: tags` 仅创建触发，已核）。④ 小项随 §5：
+  embedding 版本面表题 bump 时改「0.2.0」（去 SNAPSHOT 字样）——已登记 `release.md` §5
+  发布后清单 item 4。⑤ 恒用户侧不变（真 `v0.2.0` tag / Release / deploy / Publish）；
+  rc1 闭环后 it25.1 出收口 packet。
+
+补丁实况（工作树，逐面）：
+  `.github/workflows/ci.yml`：
+    - macos job 追加 upload-artifact `javanatic-harness-macos-aarch64`（双归档；通配钉
+      `-macos-aarch64-`——runner 若漂移为 x64 则通配失配 fail loud，同 windows-arm 之理；
+      macos steps 4 → 5）
+    - release-attach：`needs` = [build, macos, windows, windows-arm]；job 注释改「四条构建腿、
+      8 件」（macOS 手传句撤销）
+  `docs/release.md` §5：三条腿 → 四条腿、6 件 → 8 件、收件面加 macos artifact；「macOS 归档
+    不经 CI（手传）」段反转 →「全平台归档由 CI 产出」；归档命名平台面四件全 CI；发布后清单
+    item 4 加 embedding 版本面表题小项（裁决 ④）。
+  `docs/release-notes-0.2.0.md` Get it：「macOS 归档随构建平台，Linux / Windows 三件由 CI
+    产出」→「全平台归档由 CI 产出」（裁决条件 2 原话）。
+  YAML 校验（ruby psych 实读）：jobs 5；release-attach needs = ["build","macos","windows",
+    "windows-arm"]；steps = build 11 | macos 5 | windows 8 | windows-arm 8 | release-attach 3。
+  旧措辞 grep：`手传|手工上传|不经 CI|不经CI|CI 无` 全仓（除本档历史节与 plan 台账历史行）
+    → 0 命中。
+提交：随收口批次 5 笔（060b7e9 / 70caa0c / c15f3da / 62a270a / 本笔）落地——批次回显见 §14。

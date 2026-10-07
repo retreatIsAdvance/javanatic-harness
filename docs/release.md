@@ -109,23 +109,23 @@ Portal → Publish → Deployments，核对：
 git tag v0.2.0 && git push origin v0.2.0      # push 需放行；tag 指向须承载 0.2.0 版本树（见 §3.2）
 ```
 
-**附件自动化（it25.1 落，`.github/workflows/ci.yml` 的 `release-attach` job）**：v* tag 推送后，CI 在三条构建腿（`build` / `windows` / `windows-arm`）全绿后自动创建/更新 **draft** Release，并附入 6 个归档工件：
+**附件自动化（it25.1 落，`.github/workflows/ci.yml` 的 `release-attach` job）**：v* tag 推送后，CI 在四条构建腿（`build` / `macos` / `windows` / `windows-arm`）全绿后自动创建/更新 **draft** Release，并附入 8 个归档工件：
 
-- 收件面：`javanatic-harness-linux-amd64`、`javanatic-harness-windows-amd64`、`javanatic-harness-windows-aarch64` 三个 artifact（各 tar.gz + zip）
+- 收件面：`javanatic-harness-linux-amd64`、`javanatic-harness-macos-aarch64`、`javanatic-harness-windows-amd64`、`javanatic-harness-windows-aarch64` 四个 artifact（各 tar.gz + zip）
 - 幂等：无则 `gh release create --draft --verify-tag`，有则复用；`gh release upload --clobber` 可重跑
 - Release notes 取 `docs/release-notes-<版本>.md`；缺该文件时用占位文本（rc 排练走此分支）
-- **macOS 归档不经 CI**（jlink 镜像与平台绑定，CI 无 macOS runner）——本机 `mvn -B package` 产出后手工上传
+- **全平台归档由 CI 产出**（it25.1 停点 C 裁决条件 2）：四条构建腿各出本平台归档——macOS 件在 `macos-latest`（arm64）腿产出 `macos-aarch64`，回归 0.1.0 交付承诺
 - **Publish 恒用户侧**：CI 只建 draft；人工审核后点 Publish（§4.4）
 - 纪律：新 CI 面首执行不得是真发布——先以一次性 tag（`v0.2.0-rc1`）排练全链，再打真 `v0.2.0`
 
-归档命名（`dist/jh/target/` 产出，解压即用，顶层目录同名）：`javanatic-harness-0.2.0-<平台>.tar.gz` 与同名 `.zip`；平台面 = linux-amd64 / windows-amd64 / windows-aarch64（CI）+ macOS-aarch64（手传）。Linux 归档在 ubuntu job 于干净 `ubuntu:24.04` 容器内解压冒烟（无 Maven/JDK/bwrap，见 §8）；Windows 归档在对应 job 内解压冒烟同口径。
+归档命名（`dist/jh/target/` 产出，解压即用，顶层目录同名）：`javanatic-harness-0.2.0-<平台>.tar.gz` 与同名 `.zip`；平台面 = linux-amd64 / macos-aarch64 / windows-amd64 / windows-aarch64（四条 CI 腿各出）。Linux 归档在 ubuntu job 于干净 `ubuntu:24.04` 容器内解压冒烟（无 Maven/JDK/bwrap，见 §8）；Windows 归档在对应 job 内解压冒烟同口径。
 
 **发布后清单（Publish 后收尾，随后续提交落；Roadmap 翻转时机裁决 = 推迟到 Publish 后，it25.1）**：
 
 - [ ] 版本 bump 回 SNAPSHOT：`mvn versions:set -DnewVersion=0.3.0-SNAPSHOT -DgenerateBackupPoms=false`（见 §6）
 - [ ] README×2 的 Roadmap 行翻转（`17–25 (planned)` / `17–25（计划）` → 实况）
 - [ ] release notes 定稿：`docs/release-notes-0.2.0.md` 发布前终读，如需最小修正随收尾提交
-- [ ] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面、`docs/design/02-module-layout.md` POM 片段
+- [ ] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面（表题 bump 时改 `0.2.0`——去 `SNAPSHOT` 字样，如 `0.1.0 vs 0.2.0-SNAPSHOT` → `0.1.0 vs 0.2.0`；同类字样面随核）、`docs/design/02-module-layout.md` POM 片段
 - [ ] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.1.0` → 最新发布版（旧 shell 坐标覆写随之退役）
 
 ## 6. 发布后（main 前进）
