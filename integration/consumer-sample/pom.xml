@@ -9,7 +9,7 @@
       不继承 harness-parent（继承会把 junit/assertj/jqwik 等测试依赖一起拖进来），
       不进主仓 reactor。构建只依赖坐标解析：
         候选工件：主仓工作树 `mvn install -Dmaven.repo.local=<隔离仓>` →
-                  -Dharness.version=0.2.0-SNAPSHOT
+                  -Dharness.version=0.2.0
         发布工件：-Dharness.version=0.1.0（Maven Central）
     -->
     <groupId>io.github.retreatisadvance.sample</groupId>
@@ -24,7 +24,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
         <!-- 版本单点：0.1.0 = Central 发布件；0.x.0-SNAPSHOT = 工作树 install 的候选件 -->
-        <harness.version>0.2.0-SNAPSHOT</harness.version>
+        <harness.version>0.2.0</harness.version>
         <!--
           shell provider 坐标单点（it25 S-b 改名 harness-shell-bash-local → harness-shell-local）：
             候选腿 = 工作树 install 的新坐标（默认值）
