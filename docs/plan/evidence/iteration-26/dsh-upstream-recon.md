@@ -43,6 +43,16 @@ settings/settings-file  subagent/tool-subagent-report
 test-support/acp-snapshot  workflow/workflow-worker-thread
 ```
 
+**组级复核**（测量面：`git ls-tree --name-only <commit> packages/` 顶层条目；与上方包级口径
+不同面，数字不互比）：顶层条目 54 → 60 = 组目录 49 → 54（净增 9：browser-use、computer-use、
+deliverables、document、experimental、ptc-runtime、ssh、telemetry、webhook；净失 4：
+code-runtime、e2b、examples、runtime-diagnostics）+ 顶层散件文件 5 → 6（新增
+`packages/tsdown.worker.ts`）。四组路径均 BASE=Y／NEW=N；其中 `code-runtime` 系**更名重组**
+为 `ptc-runtime`（`code-runtime-node` → `ptc-runtime-node` 整树 rename；`7c9bb5914c`
+@ 2026-09-12），`e2b`／`examples`／`runtime-diagnostics` 系移除（`c49db8bc8c` @ 09-11 ／
+`244de7c18a` @ 08-26 ／ `f028f25667` @ 09-30），三笔 merge 提交的 first-parent diff 显示
+组级 README 与整树包目录一并删除。命令与输出见 §8。
+
 **119 项新增**（按组计数，前 10）：client 27、experimental 24、util 10、session 8、api 7、
 ssh 4、llm 4、credentials 3、bundle 3、boot 3；其余（各组 1–2）：webhook、test-support、skill、
 ptc-runtime、preset、host、deliverables、context、workflow、telemetry、subprocess、shell、
@@ -236,6 +246,10 @@ credentials/*（JH 无授权面）、e2b 移除（JH 从未规划）、analytics
    是单文件不是目录（`docs/rescope/` 不存在）。
 4. **upgrade-guide 文件名不统一**：`docs/upgrade-guide/<版本>/<条目>/` 下是 `guide.md` /
    `guide.zh.md` / `guide.i18n.yaml`，不是 README.md。
+5. **统计数必须随附「命令 + 测量面定义」**：同一量在不同测量面下数字不可互比。本轮实例：
+   包级 219→319（面：`packages/<组>/<包>/package.json` 清单）、组级 54→60（面：`ls-tree`
+   顶层条目，含组目录与顶层文件）、提交数 8407（面：`git rev-list --count`，含 merge）。
+   报告与提案中的统计句均注所属面；跨面引用时先回命令重测（§1、§8）。
 
 ## 8. 核验命令与关键输出（原始取证）
 
@@ -304,6 +318,37 @@ $ diff <($BASE 包清单) <(5bb600f9 包清单)      # 空输出 = 包集合一�
 $ git rev-list --count $BASE..$NEW -- apps   → 3089（web 2114 / cli 631 / desktop 526）
 $ 其余热点（同区间 -- <路径>）：packages/client 2766、subagent 552、session 428、boot 298、
   util 233、interaction 146、skill 112、web 93、mcp 85、lsp 64、extensions 1182
+```
+
+组级与更名链复核（同日追加；测量面 = `ls-tree --name-only packages/` 顶层条目）：
+
+```console
+$ git ls-tree --name-only $BASE packages/ | sed 's|/$||' | sort > /tmp/g-base.txt   # NEW 同法
+$ echo "BASE=$(wc -l < /tmp/g-base.txt) NEW=$(wc -l < /tmp/g-new.txt)"
+BASE=54 NEW=60
+$ comm -23 /tmp/g-base.txt /tmp/g-new.txt
+packages/code-runtime  packages/e2b  packages/examples  packages/runtime-diagnostics
+$ comm -13 /tmp/g-base.txt /tmp/g-new.txt
+packages/browser-use  packages/computer-use  packages/deliverables  packages/document
+packages/experimental  packages/ptc-runtime  packages/ssh  packages/telemetry
+packages/tsdown.worker.ts（散件文件，非组）  packages/webhook
+$ git ls-tree -d --name-only $BASE packages/ | wc -l → 49 ；NEW → 54    # 组目录面（顶层文件 5→6）
+$ for g in code-runtime e2b examples runtime-diagnostics; do git cat-file -e $BASE:packages/$g; git cat-file -e $NEW:packages/$g; done
+# 四组均 BASE=Y → NEW=N
+$ git diff --name-status -M 7c9bb5914c^1 7c9bb5914c -- packages/code-runtime/ packages/ptc-runtime/
+D packages/code-runtime/README.md ; R056 …/README.i18n.yaml → packages/ptc-runtime/… ;
+R087 packages/code-runtime/code-runtime-node/package.json → packages/ptc-runtime/ptc-runtime-node/package.json ; …（更名重组）
+$ git diff --name-status -M c49db8bc8c^1 c49db8bc8c -- packages/e2b/
+D packages/e2b/README.{i18n.yaml,md,zh.md} + packages/e2b/{e2b,fs-e2b,subprocess-e2b}/ 整树全 D（整组移除）
+$ git diff --name-status -M 244de7c18a^1 244de7c18a -- packages/examples/
+D packages/examples/README.{i18n.yaml,md,zh.md} + agent-spine-demo 全 D（该 merge 前组内仅剩此包，移除即空）
+$ git diff --name-status -M f028f25667^1 f028f25667 -- packages/runtime-diagnostics/
+D packages/runtime-diagnostics/README.{i18n.yaml,md,zh.md} + invariants 全 D
+$ git log --follow -M --diff-filter=R --format='%h %ad %s' --date=short -- 'packages/test-support/llm-replay/package.json'
+d02e9f1bd6 2026-06-20 Reorganize packages into a modular hierarchy   # packages/llm-replay/… → packages/support/llm-replay/…
+a2d0f7f411 2026-08-13 refactor: apply repository naming contract      # packages/support/llm-replay/… → packages/test-support/llm-replay/…
+$ git log --all --oneline -- 'packages/llm/llm-replay' | wc -l → 0   # llm/ 组形从未成立
+$ git cat-file -e $BASE:packages/support/llm-replay/package.json → N # 08-13 命名契约早于分析 tip，无残留
 ```
 
 坑位记录（§7 的方法学）：/tmp 快照 diff 法曾把 BASE 已存在的包误报为新增——已弃用，

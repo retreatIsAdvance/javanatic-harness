@@ -9,11 +9,14 @@
 
 > 均为**出处事实**订正，不触及 JH 自身设计决策（JH 侧模块名、机制、路线均不变）。
 > 「若错靠什么发现」= 该订正若与事实不符时，重跑哪个命令即红。
+> 测量面口径：本表 6 条为**逐条人工列举**——`packages/...` 路径形 3 条（A-1～A-3）、
+> `native/...` 形 1 条（A-4）、包名提及/行为叙述 2 条（A-5、A-6）；非正则全树 sweep，
+> 与其他测量面的计数不直接互比（勘察报告 §7-5）。
 
 | 编号 | 位置 | 现文（摘） | 新基线事实 | 建议改法 | 若错靠什么发现 |
 |---|---|---|---|---|---|
 | A-1 | `02-module-layout.md:41`、`:767` | dsh 包列 `preset/agent-presets` | 2026-09-21 `d1e22a7e24` 拆为 `preset/agent-preset` + `preset/agent-preset-registry`（`composeFrom` 在 registry） | 改为 `preset/agent-preset`（组合层）/ `preset/agent-preset-registry`（注册表），或合写 `preset/agent-preset{,-registry}` | `git cat-file -e 5badb15009:packages/preset/agent-presets/package.json`（红即订正错） |
-| A-2 | `02-module-layout.md:771` | dsh 包列 `llm/llm-replay` | 两基线下均在 `test-support/llm-replay`；`packages/llm/llm-replay` 全历史为空 | 路径直接替换为 `test-support/llm-replay` | `git log --all -- 'packages/llm/llm-replay'`（非空即订正错） |
+| A-2 | `02-module-layout.md:771` | dsh 包列 `llm/llm-replay` | 两基线下均在 `test-support/llm-replay`；`packages/llm/llm-replay` 全历史 0 行。去向已查清（`--follow -M`）：根级扁平 `packages/llm-replay`（≤2026-06-20 `d02e9f1bd6` 重组入 `support` 组）→ 2026-08-13 `a2d0f7f411` 命名契约再入 `test-support` 组（早于分析 tip）——`llm/` 组形从未成立 | 路径直接替换为 `test-support/llm-replay` | `git log --all -- 'packages/llm/llm-replay'`（非空即订正错）；`git log --follow -M --diff-filter=R -- 'packages/test-support/llm-replay/package.json'`（链内 R 应恰为 2 条：→support、→test-support，另现即重查） |
 | A-3 | `02-module-layout.md:778` | dsh 包列 `interaction/approval` | 两基线下均为 `interaction/user-approval`（npm `@deepseek-ai/dsh-user-approval`）；`@deepseek-ai/dsh-approval` 全历史不存在 | 路径替换为 `interaction/user-approval`；JH 侧 `interaction.approval` 名不动 | `git cat-file -e 5badb15009:packages/interaction/user-approval/package.json` |
 | A-4 | `iteration-24.md:14`、`:38` | 「`native/landlock-run` 为 C + 独立 CI」「其兜底 `native/landlock-run` 随产物自带」 | 2026-09-07 `336ebb235e` 迁入 `native/system`、09-08 `97e7223d5f` 子路径化：`@deepseek-ai/node-addon-system`（`./landlock-run`、`./flock`） | 改为 `native/system`（Landlock = 其 `landlock-run` 子路径）；保留历史语境可加「（分析期 path 为 native/landlock-run，2026-09-07 重组）」 | `git ls-tree --name-only 5badb15009 native/`（非 native/system 即订正错） |
 | A-5 | `10-testing.md:37`、`03-session-event-sourcing.md` §7 首行 | 「dsh 的 `dsh-session/invariant` 是核心」「对应 dsh 的 session invariant」 | 运行时不变式机制 2026-09-30 `f028f25667` **整体移除**（`@deepseek-ai/dsh-invariants`、各包 `./invariant`、gates、resolver、`INVARIANT` rethrow） | 改写为历史出处（「dsh 分析期曾以 ./invariant 伴随插件 + 运行时注册表实现，2026-09 已退役；JH `SessionInvariants` 是自有形态，非移植」），或删 dsh 出处句仅留 JH 自述 | `git cat-file -e 5badb15009:packages/runtime-diagnostics/invariants/package.json`（判存在即订正错） |
