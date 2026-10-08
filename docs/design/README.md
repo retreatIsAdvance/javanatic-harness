@@ -106,13 +106,13 @@
 
 ## 实现路线（垂直切片；2026-09 开源目标修订）
 
-已完成的垂直切片（it1 kernel / it2 session / it3 llm seam + replay / it4 tools + fs / it5 agent-loop + 竖切 / it6 shell + deepseek + 持久化 + R1 闭环 / it7 openai-compat + 治理上线 / it7.1 厂商灵活化 / it8 组合数据化 AppBoot + ConfigService + manifest / it9 scope + preset / it10 长跑能力 compaction + budget + resume / it11 todo_write + 计划模式 / it12 sandbox 同机进程约束 + restriction / it12.5 shell-docker 环境级隔离 / it12.6 硬化回填（JSONL 耐久、typed LLM 失败、LocalFs realpath、`--verify` 平台预警）/ it12.7 平台链落地（linux=bwrap + CI 双 job）/ it13 dist jlink + CLI 完备 / it14 交互面 REPL + 流式渲染 / it15 生产模拟场景进 CI（replay 驱动：keyless、确定性）+ `--budget=` 收口 + R1 逐锚点前缀折叠口径 / it16 发布工程 → **0.1.0 已发布**（Maven Central + GitHub Release；门面冻结 + 双语 README + jlink 归档 + [release.md](../release.md)））。R1–R4 测试随切片走，不做收尾补（[10](10-testing.md)）。
+已完成的垂直切片（it1 kernel / it2 session / it3 llm seam + replay / it4 tools + fs / it5 agent-loop + 竖切 / it6 shell + deepseek + 持久化 + R1 闭环 / it7 openai-compat + 治理上线 / it7.1 厂商灵活化 / it8 组合数据化 AppBoot + ConfigService + manifest / it9 scope + preset / it10 长跑能力 compaction + budget + resume / it11 todo_write + 计划模式 / it12 sandbox 同机进程约束 + restriction / it12.5 shell-docker 环境级隔离 / it12.6 硬化回填（JSONL 耐久、typed LLM 失败、LocalFs realpath、`--verify` 平台预警）/ it12.7 平台链落地（linux=bwrap + CI 双 job）/ it13 dist jlink + CLI 完备 / it14 交互面 REPL + 流式渲染 / it15 生产模拟场景进 CI（replay 驱动：keyless、确定性）+ `--budget=` 收口 + R1 逐锚点前缀折叠口径 / it16 发布工程 → **0.1.0 已发布**（Maven Central + GitHub Release；门面冻结 + 双语 README + jlink 归档 + [release.md](../release.md)）/ it17–it25 可靠单 Agent 系列（任务结果契约与退出码、取消收敛与崩溃恢复、资源边界、工作区理解与可靠编辑、会话操作与人工协作、外部 Java 接入闭环、三平台沙箱与归档交付）/ it25.1 发布工程 → **0.2.0 已发布**（Maven Central + GitHub Release + 四平台归档 + [release notes](../release-notes-0.2.0.md)））。R1–R4 测试随切片走，不做收尾补（[10](10-testing.md)）。
 
 **开源决策（2026-09-08 确认）**：License Apache-2.0；JDK 25 LTS 单版本（不降 21——ScopedValue 终版叙事与差异化优先，采用税在文档中明示）；首发同时面向国际与中文社区。
 
 ### Phased Evolution Plan
 
-**规划基准：2026-09-18，0.1.0 已发布；以下阶段均为计划、尚未开工。** 本节是总体迭代路线的事实源；具体迭代仍须按 [plan/README.md](../plan/README.md) 完成四确认、设计增量、锚点与审查停点，路线落盘不等于实现授权，也不代表验收通过。
+**规划基准：2026-10-08，0.2.0 已发布；0.3 及以后阶段为计划、尚未开工。** 本节是总体迭代路线的事实源；具体迭代仍须按 [plan/README.md](../plan/README.md) 完成四确认、设计增量、锚点与审查停点，路线落盘不等于实现授权，也不代表验收通过。
 
 规划原则：**维护者场景驱动、真实任务验收、社区反馈校准**。发布初期不等待社区反馈才推进；优先级以生产可用、易用、易扩展为目标，而非模块数量。参考本地 dsh 截至 2026-08-13 的源码与演进记录（不代表远端最新状态；路径口径见 [dsh-reference.md](../dsh-reference.md)），吸收取消收敛、语义检查点、外部插件接入和任务所有权的经验，不照搬其包规模、HMR 或 Web 平台。
 
@@ -132,7 +132,7 @@
 
 #### 0.2.0 — Reliable Single-Agent Product
 
-目标：用户能完成任务、判断成败、停止执行并安全恢复；Java 开发者能通过独立工程接入。以下是工作切片与验收目标，不是固定日历工期或已存在的保证。
+**本节已完成并发布**（2026-10-08）：it17–it25.1 全部收口，**0.2.0 已发布**（Maven Central + GitHub Release + 四平台归档；见 [release notes](../release-notes-0.2.0.md)）。目标：用户能完成任务、判断成败、停止执行并安全恢复；Java 开发者能通过独立工程接入。以下是工作切片与验收目标，不是固定日历工期或已存在的保证。
 
 | 迭代 | 内容与用户价值 | 核心验收 |
 |---|---|---|
@@ -187,7 +187,7 @@ MCP 优先于大量自建连接器，以控制个人维护成本；接入外部�
 - 每轮四确认增加一个验收问题：哪一种用户任务从做不到、做不稳或难操作，变成可验证地完成？契约与故障语义先审，实现后再用真实入口验收，证据留在对应 `iteration-N.md`。
 - 近期详细、远期按依赖滚动规划；未通过所依赖的验收，不叠加下一层能力。范围过大可在开工四确认时拆分，不静默改变版本承诺。
 - 实现变化按 [设计同步触发规则](../plan/README.md#设计同步触发规则) 更新对应设计；非稳定面自由重排不得覆盖 [API 稳定面](12-api-stability.md)，其指令文档冲突在后续获授权的同步中处理。
-- **it23「外部 Java 接入闭环」已完成**（2026-09-24 放行收口——独立 Maven 工程嵌入、候选/发布两条工件腿复验、[接入指南](../embedding.md)从零走查；见 [docs/plan/iteration-23.md](../plan/iteration-23.md)）；**it24「Linux 交付与 Landlock」已完成**（2026-09-27 终验——三轮 CI + 收口跑全绿、验收六项全勾；见 [docs/plan/iteration-24.md](../plan/iteration-24.md)）；**it25「Windows 与 0.2 发布验收」已完成**（2026-09-29 收口——六跑三 job 全绿、windows 全 8 步首验通过、验收 8/9 勾；末项「发布工件与稳定面核对齐全」（S-d）按收口裁决甩成 it25.1「0.2.0 发布工程」（仍属 0.2.0），四确认已放行、aarch64 交付裁决落定（2026-09-29：选 2「双 arch CI job 事实源」，降级选 3 预授权——见 [docs/plan/iteration-25.1.md](../plan/iteration-25.1.md) 裁决记录）；契约、锚点与审查停点以该台账为准，本节不替代开工手续。
+- **it23「外部 Java 接入闭环」已完成**（2026-09-24 放行收口——独立 Maven 工程嵌入、候选/发布两条工件腿复验、[接入指南](../embedding.md)从零走查；见 [docs/plan/iteration-23.md](../plan/iteration-23.md)）；**it24「Linux 交付与 Landlock」已完成**（2026-09-27 终验——三轮 CI + 收口跑全绿、验收六项全勾；见 [docs/plan/iteration-24.md](../plan/iteration-24.md)）；**it25「Windows 与 0.2 发布验收」已完成**（2026-09-29 收口——六跑三 job 全绿、windows 全 8 步首验通过、验收 8/9 勾；末项「发布工件与稳定面核对齐全」（S-d）按收口裁决甩成 it25.1「0.2.0 发布工程」（仍属 0.2.0），四确认已放行、aarch64 交付裁决落定（2026-09-29：选 2「双 arch CI job 事实源」，降级选 3 预授权——见 [docs/plan/iteration-25.1.md](../plan/iteration-25.1.md) 裁决记录）；契约、锚点与审查停点以该台账为准，本节不替代开工手续；**it25.1「0.2.0 发布工程」已完成**（2026-10-08 发布闭环——版本翻转 `060b7e9`、rc1 排练（run 37563836209）、tag `v0.2.0` 首跑红（Maven 3.10 镜像面）→ 两笔 fix（`882e9c7` / `89978be`）→ tag 重指后四构建腿 + release-attach 全绿（run 37617464750）、GitHub Release 已发布（8 件归档）、Central validated + Portal Publish（用户侧）、收尾批（bump `0.3.0-SNAPSHOT` / Roadmap 翻转 / release notes 定稿 / 发布腿重指 `0.2.0`）；见 [docs/plan/iteration-25.1.md](../plan/iteration-25.1.md)）。
 
 ## 许可与引用
 

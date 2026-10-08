@@ -122,11 +122,13 @@ git tag v0.2.0 && git push origin v0.2.0      # push 需放行；tag 指向须�
 
 **发布后清单（Publish 后收尾，随后续提交落；Roadmap 翻转时机裁决 = 推迟到 Publish 后，it25.1）**：
 
-- [ ] 版本 bump 回 SNAPSHOT：`mvn versions:set -DnewVersion=0.3.0-SNAPSHOT -DgenerateBackupPoms=false`（见 §6）
-- [ ] README×2 的 Roadmap 行翻转（`17–25 (planned)` / `17–25（计划）` → 实况）
-- [ ] release notes 定稿：`docs/release-notes-0.2.0.md` 发布前终读，如需最小修正随收尾提交
-- [ ] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面（表题 bump 时改 `0.2.0`——去 `SNAPSHOT` 字样，如 `0.1.0 vs 0.2.0-SNAPSHOT` → `0.1.0 vs 0.2.0`；同类字样面随核）、`docs/design/02-module-layout.md` POM 片段
-- [ ] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.1.0` → 最新发布版（旧 shell 坐标覆写随之退役）
+- [x] 版本 bump 回 SNAPSHOT：`mvn versions:set -DnewVersion=0.3.0-SNAPSHOT -DgenerateBackupPoms=false`（见 §6）
+- [x] README×2 的 Roadmap 行翻转（`17–25 (planned)` / `17–25（计划）` → 实况）
+- [x] release notes 定稿：`docs/release-notes-0.2.0.md` 发布前终读，如需最小修正随收尾提交（终读通过、无修正项）
+- [x] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面（表题 bump 时改 `0.2.0`——去 `SNAPSHOT` 字样，如 `0.1.0 vs 0.2.0-SNAPSHOT` → `0.1.0 vs 0.2.0`；同类字样面随核）、`docs/design/02-module-layout.md` POM 片段
+- [x] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.1.0` → 最新发布版（旧 shell 坐标覆写随之退役）
+
+（0.2.0 收尾批：2026-10-08 全数落地——bump `0.3.0-SNAPSHOT` + 本清单五条 + 发布腿 `0.2.0` 真跑复验（repo1 直连 6/6 绿；aliyun 代理对新发布件有同步延迟）；3.10.0 干净全量 598/0/0/23 随批复核。证据 = [S-d §16](plan/evidence/iteration-25.1/S-d-release-engineering.txt)。）
 
 ## 6. 发布后（main 前进）
 

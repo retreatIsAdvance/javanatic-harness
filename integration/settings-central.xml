@@ -7,7 +7,9 @@
   故此处把全部仓库（mirrorOf=*）指向公共 Central 代理。
 
   代理可替换：任何能取到 Central 的公共代理或直连均可，例如换 <url> 为
-  https://repo1.maven.org/maven2（权威源；本机直连偶发超时）。
+  https://repo1.maven.org/maven2（权威源；本机直连偶发超时）。新鲜发布件在代理侧有同步延迟：
+  0.2.0 发布首日 aliyun 对 0.2.0 部分坐标 404（isolated 仓会缓存该失败），换 repo1 直连即通——
+  届时以 RELEASE_SETTINGS=<repo1 settings 文件> 覆写本文件（S-d §16 实证）。
 -->
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

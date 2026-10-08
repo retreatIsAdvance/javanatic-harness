@@ -4,7 +4,7 @@
 
 Plugin-based agent harness on the JVM — **Java 25 LTS / JPMS / Maven**. Ports the engineering ideas of [DeepSeek Harness (dsh)](docs/dsh-reference.md) to the Java ecosystem: **ideas carry over, shapes do not**.
 
-> **Status**: the kernel, the full core trunk (session/tools/todo/plan/agent/agent-loop/system-prompt), the capability trio (llm + fs + shell), the real llm/deepseek provider, and JSONL persistence (R1 closed loop) are implemented and tested — **a real model can already drive the full vertical slice** (model tool_use → real tool execution → journaled events → R1 hash verifiable). Iterations 7–16 and the 12.6 hardening backfill (openai-compat, governance, data-driven AppBoot composition, scope/preset, long-run capability with compaction/budget/resume, todo_write + plan mode, sandbox on-host process confinement (darwin/linux), shell-docker environment-level isolation, runnable dist/jlink artifact + complete CLI, JSONL durability / typed LLM failures / fs realpath fence / platform warnings, REPL interaction surface (command registry + streaming render + typed failure rendering), production-simulation suite (replay-driven, keyless, deterministic — multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison), release engineering → 0.1.0 published (Maven Central + GitHub Release + jlink archives)) are done — composition is data, the R1–R4 invariants are in place, and real tasks run through the CLI; the dependency graph is compiler-enforced from day one.
+> **Status**: the kernel, the full core trunk (session/tools/todo/plan/agent/agent-loop/system-prompt), the capability trio (llm + fs + shell), the real llm/deepseek provider, and JSONL persistence (R1 closed loop) are implemented and tested — **a real model can already drive the full vertical slice** (model tool_use → real tool execution → journaled events → R1 hash verifiable). Iterations 7–25.1 and the 12.6 hardening backfill (openai-compat, governance, data-driven AppBoot composition, scope/preset, long-run capability with compaction/budget/resume, todo_write + plan mode, sandbox on-host process confinement (darwin/linux), shell-docker environment-level isolation, runnable dist/jlink artifact + complete CLI, JSONL durability / typed LLM failures / fs realpath fence / platform warnings, REPL interaction surface (command registry + streaming render + typed failure rendering), production-simulation suite (replay-driven, keyless, deterministic — multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison), release engineering → 0.1.0 published (Maven Central + GitHub Release + jlink archives), the 0.2.0 reliable single-agent series (task-result contract and exit codes, cancellation convergence and crash recovery, resource bounds, workspace understanding and reliable edits, session ops and human collaboration, external Java integration, three-platform sandboxes and archive delivery) → 0.2.0 published (Maven Central + GitHub Release + four platform archives)) are done — composition is data, the R1–R4 invariants are in place, and real tasks run through the CLI; the dependency graph is compiler-enforced from day one.
 >
 > Naming: JPMS root name / packages `io.javanatic.harness.*`; Maven coordinates `io.github.retreatisadvance:harness-*` (groupId = Central namespace, intentionally different from the package names).
 
@@ -29,17 +29,17 @@ Full design docs: [docs/design/README.md](docs/design/README.md) (13 docs, with 
 
 ## Get it
 
-**Maven Central** — `io.github.retreatisadvance:harness-*` (0.1.0):
+**Maven Central** — `io.github.retreatisadvance:harness-*` (0.2.0):
 
 ```xml
 <dependency>
   <groupId>io.github.retreatisadvance</groupId>
   <artifactId>harness-kernel-core</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
-Prebuilt archives: the [v0.1.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0) carries the macOS/aarch64 archive (`javanatic-harness-0.1.0-macos-aarch64.tar.gz` / `.zip`; runtime baked in — unpack and run `bin/jh`). Linux archives are built, smoke-tested in a clean `ubuntu:24.04` container, and attached to every CI run as the `javanatic-harness-linux-amd64` artifact (Release attachments for Linux land with the 0.2.0 release). To build from source instead, see below.
+Prebuilt archives: the [v0.2.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0) carries the four archives across three platforms (macOS/aarch64, Linux/amd64, Windows amd64/aarch64; each as `.tar.gz` / `.zip`, all built and smoke-tested by CI) — runtime baked in, unpack and run `bin/jh`. To build from source instead, see below.
 
 Embedding the harness in your own Java service — compose an agent (`AppBoot`), register your own plugin and tools, run a keyless governance self-check? See [docs/embedding.md](docs/embedding.md); the worked, re-runnable example is [`integration/consumer-sample`](integration/consumer-sample).
 
@@ -150,7 +150,7 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 | 14 ✅ | Interaction surface: REPL (landed in `interaction/commands`) + streaming render (chunk journaling + typed failure rendering by `FailureKind`) | — |
 | 15 ✅ | Production simulation in CI: replay-driven (keyless, deterministic) + PRODUCTION policy + multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison | [03](docs/design/03-session-event-sourcing.md) |
 | 16 ✅ | Release engineering → **0.1.0** published: Maven Central + GitHub Release (jlink archives), facade freeze, bilingual README | — |
-| 17–25 (planned) | **0.2.0**: reliable single-agent CLI, cancellation/recovery/resource limits, workspace and session usability, external Java integration, Linux archives + Landlock, Windows confinement + pwsh | [Overall plan](docs/design/README.md#phased-evolution-plan) |
+| 17–25 ✅ | **0.2.0** published: reliable single-agent CLI, cancellation/recovery/resource limits, workspace and session usability, external Java integration, Linux archives + Landlock, Windows confinement + pwsh; Maven Central + GitHub Release (four platform archives) | — |
 | 0.3 series (planned) | Reusable capabilities: skills + MCP Tools first; web access and LSP follow | [Overall plan](docs/design/README.md#phased-evolution-plan) |
 | 0.4 (planned) | Managed background tasks first, then controlled multi-agent delegation | [Overall plan](docs/design/README.md#phased-evolution-plan) |
 

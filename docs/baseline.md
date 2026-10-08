@@ -39,7 +39,7 @@ JH="$PWD/dist/jh/target/jlink-image/bin/jh"
 ### 前置（宿主 shell）
 
 ```sh
-export PATH="$HOME/Documents/apache-maven-3.8.8/bin:$PATH"
+export PATH="$HOME/Documents/apache-maven-3.10.0/bin:$PATH"
 export JAVA_HOME=$(/usr/libexec/java_home -v 25)
 export DEEPSEEK_API_KEY=sk-...
 ```

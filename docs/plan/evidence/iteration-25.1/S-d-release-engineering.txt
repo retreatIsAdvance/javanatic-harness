@@ -488,3 +488,79 @@ d｜同步面捕获与环境事实：
   环境事实（本机，已录 memory）：版本翻转 0.2.0 后本地仓无 `harness-*:0.2.0` 制品，`-pl`
     直跑（无 -am）向 aliyun/ane56 镜像拉不存在的 0.2.0 —— 静默挂起 20+ 分钟（CPU 仅 2.5s，
     lsof 见 localhost:https ESTABLISHED），非 fail-fast；本批聚焦跑改 `-am`（+`-o`）解决。
+
+== 16. 发布后收尾批（2026-10-08；head 3095e6f）：bump 0.3.0-SNAPSHOT · Roadmap 翻转 · 发布腿重指 0.2.0 ==
+
+范围（用户指令「确认已发布，启动收尾流程」）：release.md §5 五条清单全数落地（5×[x] + 尾注
+证据指针 → 本 §16）+ 附加项（AGENTS.md 补录 / 本地 Maven 3.10.x）；提交形态 = 两笔
+（`chore: bump 0.3.0-SNAPSHOT` + `docs(release): 0.2.0 发布后收口（…）`），对齐 0.1.0 先例
+（a69d722 / b4889ee）；push 待点名。前提实况复核：Release v0.2.0 published（publishedAt
+2026-10-08T03:40:16Z、8 件、非 draft）；tag 终跑 run 37617464750 五 job 全绿（headSha
+89978be）；Central deploy validated（deploymentId c1f71183-…，用户执行）+ Portal Publish
+（用户侧）；repo1 metadata `<latest>0.2.0</latest>`/`<release>0.2.0</release>`
+（lastUpdated 20261008041325）。
+
+a｜版本面：bump 0.3.0-SNAPSHOT（§5-①）+ 版本串同步面（§5-④）：
+  `mvn versions:set -DnewVersion=0.3.0-SNAPSHOT -DgenerateBackupPoms=false` → 46 reactor POM
+    各一处。非 reactor 面手动同步：integration/consumer-sample（pom `<harness.version>` 缺省值
+    + README 示例值）；docs/design/02-module-layout.md POM 片段 6 处。
+  docs/embedding.md：版本面表题去 SNAPSHOT（`0.1.0 vs 0.2.0`）+ 双口径注记（`0.2.0 = Maven
+    Central 发布件；0.3.0-SNAPSHOT = 主仓工作树 install 的候选件`）+ 示例命令 / 排错行 /
+    发布腿注释（`只从 Central 解析 0.2.0`）随改；0.1.0 用户迁移注记有意保留。
+  反查：`grep -rln "0\.2\.0-SNAPSHOT" --include="*.md" --include="*.xml" --include="*.sh"
+    --include="*.yml" .`（除 docs/plan/）→ 仅 docs/release.md（L65/L68 翻转方法说明、L128 清单
+    描述——方法史文本非版本串面，有意保留）。
+
+b｜Roadmap 与状态面翻转（§5-②；§5-③ release notes 终读通过、无修正项，随记）：
+  README.md / README.en.md（各 5 处）：状态行 `7-25.1` + 0.2.0 系列括注 + 已发布（Central +
+    GitHub Release + 四平台归档）；获取节 `0.1.0` → `0.2.0`；归档段四平台四件；路线行
+    `17-25（计划）` → `17-25 ✅` 已发布。
+  docs/design/README.md（4 处）：切片列表尾追加 it25.1 → 0.2.0 已发布（Central + GitHub
+    Release + 四平台归档 + release notes 链接）；规划基准行（2026-10-08，0.2.0 已发布；0.3
+    及以后为计划、尚未开工）；0.2.0 节「本节已完成并发布」；滚动记录尾追加 it25.1 全链
+    （rc1 排练 → tag 首跑红 → 两笔 fix(882e9c7/89978be) → 重指全绿 37617464750 → Release
+    8 件 → Central validated + Portal → 收尾批）。
+
+c｜发布腿重指 0.2.0 + 旧坐标覆写退役（§5-⑤）：
+  integration/verify-consumer.sh：`leg release 0.1.0` → `0.2.0`；leg() 内 `shell_coord` 局部
+    数组与两处展开删除（0.2.0 发布件即 it25 S-b 迁移后坐标，坐标映射不再需要——覆写退役）；
+    头部注释随改（mirror 404 面泛化 + 退役说明）；fallback Maven 路径 → apache-maven-3.10.0。
+    `bash -n` SYNTAX OK。
+  integration/settings-central.xml：注释追加代理同步延迟事实（0.2.0 发布首日 aliyun 部分坐标
+    404；换 repo1 直连即通；届时以 `RELEASE_SETTINGS=<repo1 settings>` 覆写——见 d 实证）。
+
+d｜发布腿 0.2.0 真跑（双轮负/正对照）：
+  红（缺省设置 = aliyun 公共代理；/tmp/it25.1-release-leg-0.2.0.log）：EXIT=1、失败项 6、
+    用时 5s —— `harness-bundle-aggregator:pom:0.2.0 was not found in
+    https://maven.aliyun.com/repository/public during a previous attempt. This failure was
+    cached…`（取件来源行 = public-central-…；隔离仓会缓存该失败）。判定：非代码缺陷 =
+    新鲜发布件在代理侧同步延迟。
+  绿（覆写 `RELEASE_SETTINGS=/tmp/settings-repo1.xml` → repo1 直连；
+    /tmp/it25.1-release-leg-0.2.0-repo1.log）：六项全 ok、EXIT=0、失败项 0、用时 43s；取件
+    来源行 = `harness-bundle-base-0.2.0.jar>repo1-direct-98c55166…=`（隔离仓初始为空 ⇒ 0.2.0
+    只可能取自公共 Central——发布件可解析实证）。
+  ⇒ 设计「外部消费者」验收行「发布后复验 Central 工件」兑现；aliyun 同步后可以缺省设置复跑
+    复验（观察项 g③）。
+
+e｜AGENTS.md 与 baseline 补录：
+  AGENTS.md L21 冻结旗标清单尾加 `--version`（与 -h/--help 齐）；L23 发布面状态行 `0.2.0
+    已发布（Maven Central + v0.2.0 归档，四平台）`；L52 CI Maven 事实（2026-10 起 ubuntu
+    镜像 = 3.10.0；本机无系统 mvn——用 ~/Documents/apache-maven-3.10.0 与 CI 同版）；
+    L193 升版记录（收尾批已升本地 3.10.0 对齐）。校验：wc -l = 200（≤200 行红线守）。
+  docs/baseline.md L42：`apache-maven-3.8.8` → `apache-maven-3.10.0`（随本机升版）。
+
+f｜Maven 3.10.0 从零全量复核（/tmp/it25.1-collection-package-mvn310.log）：
+  BUILD SUCCESS、Total time 01:04 min、EXIT=0；构建前清 target——类文件 mtime 全落构建窗
+  13:35:46–13:36:45 内重编实证（日志本身无 clean 插件；清理为构建前手动）。测试聚合（无锚点
+  grep；raw 114 行 = 类 84 + 模块 30）：tests=598 failures=0 errors=0 skipped=23（与 §15
+  基线 598/0/0/23 同）。归档 `javanatic-harness-0.3.0-SNAPSHOT-macos-aarch64.{tar.gz,zip}`
+  （35,497,220 / 35,546,773 B）；jlink 镜像 `bin/jh --version` → `0.3.0-SNAPSHOT`（EXIT=0；
+  版本单源随 bump 生效实证）。
+
+g｜挂账观察项（报用户；本批不动）：
+  ① docs/design/12-api-stability.md 政策窗口句与 docs/design/README.md 版本稳定性句的代际化
+    （现文案以 0.2.x 窗口为语境；0.3 开工时随设计同步处置）；
+  ② 「两处测试密闭化」（用户备忘项）：全仓 grep `密闭|hermetic` 零命中、未定位；候选项 =
+    examples/headless HeadlessMain.java L119/L124 USAGE 示例串 `如 0.2.0`（bump 后示例过期；
+    措辞面属 12 §6）——待用户确认所指后处置；
+  ③ aliyun 代理同步 0.2.0 后以缺省设置复跑发布腿（可选复验）。

@@ -18,9 +18,9 @@ Javanatic Harness（JH）是把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 
 
 ## 现状
 
-- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 四模块（真执行：POSIX=bash / Windows=pwsh，it25 S-b）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval：人闸等待界——非交互 300s 后按拒绝，`--approval-timeout=` 覆盖，it22）+ 澄清问答（interaction/ask：`ask_user` 免审批 + 停轮结果，答复 = 下一轮 user message，it22）+ 命令面（interaction/commands：registry/slash 解析/事件对，it14）；`examples/headless`（CLI runner：--verify/policy/--workspace=/--approval=/--approval-timeout=/--budget=/--sessions[=N]，经 AppBoot 数据化组合；裸 `jh` 进 REPL——命令面（/help、/exit、/cancel）+ 流式渲染 + typed 失败渲染（按 `FailureKind`），it14；生产模拟场景测试（replay 驱动、keyless：压缩 + resume + 预算 + R1 全比对），it15；dist/jh 打成 jlink 镜像，`bin/jh` 直接运行）；kernel/config + bundle/base（ConfigService/AppBoot/YAML 三层/CompositionManifest）；core/preset（per-session 能力集）；scoped 工具注册表 + setup window（06 落地）；compaction 生产者 + budget 档 + durable resume + request-context（长跑能力）；core/todo + core/plan（todo_write 整表快照 + 计划模式；ExtensionEvent + ServiceLoader codec 三实例——含 it14 的 assistant/chunk）；sandbox 三模块（同机进程约束：平台链 darwin=seatbelt / linux=bwrap→landlock / win32=windows-acl，三腿均已真机实测落地——windows-acl 为低完整性令牌 + 逐对象打标、enforcement PARTIAL 两洞如实，it25；fail-closed + plan 压只读）。
+- **已实现**：`kernel/brand`（`Id<T>`）+ `kernel/core`（统一 Scope 内核，预算见 01）；`core/session`（事件溯源）；`llm/llm` + `llm/replay`（seam + keyless 回放）；`core/tools` + `fs` 三模块（R2 pipeline）；`core/agent` + `core/system-prompt` + `core/agent-loop`（Turn/Step 状态机）；`examples/agent-spine`（可运行竖切 + ArchUnit R2 架构测试）；`shell` 四模块（真执行：POSIX=bash / Windows=pwsh，it25 S-b）；`llm/deepseek`（真实 Provider）；`session/persistence(-jsonl)`（R1 闭环）；`llm/openai-compat`（通用 OpenAI 兼容适配器 + VendorProfile，deepseek 为薄壳）；fs 根目录策略；审批三模式（interaction/approval：人闸等待界——非交互 300s 后按拒绝，`--approval-timeout=` 覆盖，it22）+ 澄清问答（interaction/ask：`ask_user` 免审批 + 停轮结果，答复 = 下一轮 user message，it22）+ 命令面（interaction/commands：registry/slash 解析/事件对，it14）；`examples/headless`（CLI runner：--verify/policy/--workspace=/--approval=/--approval-timeout=/--budget=/--sessions[=N]/--version，经 AppBoot 数据化组合；裸 `jh` 进 REPL——命令面（/help、/exit、/cancel）+ 流式渲染 + typed 失败渲染（按 `FailureKind`），it14；生产模拟场景测试（replay 驱动、keyless：压缩 + resume + 预算 + R1 全比对），it15；dist/jh 打成 jlink 镜像，`bin/jh` 直接运行）；kernel/config + bundle/base（ConfigService/AppBoot/YAML 三层/CompositionManifest）；core/preset（per-session 能力集）；scoped 工具注册表 + setup window（06 落地）；compaction 生产者 + budget 档 + durable resume + request-context（长跑能力）；core/todo + core/plan（todo_write 整表快照 + 计划模式；ExtensionEvent + ServiceLoader codec 三实例——含 it14 的 assistant/chunk）；sandbox 三模块（同机进程约束：平台链 darwin=seatbelt / linux=bwrap→landlock / win32=windows-acl，三腿均已真机实测落地——windows-acl 为低完整性令牌 + 逐对象打标、enforcement PARTIAL 两洞如实，it25；fail-closed + plan 压只读）。
 - **占位**：其余叶子模块只有 `module-info.java` + 标记类——依赖图从第一天起由 JPMS 编译器强制，不是待办清单，而是模块契约。
-- **发布面**：0.1.0 已发布（Maven Central + v0.1.0 归档）——对外承诺以 [docs/design/12-api-stability.md](docs/design/12-api-stability.md) 为准（0.1.x 不破稳定面；破坏性变更随次版本并附迁移路径）。非稳定面（实现类 / kernel 内部机制 / `examples/*` / `dist/*` 内部行为）保留自由度：正确地基 > 兼容包袱——可自由重命名/重排包并同步全部引用，不写兼容垫片。
+- **发布面**：0.2.0 已发布（Maven Central + v0.2.0 归档，四平台）——对外承诺以 [docs/design/12-api-stability.md](docs/design/12-api-stability.md) 为准（0.1.x 不破稳定面；破坏性变更随次版本并附迁移路径）。非稳定面（实现类 / kernel 内部机制 / `examples/*` / `dist/*` 内部行为）保留自由度：正确地基 > 兼容包袱——可自由重命名/重排包并同步全部引用，不写兼容垫片。
 
 ## Repository layout
 
@@ -49,7 +49,7 @@ mvn -B -q -pl <module> -Dtest=XTest test   # 单测试类
 git config core.hooksPath .githooks   # 一次性：启用 pre-commit/pre-push 钩子
 ```
 
-无 mvnw wrapper。CI 用系统 Maven 3.8+（`actions/setup-java` 提供）；本机开发环境无系统 mvn——用 IDE 自带 Maven + temurin-25 执行上述命令。测试栈：JUnit 5 + AssertJ + jqwik（根 POM 统一注入，叶子 POM 不写测试依赖）。
+无 mvnw wrapper。CI 用系统 Maven（`actions/setup-java` 提供，2026-10 起 ubuntu 镜像为 3.10.0）；本机开发环境无系统 mvn——用 `~/Documents/apache-maven-3.10.0`（与 CI 同版）+ temurin-25 执行上述命令。测试栈：JUnit 5 + AssertJ + jqwik（根 POM 统一注入，叶子 POM 不写测试依赖）。
 
 ### 跑一个 task（dist/jh jlink 镜像，it13 起）
 
@@ -85,7 +85,7 @@ DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在
 
 组合是数据（it8）：内置 headless profile → base bundle 行资源 → CLI flag overlay 经 AppBoot 装配；dist 镜像即 `examples/headless` 的 jlink 打包（无手拼 module-path）。
 
-### 发布（0.1.0，执行侧 = 用户）
+### 发布（0.2.0，执行侧 = 用户）
 
 ```sh
 mvn -B -P release -Dgpg.skip=true package   # 干跑：release 剖面工件完整（sources/javadoc/元数据；无 .asc 属预期）
@@ -190,7 +190,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - AssertJ `PathAssert` 的路径断言（`startsWith` 等）对 **actual 也做 realpath**——已删/自清理路径作 actual 必抛 `UncheckedIOException(NoSuchFileException)`（it25 三跑 CI 实证：会话 TEMP `jh-sbx-*` 助手退出即自删）；与 S-a 探针 `temp-proof.txt` 观测面同族（通类风险＝以会自己清场的对象作断言面，`S-a-windows-acl.txt` §2）——改纯 JDK 谓词（`Path.startsWith` 等不触盘；产品探针 `WindowsAcl:578` 即此形）。
 - pwsh 原生实参：**未加引号、`-` 开头且含点号的 token 会被参数 token 解析在点号处截断**成两个实参（it25 五跑 CI 实证 run 36530292970：`-Dstderr.encoding=UTF-8` → `-Dstderr` + `.encoding=UTF-8`，java 把后者当主类——产品零缺陷、纯 CI 脚本面；`-XX:-UsePerfData` 无点号故完好）。手搓带点 token 的命令行（如 ci.yml 探针步）一律走**实参数组 + splat**（`$args=@('…'); & exe @args`）——数组元素是已解析字符串，不再过令牌解析。下条侦察跑配方的 `-D` token 即此坑实例（回填时未与本条交叉核对，互指固化）。
 - 新平台/新 CI job 首落地先「侦察跑」（it25 实证：windows job 六轮才绿——CRLF 检出层 → 8.3 短名断言 → DockerShellTest 门 → pwsh splat → 全绿，见 `docs/plan/iteration-25.md`；it25.1 aarch64 腿首跑即红于装配面——setup-java/temurin 无 windows-aarch64 的 JDK 25，见 `docs/plan/evidence/iteration-25.1/S-a-arm-job-first-run.txt`）：scratch 分支把 Build 步改 `-Dmaven.test.failure.ignore=true`（pwsh 步必须单引号，见上条 pwsh 实参坑；bash 步无须），一轮收全清单（装配红与测试红分相、压缩轮次）；红即停-取证-再议，干净后摘旗标、并回主线——**master 落地形态不带该 flag**（失败即停）。
-- runner 镜像 Maven 升 3.10.0（ubuntu 20261004 起）双坑（it25.1 发布实撞；本地 3.8.8 门对两坑皆盲）：① POM `<dependencies>` 重复声明同一 (groupId:artifactId)——旧 Maven（≤3.9.x）仅打 WARNING（"must be unique … future Maven versions might no longer support building such malformed projects"）继续构建，3.10.0+ 改硬 ERROR 拒读 reactor（v0.2.0 tag 跑 build 腿红于 `core/session/pom.xml`；同日 master 跑落旧镜像四腿绿，差异纯在镜像——Runner Image 行 20260927.320 vs 20261004.327）。② 3.10.0 起 `project.build.outputTimestamp` 默认注值 `1980-02-01T00:00:00Z`（3.8.8 下为 null，`-X` 的 `(f) outputTimestamp` 可核）→ 开启 compiler 插件可复现构建补丁点 `patchJdkModuleVersion`（编译成功后读 `module-info.class`），旧钉 compiler 3.13.0 内置 asm 9.6（上限 major 66=V22）读不动 JDK 25 产物（major 69）⇒ **任何带 module-info 的模块重新编译即崩** `Unsupported class file major version 69`（修复：compiler 钉 3.14.1，自其起直挂 asm 9.8；门槛表 9.6=V22 / 9.7=V23 / 9.7.1=V24 / 9.8=V25 / 9.9=V26）。纪律：CI 同提交一绿一红先查镜像版本差；撞新镜像后必须用该版 Maven 真跑**干净全量**（删 target，非增量）再谈绿。
+- runner 镜像 Maven 升 3.10.0（ubuntu 20261004 起）双坑（it25.1 发布实撞；本地 3.8.8 门对两坑皆盲，收尾批已升本地 `~/Documents/apache-maven-3.10.0` 对齐）：① POM `<dependencies>` 重复声明同一 (groupId:artifactId)——旧 Maven（≤3.9.x）仅打 WARNING（"must be unique … future Maven versions might no longer support building such malformed projects"）继续构建，3.10.0+ 改硬 ERROR 拒读 reactor（v0.2.0 tag 跑 build 腿红于 `core/session/pom.xml`；同日 master 跑落旧镜像四腿绿，差异纯在镜像——Runner Image 行 20260927.320 vs 20261004.327）。② 3.10.0 起 `project.build.outputTimestamp` 默认注值 `1980-02-01T00:00:00Z`（3.8.8 下为 null，`-X` 的 `(f) outputTimestamp` 可核）→ 开启 compiler 插件可复现构建补丁点 `patchJdkModuleVersion`（编译成功后读 `module-info.class`），旧钉 compiler 3.13.0 内置 asm 9.6（上限 major 66=V22）读不动 JDK 25 产物（major 69）⇒ **任何带 module-info 的模块重新编译即崩** `Unsupported class file major version 69`（修复：compiler 钉 3.14.1，自其起直挂 asm 9.8；门槛表 9.6=V22 / 9.7=V23 / 9.7.1=V24 / 9.8=V25 / 9.9=V26）。纪律：CI 同提交一绿一红先查镜像版本差；撞新镜像后必须用该版 Maven 真跑**干净全量**（删 target，非增量）再谈绿。
 
 ## 修改本文件
 

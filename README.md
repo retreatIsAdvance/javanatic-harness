@@ -4,7 +4,7 @@
 
 基于 JVM 的插件化 Agent Harness —— **Java 25 LTS / JPMS / Maven**。把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 Java 体系：**思想照搬，形状不照搬**。
 
-> **状态**：kernel、core 全主干（session/tools/todo/plan/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7-16 与 12.6 硬化回填（openai-compat、治理上线、AppBoot 组合数据化、scope/preset、长跑能力 compaction/budget/resume、todo_write + 计划模式、sandbox 同机进程约束（darwin/linux）、shell-docker 环境级隔离、可运行产物 dist/jlink + CLI 完备、JSONL 耐久 / typed LLM 失败 / fs realpath 围栏 / 平台预警、REPL 交互面（命令面 + 流式渲染 + typed 失败渲染）、生产模拟场景（replay 驱动、keyless、确定性——多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对）、发布工程 → 0.1.0 已发布（Central + GitHub Release + jlink 归档））已完成——组合是数据、R1–R4 治理不变式就位、真实任务经 CLI 跑通；依赖图从第一天起由编译器强制执行。
+> **状态**：kernel、core 全主干（session/tools/todo/plan/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7-25.1 与 12.6 硬化回填（openai-compat、治理上线、AppBoot 组合数据化、scope/preset、长跑能力 compaction/budget/resume、todo_write + 计划模式、sandbox 同机进程约束（darwin/linux）、shell-docker 环境级隔离、可运行产物 dist/jlink + CLI 完备、JSONL 耐久 / typed LLM 失败 / fs realpath 围栏 / 平台预警、REPL 交互面（命令面 + 流式渲染 + typed 失败渲染）、生产模拟场景（replay 驱动、keyless、确定性——多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对）、发布工程 → 0.1.0 已发布（Central + GitHub Release + jlink 归档）、0.2.0 系列可靠单 Agent（任务结果契约与退出码、取消收敛与崩溃恢复、资源边界、工作区理解与可靠编辑、会话操作与人工协作、外部 Java 接入闭环、三平台沙箱与归档交付）→ 0.2.0 已发布（Central + GitHub Release + 四平台归档））已完成——组合是数据、R1–R4 治理不变式就位、真实任务经 CLI 跑通；依赖图从第一天起由编译器强制执行。
 >
 > 命名：JPMS 根名 / 包名 `io.javanatic.harness.*`；Maven `io.github.retreatisadvance:harness-*`（groupId = 中央仓命名空间，与包名不同源属有意为之）。
 
@@ -29,17 +29,17 @@
 
 ## 获取
 
-**Maven Central** —— `io.github.retreatisadvance:harness-*`（0.1.0）：
+**Maven Central** —— `io.github.retreatisadvance:harness-*`（0.2.0）：
 
 ```xml
 <dependency>
   <groupId>io.github.retreatisadvance</groupId>
   <artifactId>harness-kernel-core</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
-预构建归档：[v0.1.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0) 附的是 macOS/aarch64 归档（`javanatic-harness-0.1.0-macos-aarch64.tar.gz` / `.zip`；运行时已内置，解压即用 `bin/jh`）。Linux 归档由 CI 每次构建产出——在干净 `ubuntu:24.04` 容器内冒烟后作为 `javanatic-harness-linux-amd64` artifact 供下载（Release 附件随 0.2.0 发布挂上）；自源码构建见下文。
+预构建归档：[v0.2.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0) 附三平台四件归档（macOS/aarch64、Linux/amd64、Windows amd64/aarch64，各 `tar.gz` / `.zip`；全部由 CI 构建并冒烟）——运行时已内置，解压即用 `bin/jh`；自源码构建见下文。
 
 在自家 Java 服务里嵌入——`AppBoot` 起 agent、自注册插件与工具、keyless 治理自证——见 [docs/embedding.md](docs/embedding.md)；可照抄、可复跑的最小工程在 [`integration/consumer-sample`](integration/consumer-sample)。
 
@@ -140,7 +140,7 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 | 14 ✅ | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染（chunk 落账 + typed 失败渲染按 `FailureKind`）| — |
 | 15 ✅ | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
 | 16 ✅ | 发布工程 → **0.1.0** 已发布：Maven Central + GitHub Release（jlink 归档）、门面冻结、双语 README | — |
-| 17–25（计划） | **0.2.0**：可靠单 Agent CLI、取消/恢复/资源边界、工作区与会话易用性、外部 Java 接入、Linux 归档 + Landlock、Windows 本机隔离 + pwsh | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 17–25 ✅ | **0.2.0** 已发布：可靠单 Agent CLI、取消/恢复/资源边界、工作区与会话易用性、外部 Java 接入、Linux 归档 + Landlock、Windows 本机隔离 + pwsh；Maven Central + GitHub Release（四平台归档） | — |
 | 0.3 系列（计划） | 可复用能力：先 skills + MCP Tools，随后网络资料获取与 LSP | [总体计划](docs/design/README.md#phased-evolution-plan) |
 | 0.4（计划） | 先可管理的后台任务，再受控多 Agent 委派 | [总体计划](docs/design/README.md#phased-evolution-plan) |
 
