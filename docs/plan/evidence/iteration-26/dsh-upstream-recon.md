@@ -10,7 +10,7 @@
 | 时点 | commit | 日期 | 依据 |
 |---|---|---|---|
 | 初次分析（JH 设计文档写作期） | `3a46bd67` 当日 tip | 2026-08-13 21:57 | `docs/design/README.md:117` 自述「参考本地 dsh 截至 2026-08-13 的源码与演进记录」 |
-| JH 首次提交时 dsh HEAD | `b6d0195d` | 2026-08-14 22:35 | JH 首提交 `69e15df` @ 2026-08-15 15:47 |
+| JH 首次提交前后 dsh 主线 | `b6d0195d` → `5bb600f9`（tip） | 2026-08-14 22:35 → 08-15 02:49 | JH 首提交 `69e15df` @ 2026-08-15 15:47；本报告 diff 基准 = `b6d0195d`（与 tip 包集合实测一致，§8） |
 | it14 补勘点 | `9ccd9b06` | 2026-09-13 | it14 期间的引用核对 |
 | **本次新基线** | **`5badb15009ae1756c3afe0ae0cef1faafc290ccc`** | **2026-10-03 11:48** | tag `dsh-v0.2.1-alpha.1`，merge PR #5648 |
 
@@ -97,6 +97,27 @@ schedule、mcp、document 等。关键新增：`api/*-controller`（6）+`api/wo
   「诊断」超出 dsh 归一化面 —— JH 需自有设计，参照时以「定义/引用」两操作对照最稳。
 - 对照 JH 计划「语言服务退出可清理；复用文件与进程生命周期机制」：dsh `lsp-stdio` over
   ctx.fs/ctx.subprocess 正是「复用既有生命周期」的形态。窗口内无主题级变化。
+
+## 2.5 补充勘察：experimental claude-code mods / auto-review（点名重点）
+
+> experimental 组整体为窗口新增（BASE 0 个 → NEW 24 个）；其中：
+
+- `experimental/claude-code-mods`（`@deepseek-ai/dsh-experimental-claude-code-mods`）：把 Claude Code
+  的 mod（`register(on, options)` hooks 模块）包成 cordis 插件运行的**接口兼容桥**（alpha 演示）；
+  `defineMod` 包装、挂载后其 hook 链守卫工具调用、改写提示词、注册命令/工具、在提示行上方画 band。
+  逐项差异表在 `docs/subsystems/claude-code-mods.md`（基准 Claude Code 2.1.287）。
+- `experimental/client-ui-claude-code-mods`：web 端 band（画各会话 mod 树、按钮回传）。
+- `experimental/auto-review`：Auto 权限预设下的 per-tool LLM 授权复核（JH 审批面另行设计，仅记录）。
+
+对 JH 有对照价值的三点：
+1. **工具拦截的时机与日志保真**：桥把 Claude Code「权限检查前改写参数/改路由」收窄为
+   「`tools/execute` 之后——已记录即已执行，改写被跳过并报告」（该诉求指向一条既有提议
+   note：`.agents/notes/proposed/feature/2026-06-30-pre-tool-input-rewrite.md`）——与 JH
+   「日志即事实」同向；将来若做工具参数改写可回看其取舍。
+2. **加载即校验、未实现面 fail loud**：未服务的 event 在加载时点名警告、未实现的 `$` 调用
+   具体报错（`no implementation for <namespace>.<method>`）——与 JH 插件装载惯例同向。
+3. **信任边界**：mod 以插件身份在进程内全权运行（文档明言「不设沙箱——只挂你愿意当插件跑的
+   东西」）；JH 插件同为本进程信任面。JH 无 Claude Code 兼容目标，不立项，记录备查。
 
 ## 3. ② 新思想（候选；逐条入提案）
 
@@ -198,6 +219,10 @@ telemetry/otel、语音、computer-use/browser-use、office-to-pdf、ACP/Codex �
 credentials/*（JH 无授权面）、e2b 移除（JH 从未规划）、analytics 等——JH 0.2/0.3 范围与非目标
 （README:151、design/README:86）已覆盖；记录为「对齐确认」，不产生动作。
 
+窗口提交热点复核（`b6d0195d..NEW` 共 8407 提交）为上述结论提供量化佐证：`apps/` 3089
+（`apps/web` 2114 / `apps/cli` 631 / `apps/desktop` 526）+ `packages/client` 2766 —— 约七成
+提交集中在产品客户端面。
+
 ## 7. 勘察方法学与踩坑（供后续勘察复用）
 
 1. **不要用快照 diff 法**：上一轮用 /tmp 快照对比产出过错误结论（把 BASE 已存在的
@@ -266,6 +291,19 @@ $ git grep -l 'TurnEndReasonMap' $NEW -- packages            # packages/core/ses
 
 $ git ls-tree -r --name-only $NEW .agents/notes/ | grep -E '^\.agents/notes/(implemented|proposed|rejected)/[a-z-]+/2026-(08-(1[5-9]|2[0-9]|3[01])|09-[0-9]{2}|10-[0-9]{2})-[^/]+\.md$' | wc -l
 346
+```
+
+追加核验（2026-10-08，交叉核对）：
+
+```console
+$ git rev-list -1 --before='2026-08-15 15:48+0800' --first-parent $NEW    # JH 首提前主线 tip
+5bb600f9fb 2026-08-15 02:49 Merge pull request #2577 … revert-2571-worktree-reducepkg
+$ git rev-list --count $BASE..$NEW ; git rev-list --count 5bb600f9..$NEW
+8407 ; 8403
+$ diff <($BASE 包清单) <(5bb600f9 包清单)      # 空输出 = 包集合一致，diff 结论不受影响
+$ git rev-list --count $BASE..$NEW -- apps   → 3089（web 2114 / cli 631 / desktop 526）
+$ 其余热点（同区间 -- <路径>）：packages/client 2766、subagent 552、session 428、boot 298、
+  util 233、interaction 146、skill 112、web 93、mcp 85、lsp 64、extensions 1182
 ```
 
 坑位记录（§7 的方法学）：/tmp 快照 diff 法曾把 BASE 已存在的包误报为新增——已弃用，

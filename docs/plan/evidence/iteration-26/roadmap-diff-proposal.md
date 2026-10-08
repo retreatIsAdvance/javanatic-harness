@@ -72,6 +72,14 @@
 - **0.4 面**：jobs / schedule / workflow-ptc / goal / subagent 扩张——it26+ 的 0.4 四确认对照输入。
 - **boot 热重载三件套**：JH 维持「本阶段不做运行时热重载」（`docs/design/README.md:151`）。
 - **Windows ACL 收敛**：dsh 2026-09-19 强制性完整性约束与 JH it25 低完整性同向，无动作。
+- **deliverables（窗口新增组）**：`tool-present`（显式工作区交付声明）+ `workspace-changes`
+  （per-turn 工作区变更记录：git 工作树快照 + 全文件捕获 + 逐文件对比）——与 JH「结果可观察」
+  同向；无动作（记录备查；`client/ui-deliverables` 旧基线已有）。
+- **extensions 组（旧基线已有、窗口内高热 ~1182 提交）**：`tool-cordis`（插件开发用只读运行时
+  检视）+ `cordis-host-runner`（模型挂载的 dual-half 包：动态包定义注册表 + 宿主半部沙箱生命
+  周期 + invoke 处理器表）——把插件框架能力开到模型面；与 boot 三件套同域，记录备查。
+- **experimental claude-code mods / auto-review（窗口新增）**：Claude Code mod 兼容桥 + web band
+  + Auto 预设 per-tool LLM 复核——JH 无 Claude Code 兼容目标；三点对照价值见勘察报告 §2.5。
 
 ## C. 负结论（明确不因本轮勘察调整）
 
