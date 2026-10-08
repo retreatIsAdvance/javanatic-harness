@@ -1,35 +1,35 @@
 # Javanatic Harness
 
-> [中文](README.zh-CN.md)
+> [English](README.en.md)
 
-Plugin-based agent harness on the JVM — **Java 25 LTS / JPMS / Maven**. Ports the engineering ideas of [DeepSeek Harness (dsh)](docs/dsh-reference.md) to the Java ecosystem: **ideas carry over, shapes do not**.
+基于 JVM 的插件化 Agent Harness —— **Java 25 LTS / JPMS / Maven**。把 [DeepSeek Harness (dsh)](docs/dsh-reference.md) 的工程思想移植到 Java 体系：**思想照搬，形状不照搬**。
 
-> **Status**: the kernel, the full core trunk (session/tools/todo/plan/agent/agent-loop/system-prompt), the capability trio (llm + fs + shell), the real llm/deepseek provider, and JSONL persistence (R1 closed loop) are implemented and tested — **a real model can already drive the full vertical slice** (model tool_use → real tool execution → journaled events → R1 hash verifiable). Iterations 7–16 and the 12.6 hardening backfill (openai-compat, governance, data-driven AppBoot composition, scope/preset, long-run capability with compaction/budget/resume, todo_write + plan mode, sandbox on-host process confinement (darwin/linux), shell-docker environment-level isolation, runnable dist/jlink artifact + complete CLI, JSONL durability / typed LLM failures / fs realpath fence / platform warnings, REPL interaction surface (command registry + streaming render + typed failure rendering), production-simulation suite (replay-driven, keyless, deterministic — multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison), release engineering → 0.1.0 published (Maven Central + GitHub Release + jlink archives)) are done — composition is data, the R1–R4 invariants are in place, and real tasks run through the CLI; the dependency graph is compiler-enforced from day one.
+> **状态**：kernel、core 全主干（session/tools/todo/plan/agent/agent-loop/system-prompt）、capability（llm + fs + shell 三角色）、llm/deepseek 真实 Provider、JSONL 持久化（R1 闭环）均已实现并测试——**真实模型已可驱动完整竖切**（模型 tool_use → 工具真执行 → 日志落盘 → R1 哈希可证）。迭代 7-16 与 12.6 硬化回填（openai-compat、治理上线、AppBoot 组合数据化、scope/preset、长跑能力 compaction/budget/resume、todo_write + 计划模式、sandbox 同机进程约束（darwin/linux）、shell-docker 环境级隔离、可运行产物 dist/jlink + CLI 完备、JSONL 耐久 / typed LLM 失败 / fs realpath 围栏 / 平台预警、REPL 交互面（命令面 + 流式渲染 + typed 失败渲染）、生产模拟场景（replay 驱动、keyless、确定性——多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对）、发布工程 → 0.1.0 已发布（Central + GitHub Release + jlink 归档））已完成——组合是数据、R1–R4 治理不变式就位、真实任务经 CLI 跑通；依赖图从第一天起由编译器强制执行。
 >
-> Naming: JPMS root name / packages `io.javanatic.harness.*`; Maven coordinates `io.github.retreatisadvance:harness-*` (groupId = Central namespace, intentionally different from the package names).
+> 命名：JPMS 根名 / 包名 `io.javanatic.harness.*`；Maven `io.github.retreatisadvance:harness-*`（groupId = 中央仓命名空间，与包名不同源属有意为之）。
 
-## Design cornerstones (five pillars + four invariants)
+## 设计思想（五大基石 + 四条不变式）
 
-1. **Everything is a plugin** — stable plugin ids + static composition; swapping a provider swaps the product shape
-2. **A session is an event log** — `LoggedEvent(seq, event)` envelope; model history is a derived projection (event sourcing)
-3. **Capability seam, three roles** — Definition / Provider / Consumer, isolated at JPMS compile time
-4. **Configuration is composition** — profile / bundle / patch layering, restricted interpolation (no arbitrary code)
-5. **Explicitness and discipline** — exhaustive sealed switches, ScopedValue, fail loud, teardown ordering
+1. **一切皆插件** —— 稳定插件 id + 静态组合，换 Provider 即换产品形态
+2. **Session 是事件日志** —— `LoggedEvent(seq, event)` 信封；模型历史是 derived 投影（Event Sourcing）
+3. **Capability Seam 三角色** —— Definition / Provider / Consumer，JPMS 编译期隔离
+4. **配置即组合** —— Profile / Bundle / Patch 三层叠加，受限插值（无任意代码）
+5. **显式与纪律** —— sealed 穷尽、ScopedValue、fail loud、teardown 顺序
 
-Four governance invariants run through the whole design:
+四条治理不变式贯穿全部设计：
 
-| # | Invariant | One-liner | Current mechanism |
+| # | 不变式 | 一句话 | 当前机制 |
 |---|---|---|---|
-| R1 | Reconstructability | A model turn's complete request can be rebuilt byte-for-byte from persisted facts | `llm/request` double hash anchor + JSONL replay closed-loop test |
-| R2 | Execution consistency | Model-initiated side effects have exactly one controlled path | ToolExecutor five-stage pipeline + ArchUnit single-dispatch-point assertion |
-| R3 | Effect disposal | Plugin failure / scope close cleans up every registered effect | Scope effect stack (LIFO) + atomic plugin mount rollback |
-| R4 | Governance completeness | A production configuration can prove permissions, audit, and stop conditions are mounted | Constructor enforcement (landed) + `--verify` / policy profiles (it7) |
+| R1 | 可重建性 | 模型某一轮的完整请求可从持久化事实逐字节重建 | `llm/request` 双哈希锚点 + JSONL 回放闭环测试 |
+| R2 | 执行一致性 | 模型发起的副作用有且仅有一条受控路径 | ToolExecutor 五段 pipeline + ArchUnit 唯一分发点断言 |
+| R3 | 副作用消除 | 插件失败/作用域关闭即清理一切注册副作用 | Scope effect 栈 LIFO + 插件装载原子回滚 |
+| R4 | 治理完备 | 生产配置能证明权限、审计、停止条件已挂载 | 构造器强制（已落地）+ `--verify`/policy 档位（it7） |
 
-Full design docs: [docs/design/README.md](docs/design/README.md) (13 docs, with a navigation index and the R1–R4 master table). Design docs are written in Chinese (language policy: Chinese body + English titles).
+完整设计文档：[docs/design/README.md](docs/design/README.md)（13 篇，含导航索引与 R1–R4 总表）。
 
-## Get it
+## 获取
 
-**Maven Central** — `io.github.retreatisadvance:harness-*` (0.1.0):
+**Maven Central** —— `io.github.retreatisadvance:harness-*`（0.1.0）：
 
 ```xml
 <dependency>
@@ -39,139 +39,129 @@ Full design docs: [docs/design/README.md](docs/design/README.md) (13 docs, with 
 </dependency>
 ```
 
-Prebuilt archives: the [v0.1.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0) carries the macOS/aarch64 archive (`javanatic-harness-0.1.0-macos-aarch64.tar.gz` / `.zip`; runtime baked in — unpack and run `bin/jh`). Linux archives are built, smoke-tested in a clean `ubuntu:24.04` container, and attached to every CI run as the `javanatic-harness-linux-amd64` artifact (Release attachments for Linux land with the 0.2.0 release). To build from source instead, see below.
+预构建归档：[v0.1.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0) 附的是 macOS/aarch64 归档（`javanatic-harness-0.1.0-macos-aarch64.tar.gz` / `.zip`；运行时已内置，解压即用 `bin/jh`）。Linux 归档由 CI 每次构建产出——在干净 `ubuntu:24.04` 容器内冒烟后作为 `javanatic-harness-linux-amd64` artifact 供下载（Release 附件随 0.2.0 发布挂上）；自源码构建见下文。
 
-Embedding the harness in your own Java service — compose an agent (`AppBoot`), register your own plugin and tools, run a keyless governance self-check? See [docs/embedding.md](docs/embedding.md); the worked, re-runnable example is [`integration/consumer-sample`](integration/consumer-sample).
+在自家 Java 服务里嵌入——`AppBoot` 起 agent、自注册插件与工具、keyless 治理自证——见 [docs/embedding.md](docs/embedding.md)；可照抄、可复跑的最小工程在 [`integration/consumer-sample`](integration/consumer-sample)。
 
-## Requirements
+## 环境要求
 
-- **JDK 25** (LTS) + Maven 3.8+
-- This repo uses [jenv](https://www.jenv.be/) for its local JDK: the committed `.java-version` (`25.0`) switches JDKs on `cd`; Maven resolves to the same JDK through the jenv shim, no manual `JAVA_HOME`:
+- **JDK 25**（LTS）+ Maven 3.8+
+- 本仓库用 [jenv](https://www.jenv.be/) 管理局部 JDK：根目录的 `.java-version`（`25.0`）随仓库提交，进入目录即自动切换；Maven 经 jenv shim 解析到同一 JDK，无需手动设置 `JAVA_HOME`：
 
 ```sh
-jenv local 25.0        # only when adding a JDK or changing the version
-mvn -B package         # build directly
+jenv local 25.0        # 仅当首次新增 JDK 或改版本时执行
+mvn -B package         # 直接构建
 ```
 
-Without jenv (e.g. CI), be explicit:
+无 jenv 的环境（如 CI）退回显式指定：
 
 ```sh
 export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS
 ```
 
-## Build & verify
+## 构建与验证
 
 ```sh
-mvn -B package              # full build (46 reactor modules, 513 tests; environment-gated tests self-skip)
-mvn -B -pl :harness-kernel-core -am package   # one module plus its dependencies
+mvn -B package              # 全量编译打包（46 个 reactor 模块，513 项测试；环境门控用例自跳过）
+mvn -B -pl :harness-kernel-core -am package   # 单模块及其依赖
 ```
 
-`mvn -B package` also produces the jlink runtime image (it13) plus `javanatic-harness-<version>-<platform>.tar.gz` / `.zip` archives (it16) under `dist/jh/target/`: unpack and run, no hand-built module path.
+`mvn -B package` 顺带产出 jlink 运行时镜像（it13）与 `javanatic-harness-<版本>-<平台>.tar.gz` / `.zip` 归档（it16，位于 `dist/jh/target/`）：解压即用，无需手拼 module-path。
 
 ```sh
-dist/jh/target/jlink-image/bin/jh --help     # all flags and examples (exit 0)
-dist/jh/target/jlink-image/bin/jh --verify   # composition + governance assertions (no key, exit 0/1)
+dist/jh/target/jlink-image/bin/jh --help     # 全部 flag 与示例（exit 0）
+dist/jh/target/jlink-image/bin/jh --verify   # 组合 + 治理断言（无 key，exit 0/1）
 
-dist/jh/target/jlink-image/bin/jh            # bare start enters the REPL (it14): non-/ lines become turns
-                                             # sent to the model and streamed back; /help lists commands,
-                                             # /exit (or EOF/Ctrl-D) quits, /cancel cancels the in-flight turn (it22);
-                                             # a turn left open is journaled aborted; after the model asks a
-                                             # question (a "← 提问:" line) the next line is the answer
-                                             # Ctrl-C (it18) cancels the in-flight turn (journaled aborted) and stays in the REPL;
-                                             # idle Ctrl-C quits like /exit; a second Ctrl-C before the cancel converges → exit 130
+dist/jh/target/jlink-image/bin/jh            # 裸启动进 REPL（it14）：非 / 行成轮送模型并流式渲染，
+                                             # /help 列命令、/exit（或 EOF/Ctrl-D）退出、/cancel 取消在途轮（it22）；
+                                             # 进行中轮以 aborted 落账；模型提问（← 提问: 行）后的下一行即答复
+                                             # Ctrl-C（it18）取消进行中轮（以 aborted 落账）并留在 REPL；
+                                             # 空闲 Ctrl-C 同 /exit 退出；取消未收敛时再按一次 → 强制退出 130
 
-DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<existing-dir> "task text"
-# every run prints its session id (headless-<timestamp>-<short-random>); --resume=<id> continues the same session
-# --sessions[=<N>] lists sessions (id/state/cwd/last activity/event count; keyless read-only, default 20;
-#   mutually exclusive with task text / --resume / --verify)
-# --resume=<id> without task text → REPL on that existing session
-# --resume onto a session held by another writer (process/JVM) is refused fail-loud: exit 3, stdout empty
-# task-result contract (it17; it22 adds the waiting-for-answer case):
-#   stdout = final answer on success / the question on exit 5 / empty on failure
-#   (success with no text is valid, exit 0); exit codes 0 done · 1 verify violation ·
-#   2 usage/missing key · 3 task failed (incl. --resume writer-lock conflict) · 4 cancelled · 5 waiting for a human answer;
-#   diagnostics (failure text, the model's last words) go to stderr —
-#   `out=$(bin/jh "task")` reads the answer, exit code judges success
-#   one-question-one-answer (it22): the answer to exit 5 is the next user message
-#   (bin/jh --resume=<id> "answer text")
-# --approval=ask wait bound (it22): a non-interactive terminal denies after 300s by default
-#   (fail-closed — never hangs forever); --approval-timeout=<seconds> only with --approval=ask (0 = unbounded)
-# Ctrl-C during a task (it18): cooperative cancel → turn/end aborted("user"), exit 4, stdout empty;
-#   a second Ctrl-C before the cancel converges force-quits (130). Cancellation governs cooperative
-#   operations only — a tool batch that ignores it and returns still closes Completed (exit 0)
-# any OpenAI-compatible vendor:
-#   … bin/jh "task" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
-# container-level isolation (requires local docker and the image present; no auto-pull):
-#   … bin/jh "task" --docker --image=ubuntu:24.04
+DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
+# 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 续跑同一会话
+# --sessions[=<N>] 列会话（id/状态/cwd/最后活动/事件数；keyless 只读，缺省 20，与任务文本/--resume/--verify 互斥）
+# --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
+# --resume 命中占用（另一进程/实例持写者锁）fail loud：exit 3、stdout 为空
+# 任务结果契约（it17；it22 增「等待答复」）：
+#   stdout = 成功给最终答案 / 等待答复给提问文本（exit 5）/ 失败为空（成功但无文本合法，exit 0）
+#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败（含 --resume 写者锁冲突） · 4 任务被取消 · 5 等待人工答复
+#   诊断（失败文案、模型遗言）走 stderr；`out=$(bin/jh "任务")` 取答案、按退出码判成败
+#   一问一答（it22）：exit 5 的答复 = 下一轮 user message（bin/jh --resume=<id> "答复文本"）
+# --approval=ask 的等待界（it22）：非交互终端缺省 300 秒后按拒绝（fail-closed，绝不无限挂起）；
+#   --approval-timeout=<秒> 仅在 --approval=ask 下有效（0 = 不设限）
+# Ctrl-C（it18）：协作取消 → turn/end aborted("user")、exit 4、stdout 为空；
+#   取消未收敛时再按一次 = 强制退出（130）。取消只对协作面生效——
+#   整批工具无视取消并正常返回时仍以 Completed 收口（exit 0）
+# 任意 OpenAI 兼容厂商：
+#   … bin/jh "任务" --api-key-env=MOONSHOT_KEY --base-url=https://api.moonshot.cn/v1 --model=kimi-k2 --provider=kimi
+# 容器级隔离（须本机 docker 与镜像在场，不自动拉取）：
+#   … bin/jh "任务" --docker --image=ubuntu:24.04
 ```
 
-The keyless vertical slice (replay model + fs tools + full journaling) is `examples/agent-spine`; the real-model e2e is its `RealModelAgentE2ETest`.
+keyless 竖切（replay 模型 + fs 工具 + 完整落账）见 `examples/agent-spine`；真实模型 e2e 见其 `RealModelAgentE2ETest`。
 
-## Repository layout
+## 仓库结构
 
 ```
-docs/design/        13 design docs (00-overview … 12-api-stability) + docs/plan/ per-iteration acceptance
-docs/dsh-reference.md   the reference-frame notes (dsh repo path conventions)
-kernel/             the Cordis equivalent: core (unified Scope/Events/Plugin) + brand + config (YAML + ConfigService)
-core/               agent trunk: session/tools/todo/plan/agent/agent-loop/system-prompt/preset (all implemented)
-sandbox/            on-host process confinement: Definition + seatbelt/bwrap providers + policy resolution
-                    (darwin/linux tested; windows designed-first)
-llm/                seam + replay (the keyless test foundation) + openai-compat (generic adapter) + deepseek (real provider)
-fs/ shell/          the capability trio (all implemented; shell has two mutually exclusive providers —
-                    local shell (bash on POSIX, pwsh on Windows) and docker containers, see it12.5)
-session/            persistence seam (JsonValue tree + codec SPI) + JSONL backend (R1 closed loop)
-interaction/        approval three modes (auto/ask/deny, it7) + command surface (registry/slash parsing/event pairs, it14)
-dist/               jlink runtime image orchestration: produces bin/jh (unpack and run, no hand-built
-                    module path, it13)
-bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly) + runnable examples
-                    (agent-spine / headless)
+docs/design/        13 篇设计文档（00-overview … 12-api-stability）+ docs/plan/ 逐迭代验收
+docs/dsh-reference.md   设计参照系说明（dsh 仓库路径约定）
+kernel/             Cordis 等价物：core（统一 Scope/Events/Plugin）+ brand + config（YAML + ConfigService）
+core/               Agent 主干：session/tools/todo/plan/agent/agent-loop/system-prompt/preset（全部已实现）
+sandbox/            同机进程约束：Definition + 平台链（seatbelt | bwrap→landlock）+ 策略解析（darwin/linux 真 OS 实测；windows 设计先行）
+llm/                seam + replay（keyless 测试地基）+ openai-compat（通用适配器）+ deepseek（真实 Provider）
+fs/ shell/          capability 三角色（均已实现；shell 有两个互斥 Provider——本机 shell（POSIX bash / Windows pwsh）与 docker 容器，见 it12.5）
+session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端（R1 闭环）
+interaction/        审批三模式（auto/ask/deny，it7）+ 命令面（registry/slash 解析/事件对，it14）
+dist/               jlink 运行时镜像编排：产出 bin/jh（解出即用，无需手拼 module-path，it13）
+bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可运行示例（agent-spine / headless）
 ```
 
-## Roadmap (vertical slices)
+## 实现路线（垂直切片）
 
-| Slice | Modules | Design doc |
+| 切片 | 模块 | 设计文档 |
 |---|---|---|
-| 1 ✅ | `kernel.core` (unified Scope kernel) | [01-kernel.md](docs/design/01-kernel.md) |
-| 2 ✅ | `core.session` (LoggedEvent envelope + Surface) | [03-session-event-sourcing.md](docs/design/03-session-event-sourcing.md) |
-| 3 ✅ | `llm.seam` + `llm.replay` (keyless test foundation) | [10-testing.md](docs/design/10-testing.md) |
-| 4 ✅ | `core.tools` + `fs.*` (R2 single execution path) | [05-capability-seam.md](docs/design/05-capability-seam.md) |
-| 5 ✅ | `core.agent` + `core.agent-loop` + `examples/agent-spine` (slice closed loop + R2 architecture tests) | [04-agent-loop.md](docs/design/04-agent-loop.md) |
-| 6 ✅ | `shell.*` + `llm.deepseek` + JSONL persistence + R1 replay hash closed loop + real-model full-stack e2e | [05](docs/design/05-capability-seam.md) / [03](docs/design/03-session-event-sourcing.md) |
-| 7 ✅ | `llm.openai-compat` refactor + fs root + approval three modes + `--verify`/policy + `examples.headless` | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
-| 8 ✅ | Data-driven AppBoot composition: kernel/config + bundle/base + CompositionManifest + headless migration | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
-| 9 ✅ | scope/preset: ScopedToolRegistry + setup window + preset composition + home profile discovery (last breaking API iteration) | [06-scope.md](docs/design/06-scope.md) |
-| 10 ✅ | Long-run capability: compaction producer + budget profile + --resume + request-context (first half of the production-simulation gate) | [03](docs/design/03-session-event-sourcing.md) |
-| 11 ✅ | Getting work done: todo_write (whole-table snapshot) + plan mode (pure-fold + exit_plan_mode direct flip + dynamic prompt section); extension event codecs via ServiceLoader | — |
-| 12 ✅ | Safe to let it run: sandbox (platform chain, darwin=seatbelt tested, linux/windows designed-first) + restriction (shell wrap + fs fence + plan read-only + PRODUCTION assertions) | [05](docs/design/05-capability-seam.md) |
-| 12.5 ✅ | Environment-level isolation: `shell-docker`, a second `ShellExecutor` provider — the mount surface is the writable surface (the whole container root read-only); the three sandbox tiers are synonymously stronger in the container backend; provider swap, not seam change | [05](docs/design/05-capability-seam.md) |
-| 12.6 ✅ | Hardening backfill: JSONL durability (fsync barrier + torn-tail repair), typed LLM failures (`LlmCallException` + `Kind`), LocalFs realpath fence (symlink escape sealed), `--verify` platform warnings; LoopGuard comments + 02 drift corrections | [03](docs/design/03-session-event-sourcing.md) / [05](docs/design/05-capability-seam.md) |
-| 12.7 ✅ | Platform chain landed: Linux on-host confinement (bwrap backend) — darwin=seatbelt / linux=bwrap / win32=empty chain; CI dual-job real verification (ubuntu installs bubblewrap, macos adds seatbelt) | [05](docs/design/05-capability-seam.md) |
-| 13 ✅ | Runnable artifact: dist (jlink) + complete CLI (`--help` / `--workspace=` / `--approval=`; run ids + CI smoke) | — |
-| 14 ✅ | Interaction surface: REPL (landed in `interaction/commands`) + streaming render (chunk journaling + typed failure rendering by `FailureKind`) | — |
-| 15 ✅ | Production simulation in CI: replay-driven (keyless, deterministic) + PRODUCTION policy + multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison | [03](docs/design/03-session-event-sourcing.md) |
-| 16 ✅ | Release engineering → **0.1.0** published: Maven Central + GitHub Release (jlink archives), facade freeze, bilingual README | — |
-| 17–25 (planned) | **0.2.0**: reliable single-agent CLI, cancellation/recovery/resource limits, workspace and session usability, external Java integration, Linux archives + Landlock, Windows confinement + pwsh | [Overall plan](docs/design/README.md#phased-evolution-plan) |
-| 0.3 series (planned) | Reusable capabilities: skills + MCP Tools first; web access and LSP follow | [Overall plan](docs/design/README.md#phased-evolution-plan) |
-| 0.4 (planned) | Managed background tasks first, then controlled multi-agent delegation | [Overall plan](docs/design/README.md#phased-evolution-plan) |
+| 1 ✅ | `kernel.core`（统一 Scope 内核）| [01-kernel.md](docs/design/01-kernel.md) |
+| 2 ✅ | `core.session`（LoggedEvent 信封 + Surface）| [03-session-event-sourcing.md](docs/design/03-session-event-sourcing.md) |
+| 3 ✅ | `llm.seam` + `llm.replay`（keyless 测试地基）| [10-testing.md](docs/design/10-testing.md) |
+| 4 ✅ | `core.tools` + `fs.*`（R2 单一执行路径打通）| [05-capability-seam.md](docs/design/05-capability-seam.md) |
+| 5 ✅ | `core.agent` + `core.agent-loop` + `examples/agent-spine`（竖切闭环 + R2 架构测试）| [04-agent-loop.md](docs/design/04-agent-loop.md) |
+| 6 ✅ | `shell.*` + `llm.deepseek` + 持久化 JSONL + R1 回放哈希闭环 + 真实模型全栈 e2e | [05](docs/design/05-capability-seam.md) / [03](docs/design/03-session-event-sourcing.md) |
+| 7 ✅ | `llm.openai-compat` 重构 + fs 根目录 + 审批三模式 + `--verify`/policy + `examples.headless` | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
+| 8 ✅ | AppBoot 组合数据化：kernel/config + bundle/base + CompositionManifest + headless 迁移 | [07-profile-bundle.md](docs/design/07-profile-bundle.md) |
+| 9 ✅ | scope/preset：ScopedToolRegistry + setup window + preset 组合 + home profile 发现（最后的 API 破坏性迭代） | [06-scope.md](docs/design/06-scope.md) |
+| 10 ✅ | 长跑能力：compaction 生产者 + budget 档 + --resume + request-context（生产模拟门槛前半） | [03](docs/design/03-session-event-sourcing.md) |
+| 11 ✅ | 能干活：todo_write（整表替换快照）+ 计划模式（plan/mode 纯 fold + exit_plan_mode 直写翻转 + 动态提示段）；扩展事件 codec 走 ServiceLoader | — |
+| 12 ✅ | 敢让人跑：sandbox（平台链 darwin=seatbelt 实测，linux/windows 设计先行）+ restriction（shell wrap + fs 围栏 + plan 压只读 + PRODUCTION 断言） | [05](docs/design/05-capability-seam.md) |
+| 12.5 ✅ | 环境级隔离：`shell-docker` 第二个 `ShellExecutor` Provider——挂载面即可写面（整个容器根只读），沙箱三档词表在容器后端同义且更强；换 Provider 不动 seam，纯组合选择 | [05](docs/design/05-capability-seam.md) |
+| 12.6 ✅ | 硬化回填（13 后插入）：JSONL 耐久（fsync 屏障 + 撕裂尾修复）、typed LLM 失败（`LlmCallException` + `Kind` 词表）、LocalFs realpath 围栏（symlink 出界封死）、`--verify` 平台预警；LoopGuard 注释 + 02 漂移订正 | [03](docs/design/03-session-event-sourcing.md) / [05](docs/design/05-capability-seam.md) |
+| 12.7 ✅ | 平台链落地：Linux 同机约束（bwrap 后端）——darwin=seatbelt / linux=bwrap / win32=空链；CI 双 job 真验（ubuntu 装 bubblewrap、macos 补 seatbelt） | [05](docs/design/05-capability-seam.md) |
+| 13 ✅ | 可运行产物：dist（jlink）+ CLI 完备（`--help` / `--workspace=` / `--approval=`；运行 id + CI 冒烟）| — |
+| 14 ✅ | 交互面：REPL（`interaction/commands` 落地）+ 流式渲染（chunk 落账 + typed 失败渲染按 `FailureKind`）| — |
+| 15 ✅ | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
+| 16 ✅ | 发布工程 → **0.1.0** 已发布：Maven Central + GitHub Release（jlink 归档）、门面冻结、双语 README | — |
+| 17–25（计划） | **0.2.0**：可靠单 Agent CLI、取消/恢复/资源边界、工作区与会话易用性、外部 Java 接入、Linux 归档 + Landlock、Windows 本机隔离 + pwsh | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 0.3 系列（计划） | 可复用能力：先 skills + MCP Tools，随后网络资料获取与 LSP | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 0.4（计划） | 先可管理的后台任务，再受控多 Agent 委派 | [总体计划](docs/design/README.md#phased-evolution-plan) |
 
-**Planning principle**: maintainer-led scenarios, real-task acceptance, and community feedback for calibration—not a prerequisite to begin. These future stages have not started; scope, dependencies, and acceptance gates live in the overall plan, with each iteration requiring its own scope confirmation and review checkpoints.
+**规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。以上未来阶段均未开工；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。
 
-**Platform support (0.2.0)**: macOS, Linux and Windows, including on-host sandboxing — the sandbox is a platform chain, and the first usable backend on the host wins:
+**平台支持面（0.2.0）**：macOS、Linux 与 Windows 三平台可用（含同机沙箱）——沙箱是平台候选链，取宿主上第一个可用后端：
 
-| Platform | Backend (chain) | Enforcement | Prerequisite |
+| 平台 | 后端（链） | 强制强度 | 前提 |
 |---|---|---|---|
-| macOS | seatbelt | FULL | Apple Silicon (aarch64 archive); no Intel Mac release yet |
-| Linux | bwrap → landlock | FULL | bubblewrap if installed; otherwise the bundled Landlock helper (kernel ABI ≥ 3 — nothing extra to install); neither usable → fail closed, named reason and a way out in `--verify` |
-| Windows | windows-acl | PARTIAL — low-integrity enforcement, coverage registered honestly (see [release notes](docs/release-notes-0.2.0.md)) | **PowerShell 7+ (`pwsh`) required** — the shell runs through pwsh; Windows PowerShell 5.1 is not supported; pwsh missing → fail closed at execution time with a named reason |
+| macOS | seatbelt | FULL | Apple Silicon（aarch64 归档）；Intel Mac 暂无发行面 |
+| Linux | bwrap → landlock | FULL | 装了 bubblewrap 用 bwrap；没装则落自带 Landlock 助手（内核 ABI ≥ 3——无须额外安装）；两条都不可用则 fail-closed，`--verify` 点名原因与出路 |
+| Windows | windows-acl | PARTIAL——低完整性强制，覆盖面如实登记（见 [release notes](docs/release-notes-0.2.0.md)） | **PowerShell 7+（`pwsh`）必需**——自带 shell 经 pwsh 执行；Windows PowerShell 5.1 不支持；pwsh 缺席则执行期 fail-closed 点名 |
 
-Prebuilt archives for all three platforms are on the [v0.2.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0): all built and smoke-tested by CI — macOS/aarch64 (Apple Silicon; no Intel Mac release yet), Linux/amd64 (in a clean `ubuntu:24.04` container) and Windows (amd64 / aarch64).
+三平台预构建归档在 [v0.2.0 release 页](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0)提供：全部由 CI 构建并冒烟——macOS/aarch64（仅 Apple Silicon；Intel Mac 暂无发行面）、Linux/amd64（干净 `ubuntu:24.04` 容器内）与 Windows（amd64 / aarch64）。
 
-R1–R4 tests travel with each slice, never backfilled at the end ([10-testing.md](docs/design/10-testing.md)).
+R1–R4 对应测试随切片走，不做收尾补（[10-testing.md](docs/design/10-testing.md)）。
 
-## API stability
+## API 稳定面
 
-0.1.0 freezes its public surface — JPMS exports, seam contracts, the event schema, plugin config keys, and the CLI. The full list is [docs/design/12-api-stability.md](docs/design/12-api-stability.md): **0.1.x patch releases do not break it; breaking changes go to 0.2.0 with [release notes](docs/release-notes-0.2.0.md) and a migration path.**
+0.1.0 冻结其对外面——JPMS 导出包、seam 契约、事件 schema、插件配置键与 CLI。完整清单见 [docs/design/12-api-stability.md](docs/design/12-api-stability.md)：**0.1.x 修补不破上述任何面；破坏性变更随 0.2.0 并附 [release notes](docs/release-notes-0.2.0.md) 与迁移路径。**
 
-## License
+## 许可
 
-**Apache-2.0** (confirmed 2026-09-08). The architecture is ported from an analysis of dsh (see [docs/dsh-reference.md](docs/dsh-reference.md)); this repository's code is an original implementation. Goal: open source for community use — a single JDK 25 LTS version (the finalized-ScopedValue narrative takes priority), with the first release targeting both international and Chinese-speaking communities.
+**Apache-2.0**（2026-09-08 确认）。架构思想源自对 dsh 的移植分析（见 [docs/dsh-reference.md](docs/dsh-reference.md)）；本仓库代码为原创实现。目标：开源供社区使用——JDK 25 LTS 单版本（ScopedValue 终版叙事优先），首发同时面向国际与中文社区。
