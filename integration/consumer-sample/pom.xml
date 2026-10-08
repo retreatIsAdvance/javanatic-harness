@@ -9,8 +9,8 @@
       不继承 harness-parent（继承会把 junit/assertj/jqwik 等测试依赖一起拖进来），
       不进主仓 reactor。构建只依赖坐标解析：
         候选工件：主仓工作树 `mvn install -Dmaven.repo.local=<隔离仓>` →
-                  -Dharness.version=0.2.0
-        发布工件：-Dharness.version=0.1.0（Maven Central）
+                  -Dharness.version=0.3.0-SNAPSHOT
+        发布工件：-Dharness.version=0.2.0（Maven Central）
     -->
     <groupId>io.github.retreatisadvance.sample</groupId>
     <artifactId>consumer-sample</artifactId>
@@ -23,13 +23,11 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
-        <!-- 版本单点：0.1.0 = Central 发布件；0.x.0-SNAPSHOT = 工作树 install 的候选件 -->
-        <harness.version>0.2.0</harness.version>
+        <!-- 版本单点：0.2.0 = Central 发布件；0.x.0-SNAPSHOT = 工作树 install 的候选件 -->
+        <harness.version>0.3.0-SNAPSHOT</harness.version>
         <!--
           shell provider 坐标单点（it25 S-b 改名 harness-shell-bash-local → harness-shell-local）：
-            候选腿 = 工作树 install 的新坐标（默认值）
-            发布腿 = Central 0.1.0 只存在改名前的旧坐标，verify-consumer.sh 以
-                     -Dharness.shell.artifactId=harness-shell-bash-local 覆写（两条腿同源源码）
+            两条腿同用新坐标——0.2.0 起发布件含 harness-shell-local，旧坐标覆写已退役
         -->
         <harness.shell.artifactId>harness-shell-local</harness.shell.artifactId>
     </properties>

@@ -12,7 +12,7 @@
 
 | | 标准发行包 | 二开发行（本指南） |
 |---|---|---|
-| 形态 | jlink 运行时镜像 / 归档（[v0.1.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.1.0) 的 `javanatic-harness-0.1.0-<platform>.tar.gz` / `.zip`，解压用 `bin/jh`） | Maven 坐标 `io.github.retreatisadvance:harness-*` |
+| 形态 | jlink 运行时镜像 / 归档（[v0.2.0 release](https://github.com/retreatisadvance/javanatic-harness/releases/tag/v0.2.0) 的 `javanatic-harness-0.2.0-<platform>.tar.gz` / `.zip`，解压用 `bin/jh`） | Maven 坐标 `io.github.retreatisadvance:harness-*` |
 | 能力面 | 只跑 CLI（任务 / REPL / `--verify`） | 编译期嵌入：组合、插件、工具、治理断言 |
 | 插件 | **不承诺**「往镜像里丢 JAR 即启用插件」——运行时热插拔不在 0.2.0 面内（[docs/design/README.md](design/README.md) 0.2 阶段「本阶段不做」） | 插件随你的构建产物进 classpath / module-path，由组合（profile）显式引用 |
 
@@ -25,8 +25,8 @@
 ```xml
 <properties>
     <maven.compiler.release>25</maven.compiler.release>
-    <!-- 0.1.0 = Maven Central 发布件；0.2.0-SNAPSHOT = 主仓工作树 install 的候选件 -->
-    <harness.version>0.1.0</harness.version>
+    <!-- 0.2.0 = Maven Central 发布件；0.3.0-SNAPSHOT = 主仓工作树 install 的候选件 -->
+    <harness.version>0.2.0</harness.version>
 </properties>
 
 <dependencies>
@@ -52,7 +52,7 @@
 **classpath（默认，示例工程走这条，已端到端复跑）**
 
 ```sh
-mvn -f pom.xml -Dharness.version=0.1.0 dependency:build-classpath -Dmdep.outputFile=cp.txt
+mvn -f pom.xml -Dharness.version=0.2.0 dependency:build-classpath -Dmdep.outputFile=cp.txt
 java -cp "target/classes:$(cat cp.txt)" your.Main profile.yml
 ```
 
@@ -132,7 +132,7 @@ try (Runtime runtime = AppBoot.boot(options)) {              // 装配 + 治理�
 | `policy=PRODUCTION 但审批为 AUTO（换 approval-ask / approval-deny）` | 生产档禁 AUTO 审批 | 换审批行，或退回 `STANDARD` |
 | `workspace drift: {…} —— 提示词 cwd 与 fs/shell/sandbox 围栏必须同源(it21)` | `agent-loop.cwd` / `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 不同值 | 四处同源（同一工作区根）；**0.2.0 起**装配期拒绝，0.1.0 无此断言 |
 | `llm-openai-compat: no api key (config 'apiKey' or env DEEPSEEK_API_KEY); keyless compositions should disable this row` | 行启用但 key 缺失 | 设环境变量 / 行 `config.apiKey`；或给该行 `disabled: ${env:DEEPSEEK_API_KEY} == null`；只做组合自证时用 `--verify`（不需要 key） |
-| `Could not resolve dependencies … Could not find artifact …:jar:<version>` | 坐标/版本在解析源不存在 | 版本与仓库对齐（0.1.0 = Central；`0.2.0-SNAPSHOT` 只在本机 `install` 过的仓里） |
+| `Could not resolve dependencies … Could not find artifact …:jar:<version>` | 坐标/版本在解析源不存在 | 版本与仓库对齐（0.2.0 = Central；`0.3.0-SNAPSHOT` 只在本机 `install` 过的仓里） |
 | `'dependencies.dependency.version' for io.github.retreatisadvance:harness-kernel-core:jar is missing` | 抄了主仓 reactor 写法（依赖不写版本） | 独立工程必须写显式版本（`<harness.version>`） |
 | javac：`错误: 找不到模块: io.javanatic.harness.bundle.base` | module-path 上缺该 jar | jar 放上 `--module-path`；核对**模块名**而非包名 |
 | java：`java.lang.module.FindException: Module com.fasterxml.jackson.databind not found, required by io.javanatic.harness.llm.openai.compat` | module-path 缺第三方闭包 | 把 `jackson-*`、`snakeyaml` 也列上 module-path（classpath 路线无此问题） |
@@ -142,16 +142,16 @@ try (Runtime runtime = AppBoot.boot(options)) {              // 装配 + 治理�
 
 ```sh
 <repo>/integration/verify-consumer.sh candidate   # 候选腿：主仓工作树 install 进隔离仓 → 示例编译 + 自证运行
-<repo>/integration/verify-consumer.sh release     # 发布腿：隔离仓为空、只从 Central 解析 0.1.0 → 同源复验
+<repo>/integration/verify-consumer.sh release     # 发布腿：隔离仓为空、只从 Central 解析 0.2.0 → 同源复验
 ```
 
 - **候选腿**证明「工作树今天的坐标」可用；**发布腿**证明「Central 上的发布件」可用；两腿跑同一份示例源码，按**交集面**（`compose` / `dump` / `boot` / `Plugin` / `of` / `register`）复验，发布腿的治理自证用 `boot()` fail-loud + `dump()`。
 - **四负例**（候选仓 + 候选构建产物，控制组）：坏版本必解析失败、去显式版本必构建失败、坏治理配置必 boot 抛错、`PRODUCTION` 档撞 AUTO 审批必抛 `VerifyFailedException`。
 - 发布腿**不进 CI**（公网依赖不作构建门禁）；候选腿进 CI 作漂移警报。
 
-### 版本面：0.1.0 vs 0.2.0-SNAPSHOT
+### 版本面：0.1.0 vs 0.2.0
 
-| 面 | 0.1.0（Central） | 0.2.0-SNAPSHOT（工作树） |
+| 面 | 0.1.0（Central） | 0.2.0（Central） |
 |---|---|---|
 | `compose` / `resolve` / `dump` / `boot` / `Policy` / `VerifyFailedException` / `ToolRegistry.schemas` / `resolve` | ✅ | ✅ |
 | 键名三层白名单 fail loud（§4） | ❌ 静默忽略 | ✅ |

@@ -11,7 +11,7 @@
 本目录**不在任何 `<modules>` 中**（不进主仓 reactor），坐标与版本由本目录 pom 自持：
 
 - 坐标：`io.github.retreatisadvance.sample:consumer-sample:1.0.0-SNAPSHOT`
-- 唯一版本闸：`-Dharness.version=<版本>`（缺省 `0.2.0`，即候选腿）
+- 唯一版本闸：`-Dharness.version=<版本>`（缺省 `0.3.0-SNAPSHOT`，即候选腿）
 
 ## 跑法
 
@@ -20,7 +20,7 @@
 ```sh
 export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS；其它平台指向 JDK 25 即可
 <repo>/integration/verify-consumer.sh candidate    # 候选腿 + 四负例（本机工作树装进隔离仓）
-<repo>/integration/verify-consumer.sh release      # 发布腿：0.1.0 发布件（隔离仓为空、经公共 Central 代理解析）
+<repo>/integration/verify-consumer.sh release      # 发布腿：0.2.0 发布件（隔离仓为空、经公共 Central 代理解析）
 ```
 
 脚本逐步输出 `ok/FAIL`，末行 `失败项：0` 即通过；认证/参数细节见脚本头注释。
