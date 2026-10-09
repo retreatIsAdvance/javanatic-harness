@@ -11,12 +11,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-
 /**
  * SkillService 实现（package-private，对齐 {@code ScopedRegistry} 形态）。
- * 合并与装载走同一条全序：候选按 (priority, providerId, name) 排序后逐名
+ * 合并与装载走同一条胜者归并：候选按 (priority, providerId, name) 全序逐名
  * first-wins——结果与 provider 注册顺序无关（属性测试在案）；同名同 priority
- * = 两根声明同一 rank，配置错误 fail loud；跨 priority 遮蔽告警。
+ * = 两根声明同一 rank，配置错误 fail loud（catalog 与 load 两入口一致）；
+ * 跨 priority 遮蔽告警（方向：胜出者遮蔽被盖者）。
  */
 final class SkillRegistry implements SkillService {
 
@@ -54,43 +54,50 @@ final class SkillRegistry implements SkillService {
         return ordered;
     }
 
-    @Override
-    public SkillCatalog catalog() {
-        // 判重走 merged 表（同 priority 不同名的条目会插在同名两条之间，相邻性不可依赖）
-        Map<String, SkillSummary> merged = new LinkedHashMap<>();
-        Map<String, Integer> winnerPriority = new LinkedHashMap<>();
+    /**
+     * 胜者归并（catalog 与 load 的唯一裁决点）：逐名 first-wins；同名同 priority
+     * fail loud（判重走表，不依赖全序相邻——同 priority 不同名条目会插在中间）；
+     * 遮蔽告警方向 = 胜出者（先入者）遮蔽被跳过者。
+     */
+    private Map<String, Entry> winners() {
+        Map<String, Entry> winners = new LinkedHashMap<>();
         for (Entry entry : ordered()) {
-            SkillSummary summary = entry.candidate().summary();
-            String name = summary.name();
-            Integer prevPriority = winnerPriority.get(name);
-            if (prevPriority != null) {
-                if (prevPriority == entry.candidate().priority()) {
+            String name = entry.candidate().summary().name();
+            Entry prev = winners.get(name);
+            if (prev != null) {
+                if (prev.candidate().priority() == entry.candidate().priority()) {
                     throw new IllegalStateException("duplicate skill rank: '" + name + "' at priority "
-                        + prevPriority + " (sources '" + merged.get(name).source() + "' and '"
-                        + summary.source() + "')");
+                        + prev.candidate().priority() + " (sources '"
+                        + prev.candidate().summary().source() + "' and '"
+                        + entry.candidate().summary().source() + "')");
                 }
                 LOG.log(System.Logger.Level.WARNING, "skill ''{0}'' from ''{1}'' shadows ''{2}''",
-                    name, summary.source(), merged.get(name).source());
+                    name, prev.candidate().summary().source(), entry.candidate().summary().source());
                 continue;
             }
-            merged.put(name, summary);
-            winnerPriority.put(name, entry.candidate().priority());
+            winners.put(name, entry);
         }
-        return new SkillCatalog(List.copyOf(merged.values()));
+        return winners;
+    }
+
+    @Override
+    public SkillCatalog catalog() {
+        // 契约序 = 按名（稳定面，不随 rank 数值变化）；胜者裁决序与展示序分离
+        List<SkillSummary> sorted = new ArrayList<>(winners().values().stream()
+            .map(e -> e.candidate().summary())
+            .toList());
+        sorted.sort(Comparator.comparing(SkillSummary::name));
+        return new SkillCatalog(List.copyOf(sorted));
     }
 
     @Override
     public Optional<SkillDefinition> load(String name) {
         Objects.requireNonNull(name, "name");
-        List<Entry> ordered = ordered();
-        boolean present = ordered.stream().anyMatch(e -> e.candidate().summary().name().equals(name));
-        if (!present) {
+        // 与 catalog 同一归并：dup-rank 配置错误在两入口同样 fail loud
+        Entry winner = winners().get(name);
+        if (winner == null) {
             return Optional.empty();
         }
-        // 胜出者 = 全序中该名首条；委托其来源 provider——与 catalog() 同一裁决
-        return ordered.stream()
-            .filter(e -> e.candidate().summary().name().equals(name))
-            .findFirst()
-            .flatMap(e -> e.origin().provider().load(name));
+        return winner.origin().provider().load(name);
     }
 }

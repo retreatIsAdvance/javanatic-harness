@@ -106,8 +106,8 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1（承载契约 + 新词表） | `skill/skill`：`SkillService` / `SkillSummary` / `SkillDefinition` / 注册表遮蔽语义 | 已出包待放行 |
-| 停 2（跨模块效应：新依赖边 + R1 面） | `skill/tool`：装载工具声明面 + `skill/catalog` 事件 codec + Dynamic 段 | ☐ |
+| 停 1（承载契约 + 新词表） | `skill/skill`：`SkillService` / `SkillSummary` / `SkillDefinition` / 注册表遮蔽语义 | 已出包；评审修正批（F1–F4）已落，待复核放行 |
+| 停 2（跨模块效应：新依赖边 + R1 面） | `skill/tool`：装载工具声明面 + `skill/catalog` 事件 codec + Dynamic 段；**含 `skill/skill` 模块内公开实例化入口**（F5 归属：`SkillRegistry` package-private，构造者须在本模块——公开工厂或 Plugin，对齐 ToolsPlugin/ScopedRegistry 同模块先例；停 3 装配依赖它） | 修正批已落，待复核放行 |
 | 停 3（组合面 + 验收取证） | `bundle/base` 装配行 + `--verify` 治理断言 + 夹具真跑与 R1 回放 | ☐ |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-26/）
@@ -127,6 +127,15 @@
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+
+## 修正（如有）
+
+| 提交 | 缺陷 | 修正 |
+|---|---|---|
+| 停 1 修正批 | F1（评审发现）：`catalog()` 实现为 priority 主序，与四处「按名排序」契约不符（探针反例 zebra(100)+alpha(400)→[zebra,alpha]），现测试不判别 | 归并胜者与展示序分离——`winners()` 裁决后按名重排；新增判别用例 `catalogSortsByNameNotByPriority` |
+| 停 1 修正批 | F2：dup-rank 仅 `catalog()` fail loud，`load()` 静默按词序 tiebreak | 提取 `winners()` 为唯一裁决点，两入口同抛 `duplicate skill rank`；用例 `loadFailsLoudOnDuplicateRankLikeCatalog` |
+| 停 1 修正批 | F3：遮蔽 WARN 方向倒置（被遮蔽者被写成遮蔽者） | 参数序改正（胜出者在前），证据档样例同步 |
+| 停 1 修正批 | F4：证据档把 `-am` 带入的 kernel ScopeTest 性质误记为双性质自产；性质断言未覆盖 source 面 | 证据档加归属注记（本模块自产恰 1 条）；性质断言改比 `(name@source)` 对 |
 
 ## 设计偏离（如有）
 

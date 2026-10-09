@@ -43,20 +43,22 @@ class SkillCatalogMergePropertyTest {
                 List.of(candidate("shared-" + seed.get(i), "root-" + i, rank),
                     candidate("own-" + i, "root-" + i, rank))));
         }
-        List<String> namesFromFirstOrder = null;
-        // 逐个轮转注册序：任一排列下目录（名字与来源）一致
+        List<String> entriesFromFirstOrder = null;
+        // 逐个轮转注册序：任一排列下目录的 (名字, 来源) 对一致——「取错胜出源」变体在此变红
         for (int rotation = 0; rotation < providers.size(); rotation++) {
             SkillRegistry registry = new SkillRegistry();
             for (int i = 0; i < providers.size(); i++) {
                 registry.register(providers.get((rotation + i) % providers.size()));
             }
-            List<String> names = registry.catalog().skills().stream().map(SkillSummary::name).sorted().toList();
-            if (namesFromFirstOrder == null) {
-                namesFromFirstOrder = names;
+            List<String> entries = registry.catalog().skills().stream()
+                .map(s -> s.name() + "@" + s.source())
+                .toList();
+            if (entriesFromFirstOrder == null) {
+                entriesFromFirstOrder = entries;
             } else {
-                assertThat(names).isEqualTo(namesFromFirstOrder);
+                assertThat(entries).isEqualTo(entriesFromFirstOrder);
             }
         }
-        assertThat(namesFromFirstOrder).isNotEmpty();
+        assertThat(entriesFromFirstOrder).isNotEmpty();
     }
 }

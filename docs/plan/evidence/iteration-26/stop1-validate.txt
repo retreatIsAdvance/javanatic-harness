@@ -1,4 +1,4 @@
-# it26 停 1 取证 — spotless + checkstyle 全 reactor 门禁（2026-10-09）
+# it26 停 1 取证 — spotless + checkstyle 全 reactor 门禁（2026-10-09；修正批后重跑）
 
 ```sh
 $ JAVA_HOME=~/.jenv/versions/25.0 ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate

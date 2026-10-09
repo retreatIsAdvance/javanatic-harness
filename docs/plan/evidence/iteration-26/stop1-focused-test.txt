@@ -1,17 +1,15 @@
-# it26 停 1 取证 — skill/skill 聚焦测试（2026-10-09）
+# it26 停 1 取证 — skill/skill 聚焦测试（2026-10-09；修正批 F1–F4 后重跑）
 
 ```sh
 $ JAVA_HOME=~/.jenv/versions/25.0 ~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl skill/skill -am test
 ```
 
-EXIT=0（见 /tmp 会话日志摘录如下；首跑曾因裸 -pl 解析本地仓失败——AGENTS 已知坑，补 -am 后绿）
+EXIT=0。归属注记：-am 闭包会带入上游模块测试——日志中两条 1000-tries jqwik 块，**本模块自产恰 1 条**（SkillCatalogMergePropertyTest）；另一条属 kernel ScopeTest（上游既有，非本停点产出）。
 
-jqwik 性质（各 1000 tries 全过）：
-tries = 1000                  | # of calls to property
-checks = 1000                 | # of not rejected calls
+本模块 jqwik 性质（1000 tries 全过）：
 tries = 1000                  | # of calls to property
 checks = 1000                 | # of not rejected calls
 
-遮蔽告警样例（System.Logger WARN，可解释性事实）：
-警告: skill 'alpha' from 'user' shadows 'project'
-警告: skill 'shared-1' from 'root-2' shadows 'root-0'
+遮蔽告警样例（F3 修正后方向：胜出者在前）：
+警告: skill 'alpha' from 'project' shadows 'user'
+警告: skill 'deploy' from 'project' shadows 'user'

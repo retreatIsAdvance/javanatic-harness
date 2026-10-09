@@ -51,6 +51,27 @@ class SkillRegistryTest {
     }
 
     @Test
+    void catalogSortsByNameNotByPriority() {
+        // 判别反例：rank 主序会给 [zebra, alpha]，按名序必须 [alpha, zebra]
+        SkillRegistry registry = new SkillRegistry();
+        registry.register(provider("project", new SkillCandidate(summary("zebra", "project"), 100)));
+        registry.register(provider("user", new SkillCandidate(summary("alpha", "user"), 400)));
+        assertThat(registry.catalog().skills()).extracting(SkillSummary::name)
+            .containsExactly("alpha", "zebra");
+    }
+
+    @Test
+    void loadFailsLoudOnDuplicateRankLikeCatalog() {
+        SkillRegistry registry = new SkillRegistry();
+        registry.register(provider("a", new SkillCandidate(summary("dup", "root-x"), 100)));
+        registry.register(provider("b", new SkillCandidate(summary("dup", "root-y"), 100)));
+        // 与 catalog() 同一裁决点：两入口对同一配置错误行为一致
+        assertThatThrownBy(() -> registry.load("dup"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("duplicate skill rank");
+    }
+
+    @Test
     void loadDelegatesToWinningProviderNotRegistrationOrder() {
         SkillRegistry registry = new SkillRegistry();
         // user 先注册、priority 大——胜者必须是 project provider，正文来源可辨
