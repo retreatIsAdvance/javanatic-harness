@@ -8,7 +8,7 @@
 
 - **内容**（六件；**四确认已裁定（2026-10-09）：T1/T2/T3/T5 按拟案，T4 采选 B——见裁决记录与子问题裁定**）：
 
-  1. **dsh 引用订正 6 条（A 表——勘察 ③ 类收口；随本迭代首笔文档改动落地）**：
+  1. **dsh 引用订正 6 条（A 表——勘察 ③ 类收口；已落地：`3ad9f1a`，2026-10-09，随本迭代首笔文档改动）**：
      - A-1 `02-module-layout.md:41,:767`：dsh 包列 `preset/agent-presets` → `preset/agent-preset`（组合层）+ `preset/agent-preset-registry`（注册表）——2026-09-21 `d1e22a7e24` 拆分（`composeFrom` 在 registry）；
      - A-2 `:771`：`llm/llm-replay` → `test-support/llm-replay`（`git log --follow -M` 链已查清：根级扁平 → `support` 组 → `test-support` 组；`llm/` 组形全历史从未成立）；
      - A-3 `:778`：`interaction/approval` → `interaction/user-approval`（JH 侧 `interaction.approval` 模块名**不动**）；
@@ -117,6 +117,8 @@
 ## 验收（证据 = 实际执行的命令与结果）
 
 （四确认裁定后启用；勾选与证据随工作推进落此。）
+
+- [x] A 表 6 条落地（`3ad9f1a`）：旧措辞全局 grep 复核无漏（残留命中均为 A 表引文 / JH 侧模块名 / 保留的历史语境注记）；`mvn -B -q validate` 全 reactor 干净（EXIT=0，2026-10-09）。
 
 ## 修正（如有）
 
