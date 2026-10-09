@@ -62,6 +62,14 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-fs-local` | Provider | 本地文件系统实现（插件 id `fs-local`）|
 | `harness-fs-tool` | Consumer | `fs_read`/`fs_write`/`fs_edit`/`fs_delete`/`fs_list`/`fs_search` 工具 |
 
+#### Skill（技能生态，it26）
+
+| 模块 | 角色 | 职责 |
+|---|---|---|
+| `harness-skill-skill` | Definition | `SkillService` 契约（catalog 快照 / 按名装载）+ `SkillSummary`/`SkillDefinition`/`SkillCandidate`/`SkillProvider` 词汇 + 注册表（近者胜遮蔽，`SkillPlugin` 提供进共享 scope）|
+| `harness-skill-local` | Provider | 四根本地发现（项目/用户 × `.harness`/`.agents`，近者胜）——**停 3 落地**（dsh 对照：`skill/skill-filesystem`）|
+| `harness-skill-tool` | Consumer | `skill` 装载工具 + 轮首目录装载（`agent/pre-step` 挂点）+ `skill/catalog` 扩展事件 + Dynamic 目录段；**首个非 examples 依赖 `core-agent-loop` 的模块**（插件 id `skill-tool`）|
+
 #### Shell（命令执行）
 
 | 模块 | 角色 | 职责 |
@@ -149,6 +157,12 @@ flowchart TD
         fstool[harness-fs-tool]
     end
 
+    subgraph skill[Skill]
+        skilldef[harness-skill-skill]
+        skilllocal[harness-skill-local]
+        skilltool[harness-skill-tool]
+    end
+
     subgraph shell[Shell]
         shelldef[harness-shell-shell]
         local[harness-shell-local]
@@ -203,6 +217,9 @@ flowchart TD
     llmdef --> replay
     fsdef --> fslocal
     fsdef --> fstool
+    skilldef --> skilllocal
+    skilldef --> skilltool
+    skilltool --> agentloop
     shelldef --> local
     shelldef --> docker
     shelldef --> shelltool
@@ -213,6 +230,8 @@ flowchart TD
     replay --> base
     fslocal --> base
     fstool --> base
+    skilllocal --> base
+    skilltool --> base
     local --> base
     docker --> base
     shelltool --> base
@@ -771,6 +790,9 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `test-support/llm-replay` | `llm.replay` | ✅ |
 | `fs/fs` + `fs/fs-local` | `fs.fs` + `fs.local` | ✅ |
 | `fs/tool-fs` | `fs.tool` | ✅ |
+| `skill/skill` | `skill.skill`（契约 + 注册表 + `SkillPlugin` 提供面）| ✅（it26 停 2）|
+| `skill/skill-filesystem` | `skill.local`（停 3；四根 = 项目/用户 × `.harness`/`.agents`，近者胜——dsh 五根的 custom 根不采）| 🚧 it26 |
+| `skill/tool-skill` | `skill.tool`（装载工具 + 轮首目录装载 + `skill/catalog` 事件 + Dynamic 段）| ✅（it26 停 2）|
 | `shell/shell` + `shell/bash-local` | `shell.shell` + `shell.local` | ✅ |
 | `shell/tool-bash` | `shell.tool` | ✅ |
 | `sandbox/sandbox` + `sandbox/sandbox-local` | `sandbox.sandbox` + `sandbox.local` | ✅（简化）|

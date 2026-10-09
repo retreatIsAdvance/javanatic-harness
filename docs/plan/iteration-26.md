@@ -84,7 +84,7 @@
 **MODIFIED**：
 - `02-module-layout.md`：模块表 + seam 三角表 + 依赖图 + dsh 映射行（三行新增 + `skill/skill-filesystem` → `skill/local` 映射注记）；
 - `03-session-event-sourcing.md`：ExtensionEvent 生产实例清单加 `skill/catalog`（与 `todo/write`/`plan/mode`/`assistant/chunk` 并列）+ 事件 schema 节；
-- `04`/`05`：如列提示段清单 / 契约清单则加目录段与 `SkillService` 行（逐一核对，无列不动）；
+- `04`/`05`：如列提示段清单 / 契约清单则加目录段与 `SkillService` 行（逐一核对，无列不动）；【停 2 已核：04 五类扩展点不列订阅方、05 契约仅 FsService 示例无逐能力清单——两处不动】
 - `07-config`：新增两配置键；
 - `12-api-stability.md`：导出面加三模块；
 - `AGENTS.md`：现状段与 Repository layout 加 `skill/` 行；
@@ -97,6 +97,7 @@
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
 | 根 `pom.xml`（modules + dependencyManagement） | 新增 `skill` 组注册（`harness-skill-skill` 先行） | ☑（停 1） |
+| `core/agent-loop` `AgentEvents`（pre-step 挂点） | **零改动**——只作公共挂点被 `skill/tool` 消费（锚在此防误改） | ☑（停 2 证实零改动：CREATED→嵌套 PRE_STEP 订阅，loop 侧无一行变更） |
 | `bundle/base`（AppBoot / CompositionManifest 装配行） | 加 `skill` 注册表 / `skill-local` / `skill-tool` 三行 + roots、截断上限配置键接线 | ☐ |
 | `core/agent-loop` `AgentEvents`（pre-step 挂点） | **零改动**——只作公共挂点被 `skill/tool` 消费（锚在此防误改） | ☐ |
 | `core/system-prompt`（`PromptSection` 注册面） | `skill/tool` 经既有注册面挂 Dynamic 段（消费方，不改面） | ☐ |
@@ -107,7 +108,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1（承载契约 + 新词表） | `skill/skill`：`SkillService` / `SkillSummary` / `SkillDefinition` / 注册表遮蔽语义 | 已出包；评审修正批（F1–F4）已落，待复核放行 |
-| 停 2（跨模块效应：新依赖边 + R1 面） | `skill/tool`：装载工具声明面 + `skill/catalog` 事件 codec + Dynamic 段；**含 `skill/skill` 模块内公开实例化入口**（F5 归属：`SkillRegistry` package-private，构造者须在本模块——公开工厂或 Plugin，对齐 ToolsPlugin/ScopedRegistry 同模块先例；停 3 装配依赖它） | ☐ |
+| 停 2（跨模块效应：新依赖边 + R1 面） | `skill/tool`：装载工具声明面 + `skill/catalog` 事件 codec + Dynamic 段；**含 `skill/skill` 模块内公开实例化入口**（F5 归属：`SkillRegistry` package-private，构造者须在本模块——公开工厂或 Plugin，对齐 ToolsPlugin/ScopedRegistry 同模块先例；停 3 装配依赖它） | 已出包待放行 |
 | 停 3（组合面 + 验收取证） | `bundle/base` 装配行 + `--verify` 治理断言 + 夹具真跑与 R1 回放 | ☐ |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-26/）
@@ -116,6 +117,8 @@
 |---|---|
 | `stop1-focused-test.txt` | 停 1：`mvn -pl skill/skill -am test` EXIT=0 + 本模块 1 条 jqwik 性质 1000 tries（另一条属 -am 带入的上游 kernel ScopeTest，档内有注记）+ 遮蔽 WARN 样例 |
 | `stop1-validate.txt` | 停 1：`mvn -B -q validate` 全 reactor EXIT=0 |
+| `stop2-focused-test.txt` | 停 2：`mvn -pl skill/tool -am test` EXIT=0（9 例：Ledger 5 + Plugin 4，真实 loop 事件序在案） |
+| `stop2-validate.txt` | 停 2：`mvn -B -q validate` 全 reactor EXIT=0 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 

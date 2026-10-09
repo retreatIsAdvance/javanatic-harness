@@ -449,6 +449,8 @@ public final class SessionEventCodecs {
 
 **（it14）第三个生产实例 `assistant/chunk`**：流式事实（逐 chunk 落账，渲染/TTFT 消费），`ignorable=true`（投影不读，装配仍走 assistant/message）。机制结论与归属（家 `core/agent-loop`，不进核心 permits 的依赖环理由）见 §1。
 
+**（it26）第四个生产实例 `skill/catalog`**（家 `skill/tool`）：技能目录快照（条目 = name / 描述截断 / 来源根），轮首经 `agent/pre-step` 挂点装载、变更才落账、无技能不落、清空落空事件退役。`ignorable=false`：目录是 Dynamic 提示段与按名装载的事实源，静默丢弃会毁 R1 重建（`plan/mode` 同款理据）。
+
 ### JSONL 布局与行格式
 
 ```text

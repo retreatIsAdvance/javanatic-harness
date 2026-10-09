@@ -1,0 +1,9 @@
+# it26 停 2 取证 — skill/tool 聚焦测试（2026-10-09）
+
+```sh
+$ JAVA_HOME=~/.jenv/versions/25.0 ~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl skill/tool -am test
+```
+
+EXIT=0。本模块 9 例全过（surefire XML 口径）：SkillCatalogLedgerTest tests=5 errors=0 failures=0；SkillToolPluginTest tests=4 errors=0 failures=0。含真实 loop 用例 loopRefreshesCatalogAtTurnStartBeforeFirstAssemble：skill/catalog 事件序在 user/message 之前（轮首装载先于首个 assemble）、装载工具 tool/call+tool/result 入账、prompts.assemble 含目录段行。
+
+覆盖面：变更才落账 / 无技能零噪声 / 空事件退役 / 截断 500 / 目录段三态 / codec 往返 / jsonl 持久化往返 / 装载工具命中+未知名报错 / 装配三面（SkillService+工具+段）/ 真实 loop 事件序。
