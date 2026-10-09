@@ -11,7 +11,7 @@
      - 链仲裁按序——bwrap 探针可用则用 bwrap；不可用（未安装 / AppArmor 收紧非特权 userns 等）落到 landlock；全不可用仍 **fail-closed**（`SandboxLocalPlugin.java:42-45/:287-308` 的链结构即为此预留）。
      - **术语（钉死）**：链内探针仲裁 = **选择期 fallback（按能力选择）**，非 per-call 降级——一次探针、缓存、进程生命周期内不再切换；「降级」一词不用于此（保留给显式策略降档语义）。
      - 形状 = **自限制后 exec**（it12.7 台账原文：「零依赖的 Landlock 需要『自限制后 exec』的 helper **或 FFM**」（`docs/plan/iteration-12.7.md:19`）——本迭代选 **FFM 分支**，非推翻任何 C/musl 承诺，台账无该记录）：`confine` 返回「助手 argv」——助手 `prctl(PR_SET_NO_NEW_PRIVS)` + `landlock_create_ruleset` + `landlock_add_rule`（可写根逐根 `PATH_BENEATH`）+ `landlock_restrict_self`（syscall 444/445/446，经 libc `syscall()` 的 FFM downcall），随后 **exec 目标 argv**（限制跨 execve 继承；助手被目标镜像替换，无监督进程残留）。
-     - **兜底随产物自带**：助手即镜像内 JVM（`java.home/bin/java`）——**不引入 C 工具链与原生二进制**。这是 dsh「兜底随产物自带」的 Java 版形态（其 `native/landlock-run` 为 C + 独立 CI；JH 是 Java 仓，JVM 自身即现成助手宿主）。
+     - **兜底随产物自带**：助手即镜像内 JVM（`java.home/bin/java`）——**不引入 C 工具链与原生二进制**。这是 dsh「兜底随产物自带」的 Java 版形态（其 `native/system` 为 C + 独立 CI——Landlock 是其 `landlock-run` 子路径，分析期 path 为 `native/landlock-run`，2026-09-07 重组；JH 是 Java 仓，JVM 自身即现成助手宿主）。
      - **allow-list 口径**：只 handle 写效果 rights（`WRITE_FILE` / `REMOVE_FILE` / `REMOVE_DIR` / `MAKE_*` / `REFER` / `TRUNCATE`），可写根从 `WritableRoots.of(policy)` **单一来源**取（与 seatbelt / bwrap / fs 围栏同源，含 `/tmp` 与平台临时区）；读可见性与网络**不在约束面**（对齐 bwrap `--ro-bind / /` 的读可见残余，`05:472-476`）。
      - **ABI 分级**：ABI ≥ 3（`REFER`/`TRUNCATE` 齐备）→ 入选、`enforcement=FULL`；ABI 1–2 → **不入选**，探针失败并在诊断中点名——理由是 ABI<3 的两洞直接破坏 READ_ONLY 承诺（O_TRUNC 可清空只读文件、跨目录 rename/link 不受控），「不满足约束时 fail-closed」优先；`SandboxEnforcement.PARTIAL`（`SandboxEnforcement.java:12` 预留位）保持预留不动。能力判断**以内核事实为准**（见裁决增强 4），不按版本号推断。生态互补：无 ABI≥3 的老内核（如 5.15 系）默认不禁非特权 userns → bwrap 可用；而 AppArmor 收紧 userns 的 24.04+ 内核 ≥6.2 → landlock 可用——两条腿覆盖彼此缺口。
   2. **能力诊断（`--verify` 面 + 契约扩展）**：
@@ -35,7 +35,7 @@
 - **为什么**（现状证据）：
   - **平台承诺已落盘**：`README.md:131`「Linux Landlock fallback 保留在 0.2.0，不静默顺延；无法满足限制语义时 fail-closed」——it24 是其兑现窗口。
   - **bwrap 单候选的缺口已成常态**：Ubuntu 24.04 起 AppArmor 默认限制非特权 user namespace，bwrap 起不来；it12.7 的 CI 前置门当场实走了 sysctl 降档才通过（`.github/workflows/ci.yml:16-29`），dsh 亦把它列为「装不上 bwrap 的主机是常态」。
-  - **参考实现明确拒绝「无兜底」**：dsh 把「bwrap or fail closed」判为 "concentrates failure on the hosts a sandbox matters most"，其兜底 `native/landlock-run` **随产物自带**（见 memory `reference-dsh-agent-notes`）；JH 缺的正是「随产物自带」这一层——本迭代补上（Java 形态）。
+  - **参考实现明确拒绝「无兜底」**：dsh 把「bwrap or fail closed」判为 "concentrates failure on the hosts a sandbox matters most"，其兜底 `native/system`（Landlock = 其 `landlock-run` 子路径）**随产物自带**（见 memory `reference-dsh-agent-notes`）；JH 缺的正是「随产物自带」这一层——本迭代补上（Java 形态）。
   - **契约位置已留**：`SandboxEnforcement.PARTIAL` 预留语（`SandboxEnforcement.java:12`）、`ConfinedArgv.enforcement/denialSignatures` 契约在位（`ConfinedArgv.java:17`）、`BackendStatus` 三态查询面在位、平台链结构即多候选探针仲裁（it12.7 四确认原文：「候选链结构就是为多候选探针仲裁留的」）。
   - **归档面缺口**：`release.md:109-112`（0.1.0 只附 macOS 归档；Linux 归档需在 Linux 机器手工 `mvn -B package`，「CI 上传自动化留后续迭代」）；CI ubuntu 目前已经在产 Linux 归档但**无验证、无取件**（`.github/workflows/ci.yml:41-47` 只冒烟 jlink 目录，不碰归档）。
 

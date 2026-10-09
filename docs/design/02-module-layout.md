@@ -38,7 +38,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-core-agent-loop` | `agent`, `tools`, `system-prompt`, `llm` | `AgentLoopImpl` 驱动（Turn/Step 状态机）| `core/agent-loop` |
 | `harness-core-todo` | `kernel`, `kernel.config`, `session`, `tools`, `session.persistence` | `todo_write` 工具 + `todo/write` 扩展事件：整表快照落账、回放末值胜；codec 经 ServiceLoader 双注册 | `todo/tool-todo` |
 | `harness-core-plan` | `kernel`, `kernel.config`, `session`, `tools`, `system-prompt`, `session.persistence` | 计划模式：`plan/mode` 扩展事件 fold（末值胜）+ `plan:policy` 提示段 + `exit_plan_mode` 工具 | `plan/plan-mode` |
-| `harness-core-preset` | `kernel`, `kernel.config`, `tools`, `llm.llm` | per-session agent 能力集：`preset.yml` 行在 setup window 内挂载到 agent scope（[06 §6](06-scope.md)）；SnakeYAML 第四边界 | `preset/agent-presets` |
+| `harness-core-preset` | `kernel`, `kernel.config`, `tools`, `llm.llm` | per-session agent 能力集：`preset.yml` 行在 setup window 内挂载到 agent scope（[06 §6](06-scope.md)）；SnakeYAML 第四边界 | `preset/agent-preset{,-registry}` |
 | `harness-core` | 上述全部 | 聚合（packaging=pom 的 reactor 聚合，无 JPMS re-export）| `core` |
 
 ### Capability 层（可替换 seam）
@@ -764,18 +764,18 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `core/agent-loop` | `core.agent-loop` | ✅ |
 | `todo/tool-todo` | `core.todo`（整表快照落账、回放末值胜）| ✅ |
 | `plan/plan-mode` | `core.plan`（fold 末值胜 + `plan:policy` 段）| ✅（步级扩展点挂账）|
-| `preset/agent-presets` | `core.preset`（[06](06-scope.md)；per-session `preset.yml` 挂 agent scope）| ✅ |
+| `preset/agent-preset{,-registry}` | `core.preset`（[06](06-scope.md)；per-session `preset.yml` 挂 agent scope）| ✅ |
 | `core/scope` | `core` 域内 `ScopedLayers`（[06](06-scope.md)；可见性归 kernel Scope）| ✅ 简化 |
 | `llm/llm` | `llm.llm` | ✅ |
 | `llm/llm-deepseek` | `llm.deepseek` | ✅ |
-| `llm/llm-replay` | `llm.replay` | ✅ |
+| `test-support/llm-replay` | `llm.replay` | ✅ |
 | `fs/fs` + `fs/fs-local` | `fs.fs` + `fs.local` | ✅ |
 | `fs/tool-fs` | `fs.tool` | ✅ |
 | `shell/shell` + `shell/bash-local` | `shell.shell` + `shell.local` | ✅ |
 | `shell/tool-bash` | `shell.tool` | ✅ |
 | `sandbox/sandbox` + `sandbox/sandbox-local` | `sandbox.sandbox` + `sandbox.local` | ✅（简化）|
 | `session/session-persistence` + `-jsonl` | `session.persistence`（+codec SPI）+ `persistence-jsonl` | ✅（JSONL only）|
-| `interaction/approval` | `interaction.approval` | ✅ **真实三模式**（非 stub）|
+| `interaction/user-approval` | `interaction.approval` | ✅ **真实三模式**（非 stub）|
 | `interaction/commands` | `interaction.commands` | ✅（it14 实装；dsh `@deepseek-ai/dsh-commands` 形状）|
 | （dsh 无对应：问答走审批通道）| `interaction.ask` | ✅（it22；`ask_user` 免审批 + 停轮结果——与审批分离的澄清通道）|
 | `bundle/base` | `bundle.base` | ✅ |

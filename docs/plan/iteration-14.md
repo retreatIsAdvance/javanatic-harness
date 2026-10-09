@@ -13,7 +13,7 @@
 
 - **目标**：路线 it14「交互面：REPL + 流式渲染」可交付；命令面从占位转实装（05 §9 清单第 8 行）；it12.6 落的 `Kind` 词表获得第一个消费者。
 
-- **为什么**：① headless 今日只有一次性形态，交互面是路线既定（README §路线），且 durable resume 的自然消费方就是它。② dsh commands 契约（注册即 effect、run/done 落账、结果不进模型历史）是命令面既有形状，JH 已有 ExtensionEvent + ServiceLoader codec 承接机制（todo/plan 两先例）。③ 流式渲染必须有 chunk 事实：03 早已设计 `assistant/chunk`（log-only、投影不读），dsh 也持久化该事件（TTFT/遥测）——本迭代兑现，渲染器才有逐块数据。④ 05 §3 写着「消费方（it14 交互面）按 kind 渲染」——欠的债本迭代还，且把 OVERFLOW 一并收编（防第三次挂账）。
+- **为什么**：① headless 今日只有一次性形态，交互面是路线既定（README §路线），且 durable resume 的自然消费方就是它。② dsh commands 契约（注册即 effect、run/done 落账、结果不进模型历史）是命令面既有形状，JH 已有 ExtensionEvent + ServiceLoader codec 承接机制（todo/plan 两先例）。③ 流式渲染必须有 chunk 事实：03 早已设计 `assistant/chunk`（log-only、投影不读），dsh 分析期（v0/v1）也顶层持久化该事件（TTFT/遥测；v2 起改为 `assistant/message` 内嵌 compact stream / log-only `assistant/attempt`）——本迭代兑现，渲染器才有逐块数据。④ 05 §3 写着「消费方（it14 交互面）按 kind 渲染」——欠的债本迭代还，且把 OVERFLOW 一并收编（防第三次挂账）。
 
 - **不做**：
   - Ctrl-C（SIGINT）优雅取消——**挂账**：进程退出 + durable resume 兜底（`--resume` 续跑即恢复路径）；中断处理另片

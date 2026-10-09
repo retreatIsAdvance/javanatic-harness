@@ -491,7 +491,7 @@ public final class JsonlPersistence implements SessionPersistence {
 
 ## 7. 不变式（invariant companion）
 
-对应 dsh 的 session invariant。`SessionInvariants.validate(List<LoggedEvent<?>>)` 逐条检查：
+JH 自有形态、非移植（dsh 分析期的 session invariant 机制 2026-09 已整体退役，出处仅存历史对照）。`SessionInvariants.validate(List<LoggedEvent<?>>)` 逐条检查：
 
 - **信封连续**：`seq[i] == i`（load 与 append 双侧结构性保证，此处复核）
 - **turn/step 单调且嵌套**：turn 号 = TurnStart 计数（**1 起**）；step = turn 内序号（**0 起**）——两侧起点不对称是**有意口径**（对齐生产 loop 与 04 规格），勿当 bug 修；step 必在 turn 内；tool/call 与 tool/result 同 step 配对

@@ -34,7 +34,7 @@
 
 ## 2. Invariant Companion 测试
 
-dsh 的 `dsh-session/invariant` 是核心：它不测"正确性"，测"不变式始终成立"。JH 对应 `SessionInvariants`（[03 §7](03-session-event-sourcing.md)）。
+dsh 分析期曾以 `./invariant` 伴随插件 + 运行时注册表实现同类机制（2026-09 已整体退役）。JH 的 `SessionInvariants`（[03 §7](03-session-event-sourcing.md)）是自有形态、非移植：它不测"正确性"，测"不变式始终成立"。
 
 ### 属性测试（jqwik）
 
