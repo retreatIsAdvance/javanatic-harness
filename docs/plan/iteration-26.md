@@ -96,6 +96,7 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
+| 根 `pom.xml`（modules + dependencyManagement） | 新增 `skill` 组注册（`harness-skill-skill` 先行） | ☑（停 1） |
 | `bundle/base`（AppBoot / CompositionManifest 装配行） | 加 `skill` 注册表 / `skill-local` / `skill-tool` 三行 + roots、截断上限配置键接线 | ☐ |
 | `core/agent-loop` `AgentEvents`（pre-step 挂点） | **零改动**——只作公共挂点被 `skill/tool` 消费（锚在此防误改） | ☐ |
 | `core/system-prompt`（`PromptSection` 注册面） | `skill/tool` 经既有注册面挂 Dynamic 段（消费方，不改面） | ☐ |
@@ -105,7 +106,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1（承载契约 + 新词表） | `skill/skill`：`SkillService` / `SkillSummary` / `SkillDefinition` / 注册表遮蔽语义 | ☐ |
+| 停 1（承载契约 + 新词表） | `skill/skill`：`SkillService` / `SkillSummary` / `SkillDefinition` / 注册表遮蔽语义 | 已出包待放行 |
 | 停 2（跨模块效应：新依赖边 + R1 面） | `skill/tool`：装载工具声明面 + `skill/catalog` 事件 codec + Dynamic 段 | ☐ |
 | 停 3（组合面 + 验收取证） | `bundle/base` 装配行 + `--verify` 治理断言 + 夹具真跑与 R1 回放 | ☐ |
 
@@ -113,6 +114,8 @@
 
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
+| `stop1-focused-test.txt` | 停 1：`mvn -pl skill/skill -am test` EXIT=0 + jqwik 双性质 1000 tries + 遮蔽 WARN 样例 |
+| `stop1-validate.txt` | 停 1：`mvn -B -q validate` 全 reactor EXIT=0 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 

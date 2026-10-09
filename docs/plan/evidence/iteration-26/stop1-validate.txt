@@ -1,0 +1,7 @@
+# it26 停 1 取证 — spotless + checkstyle 全 reactor 门禁（2026-10-09）
+
+```sh
+$ JAVA_HOME=~/.jenv/versions/25.0 ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+```
+
+EXIT=0；日志仅 spotless 惯例 Unsafe 警告 4 行，无 checkstyle 违例。

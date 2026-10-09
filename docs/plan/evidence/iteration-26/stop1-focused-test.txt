@@ -1,0 +1,17 @@
+# it26 停 1 取证 — skill/skill 聚焦测试（2026-10-09）
+
+```sh
+$ JAVA_HOME=~/.jenv/versions/25.0 ~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl skill/skill -am test
+```
+
+EXIT=0（见 /tmp 会话日志摘录如下；首跑曾因裸 -pl 解析本地仓失败——AGENTS 已知坑，补 -am 后绿）
+
+jqwik 性质（各 1000 tries 全过）：
+tries = 1000                  | # of calls to property
+checks = 1000                 | # of not rejected calls
+tries = 1000                  | # of calls to property
+checks = 1000                 | # of not rejected calls
+
+遮蔽告警样例（System.Logger WARN，可解释性事实）：
+警告: skill 'alpha' from 'user' shadows 'project'
+警告: skill 'shared-1' from 'root-2' shadows 'root-0'

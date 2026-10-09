@@ -52,6 +52,7 @@
         <module>core</module>
         <module>llm</module>
         <module>fs</module>
+        <module>skill</module>
         <module>shell</module>
         <module>session</module>
         <module>sandbox</module>
@@ -189,6 +190,11 @@
             <dependency>
                 <groupId>io.github.retreatisadvance</groupId>
                 <artifactId>harness-fs-tool</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.retreatisadvance</groupId>
+                <artifactId>harness-skill-skill</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
