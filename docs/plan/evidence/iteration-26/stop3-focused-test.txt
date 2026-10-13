@@ -1,10 +1,14 @@
-# it26 停 3 取证 — skill/local 聚焦测试 + bundle/headless 回归（2026-10-09）
+# it26 停 3 取证 — skill/local 聚焦测试 + bundle/headless 回归（2026-10-09；2026-10-13 订正）
 
 ```sh
 $ mvn -B -q -pl skill/local -am test        # EXIT=0（LocalSkillsTest 6 例）
-$ mvn -B -q -pl bundle/base -am test       # EXIT=0（AppBootTest 23 例，含 skillLocalCwdJoinsWorkspaceSingleSource）
+$ mvn -B -q -pl bundle/base -am test       # EXIT=0（AppBootTest 22 例，含 skillLocalCwdJoinsWorkspaceSingleSource）
 $ mvn -B -q -pl examples/headless -am test # EXIT=0（工具面 11 例断言更新后全绿）
 $ mvn -B -q clean package                  # EXIT=0 全量
 ```
 
 行为要点在案：provider 全量候选跨根同名上交（归并归注册表——契约对齐修正）；load 非法名拒（含 ../ traversal 形）；损坏条目跳过（非法名/缺 description/名不匹配/无 frontmatter/空正文五形态）；四根 rank 100/200/400/500。
+
+订正（2026-10-13 修正批）：AppBootTest 计数原记「23 例」为 +1 误计；自修正批树复跑核
+为 22 例（22 个 `@Test`，含 `skillLocalCwdJoinsWorkspaceSingleSource`）。修正批后的聚焦
+全绿见 `stop3-f6-wiring-race.txt`（skill/local 6 + SkillLocalPlugin 3 + Ledger 6 + Plugin 7）。

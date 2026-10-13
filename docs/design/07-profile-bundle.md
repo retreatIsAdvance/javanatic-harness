@@ -174,6 +174,8 @@ public final class AppBoot {
 
 **工作区单源（it21；it26 增第五键）**：工作区是五个键的同一事实——`agent-loop.cwd`（提示词上下文）、`fs-local.root`（文件围栏）、`shell-tool.workspace`（shell 起点）、`sandbox-policy.workspace`（沙箱授予面）、`skill-local.cwd`（技能项目根发现源）。装配在 `resolve` 之后、加载之前逐键取 enabled 行的 config：声明值归一化（`Path.normalize`，尾斜杠不算漂移）后多于一个不同值即 `IllegalStateException`（点名每个声明键与值），非字符串值同拒。缺键视为未声明——不参与比对，由各插件自己的文档化缺省兜底（如 `agent-loop` 缺省 `user.dir`）。去掉的是"漂移 = 交集生效"的静默语义：不写断言时四处可以各指一处目录而无人报错。
 
+**skill-local 配置面（it26）**：仅两个配置键——`skill-local.cwd`（项目根，缺省 fail loud）与 `skill-local.home`（用户根，缺省 `user.home`；重定向/沙箱场景显式覆盖）。**根集合固定四根**（cwd/home × `.harness`/`.agents`，rank 100/200/400/500），不可经配置增删根或改 rank——近者胜裁决序是契约的一部分，不是配置面；扩展（如 dsh 的 custom 根）留待后续迭代。截断上限 `skill-tool.descriptionLimit`（缺省 500，dsh 同名口径）：作用于 `skill/catalog` 事件条目与目录提示段——两者同源同截断，回放确定（R1）。
+
 **CompositionManifest**（R1，03 §8）：boot 从行序 + 插件版本（module descriptor）+ 影响模型可见输出的 config 值生成清单，注册为服务；`session-store` 创建 SessionHeader 时消费它。清单 + 日志 = 可重建性的全部持久化事实。
 
 ## 6. `--verify` 与 policy 档位（R4）

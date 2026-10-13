@@ -99,19 +99,18 @@
 | 根 `pom.xml`（modules + dependencyManagement） | 新增 `skill` 组注册（`harness-skill-skill` 先行） | ☑（停 1；停 3 补 `harness-skill-local`） |
 | `bundle/base` `AppBoot.WORKSPACE_KEYS` | `skill-local.cwd` 入 workspace 单源键集（第五处同值键） | ☑（停 3） |
 | `examples/headless` `buildOverlays` + `dist/jh` jlink 模块清单 | skill 三行扇出 + jlink 挂三模块 | ☑（停 3） |
-| `core/agent-loop` `AgentEvents`（pre-step 挂点） | **零改动**——只作公共挂点被 `skill/tool` 消费（锚在此防误改） | ☑（停 2 证实零改动：CREATED→嵌套 PRE_STEP 订阅，loop 侧无一行变更） |
-| `bundle/base`（AppBoot / CompositionManifest 装配行） | 加 `skill` 注册表 / `skill-local` / `skill-tool` 三行 + roots、截断上限配置键接线 | ☐ |
-| `core/agent-loop` `AgentEvents`（pre-step 挂点） | **零改动**——只作公共挂点被 `skill/tool` 消费（锚在此防误改） | ☐ |
-| `core/system-prompt`（`PromptSection` 注册面） | `skill/tool` 经既有注册面挂 Dynamic 段（消费方，不改面） | ☐ |
-| 设计文档 `02`/`03`/`04`/`05`/`07`/`12` + `AGENTS.md` | 上表 MODIFIED 同步面（代码与文档同一提交） | ☐ |
+| `core/agent-loop` `AgentEvents`（pre-step 挂点） | **零改动**——只作公共挂点被 `skill/tool` 消费（锚在此防误改） | ☑（停 2 证实零改动；修正批 F6 后消费侧为 PRE_STEP 直订，loop 侧仍无一行变更） |
+| `bundle/base`（AppBoot / CompositionManifest 装配行） | 加 `skill` 注册表 / `skill-local` / `skill-tool` 三行 + roots、截断上限配置键接线 | ☑（停 3） |
+| `core/system-prompt`（`PromptSection` 注册面） | `skill/tool` 经既有注册面挂 Dynamic 段（消费方，不改面） | ☑（停 3；未改面） |
+| 设计文档 `02`/`03`/`04`/`05`/`07`/`12` + `AGENTS.md` | 上表 MODIFIED 同步面（代码与文档同一提交） | ☑（停 3；修正批 F5 补 `07` §5 配置面两句） |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1（承载契约 + 新词表） | `skill/skill`：`SkillService` / `SkillSummary` / `SkillDefinition` / 注册表遮蔽语义 | 已出包；评审修正批（F1–F4）已落，待复核放行 |
-| 停 2（跨模块效应：新依赖边 + R1 面） | `skill/tool`：装载工具声明面 + `skill/catalog` 事件 codec + Dynamic 段；**含 `skill/skill` 模块内公开实例化入口**（F5 归属：`SkillRegistry` package-private，构造者须在本模块——公开工厂或 Plugin，对齐 ToolsPlugin/ScopedRegistry 同模块先例；停 3 装配依赖它） | 已出包待放行 |
-| 停 3（组合面 + 验收取证） | `bundle/base` 装配行 + `--verify` 治理断言 + 夹具真跑与 R1 回放 | 已出包待放行 |
+| 停 1（承载契约 + 新词表） | `skill/skill`：`SkillService` / `SkillSummary` / `SkillDefinition` / 注册表遮蔽语义 | 已出包；评审修正批（F1–F4）已落；放行（2026-10-13，随停 3 复核一并收口） |
+| 停 2（跨模块效应：新依赖边 + R1 面） | `skill/tool`：装载工具声明面 + `skill/catalog` 事件 codec + Dynamic 段；**含 `skill/skill` 模块内公开实例化入口**（F5 归属：`SkillRegistry` package-private，构造者须在本模块——公开工厂或 Plugin，对齐 ToolsPlugin/ScopedRegistry 同模块先例；停 3 装配依赖它） | 已出包；放行（2026-10-13，随停 3 复核一并收口） |
+| 停 3（组合面 + 验收取证） | `bundle/base` 装配行 + `--verify` 治理断言 + 夹具真跑与 R1 回放 | 已出包；放行（2026-10-13）；修正批 F1–F6 已落（本批） |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-26/）
 
@@ -121,16 +120,18 @@
 | `stop1-validate.txt` | 停 1：`mvn -B -q validate` 全 reactor EXIT=0 |
 | `stop2-focused-test.txt` | 停 2：`mvn -pl skill/tool -am test` EXIT=0（9 例：Ledger 5 + Plugin 4，真实 loop 事件序在案） |
 | `stop2-validate.txt` | 停 2：`mvn -B -q validate` 全 reactor EXIT=0 |
-| `stop3-focused-test.txt` | 停 3：skill/local 6 例 + bundle/headless 回归 + 全量 clean package EXIT=0 |
-| `stop3-fixture-verify.txt` | 停 3：夹具工程 jh --verify 真跑（STANDARD + PRODUCTION 双档 EXIT=0，23/28 计数与 07 一致） |
+| `stop3-focused-test.txt` | 停 3：skill/local 6 例 + bundle/headless 回归（AppBootTest 22 例，修正批订正）+ 全量 clean package EXIT=0 |
+| `stop3-fixture-verify.txt` | 停 3：夹具工程 jh --verify 真跑（STANDARD + PRODUCTION 双档 EXIT=0，23/28 计数与 07 一致；修正批订正 broken_name 与 PROD approval-ask 括号、补组合行） |
 | `stop3-validate.txt` | 停 3：`mvn -B -q validate` 全 reactor EXIT=0 |
+| `stop3-f6-wiring-race.txt` | 修正批 F6：轮首装载接线竞态诊断 + 修复 + 突变复验（旧接线探针 5/300 vs 新 0/300；确定性回归用例 3/3 击杀）+ 聚焦全绿 |
+| `model-in-loop-runbook.md` | 验收①②：模型在环真跑 runbook（key 环境注入、home 重定向、观察点与回贴清单；待跑后回填 stop3-model-in-loop.txt） |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
 （四确认裁定后启用；勾选与证据随工作推进落此。）
 
-- [ ] 可移植到独立项目：独立夹具（/tmp/it26-fixture，无 JH 源码）放技能 → jlink jh 真跑——keyless 面已证（--verify 双档 EXIT=0，组合含 skill 三行）；**模型在环装载真跑待 DEEPSEEK_API_KEY 补跑**（依赖真实 provider 出账 skill/catalog 事件与装载闭环）
-- [ ] ask 档技能内命令仍弹审批、sandbox 仍拦的端到端（同上，需 key；治理面由 HostileInstructionsTest 回归 + `exempt=` 名单不含 skill + T2 声明面静态保证三面预证）
+- [ ] 可移植到独立项目：独立夹具（/tmp/it26-fixture，无 JH 源码）放技能 → jlink jh 真跑——keyless 面已证（--verify 双档 EXIT=0，组合含 skill 三行）；**模型在环装载真跑按 `model-in-loop-runbook.md` Run A 执行后回填**（依赖真实 provider 出账 skill/catalog 事件与装载闭环；需 DEEPSEEK_API_KEY 环境注入）
+- [ ] ask 档技能内命令仍弹审批、sandbox 仍拦的端到端（按同 runbook Run B 执行后回填；治理面由 HostileInstructionsTest 回归 + `exempt=` 名单不含 skill + T2 声明面静态保证三面预证）
 - [x] A 表 6 条落地（`3ad9f1a`）：旧措辞全局 grep 复核无漏（残留命中均为 A 表引文 / JH 侧模块名 / 保留的历史语境注记）；`mvn -B -q validate` 全 reactor 干净（EXIT=0，2026-10-09）。
 
 ## 修正（如有）
@@ -141,8 +142,15 @@
 | 停 1 修正批 | F2：dup-rank 仅 `catalog()` fail loud，`load()` 静默按词序 tiebreak | 提取 `winners()` 为唯一裁决点，两入口同抛 `duplicate skill rank`；用例 `loadFailsLoudOnDuplicateRankLikeCatalog` |
 | 停 1 修正批 | F3：遮蔽 WARN 方向倒置（被遮蔽者被写成遮蔽者） | 参数序改正（胜出者在前），证据档样例同步 |
 | 停 1 修正批 | F4：证据档把 `-am` 带入的 kernel ScopeTest 性质误记为双性质自产；性质断言未覆盖 source 面 | 证据档加归属注记（本模块自产恰 1 条）；性质断言改比 `(name@source)` 对 |
+| 停 3 修正批 | F1（复核发现）：`descriptionLimit` 构造器/行配置接线无测试咬合（短路回缺省仍全绿）；`skill/local` 插件装配路径（显式双参/行配置/缺 cwd 拒）无装配测试 | 补 `explicitLimitConstructorTruncatesCatalogAtTurnStart` + `rowConfigDescriptionLimitResolvesAtTurnStart`（突变杀验证）；新增 `SkillLocalPluginTest` 3 例 |
+| 停 3 修正批 | F2（复核发现）：夹具「非法名 `broken-name`」实为合法 kebab-case——损坏跳过用例未真正入非法态 | 目录与 frontmatter 改为 `broken_name`（下划线）；夹具双档复跑订正（`stop3-fixture-verify.txt`） |
+| 停 3 修正批 | F3（复核要求）：模型在环真跑（装载闭环 + ask 审批）未入档 | 出 `model-in-loop-runbook.md`（key 环境注入、home 重定向、观察点/回贴清单；待跑回填） |
+| 停 3 修正批 | F4（复核发现）：锚点表重复 `agent-loop` 行且 bundle/system-prompt/设计文档行未勾；`stop3-focused` AppBootTest 计数误记 23（实 22）；PROD 档括号实况为 `approval-ask` | 锚点表与证据档逐项订正（本表 + `stop3-focused-test.txt` / `stop3-fixture-verify.txt`） |
+| 停 3 修正批 | F5（复核发现）：`07` 未明言 skill-local 根集固定不可扩展、`descriptionLimit` 缺省 500 | `07` §5 补「skill-local 配置面」段 + 偏离登记（见下表） |
+| 停 3 修正批 | F6（本批自主发现）：轮首装载接线竞态——`CREATED` 为异步 NOTIFY，附加 PRE_STEP 监听与首轮 admit 抢序，首轮装载偶发整轮缺失（旧接线探针 5/300） | apply 期 PRE_STEP 直订（订阅先行）；确定性回归用例（旧接线 3/3 击杀）+ 空洞断言加固；探针复验 0/300（`stop3-f6-wiring-race.txt`） |
 
 ## 设计偏离（如有）
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
+| 本档设计增量 ④「roots 经 `skill-local` 行配置可换」/ ⑥「配置键 = roots、描述截断上限」 | 实际配置键 = `skill-local.cwd` + `skill-local.home` + `skill-tool.descriptionLimit`；根集合固定四根、rank 100/200/400/500 不可增删/改序 | 近者胜裁决序是契约的一部分，配置面最小化；dsh 的 custom 根（第 3 根）本就不采，扩展留后续 | 迭代内已同步（`07` §5 补句明言固定四根与两个路径键） |

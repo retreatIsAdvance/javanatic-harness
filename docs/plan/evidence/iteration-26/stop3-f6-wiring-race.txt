@@ -1,0 +1,43 @@
+# it26 停 3 修正批 F6 取证 — 轮首装载接线竞态：诊断、修复与突变复验（2026-10-13）
+
+## 症状与定位
+停 3 修正批 F1 验证期间，既有用例 loopRefreshesCatalogAtTurnStartBeforeFirstAssemble
+与新用例在重复运行中偶发红（类内 9 轮 2 轮红），红点轮转：assemble 断言缺目录段、
+或 catalog 断言缺失。隔离探针（IZProbeTest：rowConfig 150 轮 + toolRound 150 轮）
+复现 7/300 异常，全部同一形态 catalogEvents=0——目录事件整轮缺失
+（无头一次性会话 = 整会话缺目录段）。
+
+## 根因
+Events.notify 对每监听器投递虚拟线程（fire-and-forget 异步）；AgentEvents.CREATED
+是 NOTIFY。旧接线在 CREATED 监听里再往 agent scope 附加 PRE_STEP 监听——附加动作
+与 agent 首轮 admit 的单次 PRE_STEP 派发抢序，附加任务落后时该轮装载被整轮跳过。
+
+## 修复
+SkillToolPlugin 改为 apply 期对共享层直订 PRE_STEP（挂载视图绑共享 root、注销登记
+插件私有栈——随插件回收）：订阅先于一切 agent 创建/开轮就位，相位确定；副作用仅
+落账、裁决原样放行。AgentEvents.CREATED javadoc 补异步时机注意（不得经 CREATED
+附加轮上关键路径监听）。
+
+## 突变复验（旧接线 = MUTANT；新接线 = 修复后）
+```sh
+$ 探针 300 轮（旧接线）：5/300 ANOMALY，全部 catalogEvents=0、catalogIdx=-1、
+  sectionRendered=false、assembleHasSection=false（iter 27 rowConfig；iter 4/17/18/22 toolRound）
+$ 探针 300 轮（新接线）：0/300 ANOMALY（300 行 iter 全数在案）
+$ 确定性回归用例（旧接线）：3/3 红，rc=1，「Expected size: 1 but was: 0」
+$ 确定性回归用例（新接线）：随聚焦全绿
+$ 批量并发设计（旧接线）：先全建后齐发，附加任务在开轮前全部完成 → 0/10 检出，设计弃用（诚实记录）
+```
+
+## 回归测试（skill/tool SkillToolPluginTest）
+- wiringAppliesAtLoadTimeBeforeAnyAgentExists（确定性击杀）：不建 agent、共享层同步
+  直派 PRE_STEP，目录必落账——旧接线无 CREATED 即无监听，必红（3/3 实测）。
+- loopRefreshesCatalogAtTurnStartBeforeFirstAssemble 加固：先 contains 再 indexOf
+  （事件缺失时 indexOf=-1 空洞通过——本批复核同发现，见 F6 记录）。
+- 探针 IZProbeTest 为临时取证物，复验后删除、不入库。
+
+## 聚焦全绿（修复后）
+```sh
+$ mvn -B -q -pl skill/local,skill/tool -am test   # EXIT=0
+# LocalSkills 6 + SkillLocalPlugin 3 + SkillCatalogLedger 6 + SkillToolPlugin 7
+# （含上述两类回归），探针 0 ANOMALY；上游 -am 模块全绿
+```

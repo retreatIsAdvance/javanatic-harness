@@ -1,5 +1,6 @@
 package io.javanatic.harness.skill.tool;
 
+import io.javanatic.harness.agent.Agent;
 import io.javanatic.harness.agentloop.AgentEvents;
 import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.config.ConfigValues;
@@ -83,14 +84,15 @@ public final class SkillToolPlugin implements Plugin {
                 .orElse(DESCRIPTION_LIMIT);
         scope.onClose(prompts.register(new PromptSection.Dynamic(SECTION_ORDER,
                 SkillToolPlugin::section)));
-        // 轮首目录装载：CREATED 时拿到 session，再在该 agent scope 挂 PRE_STEP
-        // 直通监听（副作用只是落账；裁决原样放行）。内层订阅绑定 agent scope，
-        // 随其关闭回收（R3）。
-        scope.onClose(scope.events().on(AgentEvents.CREATED, (carrier, agent) ->
-            agent.scope().events().onWaterfall(AgentEvents.PRE_STEP, (c, args) -> {
-                refresh(agent.session(), skills, limit);
-                return args.next();
-            })));
+        // 轮首目录装载：PRE_STEP 直订（挂载视图绑共享层，订阅在 apply 期即就位）——
+        // 与首轮装载的相位由订阅先行保证，不经 agent 创建期的异步通知（it26 停 3
+        // 复核实证：经 CREATED 异步附加内层监听会与首轮 admit 抢序，首轮装载偶发
+        // 整轮缺失）。副作用只是落账；裁决原样放行。carrier 即派发 agent
+        // （AgentLoopImpl 自派发，恒为 Agent）。
+        scope.onClose(scope.events().onWaterfall(AgentEvents.PRE_STEP, (carrier, args) -> {
+            refresh(((Agent) carrier).session(), skills, limit);
+            return args.next();
+        }));
     }
 
     /** 装载工具：正文 + 来源头；未知名报错（不在目录或已退役）。 */

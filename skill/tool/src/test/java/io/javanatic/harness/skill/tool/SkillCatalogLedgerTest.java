@@ -117,6 +117,18 @@ class SkillCatalogLedgerTest {
             .isEqualTo("x".repeat(SkillToolPlugin.DESCRIPTION_LIMIT));
     }
 
+    /** 非缺省 limit 参与截断（停 3 复核 f1：此前用例只走 DESCRIPTION_LIMIT，调用方口径无咬合）。 */
+    @Test
+    void truncationHonorsCallerSuppliedLimit() {
+        SkillService skills = serviceWith(new MutableProvider(
+            candidate("big", "x".repeat(600), "project", 100)));
+        Session session = Session.create(Session.newId("trunc-explicit"), null, null);
+        SkillToolPlugin.refresh(session, skills, 10);
+        assertThat(events(session).getFirst().entries().getFirst().description())
+            .hasSize(10)
+            .isEqualTo("x".repeat(10));
+    }
+
     @Test
     void sectionRendersHeaderEntriesAndSource() {
         MutableProvider provider = new MutableProvider(

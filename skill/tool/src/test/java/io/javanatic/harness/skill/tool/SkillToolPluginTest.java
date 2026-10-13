@@ -1,15 +1,26 @@
 package io.javanatic.harness.skill.tool;
 
+import io.javanatic.harness.agent.Agent;
+import io.javanatic.harness.agent.AgentCancelCause;
 import io.javanatic.harness.agent.AgentHandle;
 import io.javanatic.harness.agent.AgentOptions;
 import io.javanatic.harness.agent.AgentPlugin;
 import io.javanatic.harness.agent.AgentRegistry;
+import io.javanatic.harness.agent.AgentStatus;
+import io.javanatic.harness.agent.CancelOptions;
 import io.javanatic.harness.agent.CreateAgentOptions;
+import io.javanatic.harness.agent.Inbox;
+import io.javanatic.harness.agent.InboxTarget;
+import io.javanatic.harness.agentloop.AgentEvents;
 import io.javanatic.harness.agentloop.AgentLoopPlugin;
 import io.javanatic.harness.agentloop.LoopGuard;
 import io.javanatic.harness.agentloop.LoopGuardPlugin;
+import io.javanatic.harness.agentloop.PreStepDecision;
+import io.javanatic.harness.kernel.brand.Id;
+import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
+import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.llm.FinishReason;
 import io.javanatic.harness.llm.LlmPlugin;
@@ -44,7 +55,10 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -77,6 +91,34 @@ class SkillToolPluginTest {
 
     private static SkillCandidate deploy() {
         return new SkillCandidate(new SkillSummary("deploy", "部署指南", "project"), 100);
+    }
+
+    /** 真实 loop 装配（skill-tool 由调用方按接线形态传入）；单步 STOP 脚本，无工具轮。 */
+    private static void bootLoop(Runtime rt, SkillToolPlugin tool) {
+        List<List<StreamChunk>> scripts = List.of(List.of(
+            new StreamChunk.Delta("ok"), new StreamChunk.Finish(FinishReason.STOP)));
+        new PluginLoader().loadAll(rt, List.of(
+            new SessionStorePlugin(), new AgentPlugin(),
+            new LoopGuardPlugin(new LoopGuard.Limits(10, 10)),
+            new SystemPromptPlugin(), new LlmPlugin(), new ReplayPlugin(scripts),
+            new ApprovalAutoPlugin(), new ToolsPlugin(),
+            new AgentLoopPlugin(Clock.systemUTC()),
+            new SkillPlugin(),
+            tool));
+    }
+
+    /** 跑一轮并取目录事件（轮首 PRE_STEP 装载的落账面）。 */
+    private static List<SkillCatalogEvent> catalogAfterOneTurn(Runtime rt) {
+        AgentHandle handle = rt.root().require(AgentRegistry.KEY)
+            .create(rt.root(), CreateAgentOptions.of(Session.newId("limit"), OPTIONS));
+        Session session = handle.agent().session();
+        handle.agent().followup(UserMessage.of("hi", new MessageSource.User()));
+        handle.agent().whenIdle().join();
+        return session.events().stream()
+            .map(LoggedEvent::event)
+            .filter(SkillCatalogEvent.class::isInstance)
+            .map(SkillCatalogEvent.class::cast)
+            .toList();
     }
 
     @TempDir
@@ -180,6 +222,7 @@ class SkillToolPluginTest {
 
             // 轮首装载先于首个请求：catalog 事件在 user/message 之前
             List<String> types = session.events().stream().map(LoggedEvent::type).toList();
+            assertThat(types).contains("skill/catalog"); // 先证在：缺失时 indexOf=-1 会空洞通过（停 3 复核 f6）
             assertThat(types.indexOf("skill/catalog"))
                 .isLessThan(types.indexOf("user/message"));
             assertThat(prompts.assemble(session))
@@ -188,5 +231,111 @@ class SkillToolPluginTest {
             // 装载工具真跑进账：正文入模型历史（tool/result 对）
             assertThat(types).contains("tool/call", "tool/result");
         }
+    }
+
+    /**
+     * 显式 limit 构造器接线到轮首装载（停 3 复核 f1：接线曾被突变证明无测试咬合——
+     * 短路回 DESCRIPTION_LIMIT 时本用例必红）。
+     */
+    @Test
+    void explicitLimitConstructorTruncatesCatalogAtTurnStart() {
+        try (Runtime rt = new Runtime()) {
+            bootLoop(rt, new SkillToolPlugin(6));
+            rt.root().require(SkillService.KEY).register(fixed(
+                new SkillCandidate(new SkillSummary("deploy", "0123456789", "project"), 100)));
+
+            List<SkillCatalogEvent> catalog = catalogAfterOneTurn(rt);
+            assertThat(catalog).hasSize(1);
+            assertThat(catalog.getFirst().entries().getFirst().description()).isEqualTo("012345");
+        }
+    }
+
+    /** 行配置 descriptionLimit 接线：无参构造 + ConfigService 提供 4 → 轮首条目按 4 截断。 */
+    @Test
+    void rowConfigDescriptionLimitResolvesAtTurnStart() {
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(ConfigService.KEY, id -> "skill-tool".equals(id)
+                ? Map.of("descriptionLimit", 4L) : Map.of());
+            bootLoop(rt, new SkillToolPlugin());
+            rt.root().require(SkillService.KEY).register(fixed(
+                new SkillCandidate(new SkillSummary("deploy", "0123456789", "project"), 100)));
+
+            List<SkillCatalogEvent> catalog = catalogAfterOneTurn(rt);
+            assertThat(catalog).hasSize(1);
+            assertThat(catalog.getFirst().entries().getFirst().description()).isEqualTo("0123");
+        }
+    }
+
+    /**
+     * F6 回归（确定性击杀）：装载订阅在 apply 期同步就位——不建 agent、直接向共享层
+     * 同步派发 PRE_STEP，目录即落账。旧接线（CREATED 异步通知里附加内层监听）在此
+     * 注定缺席（无 agent 创建即无 CREATED），首轮装载缺失必现（突变复验 3/3 红，见
+     * docs/plan/evidence/iteration-26/stop3-f6-wiring-race.txt）。真实 agent scope
+     * 派发路径由 loopRefreshesCatalogAtTurnStartBeforeFirstAssemble 覆盖。
+     */
+    @Test
+    void wiringAppliesAtLoadTimeBeforeAnyAgentExists() {
+        try (Runtime rt = new Runtime()) {
+            bootLoop(rt, new SkillToolPlugin());
+            rt.root().require(SkillService.KEY).register(fixed(deploy()));
+
+            Session session = Session.create(Session.newId("f6-apply"), null, null);
+            rt.events().waterfall(AgentEvents.PRE_STEP, rt.root(), agentOf(session),
+                List.of(List.of(UserMessage.of("go", new MessageSource.User())), 1, AbortSignal.never()),
+                ignored -> new PreStepDecision.Enter(List.of()));
+
+            List<SkillCatalogEvent> catalog = session.events().stream()
+                .map(LoggedEvent::event)
+                .filter(SkillCatalogEvent.class::isInstance)
+                .map(SkillCatalogEvent.class::cast)
+                .toList();
+            assertThat(catalog).hasSize(1);
+            assertThat(catalog.getFirst().entries().getFirst().name()).isEqualTo("deploy");
+        }
+    }
+
+    /** 最小 agent 桩：装载监听只消费 session()（F6 直派用例的 carrier）。 */
+    private static Agent agentOf(Session session) {
+        return new Agent() {
+            @Override public Id<Session> id() {
+                return session.id();
+            }
+
+            @Override public AgentOptions options() {
+                return OPTIONS;
+            }
+
+            @Override public Session session() {
+                return session;
+            }
+
+            @Override public Inbox inbox() {
+                throw new UnsupportedOperationException("not used in this test");
+            }
+
+            @Override public AgentStatus status() {
+                throw new UnsupportedOperationException("not used in this test");
+            }
+
+            @Override public Scope scope() {
+                throw new UnsupportedOperationException("not used in this test");
+            }
+
+            @Override public void send(UserMessage message, InboxTarget target, boolean wakeup) {
+                throw new UnsupportedOperationException("not used in this test");
+            }
+
+            @Override public void cancel(AgentCancelCause cause, CancelOptions options) {
+                throw new UnsupportedOperationException("not used in this test");
+            }
+
+            @Override public CompletableFuture<Void> whenIdle() {
+                throw new UnsupportedOperationException("not used in this test");
+            }
+
+            @Override public <T> CompletableFuture<T> runMaintenance(Supplier<T> task) {
+                throw new UnsupportedOperationException("not used in this test");
+            }
+        };
     }
 }

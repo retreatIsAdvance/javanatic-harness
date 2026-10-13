@@ -27,7 +27,12 @@ public final class AgentEvents {
     public static final EventKey<TurnStopping> TURN_STOPPING =
         EventKey.notify("agent/turn-stopping", TurnStopping.class);
 
-    /** agent 构造完成、发布（NOTIFY；payload = agent）。 */
+    /**
+     * agent 构造完成、发布（NOTIFY；payload = agent）。时机注意：NOTIFY 按监听器投递
+     * 到虚拟线程（fire-and-forget 异步）——不得依赖「CREATED 监听已跑」再挂轮上关键
+     * 路径（it26 停 3 实证：附加 PRE_STEP 监听会与首轮 admit 抢序，装载整轮缺失）。
+     * 轮上挂载请在 apply 期直订 WATERFALL（挂载视图绑共享层，订阅先行）。
+     */
     public static final EventKey<Agent> CREATED = EventKey.notify("agent/created", Agent.class);
 
     /** agent 开始 teardown（NOTIFY；payload = agent）。 */

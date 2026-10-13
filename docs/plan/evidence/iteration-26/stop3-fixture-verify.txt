@@ -1,18 +1,30 @@
-# it26 停 3 取证 — 夹具工程真跑（非 JH 仓，keyless 面）
+# it26 停 3 取证 — 夹具工程真跑（非 JH 仓，keyless 面）（2026-10-09；2026-10-13 修正批订正）
 
-夹具：/tmp/it26-fixture（.harness/skills/deploy + .agents/skills/review + 非法名 broken-name）+ /tmp/it26-fixture-home（.harness/skills/notes）。
+夹具：/tmp/it26-fixture（.harness/skills/deploy + .agents/skills/review + 非法名 broken_name）+ /tmp/it26-fixture-home（.harness/skills/notes）。
 
 ```sh
 $ cd /tmp/it26-fixture && jh --verify --workspace=/tmp/it26-fixture
+# （stderr 信息行：sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)）
 Profile: headless   policy: STANDARD
   composition: 23 rows, 28 discovered, 0 unreferenced
   approval: AUTO (approval-auto; exempt=ask_user)
+  audit: jsonl ~/.harness/sessions (durable)
+  stop: max-turns=50 max-steps=40 budget=unlimited
 VERIFY_EXIT=0
 
 $ jh --verify --policy=PRODUCTION --approval=ask --budget=100000 --workspace=/tmp/it26-fixture
-  approval: HUMAN_GATE (approval-auto; exempt=ask_user)  ← 行为 exempt 名单不含 skill（T2：of() 需审批）
+Profile: headless   policy: PRODUCTION
+  composition: 23 rows, 28 discovered, 0 unreferenced
+  approval: HUMAN_GATE (approval-ask; exempt=ask_user)  ← exempt 名单不含 skill（T2：of() 需审批）
+  audit: jsonl ~/.harness/sessions (durable)
+  stop: max-turns=50 max-steps=40 budget=100000
 PROD_VERIFY_EXIT=0
 ```
 
 计数 23/28 与 07 §6 同步口径逐字一致（skill 三行 +3）。
-模型在环的装载真跑（夹具技能 → skill 工具 → skill/catalog 事件）需 DEEPSEEK_API_KEY，待放行后补跑。
+
+修正批订正（2026-10-13，树含 F1–F6 修正、jlink 自该树重建后双档复跑）：
+- 夹具非法名由 `broken-name`（连字符 = 合法 kebab-case，原夹具未真正入非法态）改为 `broken_name`（下划线，目录级拒收）。
+- PROD 档括号订正：实况为 `approval-ask`（原记 `approval-auto` 与 `--approval=ask` 不符）；补录 PROD 组合行与 audit/stop 行。
+
+skill 面在 `--verify` 未被激活（无会话、无目录装载）——夹具技能完整性（deploy/review 可见、broken_name 跳过 + WARN）由模型在环真跑覆盖（runbook：`model-in-loop-runbook.md`，需 DEEPSEEK_API_KEY）。
