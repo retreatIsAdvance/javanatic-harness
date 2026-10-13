@@ -1041,8 +1041,9 @@ public final class HeadlessMain {
             // 沙箱授予面与 fs/shell 围栏钉到同一工作区—— Seatbelt 不比围栏宽
             new ConfigRowSpec.Replace("sandbox-policy",
                 Map.of("mode", "workspace-write", "workspace", workspace.toString()), null),
-            // 提示词工作目录与三处围栏同一次扇出(it21):四处同源,AppBoot 装配期断言兜底
+            // 提示词工作目录与围栏同一次扇出(it21;it26 增 skill-local.cwd):五处同源,AppBoot 装配期断言兜底
             new ConfigRowSpec.Replace("agent-loop", Map.of("cwd", workspace.toString()), null),
+            new ConfigRowSpec.Replace("skill-local", Map.of("cwd", workspace.toString()), null),
             new ConfigRowSpec.Replace("persistence-jsonl",
                 Map.of("root", sessions.toString()), null)));
         if (options.docker()) {

@@ -6,6 +6,7 @@
  */
 module io.javanatic.harness.skill.tool {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
     requires io.javanatic.harness.skill.skill;
     requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.core.system.prompt;

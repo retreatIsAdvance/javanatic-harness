@@ -1,0 +1,18 @@
+# it26 停 3 取证 — 夹具工程真跑（非 JH 仓，keyless 面）
+
+夹具：/tmp/it26-fixture（.harness/skills/deploy + .agents/skills/review + 非法名 broken-name）+ /tmp/it26-fixture-home（.harness/skills/notes）。
+
+```sh
+$ cd /tmp/it26-fixture && jh --verify --workspace=/tmp/it26-fixture
+Profile: headless   policy: STANDARD
+  composition: 23 rows, 28 discovered, 0 unreferenced
+  approval: AUTO (approval-auto; exempt=ask_user)
+VERIFY_EXIT=0
+
+$ jh --verify --policy=PRODUCTION --approval=ask --budget=100000 --workspace=/tmp/it26-fixture
+  approval: HUMAN_GATE (approval-auto; exempt=ask_user)  ← 行为 exempt 名单不含 skill（T2：of() 需审批）
+PROD_VERIFY_EXIT=0
+```
+
+计数 23/28 与 07 §6 同步口径逐字一致（skill 三行 +3）。
+模型在环的装载真跑（夹具技能 → skill 工具 → skill/catalog 事件）需 DEEPSEEK_API_KEY，待放行后补跑。

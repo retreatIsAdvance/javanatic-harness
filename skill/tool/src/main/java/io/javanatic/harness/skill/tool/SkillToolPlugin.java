@@ -1,6 +1,8 @@
 package io.javanatic.harness.skill.tool;
 
 import io.javanatic.harness.agentloop.AgentEvents;
+import io.javanatic.harness.kernel.config.ConfigService;
+import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.session.Session;
@@ -25,8 +27,8 @@ import java.util.Set;
  * T2）+ 轮首目录装载（PRE_STEP 挂点、agent-loop 零改动）→ skill/catalog 事件
  * 落账（变更才落、无技能零噪声、清空落空事件退役）→ Dynamic 提示段读最新
  * 事件（it21 ProjectInstructions / plan:policy 同款：目录事实在日志里，回放
- * 零磁盘依赖，R1）。描述截断上限暂为常量缺省 500（dsh 同名口径）；配置键
- * 接线随停 3 bundle 行落（07 同步）。
+ * 零磁盘依赖，R1）。描述截断上限行配置 {@code descriptionLimit}
+ * （缺省 500，dsh 同名口径；07 同步）。
  */
 public final class SkillToolPlugin implements Plugin {
 
@@ -36,8 +38,20 @@ public final class SkillToolPlugin implements Plugin {
     /** 目录段排序键：随 plan:policy（50）之后——先治理指导、后能力目录。 */
     static final int SECTION_ORDER = 60;
 
-    /** 描述截断上限（事件条目与目录段共用；缺省 = dsh 同名口径 500）。 */
+    /** 描述截断上限缺省（事件条目与目录段共用；dsh 同名口径），行配置可覆盖。 */
     static final int DESCRIPTION_LIMIT = 500;
+
+    private final Integer explicitLimit;
+
+    /** 数据组合路径：截断上限从行配置解析（缺省 500，无配置面也可跑）。 */
+    public SkillToolPlugin() {
+        this.explicitLimit = null;
+    }
+
+    /** @param descriptionLimit 截断上限（程序化组合的显式选择） */
+    public SkillToolPlugin(int descriptionLimit) {
+        this.explicitLimit = descriptionLimit;
+    }
 
     private static final String TOOL_DESCRIPTION =
         "Load the full instructions of a skill by name. Call this before acting on any skill "
@@ -62,14 +76,19 @@ public final class SkillToolPlugin implements Plugin {
         ToolRegistry registry = scope.require(ToolRegistry.KEY);
         scope.onClose(registry.register(scope, loadTool(skills)));
         SystemPromptService prompts = scope.require(SystemPromptService.KEY);
+        int limit = explicitLimit != null ? explicitLimit
+            : scope.resolve(ConfigService.KEY)
+                .map(config -> (int) ConfigValues.longValue(config.configFor(id()), id(),
+                    "descriptionLimit", DESCRIPTION_LIMIT))
+                .orElse(DESCRIPTION_LIMIT);
         scope.onClose(prompts.register(new PromptSection.Dynamic(SECTION_ORDER,
-            session -> section(session))));
+                SkillToolPlugin::section)));
         // 轮首目录装载：CREATED 时拿到 session，再在该 agent scope 挂 PRE_STEP
         // 直通监听（副作用只是落账；裁决原样放行）。内层订阅绑定 agent scope，
         // 随其关闭回收（R3）。
         scope.onClose(scope.events().on(AgentEvents.CREATED, (carrier, agent) ->
             agent.scope().events().onWaterfall(AgentEvents.PRE_STEP, (c, args) -> {
-                refresh(agent.session(), skills);
+                refresh(agent.session(), skills, limit);
                 return args.next();
             })));
     }
@@ -95,9 +114,9 @@ public final class SkillToolPlugin implements Plugin {
     }
 
     /** 目录快照 → 截断条目；与最新事件比对，变更才落账（含空事件退役）。 */
-    static void refresh(Session session, SkillService skills) {
+    static void refresh(Session session, SkillService skills, int limit) {
         List<SkillCatalogEvent.Entry> entries = skills.catalog().skills().stream()
-            .map(s -> new SkillCatalogEvent.Entry(s.name(), truncate(s.description()), s.source()))
+            .map(s -> new SkillCatalogEvent.Entry(s.name(), truncate(s.description(), limit), s.source()))
             .toList();
         Optional<SkillCatalogEvent> latest = latest(session);
         if (latest.isPresent() && latest.get().entries().equals(entries)) {
@@ -132,9 +151,9 @@ public final class SkillToolPlugin implements Plugin {
             .reduce((first, second) -> second);
     }
 
-    private static String truncate(String description) {
-        return description.length() <= DESCRIPTION_LIMIT
+    private static String truncate(String description, int limit) {
+        return description.length() <= limit
             ? description
-            : description.substring(0, DESCRIPTION_LIMIT);
+            : description.substring(0, limit);
     }
 }

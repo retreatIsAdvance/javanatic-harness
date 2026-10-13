@@ -58,6 +58,14 @@ rows:
     config:
       workspace: ${cwd}
       timeoutSeconds: 60
+  # 技能生态（it26）：Definition 提供注册表（SkillPlugin）；skill-local 四根发现
+  # （项目/用户 × .harness/.agents，近者胜——cwd 工作区单源，与 fs-local.root 同值）；
+  # skill-tool 挂 skill 装载工具（of() 需审批 = T2）+ 轮首目录装载 + Dynamic 目录段
+  - plugin: skill
+  - plugin: skill-local
+    config:
+      cwd: ${cwd}
+  - plugin: skill-tool
   # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
   - plugin: todo
     config:

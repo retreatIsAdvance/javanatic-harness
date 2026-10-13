@@ -96,7 +96,9 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| 根 `pom.xml`（modules + dependencyManagement） | 新增 `skill` 组注册（`harness-skill-skill` 先行） | ☑（停 1） |
+| 根 `pom.xml`（modules + dependencyManagement） | 新增 `skill` 组注册（`harness-skill-skill` 先行） | ☑（停 1；停 3 补 `harness-skill-local`） |
+| `bundle/base` `AppBoot.WORKSPACE_KEYS` | `skill-local.cwd` 入 workspace 单源键集（第五处同值键） | ☑（停 3） |
+| `examples/headless` `buildOverlays` + `dist/jh` jlink 模块清单 | skill 三行扇出 + jlink 挂三模块 | ☑（停 3） |
 | `core/agent-loop` `AgentEvents`（pre-step 挂点） | **零改动**——只作公共挂点被 `skill/tool` 消费（锚在此防误改） | ☑（停 2 证实零改动：CREATED→嵌套 PRE_STEP 订阅，loop 侧无一行变更） |
 | `bundle/base`（AppBoot / CompositionManifest 装配行） | 加 `skill` 注册表 / `skill-local` / `skill-tool` 三行 + roots、截断上限配置键接线 | ☐ |
 | `core/agent-loop` `AgentEvents`（pre-step 挂点） | **零改动**——只作公共挂点被 `skill/tool` 消费（锚在此防误改） | ☐ |
@@ -109,7 +111,7 @@
 |---|---|---|
 | 停 1（承载契约 + 新词表） | `skill/skill`：`SkillService` / `SkillSummary` / `SkillDefinition` / 注册表遮蔽语义 | 已出包；评审修正批（F1–F4）已落，待复核放行 |
 | 停 2（跨模块效应：新依赖边 + R1 面） | `skill/tool`：装载工具声明面 + `skill/catalog` 事件 codec + Dynamic 段；**含 `skill/skill` 模块内公开实例化入口**（F5 归属：`SkillRegistry` package-private，构造者须在本模块——公开工厂或 Plugin，对齐 ToolsPlugin/ScopedRegistry 同模块先例；停 3 装配依赖它） | 已出包待放行 |
-| 停 3（组合面 + 验收取证） | `bundle/base` 装配行 + `--verify` 治理断言 + 夹具真跑与 R1 回放 | ☐ |
+| 停 3（组合面 + 验收取证） | `bundle/base` 装配行 + `--verify` 治理断言 + 夹具真跑与 R1 回放 | 已出包待放行 |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-26/）
 
@@ -119,11 +121,16 @@
 | `stop1-validate.txt` | 停 1：`mvn -B -q validate` 全 reactor EXIT=0 |
 | `stop2-focused-test.txt` | 停 2：`mvn -pl skill/tool -am test` EXIT=0（9 例：Ledger 5 + Plugin 4，真实 loop 事件序在案） |
 | `stop2-validate.txt` | 停 2：`mvn -B -q validate` 全 reactor EXIT=0 |
+| `stop3-focused-test.txt` | 停 3：skill/local 6 例 + bundle/headless 回归 + 全量 clean package EXIT=0 |
+| `stop3-fixture-verify.txt` | 停 3：夹具工程 jh --verify 真跑（STANDARD + PRODUCTION 双档 EXIT=0，23/28 计数与 07 一致） |
+| `stop3-validate.txt` | 停 3：`mvn -B -q validate` 全 reactor EXIT=0 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
 （四确认裁定后启用；勾选与证据随工作推进落此。）
 
+- [ ] 可移植到独立项目：独立夹具（/tmp/it26-fixture，无 JH 源码）放技能 → jlink jh 真跑——keyless 面已证（--verify 双档 EXIT=0，组合含 skill 三行）；**模型在环装载真跑待 DEEPSEEK_API_KEY 补跑**（依赖真实 provider 出账 skill/catalog 事件与装载闭环）
+- [ ] ask 档技能内命令仍弹审批、sandbox 仍拦的端到端（同上，需 key；治理面由 HostileInstructionsTest 回归 + `exempt=` 名单不含 skill + T2 声明面静态保证三面预证）
 - [x] A 表 6 条落地（`3ad9f1a`）：旧措辞全局 grep 复核无漏（残留命中均为 A 表引文 / JH 侧模块名 / 保留的历史语境注记）；`mvn -B -q validate` 全 reactor 干净（EXIT=0，2026-10-09）。
 
 ## 修正（如有）

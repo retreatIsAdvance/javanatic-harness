@@ -75,23 +75,23 @@ class SkillCatalogLedgerTest {
         SkillService skills = serviceWith(provider);
         Session session = Session.create(Session.newId("ledger"), null, null);
 
-        SkillToolPlugin.refresh(session, skills);
+        SkillToolPlugin.refresh(session, skills, SkillToolPlugin.DESCRIPTION_LIMIT);
         assertThat(events(session)).hasSize(1);
 
         // 不变更：零新增（每轮刷新对 R1 的落账面稳定）
-        SkillToolPlugin.refresh(session, skills);
+        SkillToolPlugin.refresh(session, skills, SkillToolPlugin.DESCRIPTION_LIMIT);
         assertThat(events(session)).hasSize(1);
 
         // 目录变更：新事件
         provider.catalog = List.of(
             candidate("deploy", "部署指南", "project", 100),
             candidate("review", "评审清单", "user", 400));
-        SkillToolPlugin.refresh(session, skills);
+        SkillToolPlugin.refresh(session, skills, SkillToolPlugin.DESCRIPTION_LIMIT);
         assertThat(events(session)).hasSize(2);
 
         // 清空：落空事件退役（dsh 空目录语义）
         provider.catalog = List.of();
-        SkillToolPlugin.refresh(session, skills);
+        SkillToolPlugin.refresh(session, skills, SkillToolPlugin.DESCRIPTION_LIMIT);
         assertThat(events(session)).hasSize(3);
         assertThat(events(session).get(2).entries()).isEmpty();
     }
@@ -100,7 +100,7 @@ class SkillCatalogLedgerTest {
     void emptyCatalogWithNoPriorEventsStaysSilent() {
         SkillService skills = serviceWith(new MutableProvider());
         Session session = Session.create(Session.newId("silent"), null, null);
-        SkillToolPlugin.refresh(session, skills);
+        SkillToolPlugin.refresh(session, skills, SkillToolPlugin.DESCRIPTION_LIMIT);
         assertThat(events(session)).isEmpty();
         assertThat(SkillToolPlugin.section(session)).isEmpty();
     }
@@ -111,7 +111,7 @@ class SkillCatalogLedgerTest {
         SkillService skills = serviceWith(new MutableProvider(
             candidate("big", longText, "project", 100)));
         Session session = Session.create(Session.newId("trunc"), null, null);
-        SkillToolPlugin.refresh(session, skills);
+        SkillToolPlugin.refresh(session, skills, SkillToolPlugin.DESCRIPTION_LIMIT);
         assertThat(events(session).getFirst().entries().getFirst().description())
             .hasSize(SkillToolPlugin.DESCRIPTION_LIMIT)
             .isEqualTo("x".repeat(SkillToolPlugin.DESCRIPTION_LIMIT));
@@ -125,7 +125,7 @@ class SkillCatalogLedgerTest {
         Session session = Session.create(Session.newId("section"), null, null);
         assertThat(SkillToolPlugin.section(session)).isEmpty();
 
-        SkillToolPlugin.refresh(session, skills);
+        SkillToolPlugin.refresh(session, skills, SkillToolPlugin.DESCRIPTION_LIMIT);
         String section = SkillToolPlugin.section(session);
         assertThat(section)
             .contains("先装载再行动")
@@ -134,7 +134,7 @@ class SkillCatalogLedgerTest {
 
         // 退役后段消失
         provider.catalog = List.of();
-        SkillToolPlugin.refresh(session, skills);
+        SkillToolPlugin.refresh(session, skills, SkillToolPlugin.DESCRIPTION_LIMIT);
         assertThat(SkillToolPlugin.section(session)).isEmpty();
     }
 

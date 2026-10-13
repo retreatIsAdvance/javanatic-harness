@@ -1,0 +1,7 @@
+# it26 停 3 取证 — spotless + checkstyle 全 reactor 门禁（2026-10-09）
+
+```sh
+$ mvn -B -q validate
+```
+
+EXIT=0。

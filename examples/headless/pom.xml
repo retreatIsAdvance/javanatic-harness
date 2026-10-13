@@ -90,6 +90,19 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-preset</artifactId>
         </dependency>
+        <!-- it26 skill 三角：base bundle 引用行，运行时 ServiceLoader 需在模块路径 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-skill-skill</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-skill-local</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-skill-tool</artifactId>
+        </dependency>
         <!-- 生产模拟场景(it15):boot 后注入 replay 驱动,keyless 确定性;模块无 provides,不污染双向校验 -->
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>

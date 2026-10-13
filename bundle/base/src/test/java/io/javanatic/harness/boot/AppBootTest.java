@@ -61,6 +61,8 @@ class AppBootTest {
             new ConfigRowSpec.Replace("sandbox-policy",
                 Map.of("mode", "workspace-write", "workspace", ws.toString()), null),
             new ConfigRowSpec.Replace("agent-loop", Map.of("cwd", ws.toString()), null),
+            // it26:skill-local.cwd 第五承载键,同样逐个 pin
+            new ConfigRowSpec.Replace("skill-local", Map.of("cwd", ws.toString()), null),
             new ConfigRowSpec.Replace("persistence-jsonl", Map.of("root", sess.toString()), null));
     }
 
@@ -71,7 +73,8 @@ class AppBootTest {
             "system-prompt", "llm", "llm-openai-compat", "approval-auto", "approval-ask",
             "approval-deny", "tools", "fs-local", "fs-tool", "shell-local",
             "shell-tool", "shell-docker", "todo", "plan", "commands", "sandbox-local", "sandbox-policy",
-            "presets", "compaction", "agent-loop")) {
+            "presets", "compaction", "agent-loop",
+            "skill", "skill-local", "skill-tool")) {
             assertThat(discovered).containsKey(id);
         }
     }
@@ -149,6 +152,21 @@ class AppBootTest {
             .hasMessageContaining("workspace drift")
             .hasMessageContaining("fs-local.root=" + dir.resolve("ws"))
             .hasMessageContaining("shell-tool.workspace=" + other);
+    }
+
+    @Test
+    void skillLocalCwdJoinsWorkspaceSingleSource() throws Exception {
+        Path profile = profile("");
+        Path other = dir.resolve("other-ws");
+        other.toFile().mkdir();
+        List<ConfigRowSpec> drifting = new ArrayList<>(rootOverlays());
+        // it26:skill-local.cwd 入单源键集——技能项目根漂移同样 fail loud
+        drifting.add(new ConfigRowSpec.Replace("skill-local",
+            Map.of("cwd", other.toString()), null));
+        assertThatThrownBy(() -> AppBoot.boot(new AppBoot.BootOptions(profile, drifting, false, null)))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("workspace drift")
+            .hasMessageContaining("skill-local.cwd=" + other);
     }
 
     @Test

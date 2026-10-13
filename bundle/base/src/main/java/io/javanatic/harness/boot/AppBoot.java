@@ -295,12 +295,13 @@ public final class AppBoot {
     private record SandboxObservation(String mode, BackendStatus status) {
     }
 
-    /** workspace 承载键(it21 单源):四处围栏/提示词源——同组合必须同值。 */
+    /** workspace 承载键(it21 单源;it26 增 skill-local):五处围栏/提示词/发现源——同组合必须同值。 */
     private static final Map<String, String> WORKSPACE_KEYS = Map.of(
         "agent-loop", "cwd",
         "fs-local", "root",
         "sandbox-policy", "workspace",
-        "shell-tool", "workspace");
+        "shell-tool", "workspace",
+        "skill-local", "cwd");
 
     /**
      * workspace 单源断言(it21):已加载行里出现的 workspace 承载键必须同值——

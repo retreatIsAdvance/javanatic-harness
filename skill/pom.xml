@@ -17,5 +17,6 @@
     <modules>
         <module>skill</module>
         <module>tool</module>
+        <module>local</module>
     </modules>
 </project>

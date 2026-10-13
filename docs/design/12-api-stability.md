@@ -14,7 +14,7 @@
 
 ## 2. 包级 API（JPMS 导出面）
 
-`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（35 个 reactor 代码模块 / 39 个包；前缀 `io.javanatic.harness.` 省略）：
+`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（36 个 reactor 代码模块 / 40 个包；前缀 `io.javanatic.harness.` 省略）：
 
 | 模块 | 导出包 |
 |---|---|
@@ -37,6 +37,7 @@
 | fs/local | `fs.local` |
 | fs/tool | `fs.tool` |
 | skill/skill | `skill` |
+| skill/local | `skill.local` |
 | skill/tool | `skill.tool` |
 | shell/shell | `shell.shell` |
 | shell/local | `shell.local` |
