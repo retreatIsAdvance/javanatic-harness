@@ -2,8 +2,8 @@
 
 背景：it26 行集变化（e843f02 三行入 base bundle）同步了 dist/jlink 清单与 examples/headless
 叠加依赖，漏了 integration/consumer-sample 运行闭包——74cf1fc push 后 CI run 38495904023
-build 腿红 6 项。本档 = CI 原文 / 本地复现 / 修复面 / 两腿复验取证；回填见 AGENTS.md
-（已知坑·行集同步面）与 docs/release.md（发布后清单·profile 折叠核）。
+build 腿红 6 项。本档 = CI 原文 / 本地复现 / 修复面 / 两腿复验 / 推送后 CI 复跑取证；回填见
+AGENTS.md（已知坑·行集同步面）与 docs/release.md（发布后清单·profile 折叠核）。
 
 ## 1. 失败签名（CI 原文）
 
@@ -83,7 +83,11 @@ core-agent-loop / core-plan / sandbox-policy / shell-docker / fs-fs）。
 ## 6. 验收行
 
 - CI 红根因 = bundle 行集变化漏同步 consumer-sample 运行闭包（非代码缺陷）；修复后候选
-  11/11、发布 6/6 复绿（§4/§5）；CI 复跑即验（推送后）。
+  11/11、发布 6/6 复绿（§4/§5）。
+- CI 复跑实况（2026-10-14 推送后）：`74cf1fc..6a20180`（pre-push 全量门禁绿；ls-remote 实核
+  远端 = 6a20180）；run 38507427980 四腿全绿——build 腿原红步骤 `Verify external consumer
+  sample (candidate leg)` 转 success（macos / windows / windows-arm 绿；release-attach 按设计
+  skipped，仅发布事件触发）。本档闭环。
 - 回填：AGENTS.md「行集变化同步面」（含 push 前跑 verify-consumer.sh candidate 纪律）；
   release.md 发布后清单追加 profile 折叠核。
 - 附带观察：AGENTS.md 202 行（红线 ≤200；it26 已至 201，本批回填 +1）——拆分/裁剪留后续。
