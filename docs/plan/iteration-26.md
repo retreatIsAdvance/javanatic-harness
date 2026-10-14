@@ -1,4 +1,4 @@
-# 迭代 26 — 技能生态（Skills）（状态：进行中）
+# 迭代 26 — 技能生态（Skills）（状态：已收口）
 
 模块：`skill/skill`（Definition：契约与注册表）· `skill/local`（Provider：本地发现，插件 id `skill-local`）· `skill/tool`（Consumer：`skill` 工具 + 目录装载，插件 id `skill-tool`）· `bundle/base`（装配行）· 文档同步面（五项触发逐一核对：`02` 模块/seam 表 + dsh 映射、`03` 事件 schema、`04`/`05` 如列提示段/契约清单、`07` 配置键、`12` 导出面）——与 A 表订正面重叠：`02-module-layout.md` ×3、`03-session-event-sourcing.md`、`10-testing.md`、`iteration-24.md`、`iteration-14.md`
 
@@ -124,14 +124,15 @@
 | `stop3-fixture-verify.txt` | 停 3：夹具工程 jh --verify 真跑（STANDARD + PRODUCTION 双档 EXIT=0，23/28 计数与 07 一致；修正批订正 broken_name 与 PROD approval-ask 括号、补组合行） |
 | `stop3-validate.txt` | 停 3：`mvn -B -q validate` 全 reactor EXIT=0 |
 | `stop3-f6-wiring-race.txt` | 修正批 F6：轮首装载接线竞态诊断 + 修复 + 突变复验（旧接线探针 5/300 vs 新 0/300；确定性回归用例 3/3 击杀）+ 聚焦全绿 |
-| `model-in-loop-runbook.md` | 验收①②：模型在环真跑 runbook（key 环境注入、home 重定向、观察点与回贴清单；待跑后回填 stop3-model-in-loop.txt） |
+| `model-in-loop-runbook.md` | 验收①②：模型在环真跑 runbook（key 环境注入、home 重定向、观察点与回贴清单）；2026-10-14 执行期三处订正（沙箱行为 `--verify` 专属、WARN 来源注记、回贴清单） |
+| `stop3-model-in-loop.txt` | 验收①②：模型在环真跑回填——Run A 装载闭环（catalog 先于 user/message、装载工具出账、损坏跳过、home 重定向三来源）+ Run B 六闸全放行（skill + fs_list + shell×3 + fs_read；模型判定无工程未执 mvn 如实报告）；账内核验 196/366 行；sandbox 面按设计由 HostileInstructionsTest + fixture-verify 覆盖 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
 （四确认裁定后启用；勾选与证据随工作推进落此。）
 
-- [ ] 可移植到独立项目：独立夹具（/tmp/it26-fixture，无 JH 源码）放技能 → jlink jh 真跑——keyless 面已证（--verify 双档 EXIT=0，组合含 skill 三行）；**模型在环装载真跑按 `model-in-loop-runbook.md` Run A 执行后回填**（依赖真实 provider 出账 skill/catalog 事件与装载闭环；需 DEEPSEEK_API_KEY 环境注入）
-- [ ] ask 档技能内命令仍弹审批、sandbox 仍拦的端到端（按同 runbook Run B 执行后回填；治理面由 HostileInstructionsTest 回归 + `exempt=` 名单不含 skill + T2 声明面静态保证三面预证）
+- [x] 可移植到独立项目：独立夹具（/tmp/it26-fixture，无 JH 源码）放技能 → jlink jh 真跑——keyless 面已证（--verify 双档 EXIT=0，组合含 skill 三行）；**模型在环装载真跑已回填（2026-10-14，Run A）**：账内 `skill/catalog`(seq2) 先于 `user/message`(seq3)、装载工具 tool/call + tool/result 出账（含来源头与正文）、损坏跳过 WARN、三来源根正确（project-harness / project-agents / user-harness，home 重定向实况）——`stop3-model-in-loop.txt`
+- [x] ask 档技能内命令仍弹审批、sandbox 仍拦的端到端（**Run B 已回填（2026-10-14）**：技能装载工具 + fs_list/shell×3/fs_read 共 6 道审批闸全弹、无一条豁免或绕过——技能路径不豁免 T2；模型先验前置判定夹具无工程可构建、如实报告未执 `mvn`——字面行属模型行为判断未产生（可按需补跑）；sandbox 面按设计由 HostileInstructionsTest 回归 + `exempt=` 名单不含 skill + T2 声明面静态保证 + fixture-verify 双档覆盖——`stop3-model-in-loop.txt`）
 - [x] A 表 6 条落地（`3ad9f1a`）：旧措辞全局 grep 复核无漏（残留命中均为 A 表引文 / JH 侧模块名 / 保留的历史语境注记）；`mvn -B -q validate` 全 reactor 干净（EXIT=0，2026-10-09）。
 
 ## 修正（如有）
@@ -148,6 +149,7 @@
 | 停 3 修正批 | F4（复核发现）：锚点表重复 `agent-loop` 行且 bundle/system-prompt/设计文档行未勾；`stop3-focused` AppBootTest 计数误记 23（实 22）；PROD 档括号实况为 `approval-ask` | 锚点表与证据档逐项订正（本表 + `stop3-focused-test.txt` / `stop3-fixture-verify.txt`） |
 | 停 3 修正批 | F5（复核发现）：`07` 未明言 skill-local 根集固定不可扩展、`descriptionLimit` 缺省 500 | `07` §5 补「skill-local 配置面」段 + 偏离登记（见下表） |
 | 停 3 修正批 | F6（本批自主发现）：轮首装载接线竞态——`CREATED` 为异步 NOTIFY，附加 PRE_STEP 监听与首轮 admit 抢序，首轮装载偶发整轮缺失（旧接线探针 5/300） | apply 期 PRE_STEP 直订（订阅先行）；确定性回归用例（旧接线 3/3 击杀）+ 空洞断言加固；探针复验 0/300（`stop3-f6-wiring-race.txt`） |
+| 模型在环批（收口随附） | runbook Run B 预期「启动行含沙箱行」有误——`sandbox: confining policy …` 是 `--verify` 专属观测（AppBoot 仅 verify 分支 emit）；另 WARN 来源未注记（易被误读为启动期扫描） | runbook 三处订正（沙箱行预期、WARN 注记、回贴清单）；`stop3-model-in-loop.txt` 同步注记 |
 
 ## 设计偏离（如有）
 

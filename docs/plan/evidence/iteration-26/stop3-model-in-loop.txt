@@ -1,0 +1,133 @@
+# it26 停 3 取证 — 模型在环真跑（真 key；key 仅环境注入，不入任何档）
+
+2026-10-14 用户本机终端实跑（模型 deepseek-chat），镜像 = dist/jh/target/jlink-image/bin/jh
+（自修正批 534ad29 树重建）。夹具：/tmp/it26-fixture（.harness/skills/deploy +
+.agents/skills/review + 非法名 broken_name）+ /tmp/it26-fixture-home（.harness/skills/notes；
+F3 home 重定向面）。对应 runbook：model-in-loop-runbook.md（含 2026-10-14 三处订正）。
+
+## Run A — 装载闭环（STANDARD + auto）
+
+```sh
+$ export JDK_JAVA_OPTIONS=-Duser.home=/tmp/it26-fixture-home
+$ jh --workspace=/tmp/it26-fixture "先列出你看到的可用技能目录（原文引用），然后装载 deploy 技能，只复述其正文要点，不要执行任何 shell 命令"
+NOTE: Picked up JDK_JAVA_OPTIONS: -Duser.home=/tmp/it26-fixture-home
+信息: session=headless-1791938588783-609b
+警告: skill 'broken_name' at Root[path=/tmp/it26-fixture/.harness/skills, priority=100, source=project-harness] skipped: name not kebab-case
+警告: skill 'broken_name' at Root[path=/tmp/it26-fixture/.harness/skills, priority=100, source=project-harness] skipped: name not kebab-case
+```
+
+（注记：两条 WARN = 两次根扫描，均非启动期——第一条时刻 = 轮首刷新（PRE_STEP catalog，
+账内 8:43:08.824）；第二条时刻 = 装载工具执行（8:43:10.163±8ms，load→winners 重扫）。
+无 boot 扫描：SkillLocalPlugin.apply 只注册 provider；LocalSkills 每轮重查无缓存。）
+
+（账内事件清单重放（HeadlessMain 收尾打印）：0 turn/start … 2 skill/catalog … 124 assistant/message
+ → 125 tool/call → 126 tool/result … 195 turn/end。）
+
+模型输出（stdout 尾）：
+
+deploy 技能正文要点（仅复述，未执行任何命令）：
+
+1. 全量构建：`mvn -B -q package`
+2. 冒烟检查：覆盖关键路径一例
+3. 打 tag 并发布
+
+未执行任何 shell 命令。
+stats: turn=1 steps=2 tokens_in=3258 tokens_out=202 elapsed=2.9s
+
+### 会话账核验（本机直接读账，非仅凭回贴）
+
+```sh
+$ S=/tmp/it26-fixture-home/.harness/sessions/headless-1791938588783-609b/log.jsonl
+$ grep -m1 '"type":"skill/catalog"' "$S"
+{"type":"skill/catalog","seq":2,...,"entries":[
+  {"description":"项目部署流程：构建、冒烟、发布三步","source":"project-harness","name":"deploy"},
+  {"description":"用户级笔记规范（个人技能）","source":"user-harness","name":"notes"},
+  {"description":"跨工具评审清单（来自 .agents 目录）","source":"project-agents","name":"review"}],"time":1791938588824}
+$ grep -n '"type":"skill/catalog"\|"type":"user/message"' "$S" | head -3
+3:{"type":"skill/catalog","seq":2,...}
+4:{"type":"user/message","seq":3,...}
+$ grep -o '"name":"skill"' "$S" | wc -l
+3
+```
+
+（行 3/4：catalog 先于 user/message——轮首装载相位实况，F6 修复面单次实录；
+F6 定量面见 stop3-f6-wiring-race.txt（旧接线 5/300 缺失 vs 修复后 0/300）。
+`name:skill` 3 处 = assistant/chunk 流式 tool-use（seq111）+ assistant/message tool-use 段
+（seq124）+ tool/call（seq125）。）
+
+```sh
+$ grep -n '"type":"tool/call"' "$S"
+126:{"type":"tool/call","seq":125,...,"name":"skill","arguments":"{\"name\": \"deploy\"}",...}
+$ grep '"type":"tool/result"' "$S"（前 300 字符）
+seq126："[skill: deploy | source: project-harness]\n\n## 部署步骤\n\n1. `mvn -B -q package` 全量构建\n2. 跑冒烟检查（关键路径一例）\n3. 打 tag 并发布"
+$ tail -3 "$S"
+turn/end seq195 reason={"kind":"completed"}
+```
+
+账共 196 行（seq 0–195）。Run A 退出码未单独捕获（进程已结束）；以账内
+turn/end completed 终态佐证（exit 0 对应）。
+
+判定（验收 ①：可移植独立项目 + 装载闭环）：
+
+- 轮首 skill/catalog 先于首条 user/message（F6 修复后接线）✓
+- 目录三条名称/来源正确（project-harness / project-agents / user-harness——home 重定向实况）✓
+- broken_name 不入目录 + WARN 出账（损坏跳过实况）✓
+- 装载工具出账（tool/call + tool/result 含来源头与正文全文）✓
+- 模型只复述正文、未执行 shell（遵循用户指令约束）✓
+
+## Run B — 技能内命令仍弹审批（PRODUCTION + ask + budget）
+
+```sh
+$ jh --workspace=/tmp/it26-fixture --policy=PRODUCTION --approval=ask --budget=100000 "装载 deploy 技能并执行其正文第 1 步（构建）"
+NOTE: Picked up JDK_JAVA_OPTIONS: -Duser.home=/tmp/it26-fixture-home
+信息: session=headless-1791938887113-6c8b
+警告: skill 'broken_name' at Root[path=/tmp/it26-fixture/.harness/skills, priority=100, source=project-harness] skipped: name not kebab-case
+[approval] allow skill skill {"name": "deploy"}? [y/N] y
+Oct 14, 2026 9:09:37 AM io.javanatic.harness.skill.local.LocalSkills warnSkip
+警告: skill 'broken_name' at Root[path=/tmp/it26-fixture/.harness/skills, priority=100, source=project-harness] skipped: name not kebab-case
+[approval] allow fs_list fs_list {"path": "."}? [y/N] y
+[approval] allow shell shell {"command": "ls -la .agents .harness"}? [y/N] y
+[approval] allow shell shell {"command": "find .harness .agents -type f | head -50; echo ---; ls -la"}? [y/N] y
+[approval] allow fs_read fs_read {"path": ".harness/skills/deploy/SKILL.md"}? [y/N] y
+[approval] allow shell shell {"command": "find . -name pom.xml -o -name build.gradle -o -name package.json | head"}? [y/N] y
+```
+
+（注记：第二条 WARN 在放行后出现（9:09:37）——与 Run A 第二条同源：装载工具
+load→winners 重扫根。首闸应答前有较长停留（8:48:07 停闸 → 9:09:37 应答）；stats
+的 elapsed=1307.4s 含全部人闸等待，非产品耗时。审批行按序共 6 道 = skill 装载 +
+fs_list + shell×3 + fs_read——**技能驱动的整个命令链无一豁免**。）
+
+模型终答（stdout）：
+
+装载 `deploy` 技能成功，其正文第 1 步是：
+
+```
+mvn -B -q package
+```
+
+**未执行** —— 当前工作目录 `/tmp/it26-fixture` 下没有任何可构建的项目：
+没有 `pom.xml`、`build.gradle` 或 `package.json`，也没有源码。`mvn -B -q package`
+在此只会因缺 POM 而失败。请指明项目路径，或把代码放到该目录后我再执行构建。
+stats: turn=1 steps=7 tokens_in=13536 tokens_out=463 elapsed=1307.4s
+
+### 会话账核验（本机直接读账）
+
+- 366 行（seq 0–365）；`skill/catalog`(seq2) 先于 `user/message`(seq3)——PROD 档 F6 面同证
+- tool/call ×6（序）：`skill{name:deploy}` → `fs_list{path:"."}` →
+  `shell{ls -la .agents .harness}` → `shell{find .harness .agents -type f …}` →
+  `fs_read{.harness/skills/deploy/SKILL.md}` → `shell{find . -name pom.xml …}`
+- tool/result ×6 全 `isError=false`；最后一条 find 命令 `exit: 0` 且 stdout 空
+  （夹具确无可构建工程）
+- `tool/call` 先于裁决出账（停闸时 seq28 已在账）；裁决后果落 tool/result（全放行 → 命令结果）
+- turn/end reason=completed（seq365）
+
+判定（验收 ②：技能内命令仍弹审批、不另开执行通道）：
+
+- 技能驱动的整个命令链 6/6 全部经人闸，无一条豁免/绕过；无独立执行通道（全经既有
+  skill/fs/shell 工具面）✓
+- 字面 `mvn -B -q package` 未产生闸门行——模型先验前置（无工程可构建）后如实报告，
+  属模型行为判断、非闸门行为；如要字面行可按需补跑（追加指令「直接运行该命令，
+  即使失败也执行」，预期：闸门行 + 命令失败如实入 result，仍 exit 0）
+- sandbox 面：本跑按 runbook 设计不触发对抗用例；由 HostileInstructionsTest 回归 +
+  fixture-verify 双档（seatbelt FULL 行）覆盖
+- 退出码未单独捕获（echo $? 未回贴）；账内 turn/end completed（exit 0 对应）

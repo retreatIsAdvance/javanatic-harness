@@ -41,6 +41,9 @@ grep -n '"type":"skill/catalog"\|"type":"user/message"' "$S" | head -3
 - 目录 = 3 条：deploy（project-harness）/ review（project-agents）/ notes（user-harness）；
   `broken_name` **不在目录**——stderr 应有 WARN 行
   `skill 'broken_name' at ... skipped: name not kebab-case`（损坏跳过实况）。
+  注记（2026-10-14 实跑）：LocalSkills 每轮重查、无缓存也无 boot 扫描——WARN 随每次
+  根扫描出现（轮首刷新 1 条 + 装载工具 1 条；Run A 实跑共 2 条，第二条时刻 = 装载
+  工具执行时刻，非启动期）。
 - `skill/catalog` 事件在首条 `user/message` 之前（轮首装载相位——F6 修复面实况）。
 - 装载工具出账：`"name":"skill"` 的 `tool/call` + 对应 `tool/result` 含
   `[skill: deploy | source: project-harness]` 与正文。
@@ -56,17 +59,22 @@ grep -n '"type":"skill/catalog"\|"type":"user/message"' "$S" | head -3
 
 - 终端依次出现审批行（技能装载工具本身 + 技能正文指示的 shell 命令各一次）——
   **技能路径不豁免 T2 审批**；按提示裁决。
-- 启动行含 `sandbox: confining policy "workspace-write" is enforced by backend
-  "seatbelt" (enforcement FULL)`——沙箱授予面在 PRODUCTION + ask 组合下不变。
-- 会话账中该 shell 命令的 `tool/call` 带审批裁决结果出账；退出码 0（拒绝该命令时
-  模型应给出替代说明，仍 0；若停轮提问则 exit 5，按提示 `--resume=<id> "答复"`）。
-- 沙箱实际拦截面由 HostileInstructionsTest 回归 + 本行 boot 断言双覆盖（本跑不要求
-  真突破沙箱的对抗用例）。
+- 沙箱面：任务跑**不打印**启动沙箱行——`sandbox: confining policy …` 文本是
+  `--verify` 专属观测（AppBoot 仅 verify 分支 emit，`AppBoot.java:206-212`）；沙箱
+  授予面由 fixture-verify 档（PRODUCTION `--verify` 实跑 seatbelt FULL 行）+
+  HostileInstructionsTest 覆盖。（2026-10-14 订正：原「启动行含沙箱行」预期有误，
+  实跑实撞。）
+- 会话账：`tool/call` 先于裁决出账（停闸时已在账）；裁决后果落 `tool/result`——
+  放行 = 命令结果（夹具无 pom / mvn 不随 PATH，命令本身失败即如实结果，闸门与落账
+  才是证据）；拒绝 = denied 文案 error result。退出码 0（拒绝该命令时模型应给出
+  替代说明，仍 0；若停轮提问则 exit 5，按提示 `--resume=<id> "答复"`）。
+- 沙箱实际拦截面由 HostileInstructionsTest 回归 + fixture-verify 档双覆盖（本跑不
+  要求真突破沙箱的对抗用例）。
 
 ## 回贴清单（贴回对话，由我据实整理进证据档 stop3-model-in-loop.txt）
 
 1. Run A：stats 行 + 上面五条 grep 的输出 + WARN 行。
-2. Run B：审批行原文（两处）+ boot sandbox 行 + stats 行 + 退出码。
+2. Run B：审批行原文（两处）+ stats 行 + 退出码（沙箱行属 `--verify` 专属，勿找）。
 3. 任一步异常：原样贴 stderr（会话 id 与事件清单在 stderr）。
 
 ## 退出码对照
