@@ -564,3 +564,8 @@ g｜挂账观察项（报用户；本批不动）：
     examples/headless HeadlessMain.java L119/L124 USAGE 示例串 `如 0.2.0`（bump 后示例过期；
     措辞面属 12 §6）——报用户裁决（2026-10-08）：**无处溯源、不予实现，项销**（记忆行随删）。
   ③ aliyun 代理同步 0.2.0 后以缺省设置复跑发布腿（可选复验）。
+    【2026-10-14 复验（it26 follow-up）：先红后绿——上午缺省设置跑仍红于 8 坐标 not found
+    （aliyun 间歇 404；抽查双端 curl aliyun 404 / repo1 200）；十余分钟后 aliyun 同 8 坐标
+    转 200，缺省设置复跑全绿（取件来源 public-central-…）。结论：间歇面仍在（遇红以 repo1
+    覆写为准），缺省设置可用性已恢复；本项关账。证据 = iteration-26/
+    followup-consumer-closure-fix.txt。】

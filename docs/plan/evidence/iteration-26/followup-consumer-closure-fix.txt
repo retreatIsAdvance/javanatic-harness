@@ -1,0 +1,89 @@
+# it26 follow-up 取证 —— CI build 腿 consumer-sample 红：诊断 · 修复 · 双腿复验（2026-10-14）
+
+背景：it26 行集变化（e843f02 三行入 base bundle）同步了 dist/jlink 清单与 examples/headless
+叠加依赖，漏了 integration/consumer-sample 运行闭包——74cf1fc push 后 CI run 38495904023
+build 腿红 6 项。本档 = CI 原文 / 本地复现 / 修复面 / 两腿复验取证；回填见 AGENTS.md
+（已知坑·行集同步面）与 docs/release.md（发布后清单·profile 折叠核）。
+
+## 1. 失败签名（CI 原文）
+
+`gh run view 38495904023`：conclusion=failure，headSha=74cf1fc，失败 job=build、
+失败步 = `Verify external consumer sample (candidate leg)`（其余三腿全绿）：
+
+    ##[error]Exception in thread "main" java.lang.IllegalStateException: 行引用的插件未发现: skill; 行引用的插件未发现: skill-local; 行引用的插件未发现: skill-tool
+	at io.javanatic.harness.boot.AppBoot.verifyComposition(AppBoot.java:355)
+	at io.github.retreatisadvance.sample.consumer.SelfCheck.main(SelfCheck.java:48)
+    失败项：6
+
+## 2. 本地复现（同一脚本入口）
+
+    $ CONSUMER_WORK=/tmp/it26-cifix-repro2 integration/verify-consumer.sh candidate   # EXIT=1
+
+    FAIL candidate：治理自证运行 —— 日志尾部（run-candidate.log）：
+    Exception in thread "main" java.lang.IllegalStateException: 行引用的插件未发现: skill; …
+    FAIL candidate：自证通过 / 自有工具可见 / 自有工具可执行（断言面同根因）
+    FAIL 负例③坏治理配置必须 boot 抛错 —— 诊断文案缺「workspace drift」（同根因先于预期错误）
+    FAIL 负例④生产档撞 AUTO 审批必须 boot 抛错 —— …「policy=PRODUCTION 但审批为 AUTO」…
+    失败项：6（与 CI 同签名、同计数）
+
+（首次复现跑偏：脚本 mvn 解析选中不可运行的 jenv shim——`jenv: mvn: command not found`、
+EXIT≠0；回退探测只查 `-x` 不查「跑得动」。随修：候选须 `-v` 探针通过才接受。）
+
+## 3. 修复面与 profile 语义实证
+
+修复三件：
+
+- integration/consumer-sample/pom.xml：新增 candidate-closure profile（activeByDefault，
+  含 harness-skill-{skill,local,tool} 三依赖）——候选新增坐标的收容位
+- integration/verify-consumer.sh：① 发布腿 `-P '!candidate-closure'`（0.2.0 行集无 skill，
+  不停用即解析 0.2.0 处不存在的坐标而败）；② mvn 解析加「可运行」探针
+- docs：embedding.md §2（依赖计数面 + 闭包随发布面走段）、release.md（发布腿重指项加 profile
+  折叠核）、sample README（版本闸句）、settings-central.xml（间歇 404 事实）；AGENTS.md 回填
+
+profile 语义实证（Maven 3.10.0）：
+
+    $ mvn -f integration/consumer-sample/pom.xml help:active-profiles
+     - candidate-closure (source: io.github.retreatisadvance.sample:consumer-sample:1.0.0-SNAPSHOT)
+
+    $ mvn -f … help:active-profiles -P '!candidate-closure'
+    （无 active 行；无 WARNING）
+
+    $ mvn -f … dependency:list -DincludeScope=compile -Dmaven.repo.local=<候选隔离仓>   → harness-skill 计数 = 3
+    $ mvn -f … dependency:list … -P '!candidate-closure'   → 0（harness-core-agent-loop 传递仍在 = 1）
+
+## 4. 候选腿复验（修复后）
+
+    $ CONSUMER_WORK=/tmp/it26-cifix-verify integration/verify-consumer.sh candidate   # EXIT=0
+
+    ok ×7（install/编译/类路径/自证运行/自证通过/工具可见/可执行）+ 四负例 ok ×4；失败项：0；
+    Maven 自动落到 ~/Documents/apache-maven-3.10.0（无 MVN= 覆写——探针修复生效）。
+
+另：`bash -n` OK；`mvn -B -q validate` EXIT=0（docs/pom/脚本变动不触 reactor，快检随跑）。
+
+## 5. 发布腿复验（0.2.0；profile 停用 + 代理面双轮）
+
+首跑（缺省设置 = aliyun 代理）：EXIT=1、失败项 6——**非 skill 坐标**：命令头含
+`-P !candidate-closure`、失败全文无 harness-skill（停用生效实证）；失败面 = 8 坐标
+`Could not find artifact …:0.2.0 in public-central`（kernel-core / llm-llm / llm-openai-compat /
+core-agent-loop / core-plan / sandbox-policy / shell-docker / fs-fs）。
+
+双端 curl 对照（同批同路径）：aliyun 404 / repo1 200（kernel-core / fs-fs / core-agent-loop
+抽查）→ repo1 直连覆写：
+
+    $ RELEASE_SETTINGS=/tmp/settings-repo1.xml CONSUMER_WORK=/tmp/it26-cifix-verify-rel2 integration/verify-consumer.sh release
+    → 六项 ok、失败项：0、EXIT=0；取件行 `harness-bundle-base-0.2.0.jar>repo1-direct-98c551…=`
+
+十余分钟后 aliyun 同 8 坐标转 200，缺省设置复跑（/tmp/it26-cifix-verify-rel3）：
+
+    → 六项 ok、失败项：0、EXIT=0；取件行 `…>public-central-a0090e0f…=`
+
+⇒ it25.1 挂账 g③ 关账（S-d §16 已回填）：aliyun 间歇 404（0.2.0 首日 + 今日两次实证；
+同路径稍后转 200，非缺件），遇红以 repo1 覆写为准；缺省设置可用性已恢复。
+
+## 6. 验收行
+
+- CI 红根因 = bundle 行集变化漏同步 consumer-sample 运行闭包（非代码缺陷）；修复后候选
+  11/11、发布 6/6 复绿（§4/§5）；CI 复跑即验（推送后）。
+- 回填：AGENTS.md「行集变化同步面」（含 push 前跑 verify-consumer.sh candidate 纪律）；
+  release.md 发布后清单追加 profile 折叠核。
+- 附带观察：AGENTS.md 202 行（红线 ≤200；it26 已至 201，本批回填 +1）——拆分/裁剪留后续。

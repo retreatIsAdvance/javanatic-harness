@@ -126,7 +126,7 @@ git tag v0.2.0 && git push origin v0.2.0      # push 需放行；tag 指向须�
 - [x] README×2 的 Roadmap 行翻转（`17–25 (planned)` / `17–25（计划）` → 实况）
 - [x] release notes 定稿：`docs/release-notes-0.2.0.md` 发布前终读，如需最小修正随收尾提交（终读通过、无修正项）
 - [x] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面（表题 bump 时改 `0.2.0`——去 `SNAPSHOT` 字样，如 `0.1.0 vs 0.2.0-SNAPSHOT` → `0.1.0 vs 0.2.0`；同类字样面随核）、`docs/design/02-module-layout.md` POM 片段
-- [x] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.1.0` → 最新发布版（旧 shell 坐标覆写随之退役）
+- [x] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.1.0` → 最新发布版（旧 shell 坐标覆写随之退役；0.2.0 起另核一处：示例 pom 的 `candidate-closure` profile 随新发布面折叠——新发布版已含的坐标折回基础块、仅留候选新增坐标，否则发布腿解析不到坐标或 boot 点名缺失，it26 follow-up）
 
 （0.2.0 收尾批：2026-10-08 全数落地——bump `0.3.0-SNAPSHOT` + 本清单五条 + 发布腿 `0.2.0` 真跑复验（repo1 直连 6/6 绿；aliyun 代理对新发布件有同步延迟）；3.10.0 干净全量 598/0/0/23 随批复核。证据 = [S-d §16](plan/evidence/iteration-25.1/S-d-release-engineering.txt)。）
 

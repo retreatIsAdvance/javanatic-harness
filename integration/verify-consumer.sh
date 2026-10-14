@@ -6,6 +6,8 @@
 #           取件走 settings-central.xml（公共代理）：公司 mirror 对发布件的 jar 曾持续 404（0.1.0 时
 #           16 个 jar 全缺、pom 正常）——发布腿一律经公共 Central 代理取件
 #           坐标：0.2.0 起发布件含 harness-shell-local（it25 S-b 新坐标），旧坐标覆写已退役（见 leg()）
+#           行集：0.2.0 发布面冻结于 it26 之前，bundle 行集不含 skill 三行——示例 pom 的
+#           candidate-closure profile（skill 三依赖）必须停用（-P '!candidate-closure'，见 leg()）
 #   负例：坏版本 / 去显式版本 / 坏治理配置 / 生产档撞 AUTO 审批——各须构建必败或 boot 必抛，诊断可读
 #
 # 用法：integration/verify-consumer.sh [candidate|release|all]   （缺省 all）
@@ -83,17 +85,24 @@ leg() { # leg <name> <version>
     if [ "$name" = release ] && [ -f "$RELEASE_SETTINGS" ]; then
         settings=(-s "$RELEASE_SETTINGS")
     fi
+    local -a closure=()
+    if [ "$name" = release ]; then
+        # 发布腿停用示例 pom 的 candidate-closure profile：0.2.0 发布件的 bundle 行集
+        # 冻结于 it26 之前（无 skill 三行，亦无对应坐标）——不停用即解析 0.2.0 处不存在的
+        # skill 坐标而败（it26 follow-up：CI run 38495904023 build 腿实撞）
+        closure=(-P '!candidate-closure')
+    fi
     note "== 腿 $name：harness.version=$version，隔离本地仓 $repo =="
     if [ "$name" = candidate ]; then
         run "候选：工作树 install → 隔离仓（跳测试）" "$WORK/install-$name.log" \
             "$MVN" -B -ntp -f "$ROOT/pom.xml" -DskipTests -Dmaven.repo.local="$repo" install
     fi
     run "$name：示例编译" "$WORK/compile-$name.log" \
-        "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} \
+        "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} ${closure[@]+"${closure[@]}"} \
         -f "$SAMPLE/pom.xml" -Dmaven.repo.local="$repo" \
         -Dharness.version="$version" compile
     run "$name：运行类路径" "$WORK/classpath-$name.log" \
-        "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} \
+        "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} ${closure[@]+"${closure[@]}"} \
         -f "$SAMPLE/pom.xml" -Dmaven.repo.local="$repo" \
         -Dharness.version="$version" \
         org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
@@ -121,10 +130,16 @@ negatives() {
         "$JAVA" -cp "$(classpath candidate)" "$SELF_CHECK" "$PROFILE" PRODUCTION
 }
 
-MVN=${MVN:-$(command -v mvn 2>/dev/null || true)}
+if [ -z "${MVN:-}" ]; then
+    MVN=$(command -v mvn 2>/dev/null || true)
+    if [ -n "$MVN" ] && ! "$MVN" -v >/dev/null 2>&1; then
+        note "PATH 上的 mvn 跑不动（$MVN —— jenv shim 未注册命令的典型症状），转回退探测"
+        MVN=
+    fi
+fi
 if [ -z "${MVN:-}" ]; then
     for candidate in "$HOME/.jenv/shims/mvn" "$HOME/Documents/apache-maven-3.10.0/bin/mvn"; do
-        if [ -x "$candidate" ]; then
+        if [ -x "$candidate" ] && "$candidate" -v >/dev/null 2>&1; then
             MVN=$candidate
             break
         fi
