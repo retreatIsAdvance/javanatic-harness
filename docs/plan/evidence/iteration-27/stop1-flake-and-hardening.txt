@@ -1,0 +1,34 @@
+# it27 停 1 取证 — 收尾期单次红线：宿主机负载假红 → 根因 → 加固（2026-10-15）
+
+## 现象
+
+突变 C 还原后的绿复跑（14:14）单例红——**非代码回归**（两被改文件均已 `shasum` 验证还原为原版）：
+
+```text
+[ERROR] Tests run: 34, Failures: 0, Errors: 1, Skipped: 0
+[ERROR]   McpStdioCallTest.wrongIdResponseIsDroppedAndCallTimesOut:34 » McpTimeout mcp 'initialize' on 'alpha' timed out after 1s
+    at io.javanatic.harness.mcp.stdio.StdioMcpConnection.handshake(StdioMcpConnection.java:293)
+```
+
+该用例 server 超时故意取 1s（错 id 调用靠它快速收口），代价是**启动握手与夹具 JVM 冷启共用同 1s 预算**。
+
+## 根因（红即停→取证）
+
+- `uptime`：load average 199.91；`ps`：**8 个 `yes` 进程**（PPID=1，始于 14:03:05 / 14:04:44）= 我在饱和重复跑中 `yes > /dev/null &` 的遗留（工具 shell 无作业控制，原清理静默失手；本次饱和轮内 `jobs -p` 亦回空，佐证机制）；
+- 另有 IDE（agent-forge JPS build）等并发；
+- 夹具 JVM 冷启在极端负载下 > 1s → initialize 握手被挤红。
+
+## 处置
+
+1. `kill` 8 进程 + `pgrep -x yes` 验证清理（14:16）；
+2. 用例加固（**语义不变，仅加宽常数**）：timeout 1s→2s，断言随之 `timed out after 2s` / ≥1800ms，注释记录原因（`McpStdioCallTest.java`）；
+3. 三层复验：
+   - 非饱和聚焦套件 34/34 绿（EXIT=0；终局数字见 `stop1-focused-test.txt`）；
+   - clean 4×yes 饱和轮全绿 + 清理验证（见 `stop1-repeat-saturated.txt` 第二轮）；
+   - `mvn -B -q validate` 复跑 EXIT=0（见 `stop1-validate.txt`）。
+
+## 影响面
+
+- 改动仅限测试文件 `McpStdioCallTest.java`（常数 + 断言 + 注释）；
+- 突变 A/B/C 均为承载逻辑且不触及该文件，突变结论不受影响；
+- 遗留经验：饱和跑清理须在同一次 shell 内 `pkill -x yes` + `pgrep` 验空（不依赖作业控制）。

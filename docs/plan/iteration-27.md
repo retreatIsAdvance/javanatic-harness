@@ -77,7 +77,8 @@
 - 工具命名规则（`mcp__<server>__<raw>` + `__` 拒绝两处校验）与 env 清洗规则（缺省最小环境 + 白名单）的文档存在处（02/05/07）；
 - 配置键（07）：`mcp-stdio` 行 `servers[]`（id/command/args/env/timeoutSeconds）+ `mcp-tool` 行说明；
 - `bundle/base` 装配两行（`mcp-stdio` + `mcp-tool`）；
-- 新依赖边：`mcp/stdio` → `mcp/mcp`（+ Jackson 边界）；`mcp/tool` → `mcp/mcp` + `core-tools`（02 依赖列登记）。
+- 新依赖边：`mcp/stdio` → `mcp/mcp`（+ Jackson 边界）；`mcp/tool` → `mcp/mcp` + `core-tools`（02 依赖列登记）；
+- 装配单线程假设（评审 F2 注记，2026-10-16）：`mcp-stdio` 的 `apply` 全周期同步完成于装载线程（装载契约：`PluginLoader.loadAllUnder` 同步 apply，回滚/收尾在其返回后；并发 close 属框架误用面）；`apply` 内加 cheap 护栏（start 后发现 `scope.isClosed()` 即自收口 + fail loud）——effect 注册为 check-then-act，完整不变量以装载契约收口。
 
 **MODIFIED**：
 - `02-module-layout.md`：模块表 + seam 三角表 + 依赖图 + dsh 映射行（`mcp/mcp-client` → `mcp/stdio` 映射注记）；
@@ -94,7 +95,7 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| 根 `pom.xml`（modules） | 新增 `mcp` 组注册 | ☐ |
+| 根 `pom.xml`（modules） | 新增 `mcp` 组注册 | ☑（ace05fb） |
 | `core/tools` `ValueSchema` | 新增 `Opt` 变体（sealed permits 扩展）——**跨模块共享词表扩展（停 2 核心评审对象）** | ☐ |
 | `core/tools` `ToolArgs.validate` | 缺失 + `Opt` 放行（一次改动，全既有 use-site 回归） | ☐ |
 | `core/tools` `ScopedRegistry.register` | **零改动**——MCP 工具复用既有注册面（锚在此防误改） | ☐ |
@@ -108,15 +109,30 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1（承载契约 + 新词表） | `mcp/mcp`（`McpClientService` 契约 / 类型 / 错误分档）+ `mcp/stdio`（JSON-RPC 帧 / 协商 / 子进程生命周期 / 重连退避） | ☐ |
+| 停 1（承载契约 + 新词表） | `mcp/mcp`（`McpClientService` 契约 / 类型 / 错误分档）+ `mcp/stdio`（JSON-RPC 帧 / 协商 / 子进程生命周期 / 重连退避） | ☑ |
 | 停 2（跨模块效应 + R1） | `ValueSchema.Opt` 扩展（共享词表——全部既有 use-site 回归）+ `mcp/tool`（schema 映射白名单 / `mcp/catalog` codec / 注册面 / 声明面） | ☐ |
 | 停 3（组合面 + 验收取证） | `bundle/base` 行 + `--verify` 断言 + 夹具 server 真跑与故障注入档 + R1 回放 | ☐ |
+
+## 停 1 评审记录（2026-10-16）
+
+**总判：方向放行，附修正**——技术面实质成立、packet 质量高；packet 声明逐项核验属实；F1【中】须在停 2 动工前修，F2/F3【低】处置随停 1。三项处置如下（证据 `stop1-review-round1.txt`）：
+
+| # | 级别 | 发现 | 处置 |
+|---|---|---|---|
+| F1 | 中 | `JsonRpcPeer.request` 等待循环 `checkAbort()` 直接抛出，绕过 `cancelPending`——轮询型 signal（不实现 onCancel）取消时：① pending 槽泄漏 ② 不发 `notifications/cancelled` ③ 不记撤销记忆（晚到响应走 unmatched WARN） | 等待循环 try/catch `AbortedException` → `cancelPending` 后重抛；钉死用例 `pollOnlyCancelNotifiesServerAndDropsLateResponse`（`PollOnlySignal` + 夹具 `--record-cancel-to` + JUL 捕获无 unmatched WARN）；突变 D1（回退修复）/ D2（仅去撤销记忆）各自红→还原→逐字节验真 |
+| F2 | 低 | `apply` 启动竞态残余：`onClose` 只覆盖已 start 返回的连接（close 与第 N 个 start 并发时该进程不在回收名单） | 双管：① `apply` 循环 cheap 护栏——start 后发现 `scope.isClosed()` 即自收口 + fail loud；② 装配单线程假设入设计增量（装载契约：`PluginLoader.loadAllUnder` 同步 apply；effect 注册为 check-then-act，插件侧无闭环语义，完整不变量以装载契约收口） |
+| F3 | 低 | 饱和跑清理脚本静默失手（`jobs -p` 在无作业控制 shell 下回空，遗留 `yes` 压满 CPU 制造假红） | 固化「同 shell `pkill -x yes` + 收尾 `pgrep -x yes` 验空」入 AGENTS.md 已知坑（按实测形态固化，`jobs -p` 不采用）；本轮饱和轮按新纪律执行 `CLEANED-OK` |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-27/）
 
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
-| （随停点落盘） | |
+| `stop1-focused-test.txt` | 停 1：`mvn -pl mcp/stdio -am test` EXIT=0 + 本模块 34 例（16+4+10+4）逐 suite 计数与计时 |
+| `stop1-validate.txt` | 停 1：`mvn -B -q validate` 全 reactor EXIT=0（仅 spotless 惯例警告 4 行） |
+| `stop1-repeat-saturated.txt` | 停 1：CPU 饱和（`yes`）重复跑——三轮（加固前，计时互异）+ 一轮（加固后，清理验证 CLEANED-OK） |
+| `stop1-mutation-checks.txt` | 停 1：突变 A 对账失效 / B 歧义防护失效 / C 耗尽终态移除，各自红→还原→（复绿并入终局套件） |
+| `stop1-flake-and-hardening.txt` | 停 1：收尾期宿主机负载假红（`yes` 遗留）→ 根因取证 → 用例加固（1s→2s，语义不变）与复验 |
+| `stop1-review-round1.txt` | 停 1 评审处置：F1 修复 + 钉死用例（终态 35 例复跑绿）+ 突变 D1/D2 红→逐字节还原 + 饱和轮（新清理纪律 CLEANED-OK）+ validate 复跑 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -138,6 +154,10 @@
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| 停 1 修正批（同停 1 提交） | 假红（收尾自助发现）：`McpStdioCallTest#wrongIdResponseIsDroppedAndCallTimesOut` server 超时 1s 与夹具 JVM 冷启共额——宿主机极端负载下握手假红（根因 = 饱和跑 `yes` 遗留 + IDE 并发；证据 `stop1-flake-and-hardening.txt`） | 超时加宽 1s→2s（断言随动：`timed out after 2s` / ≥1800ms；语义不变）；饱和跑清理改 `pkill -x yes` + `pgrep` 验空 |
+| 停 1 评审修正批（同停 1 提交） | 评审 F1（中）：取消链轮询路径绕过 `cancelPending`——槽泄漏 + 远端悬挂 + 撤销记忆漏记（消费面接上取消链将成真实语义洞；证据 `stop1-review-round1.txt`） | 等待循环收口（try/catch → `cancelPending` → 重抛）+ 钉死用例 + 突变 D1/D2 |
+| 同上 | 评审 F2（低）：`apply` 启动竞态残余（close 与第 N 个 start 并发面） | cheap 护栏（start 后发现 closed 即自收口 + fail loud）+ 装配单线程假设入设计增量 |
+| 同上 | 评审 F3（低）：饱和跑清理纪律未固化 | 入 AGENTS.md 已知坑（`pkill -x yes` + `pgrep` 验空；按实测形态，`jobs -p` 无作业控制 shell 下回空不采用） |
 
 ## 设计偏离（如有）
 

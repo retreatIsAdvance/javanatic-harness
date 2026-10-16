@@ -18,5 +18,9 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-kernel-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-llm-llm</artifactId>
+        </dependency>
     </dependencies>
 </project>

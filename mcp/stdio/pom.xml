@@ -27,6 +27,10 @@
             <artifactId>harness-mcp-mcp</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-llm-llm</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>

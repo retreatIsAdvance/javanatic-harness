@@ -1,0 +1,23 @@
+# it27 停 1 取证 — mcp/stdio 聚焦测试（终局；2026-10-15，收尾加固后复跑）
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl mcp/stdio -am test
+```
+
+EXIT=0。本模块 4 个 suite 共 34 例（16+4+10+4）全绿：
+
+```text
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.069 s -- in io.javanatic.harness.mcp.stdio.McpServerConfigTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.636 s -- in io.javanatic.harness.mcp.stdio.McpStdioCallTest
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.153 s -- in io.javanatic.harness.mcp.stdio.McpStdioPluginTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.043 s -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+```
+
+覆盖面：行配置解析矩阵 16（含 `__` 拒收/kebab/重名/超时矩阵）· 调用面错误分档与取消 4（错 id 丢弃+超时收口 / 缺 result / error 成员 / 取消+晚到响应静默）· 装配与启动 fail loud 10（排序+工具+调用 / env 白名单 / 进程回收 / `__` 装配级 / 六档启动失败）· 崩溃重连与对账 4（重连续用 / 漂移 fail loud / 耗尽终态 / 残帧级联+重连）。
+
+归属注记（it26 同款纪律）：`-am` 闭包带入上游模块（kernel / core / llm）测试同轮全绿（EXIT=0 为准）；闭包内 1 条 jqwik 性质块为上游 kernel ScopeTest，非本停点产出。夹具 = `mcp/stdio/src/test/resources/mcp-fixture/FixtureServer.java`（单文件、零依赖、JDK 直跑）；证据取自 `mcp/stdio/target/surefire-reports/*.txt` 即时快照（`/tmp/it27-mut/final-clean.counts` 同文）。
+
+复跑注记：`McpStdioCallTest#wrongIdResponseIsDroppedAndCallTimesOut` 的 server 超时在收尾期由 1s 加宽到 2s（宿主机极端负载假红后加固，语义不变）——红线、根因与处置见 `stop1-flake-and-hardening.txt`。
+
+评审处置轮注记（2026-10-16）：F1 修复（取消链轮询路径收口）+ 新用例 `pollOnlyCancelNotifiesServerAndDropsLateResponse` → 终态 35 例（16+5+10+4）；复跑、突变 D1/D2 与饱和轮（新清理纪律）见 `stop1-review-round1.txt`。

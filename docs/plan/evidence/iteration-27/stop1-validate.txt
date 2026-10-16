@@ -1,0 +1,15 @@
+# it27 停 1 取证 — spotless + checkstyle 全 reactor 门禁（2026-10-15，收尾加固编辑后复跑）
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+```
+
+EXIT=0；日志全文仅 spotless 惯例 Unsafe 警告 4 行，无 checkstyle 违例：
+
+```text
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+```

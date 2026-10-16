@@ -1,0 +1,28 @@
+# it27 停 1 取证 — CPU 饱和重复跑（宿主机 `yes` 打满；2026-10-15）
+
+口径（it25/it26 惯例）：时序敏感的测试在 CPU 饱和下重复跑；每轮**即时**快照 surefire counts（报告文件被下一轮覆写，统一 grep 会读到覆写后数据——逐轮快照才能证明真实重跑）；计时有差异 = 确实每轮新跑。
+
+## 三轮（加固前；14:05–14:06）
+
+每轮：`yes > /dev/null &` ×4 → `mvn -B -q -pl mcp/stdio -am test` → 逐轮 counts 快照。三轮 34/34 全绿（16/4/10/4），计时互异：
+
+```text
+R1: 0.119 / 6.346 / 11.46 / 9.669   (Config / Call / Plugin / Recovery)
+R2: 0.134 / 6.527 / 11.18 / 8.317
+R3: 0.097 / 6.445 / 11.32 / 9.720
+```
+
+清理缺陷（如实记录）：工具 shell 无作业控制（`jobs/kill` 静默失手），两批 `yes`（各 4 进程，始于 14:03:05 / 14:04:44，PPID=1）实际遗留至 14:16 才清理——故 R2/R3 期间负载 ≥8×yes（≥4×yes 口径的上界意义更强）。暴露方式与完整处置见 `stop1-flake-and-hardening.txt`。
+
+## 一轮（加固后；14:19）
+
+单次 shell 内：`yes ×4` → 聚焦套件 → `pkill -x yes` → `pgrep -x yes` 验证：
+
+```text
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.064 s -- in McpServerConfigTest
+Tests run: 4,  Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.784 s -- in McpStdioCallTest
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.50 s -- in McpStdioPluginTest
+Tests run: 4,  Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.351 s -- in McpStdioRecoveryTest
+MVN_EXIT=0
+CLEANED-OK（pgrep 无残留）
+```

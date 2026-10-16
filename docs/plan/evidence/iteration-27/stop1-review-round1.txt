@@ -1,0 +1,110 @@
+# it27 停 1 评审处置轮（2026-10-16）：F1 修复 + 钉死用例 + 突变 D + 饱和轮
+
+评审总判（用户）：方向放行、附修正——packet 声明逐项核验属实；F1【中】须在停 2 动工前修；
+F2/F3【低】处置随停 1。本文件为处置轮的完整取证；终局 35 例（McpStdioCallTest 4 → 5）。
+
+## 1. F1 修复面（取消链轮询路径收口）
+
+- `JsonRpcPeer.request` 等待循环：`try { signal.checkAbort(); } catch (AbortedException e) {
+  cancelPending(id, slot, e); throw e; }`——轮询型 signal（不实现 onCancel）的直接抛出
+  会绕过收口（槽泄漏 + 不发 `notifications/cancelled` + 撤销记忆漏记）；onCancel 型已由
+  注册回调收口，`cancelPending` 幂等去重。
+- 钉死测试件：`Fixtures.PollOnlySignal`（不实现 onCancel，默认空操作）；夹具
+  `--record-cancel-to P`（收到 `notifications/cancelled` 时把 requestId 写入 P）；
+  新用例 `McpStdioCallTest#pollOnlyCancelNotifiesServerAndDropsLateResponse`——中途取消后断言：
+  AbortedException 上抛 + 夹具记录文件出现（通知已发）+ 晚到响应静默丢弃（JUL 捕获
+  peer 日志树，无 unmatched WARN）+ 取消后连接保持可用。
+
+## 2. 复跑（修复后终局态）
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl mcp/stdio -am test
+```
+
+EXIT=0。本模块 4 个 suite 共 35 例（16+5+10+4）全绿：
+
+```text
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.053 s -- in io.javanatic.harness.mcp.stdio.McpServerConfigTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.977 s -- in io.javanatic.harness.mcp.stdio.McpStdioCallTest
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.322 s -- in io.javanatic.harness.mcp.stdio.McpStdioPluginTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.309 s -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+```
+
+## 3. 突变 D1：F1 修复回退（裸 `checkAbort`，绕过收口）
+
+备份 shasum（修复态）＝ `1071312e387ea65dcfb99b3aeb4102abf78f07906812166c7f1b5350da475b4b`。
+改动：等待循环还原为 `signal.checkAbort();`（MUTATION-F1 标记）。
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl mcp/stdio -am test \
+    -Dtest=McpStdioCallTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=1 —— 红线逐字：
+
+```text
+[ERROR] Tests run: 5, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 16.18 s <<< FAILURE! -- in io.javanatic.harness.mcp.stdio.McpStdioCallTest
+[ERROR] io.javanatic.harness.mcp.stdio.McpStdioCallTest.pollOnlyCancelNotifiesServerAndDropsLateResponse -- Time elapsed: 10.66 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: fixture recorded notifications/cancelled
+	at io.javanatic.harness.mcp.stdio.Fixtures.awaitTrue(Fixtures.java:63)
+	at io.javanatic.harness.mcp.stdio.McpStdioCallTest.pollOnlyCancelNotifiesServerAndDropsLateResponse(McpStdioCallTest.java:158)
+```
+
+语义：取消绕过收口 → 不发 `notifications/cancelled` → 夹具记录文件永不出现 → `awaitTrue` 超时红。
+
+还原：`cp` 备份 → `diff -q` 一致 + shasum 与备份一致 + `grep MUTATION` = 0。
+
+## 4. 突变 D2：保留修复、去撤销记忆（`rememberCancelled` 调用停用）
+
+改动：`cancelPending` 内 `rememberCancelled(id);` 停用（MUTATION-F1B 标记）；命令同上。
+
+EXIT=1 —— 红线逐字（含读线程控制台日志，证明被捕获的 WARN 内容）：
+
+```text
+10月 16, 2026 11:11:53 上午 io.javanatic.harness.mcp.stdio.JsonRpcPeer dispatch
+警告: mcp server 'alpha' sent an unmatched response id 3; dropped
+[ERROR] Tests run: 5, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 7.180 s <<< FAILURE! -- in io.javanatic.harness.mcp.stdio.McpStdioCallTest
+[ERROR] io.javanatic.harness.mcp.stdio.McpStdioCallTest.pollOnlyCancelNotifiesServerAndDropsLateResponse -- Time elapsed: 1.658 s <<< FAILURE!
+java.lang.AssertionError:
+Expecting no elements of:
+  [java.util.logging.LogRecord@d278d2b]
+to match given predicate but this element did:
+  java.util.logging.LogRecord@d278d2b
+	at io.javanatic.harness.mcp.stdio.McpStdioCallTest.pollOnlyCancelNotifiesServerAndDropsLateResponse(McpStdioCallTest.java:167)
+```
+
+语义：通知照发（夹具记录断言先过）、撤销记忆缺失 → 晚到响应误报 unmatched——**两个断言
+各自独立钉死**（D1 钉「通知+收口」，D2 钉「撤销记忆」）。同轮 11:11:56 另有一条上述 WARN
+（id 3）来自随后运行的 `cancelAbortsCallAndKeepsConnection`（onCancel 型，不校验 WARN 面故仍绿），
+与 D2 同源、非独立现象。
+
+还原：同上（`diff -q` + shasum 一致 + `grep MUTATION` = 0）。
+
+## 5. 饱和轮（F3 新清理纪律 = 固化形态）
+
+同一 shell 内：先 `pgrep -x yes` 查前遗（NO-PRIOR-YES）→ 8 × `yes &` 压满 → 聚焦跑 → 收尾
+`pkill -x yes` → `pgrep -x yes` 验空：
+
+```sh
+$ for i in 1 2 3 4 5 6 7 8; do yes > /dev/null & done
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl mcp/stdio -am test
+$ pkill -x yes; sleep 0.3; pgrep -x yes && echo YES-LEFTOVER || echo CLEANED-OK
+```
+
+`MVN_EXIT=0`，`CLEANED-OK`（pkill 后验空）。计数（饱和面计时，全 0 失败）：
+
+```text
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.099 s -- in io.javanatic.harness.mcp.stdio.McpServerConfigTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.690 s -- in io.javanatic.harness.mcp.stdio.McpStdioCallTest
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.77 s -- in io.javanatic.harness.mcp.stdio.McpStdioPluginTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.688 s -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+```
+
+## 6. validate 复跑（全 reactor）
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+```
+
+EXIT=0（输出仅 spotless 的 4 行 Unsafe 警告，同 `stop1-validate.txt`）。

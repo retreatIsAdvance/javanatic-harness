@@ -1,0 +1,78 @@
+# it27 停 1 突变检查 — A 对账失效 / B 歧义防护失效 / C 耗尽终态移除（2026-10-15）
+
+性质：三项均为**承载逻辑**的突变杀（破坏必红 → 还原复绿）。被改文件为未跟踪新文件，还原 = 备份 `cp` 回 + `diff -q` 逐字节验证 + `shasum` 对照（备份存 `/tmp/it27-mut/*.orig`）。全链结束后 `grep -rn MUTATION mcp/ --include="*.java"` 零命中。
+
+跨类过滤语法注记：`-Dtest` 跨类用逗号（`Class1#m,Class2#m`）；`+` 仅连同类多方法。
+
+## A — 对账失效（尺寸差早退 `return false` → `return true`，漂移不可见）
+
+改动：`StdioMcpConnection.sameCatalog` 首查尺寸差分支改返回值（标 `MUTATION-A`）。
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/stdio -am test \
+    -Dtest='McpStdioRecoveryTest#catalogDriftOnReconnectFailsServerWithRestartDiagnosis' \
+    -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=1，红线（决定性行）：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 11.38 s <<< FAILURE! -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+[ERROR] ...catalogDriftOnReconnectFailsServerWithRestartDiagnosis -- Time elapsed: 11.36 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: FAILED after catalog drift
+[ERROR]   McpStdioRecoveryTest.catalogDriftOnReconnectFailsServerWithRestartDiagnosis:66 timed out awaiting: FAILED after catalog drift
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`diff -q` 静默（逐字节一致）；shasum `171f2092…b944` 与备份一致。
+
+## B — T2 歧义防护失效（配置侧 `if (false && id.contains("__"))`）
+
+改动：`McpServerConfig.validateId` 的 `__` 拒收分支短路（标 `MUTATION-B`）。注：kebab 规则仍会拒 `bad__id`，但报的是 kebab 错——两处断言要求的**歧义专用诊断**丢失，据此判红（fail loud 的判别力在诊断面）。
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/stdio -am test \
+    -Dtest='McpServerConfigTest#doubleUnderscoreIdRejectedWithAmbiguityReason,McpStdioPluginTest#doubleUnderscoreServerIdFailsLoudAtConfig' \
+    -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=1，红线：
+
+```text
+[ERROR] McpServerConfigTest.doubleUnderscoreIdRejectedWithAmbiguityReason:87->assertRejected:160
+[ERROR] McpStdioPluginTest.doubleUnderscoreServerIdFailsLoudAtConfig:117
+Expecting throwable message:
+  "mcp-stdio.servers[0].id: 'bad__id' must be kebab-case ([a-z][a-z0-9]*(-[a-z0-9]+)*)"
+to contain:
+  "must not contain '__'"
+but did not.
+[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`diff -q` 静默；shasum `bf8a698c…bb85` 一致。
+
+## C — 耗尽终态移除（`failExhausted();` 调用删除）
+
+改动：`StdioMcpConnection.reconnectLoop` 尾部 `failExhausted();` 调用移除（标 `MUTATION-C`；终态永不落，server 停在 RECONNECTING）。
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/stdio -am test \
+    -Dtest='McpStdioRecoveryTest#reconnectExhaustionFailsServer' \
+    -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=1，红线：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 11.17 s <<< FAILURE! -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+[ERROR] ...reconnectExhaustionFailsServer -- Time elapsed: 11.14 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: FAILED after reconnect exhaustion
+[ERROR]   McpStdioRecoveryTest.reconnectExhaustionFailsServer:89 timed out awaiting: FAILED after reconnect exhaustion
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`diff -q` 静默；shasum `171f2092…b944` 一致（与 A 同文件同基线）。
