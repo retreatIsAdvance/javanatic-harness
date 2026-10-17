@@ -176,6 +176,8 @@ public final class AppBoot {
 
 **skill-local 配置面（it26）**：仅两个配置键——`skill-local.cwd`（项目根，缺省 fail loud）与 `skill-local.home`（用户根，缺省 `user.home`；重定向/沙箱场景显式覆盖）。**根集合固定四根**（cwd/home × `.harness`/`.agents`，rank 100/200/400/500），不可经配置增删根或改 rank——近者胜裁决序是契约的一部分，不是配置面；扩展（如 dsh 的 custom 根）留待后续迭代。截断上限 `skill-tool.descriptionLimit`（缺省 500，dsh 同名口径）：作用于 `skill/catalog` 事件条目与目录提示段——两者同源同截断，回放确定（R1）。
 
+**mcp-stdio 配置面（it27）**：行配置仅 `servers[]`，条目键 `id` / `command` / `args` / `env` / `timeoutSeconds`（键白名单，未知键、缺 `id`/`command`、坏值均 fail loud 并带 `servers[i]` 定位）。`id` 须 kebab-case 且**拒含 `__`**（T2 公开名拼接二义）；`args` 逐元素透传、不经 shell；`env` 是**白名单叠加**——子进程环境 = 最小环境 `PATH`/`HOME`/`TMPDIR`（不继承全量）+ 条目显式值（同键覆盖）；`timeoutSeconds` 须正数、缺省 60（dsh 同口径，initialize/tools/list/tools/call 共用）。`servers` 缺省空 = 零噪声（不拉进程、不落 `mcp/catalog`、不注册工具）。server **全部在装配期启动**（哪怕本轮不用；每会话成本 = 进程数 × 启动协商），按配置序拉起；`command` 以用户全权运行、**不入沙箱**（MCP server 是组合者显式配置的信任面），任一 server 启动失败即装配期 fail loud 并回滚已启动进程。`mcp-tool` 无 config。
+
 **CompositionManifest**（R1，03 §8）：boot 从行序 + 插件版本（module descriptor）+ 影响模型可见输出的 config 值生成清单，注册为服务；`session-store` 创建 SessionHeader 时消费它。清单 + 日志 = 可重建性的全部持久化事实。
 
 ## 6. `--verify` 与 policy 档位（R4）
@@ -188,26 +190,27 @@ jh --verify --policy=PRODUCTION --approval=ask --budget=2000000
 
 ```text
 Profile: headless   policy: PRODUCTION
-  composition: 20 rows, 25 discovered, 0 unreferenced
+  composition: 25 rows, 30 discovered, 0 unreferenced
   approval: HUMAN_GATE (approval-ask; exempt=ask_user)
+  mcp: mcp-stdio + mcp-tool; tools=0
   audit: jsonl ~/.harness/sessions (durable)
   stop: max-turns=50 max-steps=40 budget=2000000
 ```
 
-（it20 起实况：摘要五行打 stdout、exit 0；`policy` 沿用 CLI 词表大写；rows = 加载行数、discovered = ServiceLoader 发现总数、unreferenced 校验通过后恒 0（非零即 boot 失败——计数与校验同一口径）；预算 0 显示 `unlimited`；违规路径逐项打 stderr 且 stdout 为空。it22 起 `approval:` 行尾点名**免审批工具**（`exempt=`；读 `ToolRegistry.definitions(Scope)` 的 `approvalExempt` 声明面，名称序逗号分隔、无声明印 `-`）——审批面与它的例外在同一行自述；示例计数随 it22 的 `ask-user` 行 +1（20/25）、随 it26 的 skill 三行 +3（23/28）。`skill` 装载工具走 `of()` 需审批（T2），不在免审批名单。`skill-local.cwd` 已入 workspace 单源键集（五处同值）。）
+（it20 起实况：摘要六行打 stdout、exit 0；`policy` 沿用 CLI 词表大写；rows = 加载行数、discovered = ServiceLoader 发现总数、unreferenced 校验通过后恒 0（非零即 boot 失败——计数与校验同一口径）；预算 0 显示 `unlimited`；违规路径逐项打 stderr 且 stdout 为空。it22 起 `approval:` 行尾点名**免审批工具**（`exempt=`；读 `ToolRegistry.definitions(Scope)` 的 `approvalExempt` 声明面，名称序逗号分隔、无声明印 `-`）——审批面与它的例外在同一行自述；示例计数随 it22 的 `ask-user` 行 +1（20/25）、随 it26 的 skill 三行 +3（23/28）、随 it27 的 mcp 两行 +2（25/30）。`skill` 装载工具走 `of()` 需审批（T2），不在免审批名单。`skill-local.cwd` 已入 workspace 单源键集（五处同值）。it27 起 `mcp:` 行点名两行在场与已注册工具（`mcp__*` 名称序；无工具印 `tools=0`，有工具注记 `approval-required`）——MCP 工具恒需审批（插件无豁免出口），与 `exempt` 名单互证；两行被 profile 移除时印 `-`。）
 
 | 档位 | 校验内容 |
 |---|---|
 | `standard`（缺省）| 组合双向校验通过；治理服务在装配期已强制（构造器注入） |
 | `production` | 另加三条：`ApprovalService.mode() != AUTO`；持久化实现存在且 durable；`LoopGuard.limits()` 的 max-turns / max-steps / budget 全部非零 |
 
-- `--verify` **不创建 agent、不需要 API key**，组合 + 断言后以 exit 0/1 退出——进 CI，机器可检查；通过时治理摘要五行打 stdout。
+- `--verify` **不创建 agent、不需要 API key**，组合 + 断言后以 exit 0/1 退出——进 CI，机器可检查；通过时治理摘要六行打 stdout。
 - 治理摘要来自实现自述：`ApprovalService.mode()`（`AUTO` / `HUMAN_GATE` / `DENY_ALL`）、免审批工具名单（`ToolRegistry.definitions(Scope)` 的 `approvalExempt` 声明面，it22）、`SessionPersistence.durable()`、`LoopGuard.limits()`、`AppBoot.bootReported` 的组合计数（行/发现/未引用）——实现类如实报告，档位校验负责拒绝不合格组合（fail loud at boot）。
 
-实现落定（it8）：`ConfigService`/`ExpressionResolver`/行模型（sealed 动作联合 Include/Replace/Remove/Insert——互斥动作不落布尔字段）在 kernel/config（零第三方）；`AppBoot` + SnakeYAML 装载在 bundle/base（第三第三方，仅此模块）。it7 的程序化口径已迁移：headless 经内置 profile + CLI flag overlay 走同一 boot 路径；Policy 断言进 boot（VerifyFailedException 携带违规清单）。显式差异：profile 为显式文件路径（home 命名发现随 it9）；bundle 按 classpath 资源名解析（GAV 钉扎随发布切片）；CompositionManifest 含行序+已解析 config、进 SessionHeader（插件版本摘要随发布切片）；插件配置化——构造器注入（程序化组合）与无参 + `configFor(id())`（数据组合）两条显式路径等价，安全边界值（fs/persistence root）在 config 路径缺失即 fail loud。dump 对含 `apikey` 的键脱敏。
+实现落定（it8）：`ConfigService`/`ExpressionResolver`/行模型（sealed 动作联合 Include/Replace/Remove/Insert——互斥动作不落布尔字段）在 kernel/config（零第三方）；`AppBoot` + SnakeYAML 装载在 bundle/base（第三第三方，仅此模块）。it7 的程序化口径已迁移：headless 经内置 profile + CLI flag overlay 走同一 boot 路径；Policy 断言进 boot（VerifyFailedException 携带违规清单）。显式差异：profile 为显式文件路径（home 命名发现随 it9）；bundle 按 classpath 资源名解析（GAV 钉扎随发布切片）；CompositionManifest 含行序+已解析 config、进 SessionHeader（插件版本摘要随发布切片）；插件配置化——构造器注入（程序化组合）与无参 + `configFor(id())`（数据组合）两条显式路径等价，安全边界值（fs/persistence root）在 config 路径缺失即 fail loud。**（it27）dump 与 header 持久化共用 `ConfigValues.masked` 递归脱敏**：任意深度，键名含 `apikey|token|secret|password|key`（不区分大小写）即值替换 `****`、**键与键序保留**；内存 manifest 保留原值，脱敏只发生在写入/展示边界（R1 只需键名与结构；`mcp-stdio.servers[].env` 是第一个把凭据搬进会话 header 的配置面）。
 
 实现落定（it7）：`Policy`（STANDARD/PRODUCTION）与治理断言在 `examples/headless` 落地——程序化组合口径（直装插件清单，非 YAML rows；YAML/ConfigService/bundle 层随 it8）。`--verify` 无 key 可跑（不装配 provider）；审批三模式齐备（auto 留 core/tools 作 executor 锚，ask/deny 在 interaction/approval；ask 缺省即拒绝语义）。PRODUCTION 拒 AUTO / 非 durable / 零 limits，违规逐项指出、exit 1。it8 bundle 落地时 Policy 校验上移到 boot。
-- 组合结果的人读视图 = `AppBoot.dump(rows)`（API 面纯函数，§8）：一行一插件、`config` 展开为 `{k=v}`、凭据键脱敏、禁用行带 `(disabled: <expr>)`。**CLI 无 `--dump-config` flag**——`jh` 的组合期出口只有 `--verify`，CLI 面以 [12 §6](12-api-stability.md) 冻结清单为准。
+- 组合结果的人读视图 = `AppBoot.dump(rows)`（API 面纯函数，§8）：一行一插件、`config` 展开为 `{k=v}`（嵌套结构保序）、敏感键递归脱敏（值 `****`、键保留）、禁用行带 `(disabled: <expr>)`。**CLI 无 `--dump-config` flag**——`jh` 的组合期出口只有 `--verify`，CLI 面以 [12 §6](12-api-stability.md) 冻结清单为准。
 - `--verify` 回答"治理够不够"（§6）：组合 + 断言后 exit 0/1，不创建 agent、不需要 key。
 
 ## 7. Headless Profile（MVP 默认）
@@ -273,7 +276,7 @@ jh --resume=<上次打印的 session=…> "继续"    # 会话按打印 id 续�
 
 ## 8. 组合结果的人读视图：`AppBoot.dump(rows)`
 
-`dump` 是 API 面纯函数（CLI 无对应 flag，见 §6）：一行一插件；`config` 非空则展开为 `{k=v}`（值已求值、含 `apikey` 的键脱敏为 `****`）；禁用行附 `(disabled: <expr>)`。任何一行都能被自己的 patch 替换——dump 是替换前的对照面。
+`dump` 是 API 面纯函数（CLI 无对应 flag，见 §6）：一行一插件；`config` 非空则展开为 `{k=v}`（值已求值；嵌套 map/list 保序；敏感键**递归**脱敏为 `****`、键保留——与 header 持久化同一规则，it27）；禁用行附 `(disabled: <expr>)`。任何一行都能被自己的 patch 替换——dump 是替换前的对照面。
 
 ```text
 # 节选（base 组合，行序 = 装载序）
@@ -286,7 +289,7 @@ shell-docker  (disabled: true)
 agent-loop {cwd=/path/to/workspace}
 ```
 
-外部嵌入的自证即用它打印"组成了什么"（`integration/consumer-sample` 的 `SelfCheck`：`compose` → `dump`），`--verify` 另印治理摘要五行（§6）。
+外部嵌入的自证即用它打印"组成了什么"（`integration/consumer-sample` 的 `SelfCheck`：`compose` → `dump`），`--verify` 另印治理摘要六行（§6）。
 
 ## 9. 自定义示例：换 shell provider / 改沙箱档
 

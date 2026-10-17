@@ -14,7 +14,7 @@
 
 ## 2. 包级 API（JPMS 导出面）
 
-`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（36 个 reactor 代码模块 / 40 个包；前缀 `io.javanatic.harness.` 省略）：
+`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（39 个 reactor 代码模块 / 43 个包；前缀 `io.javanatic.harness.` 省略）：
 
 | 模块 | 导出包 |
 |---|---|
@@ -39,6 +39,9 @@
 | skill/skill | `skill` |
 | skill/local | `skill.local` |
 | skill/tool | `skill.tool` |
+| mcp/mcp | `mcp` |
+| mcp/stdio | `mcp.stdio` |
+| mcp/tool | `mcp.tool` |
 | shell/shell | `shell.shell` |
 | shell/local | `shell.local` |
 | shell/docker | `shell.docker` |
@@ -67,6 +70,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | `SessionStore` / `Session` / `LoggedEvent` / `Message` / `ContentBlock` / `SurfaceOp` | `session` / `session.event` / `session.message` | 事件日志与模型消息投影（[03](03-session-event-sourcing.md)）|
 | `LlmService` / `LlmAdapter` / `StreamChunk` / `AbortSignal` | `llm` | seam 三角色、阻塞流、取消（[05](05-capability-seam.md)）|
 | `FsService` / `ShellExecutor` / `SandboxProvider` / `SandboxPolicyService` / `BackendStatus` | `fs` / `shell.shell` / `sandbox.sandbox` | capability 入口（换 Provider 即换环境）|
+| `McpClientService` / `McpServerConnection` / `McpToolDescriptor` / `McpCallResult` / `McpServerState` | `mcp` | MCP 连接面（it27）：清单冻结、call/状态/错误分档；Provider 换 transport 不动契约 |
 | `SessionPersistence` / `SessionEventCodec` / `JsonValue` | `session.persistence` | 持久化 seam 与 codec SPI（ServiceLoader）|
 | `ApprovalPrompt` | `interaction.approval` | 人闸回调（ask 模式） |
 | `CommandRegistry` / `Command` / `Handler` / `CommandResult` | `interaction.commands` | 命令面（registry / slash 解析 / 事件对，it14） |
@@ -86,11 +90,13 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 **0.2.0 迁移（it24 链仲裁）**：`BackendStatus.Ready(String)` → `Ready(String backend, SandboxEnforcement enforcement, String detail)`——Linux 平台链由 `[bwrap]` 变 `[bwrap, landlock]`（选择期 fallback：一次探针、缓存、进程生命周期内不切换），`Ready` 的 `detail` 承载链路细节（前候选失败明细 + 本后端能力行，无则空串）。`AppBoot.sandboxWarning(Scope)` 签名与语义不变（`Ready` 仍静默）；新增 `AppBoot.sandboxLine(Scope)`（`Ready` → INFO 行；观测非违规，**exit 码不变**）与 `AppBoot.emitSandboxObservations(Scope, BiConsumer<Level, String>)`（`boot` 的唯一观测出口；文本构造仍由 `sandboxWarning`/`sandboxLine` 独立可测）。
 
+**0.3.0 增量（it27 MCP）**：新增导出包 `mcp`（`McpClientService` / `McpServerConnection` / `McpToolDescriptor` / `McpCallResult` / `McpServerState`）、`mcp.stdio`（插件行 `mcp-stdio`）、`mcp.tool`（插件行 `mcp-tool`）；`mcp/catalog` 扩展事件（条目含 `publicName`；读侧缺该字段 fail loud——0.3.0 前不存在此事件，无兼容垫片）。公开工具名 `mcp__<server>__<raw>` 是稳定面；raw 非法/超长的确定性归一（清洗 + `_hash8` + WARN）与 catalog 记录 `publicName` 都是**算法事实**，算法变更按事件 schema 迁移处理（不得静默改读）。组合清单 config 结构化（嵌套保序）+ 写入期递归脱敏：header 敏感值恒 `****`、键名保留。MCP 工具**恒需审批**（无 `approvalExempt` 出口）。
+
 ## 4. 事件 schema
 
 - **信封**：`LoggedEvent(seq, event)`——seq 单调（JSONL 一行一条）；`SessionEvent.time()` = epoch 毫秒。
 - **核心 sealed**：`SessionEvent permits` `TurnStart` / `TurnEnd` / `StepStart` / `StepEnd` / `UserMessageEvent` / `AssistantMessageEvent` / `LlmRequestEvent` / `ToolCallEvent` / `ToolResultEvent` / `CompactionStart` / `CompactionSummary` / `CompactionEnd` / `RequestHeader` / `ProjectInstructions` / `SessionEndSeedEvent` / `ExtensionEvent`（[03](03-session-event-sourcing.md)）。
-- **扩展点**：`ExtensionEvent`（开放）+ `SessionEventCodec<T>` SPI——ServiceLoader 注册、jsonl 落盘驱动；现有 codec 实例：assistant/chunk、todo、plan、command 等。
+- **扩展点**：`ExtensionEvent`（开放）+ `SessionEventCodec<T>` SPI——ServiceLoader 注册、jsonl 落盘驱动；现有 codec 实例：assistant/chunk、todo、plan、command、skill/catalog、mcp/catalog。
 - **R1 锚点**：`LlmRequestEvent` 双哈希——模型请求可逐字节重建，回放闭环比对（[10](10-testing.md)）。
 - **失败词表**：`FailureKind`（typed LLM 失败，it12.6）。
 
@@ -114,8 +120,11 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | presets | `root` | preset 组合 |
 | agent-loop | `cwd` / `instructionsFile` | 提示词上下文工作目录（`request/header` 落账值；缺省 `user.dir`）。与 `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 同源——四处漂移装配期拒绝（[07 §5](07-profile-bundle.md)）；项目说明文件名或路径（it21，缺省 `AGENTS.md`）|
 | approval-ask | `idleTimeoutSeconds` | 人闸等待界（秒；0 = 不设限；it22）。缺省按终端形态：**非交互 300s 后按拒绝**（fail-closed）/ 交互不设限；CLI `--approval-timeout=` 覆盖（§6）。读取点 `ApprovalAskPlugin`，有效值判定与 CLI 同源（`ApprovalPrompt.effectiveIdleTimeout`）|
+| skill-local | `cwd` / `home` | 技能项目根与用户根（it26；`cwd` 缺省 fail loud，`home` 缺省 `user.home`；根集合固定四根，不可配置增删）|
+| skill-tool | `descriptionLimit` | 技能描述截断上限（it26，缺省 500；`skill/catalog` 与目录提示段同源同截断）|
+| mcp-stdio | `servers` | MCP server 清单（it27；缺省 `[]` = 零噪声）。条目键 `id` / `command` / `args` / `env` / `timeoutSeconds`：`id` kebab-case 且拒 `__`；`env` 为白名单叠加（最小环境 `PATH`/`HOME`/`TMPDIR`）；`timeoutSeconds` 正数、缺省 60；命令以用户全权运行、不入沙箱；装配期启动，失败 fail loud 并回滚（[07 §5](07-profile-bundle.md)）|
 
-无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`ask-user`、`commands`（25 个 base 行 id = 14 可配 + 11 无配）。
+无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`ask-user`、`commands`、`skill`、`mcp-tool`（30 个 base 行 id = 17 可配 + 13 无配）。
 
 - **插值白名单**（[07](07-profile-bundle.md)）：`${env:NAME}` / `${props:NAME}` / `${cwd}` / `${home}` / `:-默认值`；比较式 `==` / `!=`（右操作数 `null` 或 `'literal'`）——无任意代码；源不在白名单 fail loud。
 - **键名白名单（it23，0.2.0 迁移面）**：profile 顶层 / bundle 顶层 / 行三层均为 allowlist，未列名键（含拼写错误）**装载期 fail loud**（`YamlRows`；**0.1.0 为静默忽略**）——键集与拒绝文案见 [07 §1](07-profile-bundle.md)。

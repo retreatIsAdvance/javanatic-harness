@@ -1,0 +1,145 @@
+it27 停 3-S2 取证：jlink 镜像 + 富 schema 夹具真跑
+采集时间：2026-10-17 10:26–10:30 (+08:00)
+镜像：dist/jh/target/jlink-image/bin/jh（0.3.0-SNAPSHOT，构建自本停工作树）
+隔离：user.home=/tmp/it27-s2/home（JDK_JAVA_OPTIONS；sessions 落该目录，不碰真实 ~/.harness）
+说明：命令输出中的 "NOTE: Picked up JDK_JAVA_OPTIONS" 是 JDK 对隔离参数的提示，
+非 jh/MCP 输出；"Shell cwd was reset" 是执行器提示，忽略。
+
+## 0. 夹具增强（仅测试资源）
+
+mcp/stdio/src/test/resources/mcp-fixture/FixtureServer.java 新增 `--rich-schema`：
+echo 条目返回白名单全构造 inputSchema
+（string/integer/number/boolean/array/object + required:["message"]），
+默认路径不变。mcp/stdio 35 例复跑全绿：
+    Tests run: 35, Failures: 0, Errors: 0, Skipped: 0
+    [INFO] BUILD SUCCESS
+
+## 1. jlink 构建（先红后绿：模块名缺陷）
+
+首跑 `mvn -B -pl dist/jh -am package -DskipTests` 红：
+
+    [ERROR] 错误: Module io.javanatic.harness.mcp.mcp not found
+    [ERROR] java.lang.module.FindException: Module io.javanatic.harness.mcp.mcp not found
+      at jdk.jlink/jdk.tools.jlink.internal.JlinkTask...
+
+根因：mcp/mcp 的 JPMS 模块名是 `io.javanatic.harness.mcp`（artifactId 与模块名
+不同形，同 skill.tool 先例），dist/jh 的 modules 列表误写 `.mcp.mcp`。
+修复：`<module>io.javanatic.harness.mcp</module>`。复跑：
+
+    [INFO] harness-dist-jh .................................... SUCCESS [  5.522 s]
+    [INFO] BUILD SUCCESS
+    Finished at: 2026-10-17T10:26:57+08:00
+
+## 2. 默认组合（base 两行在场，servers 为空）
+
+    JDK_JAVA_OPTIONS=-Duser.home=/tmp/it27-s2/home jh --verify \
+        --workspace=/tmp/it27-s2/ws
+
+    Profile: headless   policy: STANDARD
+      composition: 25 rows, 30 discovered, 0 unreferenced
+      approval: AUTO (approval-auto; exempt=ask_user)
+      mcp: mcp-stdio + mcp-tool; tools=0
+      audit: jsonl /tmp/it27-s2/home/.harness/sessions (durable)
+      stop: max-turns=50 max-steps=40 budget=unlimited
+    EXIT=0
+
+25/30 与 docs/design/07 §6 同步值一致（it26 的 23/28 + mcp 两行）。
+零进程：`pgrep -fl mcp-fixture/FixtureServer` → none（验证前后各一次）。
+
+## 3. 配置启用（rich profile，富 schema 夹具）
+
+profile rows 以 `replace: true` 挂 servers[0]：id=fixture，command=<temurin-25 java>，
+args=[FixtureServer.java, --rich-schema, --pid-file, /tmp/it27-s2/fixture.pid]，
+timeoutSeconds=30。
+
+    mcp: mcp-stdio + mcp-tool; tools=mcp__fixture__big,mcp__fixture__echo,mcp__fixture__env,mcp__fixture__fail (approval-required)
+    EXIT=0
+
+- 工具名序：big / echo / env / fail；恒注记 approval-required。
+- pid 文件写入 25571；verify 退出后 `kill -0 25571` 失败 → **PROCESS_REAPED**。
+
+## 4. 配置启停（两行 disabled）
+
+rows: mcp-stdio disabled:true + mcp-tool disabled:true（同时禁用——requires 约束）：
+
+    composition: 23 rows, 30 discovered, 0 unreferenced
+    mcp: -; tools=0
+    EXIT=0
+    pgrep before/after: none
+
+## 5. 装配失败诊断（--exit-immediately）
+
+    jh --verify --profile=fail.yml
+    EXIT=1
+    stdout: 空
+    stderr:
+      Exception in thread "main" java.lang.IllegalStateException: Plugin failed and rolled back: mcp-stdio
+      ...
+      Caused by: io.javanatic.harness.mcp.McpConnectionException:
+        mcp server 'dead-fixture' closed stdout (process exited)
+
+fail loud：进程死亡在装配期即点名 server 与原因，插件原子回滚（无半装配）。
+
+## 6. 富 schema 端到端真跑（jlink + MCP 子进程 + fake OpenAI SSE，keyless）
+
+fake OpenAI server 捕获两次 /chat/completions；第一次返回
+`mcp__fixture__echo({"message":"hello from jh"})` 的 tool_calls，
+第二次返回收尾文本。
+
+    jh "调用 echo 工具打个招呼" --profile=rich.yml --workspace=ws \
+       --provider=fixture --model=fixture-1 \
+       --base-url=http://127.0.0.1:18727 --api-key=fake
+    EXIT=0
+    stdout: 完成：echo 已回
+    stderr stats: turn=1 steps=2 tokens_in=22 tokens_out=11 elapsed=0.1s
+
+会话日志（headless-1792204146183-d157/log.jsonl）事件序：
+    turn/start, request/header, user/message, step/start, **mcp/catalog**,
+    llm/request, assistant/message, **tool/call**, **tool/result**, step/end,
+    step/start, llm/request, assistant/message, step/end, turn/end
+
+mcp/catalog 条目（4 个）中 echo 的 schema 原文含全部富构造：
+    {"type":"object","description":"echo args","properties":{
+      "message":{"type":"string",...},"repeat":{"type":"integer",...},
+      "ratio":{"type":"number",...},"loud":{"type":"boolean",...},
+      "tags":{"type":"array","items":{"type":"string"},...},
+      "nested":{"type":"object","properties":{"inner":{"type":"string"}},...}},
+     "required":["message"]}
+
+tool/call: name=mcp__fixture__echo, arguments={"message": "hello from jh"}
+tool/result: content="echo: hello from jh", isError=false
+
+发给模型的 tools 面（第一次请求捕获）：
+- mcp__fixture__echo：message/tags/nested/ratio/loud/repeat 全量映射；
+  integer → number（已登记弱化）；required 不包 Opt；
+- big/env/fail：空对象 schema（夹具默认）。
+第二次请求 messages 角色序：system, user, assistant, tool；
+tool 消息 tool_call_id=call_mcp_1, content="echo: hello from jh"。
+
+进程回收：fixture pid 26372，turn 结束后 kill -0 失败 → PROCESS_REAPED。
+
+## 7. 默认组合零 MCP 噪声（真跑对照）
+
+同 fake server 跑普通一次任务（无 --profile，servers 为空）：
+
+    EXIT=0；stdout 完成：echo 已回
+    pgrep -fl mcp-fixture/FixtureServer → before/after 均 none
+    新会话 log.jsonl 中 mcp/catalog 计数 = 0
+
+→ 空 servers：不拉进程、不落事件、不发模型请求里的 mcp tool。
+
+## 8. 真实会话回放（零联网零进程，MCP 行关闭）
+
+fake server 已停；用 disabled profile 续跑 S2 会话：
+
+    printf '/exit\n' | jh --resume=headless-1792204146183-d157 \
+       --profile=disabled.yml --base-url=http://127.0.0.1:1 --api-key=fake
+    EXIT=0
+    stdout: jh 交互模式 / session=headless-...（续跑提示）
+    stderr: 信息: resume session=headless-...
+    pgrep: none
+
+→ 真实 JSONL 会话可独立加载（无网络、无 MCP 进程）。catalog fold 重建面由
+mcp/tool 测试矩阵取证（停 3-S3 汇入）：
+  McpCatalogLedgerTest#foldRebuildsRegisteredSurfaceFromLedgerOnly（只读账条目重映射，
+  不触碰 client）；#catalogEventRoundTripsThroughJsonl（持久化面）。

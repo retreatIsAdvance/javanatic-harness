@@ -7,8 +7,8 @@ import java.util.Objects;
  * JSON 解析在边界模块（transport 组帧与消费面映射各自持有，同 core/tools
  * 信任边界先例）；映射到 {@code ValueSchema}（白名单）由消费面做（05 schema 边界）。
  *
- * @param serverId 来源 server id
- * @param name raw 工具名（拒含 "__"：配置校验 + tools/list 结果校验两处）
+ * @param serverId 来源 server id（配置面拒含 "__"）
+ * @param name raw 工具名（非空；含 "__"/非法字符/超长由消费面确定性归一为公开名）
  * @param description 工具描述（远端原文；可能为空串）
  * @param inputSchemaJson 参数 JSON Schema 原文（对象文本）
  */

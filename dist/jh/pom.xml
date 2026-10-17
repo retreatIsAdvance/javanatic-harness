@@ -76,6 +76,9 @@
                                 <module>io.javanatic.harness.skill.skill</module>
                                 <module>io.javanatic.harness.skill.local</module>
                                 <module>io.javanatic.harness.skill.tool</module>
+                                <module>io.javanatic.harness.mcp</module>
+                                <module>io.javanatic.harness.mcp.stdio</module>
+                                <module>io.javanatic.harness.mcp.tool</module>
                                 <module>io.javanatic.harness.interaction.ask</module>
                                 <module>io.javanatic.harness.sandbox.local</module>
                                 <module>io.javanatic.harness.sandbox.policy</module>

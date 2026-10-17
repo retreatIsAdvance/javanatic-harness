@@ -18,13 +18,13 @@ import io.javanatic.harness.llm.ToolSchema;
 import io.javanatic.harness.mcp.McpCatalogDriftException;
 import io.javanatic.harness.mcp.McpClientService;
 import io.javanatic.harness.mcp.McpServerState;
-import io.javanatic.harness.mcp.McpToolDescriptor;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.session.message.UserMessage;
+import io.javanatic.harness.session.persistence.JsonValue;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 import io.javanatic.harness.session.persistence.jsonl.JsonlPersistencePlugin;
 import io.javanatic.harness.tools.ApprovalAutoPlugin;
@@ -101,8 +101,8 @@ class McpCatalogLedgerTest {
 
             assertThat(catalogs(session)).hasSize(1);
             // 排除工具不进账（fold 只重建注册面）；schema 为 wire 原文
-            assertThat(catalogs(session).getFirst().entries()).containsExactly(
-                new McpCatalogEvent.Entry("alpha", "echo", "Echo text back", ECHO_SCHEMA));
+            assertThat(catalogs(session).getFirst().entries()).containsExactly(new McpCatalogEvent.Entry(
+                "alpha", "echo", "mcp__alpha__echo", "Echo text back", ECHO_SCHEMA));
         }
     }
 
@@ -165,11 +165,30 @@ class McpCatalogLedgerTest {
     @Test
     void catalogEventRoundTripsThroughCodec() {
         McpCatalogEvent original = new McpCatalogEvent(42, List.of(
-            new McpCatalogEvent.Entry("alpha", "echo", "Echo text back", ECHO_SCHEMA),
-            new McpCatalogEvent.Entry("beta", "ping", "ping", "{\"type\": \"object\"}")));
+            new McpCatalogEvent.Entry("alpha", "echo", "mcp__alpha__echo",
+                "Echo text back", ECHO_SCHEMA),
+            new McpCatalogEvent.Entry("beta", "ping", "mcp__beta__ping",
+                "ping", "{\"type\": \"object\"}")));
         McpCatalogCodec codec = new McpCatalogCodec();
         assertThat(codec.type()).isEqualTo("mcp/catalog");
         assertThat(codec.read(codec.write(original))).isEqualTo(original);
+    }
+
+    /** 归一化之前的账（无 publicName）无法无损重建注册面：codec fail loud，不猜算法。 */
+    @Test
+    void codecRejectsPreNormalizationLedger() {
+        JsonValue.Obj legacy = JsonValue.object()
+            .set("time", 1L)
+            .set("entries", new JsonValue.Arr(List.of(JsonValue.object()
+                .set("serverId", "alpha")
+                .set("name", "echo")
+                .set("description", "d")
+                .set("schema", "{\"type\": \"object\"}")
+                .build())))
+            .build();
+        assertThatThrownBy(() -> new McpCatalogCodec().read(legacy))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("publicName");
     }
 
     @TempDir
@@ -210,14 +229,12 @@ class McpCatalogLedgerTest {
             assertThat(entries).extracting(McpCatalogEvent.Entry::serverId)
                 .containsExactly("alpha", "beta"); // 规范排序（serverId, name）
 
-            // fold 面：零联网零进程——不触碰 client，只读账条目重映射
+            // fold 面：零联网零进程——不触碰 client，只读账条目重映射（publicName 直接复用）
             List<ToolSchema> folded = entries.stream()
                 .map(entry -> {
-                    McpToolDescriptor descriptor = new McpToolDescriptor(entry.serverId(),
-                        entry.name(), entry.description(), entry.schema());
                     ValueSchema schema = McpSchemaMapping
-                        .map(entry.schema(), McpToolPlugin.fullName(descriptor)).schema();
-                    return new ToolSchema(McpToolPlugin.fullName(descriptor), entry.description(),
+                        .map(entry.schema(), entry.publicName()).schema();
+                    return new ToolSchema(entry.publicName(), entry.description(),
                         ValueSchema.toJson(schema));
                 })
                 .sorted(Comparator.comparing(ToolSchema::name))

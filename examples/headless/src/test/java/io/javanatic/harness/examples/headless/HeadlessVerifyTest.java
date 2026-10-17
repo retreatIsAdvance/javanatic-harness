@@ -9,8 +9,11 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.StringReader;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,6 +38,7 @@ class HeadlessVerifyTest {
             .contains("Profile: headless   policy: STANDARD")
             .containsPattern("  composition: \\d+ rows, \\d+ discovered, 0 unreferenced")
             .contains("  approval: AUTO (approval-auto; exempt=ask_user)")
+            .contains("  mcp: mcp-stdio + mcp-tool; tools=0")
             .contains("  audit: jsonl " + sessions + " (durable)")
             .contains("  stop: max-turns=50 max-steps=40 budget=unlimited");
     }
@@ -77,6 +81,50 @@ class HeadlessVerifyTest {
             .isInstanceOf(AppBoot.VerifyFailedException.class)
             .hasMessageContaining("token budget 为零")
             .hasMessageNotContaining("审批为 AUTO");
+    }
+
+    @Test
+    void verifyWithFixtureServerNamesMcpToolsOutsideExemptList() throws Exception {
+        // 启用组合（it27 停 3）：装配期拉起夹具 server → mcp__verify-fixture__echo 注册。
+        // 摘要点名工具；exempt 行仍只有 ask_user——MCP 工具恒需审批（插件无豁免出口）。
+        Result result = run("--verify", "--profile=" + mcpProfile());
+        assertThat(result.exit()).isZero();
+        assertThat(result.stdout())
+            .contains("  mcp: mcp-stdio + mcp-tool; tools=mcp__verify-fixture__echo (approval-required)")
+            .contains("  approval: AUTO (approval-auto; exempt=ask_user)");
+        assertThat(result.stderr()).isEmpty(); // 零噪声：server 不写 stderr，摘要不混诊断
+    }
+
+    /** 写「启用 mcp-stdio 行」的 profile；args 走测试资源里的最小夹具源码（JDK 直跑）。 */
+    private Path mcpProfile() throws Exception {
+        Path profile = workspace.resolve("mcp-profile.yml");
+        Files.writeString(profile, """
+            name: headless
+            policy: standard
+            bundles: [base]
+            rows:
+              - plugin: mcp-stdio
+                replace: true
+                config:
+                  servers:
+                    - id: verify-fixture
+                      command: '%s'
+                      args:
+                        - '%s'
+                      timeoutSeconds: 30
+            """.formatted(javaBin(), fixtureSource()));
+        return profile;
+    }
+
+    private static String javaBin() {
+        String executable = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win")
+            ? "java.exe" : "java";
+        return Path.of(System.getProperty("java.home"), "bin", executable).toString();
+    }
+
+    private static String fixtureSource() throws URISyntaxException {
+        return Path.of(HeadlessVerifyTest.class.getResource("/verify-fixture/VerifyFixture.java")
+            .toURI()).toString();
     }
 
     @Test

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -74,7 +75,7 @@ class AppBootTest {
             "approval-deny", "tools", "fs-local", "fs-tool", "shell-local",
             "shell-tool", "shell-docker", "todo", "plan", "commands", "sandbox-local", "sandbox-policy",
             "presets", "compaction", "agent-loop",
-            "skill", "skill-local", "skill-tool")) {
+            "skill", "skill-local", "skill-tool", "mcp-stdio", "mcp-tool")) {
             assertThat(discovered).containsKey(id);
         }
     }
@@ -191,6 +192,28 @@ class AppBootTest {
         String dump = AppBoot.dump(rows);
         assertThat(dump).contains("approval-ask").contains("(disabled: true)");
         assertThat(dump).doesNotContain("sk-secret").contains("****");
+    }
+
+    /** F-new：dump 与 header 共用递归脱敏——MCP servers[].env 的凭据不落人读输出。 */
+    @Test
+    void dumpMasksNestedMcpEnvAndKeepsKeyOrder() throws Exception {
+        Map<String, Object> env = new LinkedHashMap<>();
+        env.put("GITHUB_TOKEN", "ghp-secret");
+        env.put("MODE", "dev");
+        Map<String, Object> server = new LinkedHashMap<>();
+        server.put("id", "fixture");
+        server.put("env", env);
+        Path profile = profile("");
+        List<ConfigRowSpec> rows = AppBoot.compose(new AppBoot.BootOptions(
+            profile, List.of(new ConfigRowSpec.Replace("mcp-stdio",
+                Map.of("servers", List.of(server)), null)), false, null));
+
+        String dump = AppBoot.dump(rows);
+
+        assertThat(dump).doesNotContain("ghp-secret")
+            .contains("GITHUB_TOKEN=****")
+            .contains("MODE=dev");
+        assertThat(dump.indexOf("GITHUB_TOKEN=****")).isLessThan(dump.indexOf("MODE=dev"));
     }
 
     @Test

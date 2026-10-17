@@ -1,0 +1,1455 @@
+it27 收口 —— 全量 mvn -B -q package
+日期: 2026-10-17 20:49:48
+工作区: /Users/abel_yang/study/deepseek/javanatic-harness（master）
+JAVA_HOME: /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+mvn: /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn
+
+$ mvn -B -q package
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+timestamp = 2026-10-17T20:49:53.486511, ScopeTest:teardownIsAlwaysReverseOfRegistration =
+                              |-----------------------jqwik-----------------------
+tries = 1000                  | # of calls to property
+checks = 1000                 | # of not rejected calls
+generation = RANDOMIZED       | parameters are randomly generated
+after-failure = SAMPLE_FIRST  | try previously failed sample, then previous seed
+when-fixed-seed = ALLOW       | fixing the random seed is allowed
+edge-cases#mode = MIXIN       | edge cases are mixed in
+edge-cases#total = 10         | # of all combined edge cases
+edge-cases#tried = 10         | # of edge cases tried in current run
+seed = 4797662557136104963    | random seed to reproduce generated values
+
+
+10月 17, 2026 8:49:55 下午 io.javanatic.harness.session.SessionRecovery closeInterrupted
+警告: session s1: appended 3 recovery fact(s) for interrupted tail
+10月 17, 2026 8:49:55 下午 io.javanatic.harness.session.Session accept
+警告: session append observer failed
+java.lang.IllegalStateException: observer boom
+	at io.javanatic.harness.session.SessionTest.lambda$observerFailureIsContained$0(SessionTest.java:154)
+	at io.javanatic.harness.session.Session.accept(Session.java:126)
+	at io.javanatic.harness.session.Session.append(Session.java:109)
+	at io.javanatic.harness.session.SessionTest.observerFailureIsContained(SessionTest.java:157)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+
+timestamp = 2026-10-17T20:49:55.327982, SessionPropertiesTest:concurrentAppendsProduceContiguousUniqueSeqs =
+                              |-----------------------jqwik-----------------------
+tries = 320                   | # of calls to property
+checks = 320                  | # of not rejected calls
+generation = EXHAUSTIVE       | parameters are exhaustively generated
+after-failure = SAMPLE_FIRST  | try previously failed sample, then previous seed
+when-fixed-seed = ALLOW       | fixing the random seed is allowed
+edge-cases#mode = MIXIN       | edge cases are mixed in
+edge-cases#total = 0          | # of all combined edge cases
+edge-cases#tried = 0          | # of edge cases tried in current run
+seed = 7335335860226398585    | random seed to reproduce generated values
+
+
+10月 17, 2026 8:49:58 下午 io.javanatic.harness.session.persistence.jsonl.JsonlPersistence lambda$attach$3
+警告: flush barrier skipped for session direct: no writer (never persisted here)
+10月 17, 2026 8:49:58 下午 io.javanatic.harness.session.Session accept
+警告: session append observer failed
+java.util.concurrent.CompletionException: session/appended listener failed
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:220)
+	at io.javanatic.harness.kernel.events.Events.notifyOrdered(Events.java:121)
+	at io.javanatic.harness.session.SessionStore.lambda$create$0(SessionStore.java:46)
+	at io.javanatic.harness.session.Session.accept(Session.java:126)
+	at io.javanatic.harness.session.Session.append(Session.java:109)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest.gapWriteAfterSwallowedFailureIsRejectedSoBarrierStaysRed(JsonlPersistenceTest.java:532)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+Caused by: java.nio.file.AccessDeniedException: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit1218935345110329499/s1/log.jsonl
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:90)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.newFileChannel(UnixFileSystemProvider.java:213)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.newByteChannel(UnixFileSystemProvider.java:244)
+	at java.base/java.nio.file.spi.FileSystemProvider.newOutputStream(FileSystemProvider.java:426)
+	at java.base/java.nio.file.Files.newOutputStream(Files.java:215)
+	at java.base/java.nio.file.Files.write(Files.java:3174)
+	at java.base/java.nio.file.Files.writeString(Files.java:3368)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.writeEnvelope(JsonlPersistence.java:517)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.append(JsonlPersistence.java:476)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence.lambda$attach$1(JsonlPersistence.java:87)
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:218)
+	... 74 more
+
+10月 17, 2026 8:49:58 下午 io.javanatic.harness.session.Session accept
+警告: session append observer failed
+java.util.concurrent.CompletionException: session/appended listener failed
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:220)
+	at io.javanatic.harness.kernel.events.Events.notifyOrdered(Events.java:121)
+	at io.javanatic.harness.session.SessionStore.lambda$create$0(SessionStore.java:46)
+	at io.javanatic.harness.session.Session.accept(Session.java:126)
+	at io.javanatic.harness.session.Session.append(Session.java:109)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest.gapWriteAfterSwallowedFailureIsRejectedSoBarrierStaysRed(JsonlPersistenceTest.java:537)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+Caused by: java.lang.IllegalStateException: write gap: entry seq 2 but only 1 lines durable
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.writeEnvelope(JsonlPersistence.java:503)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.append(JsonlPersistence.java:476)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence.lambda$attach$1(JsonlPersistence.java:87)
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:218)
+	... 74 more
+
+10月 17, 2026 8:49:58 下午 io.javanatic.harness.session.Session accept
+警告: session append observer failed
+java.util.concurrent.CompletionException: session/appended listener failed
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:220)
+	at io.javanatic.harness.kernel.events.Events.notifyOrdered(Events.java:121)
+	at io.javanatic.harness.session.SessionStore.lambda$create$0(SessionStore.java:46)
+	at io.javanatic.harness.session.Session.accept(Session.java:126)
+	at io.javanatic.harness.session.Session.append(Session.java:109)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest.writeSideWithoutCodecFailsLoudOnSave(JsonlPersistenceTest.java:350)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+Caused by: java.lang.IllegalStateException: no codec registered for type: custom/unknown
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.lambda$writeEnvelope$0(JsonlPersistence.java:510)
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.writeEnvelope(JsonlPersistence.java:509)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.append(JsonlPersistence.java:476)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence.lambda$attach$1(JsonlPersistence.java:87)
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:218)
+	... 74 more
+
+10月 17, 2026 8:49:58 下午 io.javanatic.harness.session.persistence.jsonl.JsonlPersistence repairTornTail
+警告: torn tail in /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit4886043173625072003/s1/log.jsonl: complete line missing newline, healed
+10月 17, 2026 8:49:58 下午 io.javanatic.harness.session.persistence.jsonl.JsonlPersistence repairTornTail
+警告: torn tail in /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit18418129613973767832/s1/log.jsonl: partial line of 24 bytes truncated
+10月 17, 2026 8:49:58 下午 io.javanatic.harness.session.persistence.jsonl.JsonlPersistence repairTornTail
+警告: torn tail in /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit12642045715614734251/s1/log.jsonl: partial line of 19 bytes truncated
+10月 17, 2026 8:49:58 下午 io.javanatic.harness.session.Session accept
+警告: session append observer failed
+java.util.concurrent.CompletionException: session/appended listener failed
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:220)
+	at io.javanatic.harness.kernel.events.Events.notifyOrdered(Events.java:121)
+	at io.javanatic.harness.session.SessionStore.lambda$create$0(SessionStore.java:46)
+	at io.javanatic.harness.session.Session.accept(Session.java:126)
+	at io.javanatic.harness.session.Session.append(Session.java:109)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistenceTest.flushBarrierExposesSwallowedWriteFailure(JsonlPersistenceTest.java:509)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+Caused by: java.nio.file.AccessDeniedException: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit8310110984860657650/s1/log.jsonl
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:90)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.newFileChannel(UnixFileSystemProvider.java:213)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.newByteChannel(UnixFileSystemProvider.java:244)
+	at java.base/java.nio.file.spi.FileSystemProvider.newOutputStream(FileSystemProvider.java:426)
+	at java.base/java.nio.file.Files.newOutputStream(Files.java:215)
+	at java.base/java.nio.file.Files.write(Files.java:3174)
+	at java.base/java.nio.file.Files.writeString(Files.java:3368)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.writeEnvelope(JsonlPersistence.java:517)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence$SessionWriter.append(JsonlPersistence.java:476)
+	at io.javanatic.harness.session.persistence.jsonl.JsonlPersistence.lambda$attach$1(JsonlPersistence.java:87)
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:218)
+	... 74 more
+
+10月 17, 2026 8:50:00 下午 io.javanatic.harness.agentloop.CompactionPlugin compact
+警告: compaction skipped: nothing to compact (tail covers surface)
+10月 17, 2026 8:50:00 下午 io.javanatic.harness.agentloop.AgentLoopImpl runTurn
+严重: turn 1 failed
+java.lang.IllegalStateException: boom
+	at io.javanatic.harness.agentloop.AgentLoopTest.lambda$requestErrorWithoutDecisionEndsTurnWithError$0(AgentLoopTest.java:537)
+	at io.javanatic.harness.llm.RoutingLlmService.stream(RoutingLlmService.java:31)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runStepLoop(AgentLoopImpl.java:425)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runTurn(AgentLoopImpl.java:322)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.drivePendingWork(AgentLoopImpl.java:215)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$ensureDriver$0(AgentLoopImpl.java:180)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$2(AgentLoopImpl.java:200)
+	at java.base/jdk.internal.vm.ScopedValueContainer.callWithoutScope(ScopedValueContainer.java:162)
+	at java.base/jdk.internal.vm.ScopedValueContainer.call(ScopedValueContainer.java:147)
+	at java.base/java.lang.ScopedValue$Carrier.call(ScopedValue.java:419)
+	at io.javanatic.harness.agent.AgentRegistry.withInitiator(AgentRegistry.java:100)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$1(AgentLoopImpl.java:199)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+10月 17, 2026 8:50:00 下午 io.javanatic.harness.agentloop.AgentLoopImpl runTurn
+严重: turn 1 failed
+io.javanatic.harness.session.DurabilityException: flush barrier failed for session a20: java.lang.IllegalStateException: disk full
+	at io.javanatic.harness.session.SessionStore.flush(SessionStore.java:87)
+	at io.javanatic.harness.tools.ToolExecutorImpl.execute(ToolExecutorImpl.java:62)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runStepLoop(AgentLoopImpl.java:466)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runTurn(AgentLoopImpl.java:322)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.drivePendingWork(AgentLoopImpl.java:215)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$ensureDriver$0(AgentLoopImpl.java:180)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$2(AgentLoopImpl.java:200)
+	at java.base/jdk.internal.vm.ScopedValueContainer.callWithoutScope(ScopedValueContainer.java:162)
+	at java.base/jdk.internal.vm.ScopedValueContainer.call(ScopedValueContainer.java:147)
+	at java.base/java.lang.ScopedValue$Carrier.call(ScopedValue.java:419)
+	at io.javanatic.harness.agent.AgentRegistry.withInitiator(AgentRegistry.java:100)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$1(AgentLoopImpl.java:199)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+Caused by: java.lang.IllegalStateException: disk full
+	at io.javanatic.harness.agentloop.AgentLoopTest.lambda$toolBatchBarrierFailureStopsExecutionAfterCallsLanded$0(AgentLoopTest.java:610)
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:218)
+	at io.javanatic.harness.kernel.events.Events.lambda$notifyAndWait$0(Events.java:144)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1825)
+	at java.base/java.util.concurrent.ThreadPerTaskExecutor$TaskRunner.run(ThreadPerTaskExecutor.java:291)
+	... 1 more
+
+10月 17, 2026 8:50:00 下午 io.javanatic.harness.agentloop.AgentLoopImpl runTurn
+严重: turn 1 failed
+io.javanatic.harness.session.DurabilityException: flush barrier failed for session a19: java.lang.IllegalStateException: disk full
+	at io.javanatic.harness.session.SessionStore.flush(SessionStore.java:87)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runStepLoop(AgentLoopImpl.java:422)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runTurn(AgentLoopImpl.java:322)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.drivePendingWork(AgentLoopImpl.java:215)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$ensureDriver$0(AgentLoopImpl.java:180)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$2(AgentLoopImpl.java:200)
+	at java.base/jdk.internal.vm.ScopedValueContainer.callWithoutScope(ScopedValueContainer.java:162)
+	at java.base/jdk.internal.vm.ScopedValueContainer.call(ScopedValueContainer.java:147)
+	at java.base/java.lang.ScopedValue$Carrier.call(ScopedValue.java:419)
+	at io.javanatic.harness.agent.AgentRegistry.withInitiator(AgentRegistry.java:100)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$1(AgentLoopImpl.java:199)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+Caused by: java.lang.IllegalStateException: disk full
+	at io.javanatic.harness.agentloop.AgentLoopTest.lambda$dispatchBarrierFailureBlocksLlmCallWithDiskKind$0(AgentLoopTest.java:577)
+	at io.javanatic.harness.kernel.events.Events.invokePropagating(Events.java:218)
+	at io.javanatic.harness.kernel.events.Events.lambda$notifyAndWait$0(Events.java:144)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1825)
+	at java.base/java.util.concurrent.ThreadPerTaskExecutor$TaskRunner.run(ThreadPerTaskExecutor.java:291)
+	... 1 more
+
+10月 17, 2026 8:50:00 下午 io.javanatic.harness.agentloop.AgentLoopImpl runTurn
+严重: turn 1 failed
+io.javanatic.harness.llm.LlmCallException: deepseek http 429
+	at io.javanatic.harness.agentloop.AgentLoopTest.lambda$llmFailureKindMapsToTurnEndReason$0(AgentLoopTest.java:556)
+	at io.javanatic.harness.llm.RoutingLlmService.stream(RoutingLlmService.java:31)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runStepLoop(AgentLoopImpl.java:425)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runTurn(AgentLoopImpl.java:322)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.drivePendingWork(AgentLoopImpl.java:215)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$ensureDriver$0(AgentLoopImpl.java:180)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$2(AgentLoopImpl.java:200)
+	at java.base/jdk.internal.vm.ScopedValueContainer.callWithoutScope(ScopedValueContainer.java:162)
+	at java.base/jdk.internal.vm.ScopedValueContainer.call(ScopedValueContainer.java:147)
+	at java.base/java.lang.ScopedValue$Carrier.call(ScopedValue.java:419)
+	at io.javanatic.harness.agent.AgentRegistry.withInitiator(AgentRegistry.java:100)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$1(AgentLoopImpl.java:199)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+10月 17, 2026 8:50:00 下午 io.javanatic.harness.agentloop.AbortController cancel
+警告: cancel action failed
+java.lang.IllegalStateException: boom
+	at io.javanatic.harness.agentloop.AbortControllerTest.lambda$failingActionDoesNotBlockOthersOrCancellation$0(AbortControllerTest.java:45)
+	at io.javanatic.harness.agentloop.AbortController.cancel(AbortController.java:69)
+	at io.javanatic.harness.agentloop.AbortControllerTest.failingActionDoesNotBlockOthersOrCancellation(AbortControllerTest.java:48)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+
+[it21] ReadLedger.fold over 20002 events: 4 ms
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'alpha' from 'project' shadows 'user'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'deploy' from 'project' shadows 'user'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-0' from 'root-1' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-0' from 'root-1' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-0' from 'root-1' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-0' from 'root-1' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-0' from 'root-1' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-2147483646' from 'root-2' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-2147483646' from 'root-2' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-2147483646' from 'root-2' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-2147483646' from 'root-2' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-2147483646' from 'root-2' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-9' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-9' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-9' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-9' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-9' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-9' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--6' from 'root-0' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--6' from 'root-0' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--6' from 'root-0' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--6' from 'root-0' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared-1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--2' from 'root-0' shadows 'root-1'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--2' from 'root-0' shadows 'root-1'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--2' from 'root-0' shadows 'root-1'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--3' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--3' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--3' from 'root-0' shadows 'root-2'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--1' from 'root-1' shadows 'root-3'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--23' from 'root-0' shadows 'root-5'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--23' from 'root-0' shadows 'root-5'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--23' from 'root-0' shadows 'root-5'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--23' from 'root-0' shadows 'root-5'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--23' from 'root-0' shadows 'root-5'
+10月 17, 2026 8:50:18 下午 io.javanatic.harness.skill.SkillRegistry winners
+警告: skill 'shared--23' from 'root-0' shadows 'root-5'
+timestamp = 2026-10-17T20:50:18.742944, SkillCatalogMergePropertyTest:mergeResultIndependentOfRegistrationOrder =
+                              |-----------------------jqwik-----------------------
+tries = 1000                  | # of calls to property
+checks = 1000                 | # of not rejected calls
+generation = RANDOMIZED       | parameters are randomly generated
+after-failure = SAMPLE_FIRST  | try previously failed sample, then previous seed
+when-fixed-seed = ALLOW       | fixing the random seed is allowed
+edge-cases#mode = MIXIN       | edge cases are mixed in
+edge-cases#total = 0          | # of all combined edge cases
+edge-cases#tried = 0          | # of edge cases tried in current run
+seed = 9195246488102581254    | random seed to reproduce generated values
+
+
+10月 17, 2026 8:50:19 下午 io.javanatic.harness.skill.local.LocalSkills warnSkip
+警告: skill 'not-a-skill' at /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit418750772650747367/.harness/skills/not-a-skill skipped: missing SKILL.md
+10月 17, 2026 8:50:19 下午 io.javanatic.harness.skill.local.LocalSkills warnSkip
+警告: skill 'Bad_Name' at Root[path=/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit6930147092540372946/.harness/skills, priority=100, source=project-harness] skipped: name not kebab-case
+10月 17, 2026 8:50:19 下午 io.javanatic.harness.skill.local.LocalSkills warnSkip
+警告: skill 'empty-body' at /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit6930147092540372946/.harness/skills/empty-body skipped: frontmatter must start/end with '---' and declare name+description
+10月 17, 2026 8:50:19 下午 io.javanatic.harness.skill.local.LocalSkills warnSkip
+警告: skill 'mismatch' at /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit6930147092540372946/.harness/skills/mismatch skipped: frontmatter name 'other' != directory name
+10月 17, 2026 8:50:19 下午 io.javanatic.harness.skill.local.LocalSkills warnSkip
+警告: skill 'nodesc' at /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit6930147092540372946/.harness/skills/nodesc skipped: frontmatter must start/end with '---' and declare name+description
+10月 17, 2026 8:50:19 下午 io.javanatic.harness.skill.local.LocalSkills warnSkip
+警告: skill 'raw' at /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit6930147092540372946/.harness/skills/raw skipped: frontmatter must start/end with '---' and declare name+description
+10月 17, 2026 8:50:21 下午 io.javanatic.harness.mcp.stdio.StdioMcpConnection failExhausted
+严重: mcp server 'alpha' failed: reconnect exhausted after 2 attempts
+10月 17, 2026 8:50:22 下午 io.javanatic.harness.mcp.stdio.StdioMcpConnection handleBroken
+警告: mcp server 'alpha' connection lost; reconnecting (up to 2 attempts)
+10月 17, 2026 8:50:23 下午 io.javanatic.harness.mcp.stdio.StdioMcpConnection reconnectLoop
+信息: mcp server 'alpha' reconnected (4 tools, catalog reconciled)
+10月 17, 2026 8:50:24 下午 io.javanatic.harness.mcp.stdio.StdioMcpConnection reconnectLoop
+信息: mcp server 'alpha' reconnected (4 tools, catalog reconciled)
+10月 17, 2026 8:50:25 下午 io.javanatic.harness.mcp.stdio.StdioMcpConnection failDrift
+严重: mcp server 'alpha': server 清单与会话启动不一致，请重开会话（会话内清单冻结 T4；added=[drifted], removed=[], changed=[]）
+10月 17, 2026 8:50:25 下午 io.javanatic.harness.mcp.stdio.JsonRpcPeer dispatch
+警告: mcp server 'alpha' sent an unmatched response id 10003; dropped
+10月 17, 2026 8:50:40 下午 io.javanatic.harness.agentloop.AgentLoopImpl runTurn
+严重: turn 1 failed
+io.javanatic.harness.mcp.McpCatalogDriftException: mcp server 'alpha' 清单与会话启动不一致，请重开会话
+	at io.javanatic.harness.mcp.tool.McpToolPlugin.throwIfDrifted(McpToolPlugin.java:196)
+	at io.javanatic.harness.mcp.tool.McpToolPlugin.checkpoint(McpToolPlugin.java:185)
+	at io.javanatic.harness.mcp.tool.McpToolPlugin.lambda$apply$0(McpToolPlugin.java:97)
+	at io.javanatic.harness.kernel.events.Events.lambda$buildChain$0(Events.java:250)
+	at io.javanatic.harness.kernel.events.Events.waterfall(Events.java:173)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runStepLoop(AgentLoopImpl.java:411)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.runTurn(AgentLoopImpl.java:322)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.drivePendingWork(AgentLoopImpl.java:215)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$ensureDriver$0(AgentLoopImpl.java:180)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$2(AgentLoopImpl.java:200)
+	at java.base/jdk.internal.vm.ScopedValueContainer.callWithoutScope(ScopedValueContainer.java:162)
+	at java.base/jdk.internal.vm.ScopedValueContainer.call(ScopedValueContainer.java:147)
+	at java.base/java.lang.ScopedValue$Carrier.call(ScopedValue.java:419)
+	at io.javanatic.harness.agent.AgentRegistry.withInitiator(AgentRegistry.java:100)
+	at io.javanatic.harness.agentloop.AgentLoopImpl.lambda$spawnDriver$1(AgentLoopImpl.java:199)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+10月 17, 2026 8:50:40 下午 io.javanatic.harness.mcp.tool.McpToolPlugin apply
+警告: mcp__alpha__broken excluded: unsupported construct: oneOf
+10月 17, 2026 8:50:40 下午 io.javanatic.harness.mcp.tool.McpToolPlugin apply
+警告: mcp__alpha__broken excluded: unsupported construct: oneOf
+[approval] allow bash rm -rf /? [y/N] [approval] allow bash rm -rf /? [y/N] [approval] allow bash rm -rf /? [y/N] [approval] 等待超时（50ms）:无人应答,按拒绝处理——非交互场景请用 --approval=auto|deny;需要人闸请调 --approval-timeout=<秒>（0 = 不设限）
+[approval] allow bash rm -rf /? [y/N] [approval] allow bash rm -rf /? [y/N] [approval] allow bash rm -rf /? [y/N] [approval] allow bash rm -rf /? [y/N] [approval] allow bash rm -rf /? [y/N] [approval] allow echo echo {}? [y/N] [approval] 等待超时（1s）:无人应答,按拒绝处理——非交互场景请用 --approval=auto|deny;需要人闸请调 --approval-timeout=<秒>（0 = 不设限）
+10月 17, 2026 8:50:56 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:56 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:56 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:56 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:56 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$0
+警告: sandbox warning: confining policy "workspace-write" is configured but no sandbox backend is usable on platform "win32" (windows-acl probe failed (did not start (Cannot run program "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit9870506496494233482/no-such-jdk/bin/java": Exec failed, error: 2 (No such file or directory) ))); the first confined shell call will fail closed. Options: install bubblewrap, or overlay mode: danger-full-access (explicit bypass).
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241458591-88f5
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: resume session=nope
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+严重: 会话不存在: nope；用 jh --sessions 查看可用会话，再 --resume=<id>
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但审批为 AUTO（换 approval-ask / approval-deny）
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)
+10月 17, 2026 8:50:58 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+严重: API key 未提供（--api-key=… 或环境变量 DEEPSEEK_API_KEY；--verify 可无 key 运行）
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但审批为 AUTO（换 approval-ask / approval-deny）
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+Profile: headless   policy: STANDARD
+  composition: 25 rows, 30 discovered, 0 unreferenced
+  approval: AUTO (approval-auto; exempt=ask_user)
+  mcp: mcp-stdio + mcp-tool; tools=0
+  audit: jsonl /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit4690765817455299283 (durable)
+  stop: max-turns=50 max-steps=40 budget=unlimited
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+严重: API key 未提供（--api-key=… 或环境变量 JH_DEFINITELY_UNSET_VAR；--verify 可无 key 运行）
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+[approval] allow fs_write fs_write {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit13767005824925847281/escaped.txt","content":"escaped"}? [y/N] [approval] allow shell shell {"command":"ln -sf /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit13767005824925847281/linked-instructions.md AGENTS.md"}? [y/N] [approval] allow fs_write fs_write {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit13767005824925847281/escaped.txt","content":"escaped again"}? [y/N] 10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459471-3472
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: tool/call
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 11: tool/result
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 12: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 13: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459534-3910
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459558-1a51
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: resume session=headless-1792241459558-1a51
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.agentloop.AgentLoopImpl runTurn
+严重: turn 2 failed
+io.javanatic.harness.llm.LlmCallException: deepseek http 401
+	at io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter.httpFailure(OpenAiCompatAdapter.java:153)
+	at io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter.sendWithRetry(OpenAiCompatAdapter.java:122)
+	at io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter.produce(OpenAiCompatAdapter.java:82)
+	at io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter.lambda$stream$0(OpenAiCompatAdapter.java:70)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 11: session/end-seed
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 12: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 13: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 14: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 15: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 16: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 17: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459610-5488
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 7: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459631-a18d
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.agentloop.AgentLoopImpl runTurn
+严重: turn 1 failed
+io.javanatic.harness.llm.LlmCallException: deepseek http 401
+	at io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter.httpFailure(OpenAiCompatAdapter.java:153)
+	at io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter.sendWithRetry(OpenAiCompatAdapter.java:122)
+	at io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter.produce(OpenAiCompatAdapter.java:82)
+	at io.javanatic.harness.llm.openai.compat.OpenAiCompatAdapter.lambda$stream$0(OpenAiCompatAdapter.java:70)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 6: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459649-cecd
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: tool/call
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 11: tool/result
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 12: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 13: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: resume session=headless-1792241459649-cecd
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: tool/call
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 11: tool/result
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 12: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 13: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 14: session/end-seed
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 15: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 16: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 17: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 18: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 19: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 22: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 23: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 24: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459686-b51f
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459706-85a8
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459717-4666
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459721-7546
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 11: turn/end
+收到
+stats: turn=1 steps=1 tokens_in=0 tokens_out=0 elapsed=0.0s
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: resume session=headless-1792241459721-7546
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459746-50ff
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459758-f680
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+ok
+stats: turn=1 steps=1 tokens_in=0 tokens_out=0 elapsed=0.0s
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459775-9241
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+ok
+stats: turn=1 steps=1 tokens_in=0 tokens_out=0 elapsed=0.0s
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459792-cece
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+ok
+stats: turn=1 steps=1 tokens_in=0 tokens_out=0 elapsed=0.0s
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: resume session=headless-1792241459792-cece
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 11: session/end-seed
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 12: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 13: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 14: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 15: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 16: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 19: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 20: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 21: turn/end
+ok
+stats: turn=2 steps=1 tokens_in=0 tokens_out=0 elapsed=0.0s
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459825-ce7f
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+ok
+stats: turn=1 steps=1 tokens_in=0 tokens_out=0 elapsed=0.0s
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: resume session=headless-1792241459825-ce7f
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.session.SessionRecovery closeInterrupted
+警告: session headless-1792241459825-ce7f: appended 3 recovery fact(s) for interrupted tail
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 11: session/end-seed
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 12: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 13: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 14: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 15: tool/call
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 16: session/end-seed
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 17: tool/result
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 18: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 19: turn/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 20: turn/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 21: request/header
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 22: user/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 23: step/start
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 24: llm/request
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 27: assistant/message
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 28: step/end
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 29: turn/end
+ok
+stats: turn=3 steps=1 tokens_in=0 tokens_out=0 elapsed=0.0s
+10月 17, 2026 8:50:59 下午 io.javanatic.harness.session.persistence.jsonl.JsonlPersistence lambda$attach$3
+警告: flush barrier skipped for session repl-approval: no writer (never persisted here)
+[approval] allow echo echo {}? [y/N] 10月 17, 2026 8:50:59 下午 io.javanatic.harness.session.persistence.jsonl.JsonlPersistence lambda$attach$3
+警告: flush barrier skipped for session repl-approval: no writer (never persisted here)
+[approval] allow echo echo {}? [y/N] 10月 17, 2026 8:50:59 下午 io.javanatic.harness.session.persistence.jsonl.JsonlPersistence lambda$attach$3
+警告: flush barrier skipped for session repl-cancel: no writer (never persisted here)
+[approval] allow echo echo {}? [y/N] 10月 17, 2026 8:50:59 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241459890-4f52
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:51:00 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241462166-7a39
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 6: turn/end
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: resume session=headless-1792241462166-7a39
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 6: turn/end
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 7: session/end-seed
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: turn/start
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: request/header
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: user/message
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 11: step/start
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 12: llm/request
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 15: assistant/message
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 16: step/end
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 17: turn/end
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241462491-9cf6
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241462676-369d
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241462844-2bcd
+10月 17, 2026 8:51:02 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241462903-831b
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 6: turn/end
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain run
+信息: session=headless-1792241463034-d321
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 0: turn/start
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 1: request/header
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 2: skill/catalog
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 3: user/message
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 4: step/start
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 5: llm/request
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 8: assistant/message
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 9: step/end
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$6
+信息: 10: turn/end
+回答完成
+stats: turn=1 steps=1 tokens_in=0 tokens_out=0 elapsed=0.0s
+10月 17, 2026 8:51:03 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+[approval] allow fs_read fs_read {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit7005426928656317134/note.txt"}? [y/N] [approval] allow fs_write fs_write {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit7005426928656317134/written.txt","content":"written by scenario"}? [y/N] 10月 17, 2026 8:51:03 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+[approval] allow fs_read fs_read {"path":"/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit7005426928656317134/written.txt"}? [y/N] 10月 17, 2026 8:51:03 下午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+EXIT=0
+
+== surefire 汇总（package 后各模块 target/surefire-reports）==
+TOTAL Tests run: 701, Failures: 0, Errors: 0, Skipped: 23
+
+== 逐模块（surefire 报告数 = 测试类数）==
+bundle/base                      classes=3 tests=32/0/0/0
+core/agent-loop                  classes=8 tests=57/0/0/0
+core/agent                       classes=2 tests=13/0/0/0
+core/plan                        classes=1 tests=6/0/0/0
+core/preset                      classes=1 tests=4/0/0/0
+core/session                     classes=7 tests=41/0/0/0
+core/system-prompt               classes=1 tests=6/0/0/0
+core/todo                        classes=1 tests=6/0/0/0
+core/tools                       classes=3 tests=31/0/0/0
+examples/agent-spine             classes=4 tests=6/0/0/1
+examples/headless                classes=16 tests=82/0/0/0
+fs/local                         classes=2 tests=33/0/0/0
+fs/tool                          classes=2 tests=21/0/0/0
+interaction/approval             classes=2 tests=12/0/0/0
+interaction/ask                  classes=1 tests=5/0/0/0
+interaction/commands             classes=2 tests=11/0/0/0
+kernel/brand                     classes=1 tests=2/0/0/0
+kernel/config                    classes=3 tests=16/0/0/0
+kernel/core                      classes=3 tests=26/0/0/0
+llm/deepseek                     classes=2 tests=2/0/0/1
+llm/llm                          classes=3 tests=13/0/0/0
+llm/openai-compat                classes=2 tests=23/0/0/0
+llm/replay                       classes=1 tests=6/0/0/0
+mcp/stdio                        classes=4 tests=36/0/0/0
+mcp/tool                         classes=3 tests=28/0/0/0
+sandbox/local                    classes=4 tests=73/0/0/16
+sandbox/policy                   classes=1 tests=3/0/0/0
+sandbox/sandbox                  classes=1 tests=3/0/0/0
+session/persistence-jsonl        classes=2 tests=33/0/0/0
+shell/docker                     classes=1 tests=11/0/0/0
+shell/local                      classes=4 tests=23/0/0/5
+shell/tool                       classes=1 tests=3/0/0/0
+skill/local                      classes=2 tests=9/0/0/0
+skill/skill                      classes=2 tests=10/0/0/0
+skill/tool                       classes=3 tests=15/0/0/0

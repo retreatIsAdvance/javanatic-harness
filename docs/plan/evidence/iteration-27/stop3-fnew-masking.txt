@@ -1,0 +1,66 @@
+it27 停 3 修正批 F-new —— 递归脱敏（header/manifest + dump）
+日期: 2026-10-17
+工作区: /Users/abel_yang/study/deepseek/javanatic-harness（master）
+JAVA_HOME: /usr/libexec/java_home -v 25
+mvn: ~/Documents/apache-maven-3.10.0/bin/mvn
+
+== 1. 终态聚焦套件（脱敏规则 + 两个序列化边界）==
+$ mvn -B -q -pl kernel/config,bundle/base,session/persistence-jsonl -am test
+EXIT=0
+
+surefire 逐类计数（target/surefire-reports/*.txt）:
+ConfigValuesTest     Tests run: 4,  Failures: 0, Errors: 0, Skipped: 0
+AppBootTest          Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+JsonlPersistenceTest Tests run: 26, Failures: 0, Errors: 0, Skipped: 0
+
+覆盖:
+- ConfigValues.masked：任意深度递归、敏感键子串（apikey|token|secret|password|key，
+  不区分大小写）、值恒为 ****、键保留、LinkedHashMap 键序保留、非敏感值原样、
+  敏感键 null 也掩、嵌套非字符串键 fail loud、返回副本不改写调用方输入；
+- AppBoot.dump：MCP servers[].env 的 GITHUB_TOKEN 掩为 ****，MODE 原样，键序保持；
+- JsonlPersistence.HeaderCodec.write：header.json 的 manifest 写入期脱敏，load 读回
+  的清单值为 ****（fold 只需键名，不需要 env 值——R1 无损）。
+
+== 2. 突变 M1：嵌套 map 不递归 ==
+改动: ConfigValues.maskValue 的 `return maskMap(nested)` → `return nested`
+$ mvn -B -q -pl kernel/config -am test
+EXIT=1
+[ERROR] ConfigValuesTest.masksNestedEnvSecretsAndKeepsNonSensitiveValues:47
+[ERROR] ConfigValuesTest.nonStringNestedMapKeyFailsLoud:87
+[ERROR] Tests run: 16, Failures: 2, Errors: 0, Skipped: 0
+（嵌套 env 未掩 + 嵌套非字符串键不再触发 fail loud → 两例红）
+
+== 3. 突变 M2：LinkedHashMap → HashMap（键序丢失）==
+改动: `new LinkedHashMap<>()` → `new java.util.HashMap<>()`（同时清理 import 以过 spotless）
+$ mvn -B -q -pl kernel/config -am test
+EXIT=1
+[ERROR] ConfigValuesTest.preservesKeyOrderAtEveryLevel:69
+[ERROR] Tests run: 16, Failures: 1, Errors: 0, Skipped: 0
+（单字符键 c/b/a 插入序反向，HashMap 按桶序迭代 → 键序断言红）
+
+== 4. 突变 M3：敏感键词表收窄为 apikey ==
+改动: SENSITIVE_MARKERS = List.of("apikey")
+$ mvn -B -q -pl kernel/config -am test
+EXIT=1
+[ERROR] ConfigValuesTest.masksNestedEnvSecretsAndKeepsNonSensitiveValues:43
+[ERROR] ConfigValuesTest.sensitiveKeyWithNullValueIsMasked:80
+[ERROR] Tests run: 16, Failures: 2, Errors: 0, Skipped: 0
+（TOKEN / password / key 子串不再命中 → 两例红）
+
+== 5. 突变 M4：header 写入路径绕过脱敏 ==
+改动: HeaderCodec.write 的 `ConfigValues.masked(row.config()).forEach` → `row.config().forEach`
+      （同时清理 import）
+$ mvn -B -q -pl session/persistence-jsonl -am \
+      -Dtest=JsonlPersistenceTest -Dsurefire.failIfNoSpecifiedTests=false test
+EXIT=1
+[ERROR] JsonlPersistenceTest.headerManifestMasksSensitiveValuesRecursively:219
+[ERROR] Tests run: 26, Failures: 1, Errors: 0, Skipped: 0
+（header.json 出现明文 ghp-secret/top-secret/sk-secret/other-secret → 红）
+
+== 6. 还原逐字节验证 ==
+$ shasum -a 256 kernel/config/src/main/java/io/javanatic/harness/kernel/config/ConfigValues.java \
+                session/persistence-jsonl/src/main/java/io/javanatic/harness/session/persistence/jsonl/JsonlPersistence.java
+91dbb279d06201472f5c0a388404e935f652aa61c124d88356d5d6d5b79e67cb  kernel/config/.../ConfigValues.java
+d8225f12af252ab7d46bc5c309d1833179c3bf9a1d36b719d90cd6817aa0cffc  session/persistence-jsonl/.../JsonlPersistence.java
+
+还原后复跑第 1 节 → EXIT=0（终态数据即第 1 节）。

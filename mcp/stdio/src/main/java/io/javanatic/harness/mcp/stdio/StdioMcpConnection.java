@@ -345,7 +345,10 @@ final class StdioMcpConnection implements McpServerConnection {
             + "' tools/list pagination exceeds " + MAX_LIST_PAGES + " pages");
     }
 
-    /** 单条工具校验（T2 raw 名拒 "__"；重名 fail loud；inputSchema 必填——畸形不静默）。 */
+    /**
+     * 单条工具校验（raw 名非空——含 "__"/非法字符/超长不拒，由消费面确定性归一；
+     * 重名 fail loud；inputSchema 必填——畸形不静默）。
+     */
     private FrozenTool parseTool(JsonNode node, Set<String> seen) {
         if (!node.isObject()) {
             throw new McpProtocolException("mcp server '" + config.id()
@@ -357,10 +360,6 @@ final class StdioMcpConnection implements McpServerConnection {
                 + "' tools/list entry missing 'name': " + node);
         }
         String name = nameNode.asText();
-        if (name.contains("__")) {
-            throw new McpProtocolException("mcp server '" + config.id() + "' tool '" + name
-                + "' must not contain '__' (tool names become mcp__<server>__<raw>)");
-        }
         if (!seen.add(name)) {
             throw new McpProtocolException("mcp server '" + config.id()
                 + "' lists duplicate tool '" + name + "'");

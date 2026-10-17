@@ -138,11 +138,13 @@
         <!--
           candidate-closure：候选件行集比发布件多出的坐标收在这里（it26 follow-up——
           skill 三行入 base bundle 后，本示例运行闭包漏同步，CI build 腿红于 boot 期
-          「行引用的插件未发现: skill; skill-local; skill-tool」）。默认生效＝候选腿；
-          发布腿（0.2.0 发布面冻结于 skill 之前，无这些坐标）必须 -P '!candidate-closure'
-          停用，否则解析 0.2.0 处不存在的坐标即败——见 integration/verify-consumer.sh
-          的 leg() 与 docs/release.md 发布后清单「发布腿重指」（新发布版已含的坐标
-          折回上方基础块，本 profile 只留候选新坐标）。
+          「行引用的插件未发现: skill; skill-local; skill-tool」；it27 同规追加
+          mcp 三坐标：mcp-mcp（契约件）/ mcp-stdio / mcp-tool（后两者为行））。默认
+          生效＝候选腿；发布腿（0.2.0 发布面冻结于 skill 之前，无这些坐标）必须
+          -P '!candidate-closure' 停用，否则解析 0.2.0 处不存在的坐标即败——见
+          integration/verify-consumer.sh 的 leg() 与 docs/release.md 发布后清单
+          「发布腿重指」（新发布版已含的坐标折回上方基础块，本 profile 只留候选新
+          坐标）。
         -->
         <profile>
             <id>candidate-closure</id>
@@ -163,6 +165,21 @@
                 <dependency>
                     <groupId>io.github.retreatisadvance</groupId>
                     <artifactId>harness-skill-tool</artifactId>
+                    <version>${harness.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.retreatisadvance</groupId>
+                    <artifactId>harness-mcp-mcp</artifactId>
+                    <version>${harness.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.retreatisadvance</groupId>
+                    <artifactId>harness-mcp-stdio</artifactId>
+                    <version>${harness.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.retreatisadvance</groupId>
+                    <artifactId>harness-mcp-tool</artifactId>
                     <version>${harness.version}</version>
                 </dependency>
             </dependencies>

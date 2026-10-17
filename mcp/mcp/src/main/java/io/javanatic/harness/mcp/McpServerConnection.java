@@ -14,7 +14,7 @@ import java.util.List;
  */
 public interface McpServerConnection {
 
-    /** server id（kebab-case；配置校验与 tools/list 校验两处拒含 "__"）。 */
+    /** server id（kebab-case；配置面拒含 "__"）。 */
     String serverId();
 
     /** 当前连接状态（诊断面；工具面不因状态变化而增删——清单冻结）。 */

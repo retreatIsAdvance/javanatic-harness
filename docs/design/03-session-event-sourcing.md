@@ -449,7 +449,11 @@ public final class SessionEventCodecs {
 
 **（it14）第三个生产实例 `assistant/chunk`**：流式事实（逐 chunk 落账，渲染/TTFT 消费），`ignorable=true`（投影不读，装配仍走 assistant/message）。机制结论与归属（家 `core/agent-loop`，不进核心 permits 的依赖环理由）见 §1。
 
-**（it26）第四个生产实例 `skill/catalog`**（家 `skill/tool`）：技能目录快照（条目 = name / 描述截断 / 来源根），轮首经 `agent/pre-step` 挂点装载、变更才落账、无技能不落、清空落空事件退役。`ignorable=false`：目录是 Dynamic 提示段与按名装载的事实源，静默丢弃会毁 R1 重建（`plan/mode` 同款理据）。
+**（it14）第四个生产实例 `command/run` + `command/done`**（家 `interaction/commands`）：slash 命令的成对事实（开始 / 结束，结束含 `ok` 与细节），log-only、`ignorable=true`——交互面遥测，未知读取方跳过不改变消息重建语义。
+
+**（it26）第五个生产实例 `skill/catalog`**（家 `skill/tool`）：技能目录快照（条目 = name / 描述截断 / 来源根），轮首经 `agent/pre-step` 挂点装载、变更才落账、无技能不落、清空落空事件退役。`ignorable=false`：目录是 Dynamic 提示段与按名装载的事实源，静默丢弃会毁 R1 重建（`plan/mode` 同款理据）。
+
+**（it27）第六个生产实例 `mcp/catalog`**（家 `mcp/tool`）：冻结 MCP 工具清单快照（条目 = serverId / raw name / publicName / description / inputSchema），每轮 REQUEST 检查点比对、变更才落账；`logged` 记已连接子集，`DRIFTED` 时保持冻结面。`ignorable=false`：清单是工具注册与 R1 重建的唯一事实源（回放零网络零进程），静默丢弃会使历史请求不可重建（`skill/catalog` 同款理据）。publicName **直接入条目**而非 fold 时重算——命名算法版本变化不影响旧日志重建（纯函数是写入期的确定性，不是读取期的兼容承诺）。
 
 ### JSONL 布局与行格式
 
@@ -488,6 +492,7 @@ public final class JsonlPersistence implements SessionPersistence {
 - **（it19）恢复收口**:resume 装载后由 `SessionRecovery` 分析未完成尾形(悬空调用 = 消息级 tool_use ∪ 审计级 tool/call − 已配对 tool/result;开着的 turn/step),以恢复事实闭合:**不自动重放**——error `tool/result`(文案「结果未知,可自行核验」,`sourceEventSeqs` 引悬空调用/消息 seq)+ `step/end` + `turn/end(Aborted("interrupted"))`;事实在 end-seed **之后**追加(`firstLiveSeq` 语义内)、分析纯函数、收口幂等。理由:悬空 tool_use 使 resume 后首个真实请求违反 OpenAI 配对契约(400)。
 - **（it19.1）surface codec 的 provenance 落盘口径**:写侧 `sourceEventSeqs` **非 null 即写**(与 `Replace` 分支解耦——Append 亦然),读侧按 key 存在即回(此前仅 Replace 落盘,Append——含 it19 恢复事实——重载丢来源,provenance 只是进程内契约);旧日志缺键读为 null(v0 口径,无兼容垫片)。往返矩阵与旧格式读侧用例在 `JsonlPersistenceTest`。
 - **（it21）项目说明装载**:`project/instructions`(time/path/sha256/truncated/content)**进核心 permits**(占位在 `RequestHeader` 与 `SessionEndSeedEvent` 之间)——它是核心事实而非插件扩展,理由同 `request/header`(提示词组装读日志,值须落账);`ignorable=true`(遥测性:跳过不改变消息重建语义,旧读取方可跳过;读它的是提示词组装的说明段)。装载在轮首、`request/header` 之后:内容与指纹进事件,loop 只做「最新事件 path+sha256 与本次装载相同则不追加」的去重(日志有界);文件不存在静默跳过(多数会话无说明文件,不落账不报错)、读取失败 WARN 降级不炸 turn、内容为空不落账。段渲染见 04 §4。
+- **（it27）组合清单结构化与写入期脱敏**:`CompositionManifest.Row.config` 由扁平字符串值扩为结构化值(`Map<String,Object>`,嵌套 map/list 保持插入序——`mcp-stdio.servers[]` 是首个需要嵌套结构的行配置);持久化 header 写入路径与 `AppBoot.dump` **共用同一递归脱敏规则**`ConfigValues.masked`:任意深度、键名含 `apikey|token|secret|password|key`(不区分大小写)→ 值替换 `****`、**键与键序保留**。脱敏只在写入/展示边界发生,内存 manifest 保留原值供装配与运行期消费;**R1 无损**——重建只需键名与结构,不需凭据值(header 一次性写入,写入期脱敏不构成派生失真)。非字符串键 fail loud(无法判定敏感性时不静默放行)。
 
 - **load 重建**:逐行信封,seq == 行号校验(跳号/重复拒绝);未知 type 按信封 ignorable 跳过或拒绝;header 往返含 FORMAT_VERSION。
 

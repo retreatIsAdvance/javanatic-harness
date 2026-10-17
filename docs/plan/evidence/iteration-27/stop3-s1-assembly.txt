@@ -1,0 +1,112 @@
+it27 停 3-S1 取证：bundle 两行 + 四处消费面 + verify 摘要扩展
+采集时间：2026-10-17 10:20–10:32 (+08:00)
+基线：08cc1e9（停 2 提交后，工作区仅本停改动）
+
+## 1. 改动面（git diff --stat）
+
+ bundle/base/pom.xml                                | 12 ++++++
+ .../META-INF/harness/bundle.yml                    |  8 ++++
+ .../io/javanatic/harness/boot/AppBootTest.java     |  2 +-
+ dist/jh/pom.xml                                    |  3 ++
+ docs/design/07-profile-bundle.md                   |  9 ++--
+ docs/embedding.md                                  | 12 +++---
+ examples/headless/pom.xml                          | 13 ++++++
+ .../examples/headless/HeadlessMain.java            | 25 +++++++++++
+ .../examples/headless/HeadlessVerifyTest.java      | 48 ++++++++++++++++++++++
+ integration/consumer-sample/pom.xml                | 18 +++++++-
+ .../persistence/jsonl/JsonlPersistence.java        | 45 ++++++++++++++++++--
+ .../persistence/jsonl/JsonlPersistenceTest.java    | 30 ++++++++++++++
+ 12 files changed, 211 insertions(+), 14 deletions(-)
+（另新增两文件：mcp/stdio/src/main/resources/META-INF/services/...；
+ examples/headless/src/test/resources/verify-fixture/VerifyFixture.java）
+
+四处消费面全部同批：
+- dist/jh/pom.xml：jlink modules += io.javanatic.harness.mcp.{mcp,stdio,tool}
+- examples/headless/pom.xml：compile 依赖 += harness-mcp-{mcp,stdio,tool}
+- integration/consumer-sample/pom.xml：candidate-closure += 同三坐标
+- docs/embedding.md §2：基础依赖口径保持 15 条 + bundle-base = 16 条；
+  候选闭包另记 skill 三件 + mcp 三坐标（mcp-mcp 契约件，mcp-stdio/mcp-tool 为行）
+内部第五处：bundle/base/pom.xml 测试闭包 += mcp-stdio/mcp-tool（ServiceLoader 可见），
+AppBootTest 发现清单 += "mcp-stdio", "mcp-tool"。
+
+## 2. 装配期发现的两个真实集成缺陷
+
+### 2.1 classpath 通道缺 services 文件（首跑红）
+
+首跑 `mvn -B -pl bundle/base -am test` → 4 failures + 7 errors，代表性文案：
+
+    行引用的插件未发现: mcp-stdio
+
+根因：mcp/stdio 只有 module-info `provides`，surefire fork 走 classpath，
+ServiceLoader 只认 META-INF/services；mcp/tool 与 skill 三件均有 services 文件。
+修复：新增
+    mcp/stdio/src/main/resources/META-INF/services/io.javanatic.harness.kernel.plugin.Plugin
+内容：
+    io.javanatic.harness.mcp.stdio.McpStdioPlugin
+复跑后 mcp-stdio 入发现清单，AppBootTest 22 例全绿。
+
+### 2.2 manifest 结构化 config 不可持久化（二跑红）
+
+二跑 `bootsBaseProfileAndManifestFlowsIntoHeader` 红：
+
+    IllegalStateException: manifest config 'servers' for 'mcp-stdio' not primitive: ArrayList
+      at JsonlPersistence$HeaderCodec.configValue(JsonlPersistence.java:580)
+
+根因：base 行 `servers: []` 进 CompositionManifest → SessionHeader 写盘，
+HeaderCodec 仅支持原语。修复：configValue/plainValue 递归支持
+List/Map/null（JSON 树），非 String map 键与其它类型 fail loud。
+设计判断：不把 servers 排除出 manifest——MCP server 配置影响模型可见工具面，
+属 R1 组合事实；排除会静默丢事实。
+
+新增回归用例：JsonlPersistenceTest#manifestConfigRoundTripsNestedValues
+（servers[] 内嵌 args[] 与 env{}；钉盘上树形 + 重载 manifest 等值）。
+注意：Map.copyOf 不承诺键序，盘上断言只钉树形（数组/对象两层），不钉字段序。
+
+### 2.3 新用例突变检查
+
+突变：HeaderCodec 的 List 分支改为 `throw new IllegalStateException("mutation: list unsupported")`
+→ 聚焦跑：
+
+    Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+    Caused by: java.lang.IllegalStateException: mutation: list unsupported
+    [ERROR] BUILD FAILURE
+
+还原后：
+
+    Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+    [INFO] BUILD SUCCESS
+
+## 3. 聚焦回归（三模块 + 上游）
+
+命令：
+    export JAVA_HOME=$(/usr/libexec/java_home -v 25 2>/dev/null || /usr/libexec/java_home)
+    ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl session/persistence-jsonl,bundle/base,examples/headless -am test
+
+结果（10:22:09 +08:00）：BUILD SUCCESS，1:06 min。
+本批测试类计数（surefire-reports）：
+- session-persistence-jsonl：JsonlPersistenceTest 25 + JsonlPersistenceListTest 7 = 32
+- bundle-base：AppBootTest 22 + RowComposerTest 4 + YamlRowsTest 5 = 31
+- examples-headless：16 类合计 82
+- mcp-stdio：35（16+5+10+4）
+- mcp-tool：26（8+11+7）
+headless 新用例：
+  HeadlessVerifyTest#verifyWithFixtureServerNamesMcpToolsOutsideExemptList
+  断言摘要行：
+    mcp: mcp-stdio + mcp-tool; tools=mcp__verify-fixture__echo (approval-required)
+    approval: AUTO (approval-auto; exempt=ask_user)
+  stderr 为空；夹具经测试资源 URI 定位、JDK 单文件源直跑，零联网。
+
+默认 profile 的既有 verify 用例补断言：
+    mcp: mcp-stdio + mcp-tool; tools=0
+
+## 4. validate
+
+    ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+    VALIDATE_EXIT=0
+（spotless/checkstyle 全仓通过；无规则削弱。）
+
+## 5. 留待后续停点
+
+- S2：jlink 镜像真跑（servers 空零进程零噪声、配置启停、--verify 注册面、
+  装配失败诊断），并复核 docs 25 rows / 30 discovered 实况。
+- S3：R1 端到端回放（catalog fold 零联网零进程）+ verify-consumer candidate 双腿。

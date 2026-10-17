@@ -1,0 +1,81 @@
+it27 收口批 —— T2 命名归一 + 1 MiB 真帧（含突变检查）
+日期: 2026-10-17
+工作区: /Users/abel_yang/study/deepseek/javanatic-harness（master，基线 08cc1e9 + 停 3 未提交改动）
+JAVA_HOME: /usr/libexec/java_home -v 25
+mvn: ~/Documents/apache-maven-3.10.0/bin/mvn
+
+== 1. 命名归一（T2 增补）==
+规则（纯函数，McpToolPlugin.publicName）:
+- serverId 配置面拒 '__'（McpServerConfig，fail loud；配置面维持）；
+- raw 合法（非空、无 '__'、仅 [A-Za-z0-9_-]、mcp__<server>__<raw> 总长 ≤ 64）→ 原样；
+- 否则非法字符→'_'、折叠连续 '_'、去首尾 '_'、按预算截断，追加 '_' + hash8
+  （sha256(serverId '\0' rawName) 前 8 hex）+ WARN；清洗为空退化为 "tool"；
+- catalog 条目直接记录 publicName（fold 不重跑算法）；读侧缺 publicName fail loud。
+
+钉死向量（shasum -a 256 独立核验）:
+$ printf 'beta\0a__b' | shasum -a 256 | cut -c1-8
+ff2d9f4e  → mcp__beta__a_b_ff2d9f4e
+$ printf 'alpha\0My Tool.v2' | shasum -a 256 | cut -c1-8
+4d1308b1  → mcp__alpha__My_Tool_v2_4d1308b1
+$ { printf 'alpha\0'; printf 'x%.0s' {1..80}; } | shasum -a 256 | cut -c1-8
+1cca3f0b  → 64 字符，前缀 mcp__alpha__、后缀 _1cca3f0b
+
+覆盖用例:
+- McpToolPluginTest#dunderRawNamesNormalizeDeterministicallyAndRemainCallable
+  （WARN 文案 + 注册名 + 调用桥回 raw 名）
+- McpToolPluginTest#publicNameIsPureBoundedAndFailLoudOnImpossiblePrefix
+  （合法原样 / 非法清洗 / description/schema 无关 / 长度 64 / 超短 server 预算 fail loud /
+   serverId '__' fail loud）
+- McpStdioPluginTest#doubleUnderscoreRawNameIsAcceptedAtTransport（transport 不再拒 raw '__'）
+- McpCatalogLedgerTest#codecRejectsPreNormalizationLedger（旧账缺 publicName fail loud）
+
+== 2. 突变 T2：去掉 hash 后缀 ==
+改动: McpToolPlugin `return new PublicName(prefix + sanitized + suffix, true);`
+      → `return new PublicName(prefix + sanitized, true);`
+$ mvn -B -q -pl mcp/tool -am test -Dtest=McpToolPluginTest,McpCatalogLedgerTest -Dsurefire.failIfNoSpecifiedTests=false
+EXIT=1
+[ERROR] McpToolPluginTest.dunderRawNamesNormalizeDeterministicallyAndRemainCallable:...
+expected to contain exactly: ["mcp__alpha__ok", "mcp__beta__a_b_ff2d9f4e"]
+but some elements were not found: ["mcp__beta__a_b_ff2d9f4e"]
+and others were not expected: ["mcp__beta__a_b"]
+[ERROR] McpToolPluginTest.publicNameIsPureBoundedAndFailLoudOnImpossiblePrefix:172
+expected: "mcp__alpha__My_Tool_v2_4d1308b1"
+ but was: "mcp__alpha__My_Tool_v2"
+[ERROR] Tests run: 17, Failures: 2, Errors: 0, Skipped: 0
+
+还原后逐字节验真:
+$ shasum -a 256 mcp/tool/.../McpToolPlugin.java
+85a8e0120dd83e7713ecf069050b34aa037c76a8c192dc80bae7df6690388c31
+
+== 3. 1 MiB 真帧（大输出）==
+用例: McpStdioCallTest#oneMebibyteResultFrameRoundTripsIntact
+（夹具 --big-bytes 1048576 → tools/call 单帧 1 MiB 文本 → 断言内容长度与逐字符相等）
+
+== 4. 突变大帧：读侧截断 1024 字符 ==
+改动: JsonRpcPeer.readLoop `dispatch(line);`
+      → `dispatch(line.substring(0, Math.min(line.length(), 1024)));`
+$ mvn -B -q -pl mcp/stdio -am test -Dtest=McpStdioCallTest -Dsurefire.failIfNoSpecifiedTests=false
+EXIT=1
+[ERROR] McpStdioCallTest.oneMebibyteResultFrameRoundTripsIntact » McpProtocol
+mcp server 'alpha' sent a malformed frame: {"jsonrpc":"2.0","id":3,...
+[ERROR] Tests run: 6, Failures: 0, Errors: 1, Skipped: 0
+
+还原后逐字节验真:
+$ shasum -a 256 mcp/stdio/.../JsonRpcPeer.java
+1071312e387ea65dcfb99b3aeb4102abf78f07906812166c7f1b5350da475b4b
+
+== 5. 还原后终态复绿 ==
+$ mvn -B -pl mcp/tool,mcp/stdio -am test
+EXIT=0
+mcp/stdio: Tests run: 36, Failures: 0, Errors: 0, Skipped: 0
+  McpServerConfigTest 16 / McpStdioRecoveryTest 4 / McpStdioCallTest 6 / McpStdioPluginTest 10
+mcp/tool: Tests run: 28, Failures: 0, Errors: 0, Skipped: 0
+  McpToolPluginTest 8 / McpCatalogLedgerTest 9 / McpSchemaMappingTest 11
+（-am 另带上游 kernel/core/llm/agent-loop 全部绿；本档只记本组两模块）
+
+== 6. 大输出上限的诚实登记（不宣称不存在的统一限额）==
+- transport 读路径对 1 MiB 单帧无截断（上测）；
+- ToolExecutor 没有通用结果字节上限；fs/shell 的 maxReadBytes/maxOutputBytes 是
+  各自 Provider 的上限，不适用于 MCP 结果；
+- 因此「大输出走既有输出限额」的初稿措辞不成立，已在 iteration-27 偏离表登记；
+  统一 MCP 结果字节上限挂 it27.1（与 Streamable HTTP 合并设计）。

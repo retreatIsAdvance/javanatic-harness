@@ -3,6 +3,7 @@ package io.javanatic.harness.boot;
 import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.kernel.config.ConfigRowSpec;
 import io.javanatic.harness.kernel.config.ConfigService;
+import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.kernel.config.ExpressionResolver;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
@@ -139,7 +140,7 @@ public final class AppBoot {
         for (ConfigRowSpec row : rows) {
             out.append(row.plugin());
             if (!row.config().isEmpty()) {
-                out.append(' ').append(masked(row.config()));
+                out.append(' ').append(ConfigValues.masked(row.config()));
             }
             if (disabledText(row) != null) {
                 out.append("  (disabled: ").append(disabledText(row)).append(')');
@@ -156,14 +157,6 @@ public final class AppBoot {
             case ConfigRowSpec.Insert insert -> insert.disabled();
             case ConfigRowSpec.Remove ignored -> null;
         };
-    }
-
-    /** 凭据键脱敏——dump 是人读输出,字面量 key 永不落盘。 */
-    private static Map<String, Object> masked(Map<String, Object> config) {
-        Map<String, Object> out = new HashMap<>();
-        config.forEach((key, value) -> out.put(key,
-            key.toLowerCase().contains("apikey") && value != null ? "****" : value));
-        return out;
     }
 
     /**

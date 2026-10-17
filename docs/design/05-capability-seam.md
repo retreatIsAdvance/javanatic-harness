@@ -610,6 +610,53 @@ public final class PersistencePlugin implements Plugin {
 
 ---
 
+## 7.1 完整 Seam：MCP（it27）
+
+### Definition（`harness.mcp.mcp`，零第三方）
+
+```java
+public interface McpClientService {
+    ServiceKey<McpClientService> KEY = new ServiceKey<>("mcp");
+    List<McpServerConnection> connections();            // 按 server id 排序（稳定面）
+    Optional<McpServerConnection> connection(String serverId);
+}
+
+public interface McpServerConnection {
+    String serverId();
+    McpServerState state();                              // CONNECTED/RECONNECTING/FAILED/DRIFTED
+    List<McpToolDescriptor> tools();                     // 会话启动清单快照，冻结
+    McpCallResult call(String toolName, String argumentsJson, AbortSignal signal);
+}
+```
+
+`McpToolDescriptor(serverId, name, description, inputSchemaJson)` 的 schema 为 wire 原文 String——JSON 解析留在边界模块（transport 组帧与消费面映射各自持有，同 `core/tools` 信任边界先例）。`McpCallResult(content, isError)`：**工具级错误是数据**（远端 `isError` 标记，不抛、不炸 turn）；传输/协议失败走异常分档（`McpTimeoutException` / `McpProtocolException` / `McpCatalogDriftException` / `McpConnectionException`）。
+
+### Provider（`harness.mcp.stdio`，plugin id `mcp-stdio`）
+
+手写最小 JSON-RPC 2.0 stdio 客户端：换行分帧、`initialize` 协商、`tools/list`（分页上限 100 页）、`tools/call`、错误分档；子进程**装配期启动**、随 scope 回收（进程树清理）、stderr 转日志；env = 最小环境 + 行配置白名单；超时缺省 60s（server 级覆盖）；重连 500ms→30s ×10。官方 Java SDK 不采（绑 Reactor + 不定版本面，与同步写法/虚拟线程纪律冲突；dsh 亦自持 mcp-client）。进程**不经沙箱**：MCP server 是组合者显式配置的信任面（同插件本身），启动失败装配期 fail loud 并回滚已启动的 server。
+
+### Consumer（`harness.mcp.tool`，plugin id `mcp-tool`）
+
+经 `McpClientService` 取连接面 → 按启动清单注册进既有 `ScopedRegistry`（`approvalExempt=false`——MCP 工具**恒需审批**，无豁免出口）→ `mcp/catalog` 扩展事件落账（`ignorable=false`）→ 每轮 REQUEST 检查点核对状态（`DRIFTED` 抛 `McpCatalogDriftException` 落轮终；`FAILED` 按调用级 error result 降级，不牵连当前轮）。运行期**不 import transport**；插件 `requires "mcp-stdio"` 是组合面绑定（Streamable HTTP 引入时改 transport 中立 provides/requires，挂 it27.1）。
+
+### 公开命名（T2，纯函数）
+
+`mcp__<serverId>__<raw>`；serverId 配置面拒含 `__`（`mcp__a__b__c` 拼接二义消解）。raw 合法（非空、无 `__`、仅 `[A-Za-z0-9_-]`、总长 ≤ 64）→ 原样；否则清洗（非法字符→`_`、折叠 `_` 串、去边界 `_`）+ 按剩余预算截断 + 追加 `_<hash8>`（`sha256(serverId \0 rawName)` 前 8 hex）并 WARN——同名确定性、长度有界，不静默丢工具。`mcp/catalog` 条目**直接记 publicName**，fold 不重跑算法；读侧缺 `publicName` 的旧账 fail loud（算法版本进 schema 事实）。
+
+### Schema 边界（白名单）
+
+wire JSON Schema → `ValueSchema` 白名单映射：`type`（object/string/number/integer/boolean/array，递归）+ `description` + `properties`/`required`（未列者包 `Opt`）+ `items`（单对象形）；`enum`/`const` 降级拼进 description（**提示，不执法**）。不支持构造（`oneOf`/`anyOf`/`allOf`/`not`/`$ref` 系/if-then-else/`prefixItems`/`contains`/依赖族/`unevaluated*`/`additionalProperties` 模式形/白名单外关键字）→ **该工具排除 + WARN**；顶层非 object 同排除；属性级结构失败 → 该属性排除 + WARN、工具仍注册。远端结果 `content` 文本化面统一（`outputSchema` 不消费）。工具级 byte cap 不在本版：transport 读侧对单帧无行上限（1 MiB 真帧取证），且**没有统一 MCP 结果字节上限**（既有 fs/shell 限额不适用于 MCP）——挂 it27.1。
+
+### 状态与 T4
+
+清单会话启动冻结。重连只做续命 + 对账；对账不一致 → `DRIFTED`（终态）→ 消费面落轮终 `TurnEndReason.Error` +「请重开会话」，**不静默换面**。热换代（generation swap）机制上 JH 更简单（单线程轮屏障免双代），但必须走 **T4 修订**，不进 it27——与 Streamable HTTP 合并重裁（it27.1/28）。取消沿 `AbortSignal` 传播（checkAbort 轮询 + onCancel 中止等待并尽力通知远端；取消是正常路径，不落工具错误结果）。
+
+### dsh 对照挂账（it27 收口登记）
+
+`oneOf` 组合语义不映射；`enum`/`const` 只提示不执法；`outputSchema` 不消费；`taskSupport`（任务协商）不实现；`_hash8` 与合法 raw 名理论上可撞（如 raw 恰为 `x_1234abcd`），注册表 fail loud，退路为 dsh hash12 或前缀转义（命名算法变更须重裁 catalog 条目）。前四项随 Streamable HTTP 一并重访。
+
+---
+
 ## 8. ToolRegistry 与 ToolExecutor — R2 的落点
 
 > **R2（执行一致性）**：模型发起的副作用有且仅有一条路径——ToolCall → ToolExecutor pipeline（校验 → 审批 → 超时 → 执行 → 审计落账）。插件代码直接调 capability 是代码发起（过 review），不在此约束内。
@@ -776,6 +823,7 @@ public record ToolDefinition(
 | Session Persistence | `session.persistence` | `jsonl` | persistence 插件 | ✅ |
 | Approval | `interaction.approval` | `auto` / `ask` / `deny` | ToolExecutor 固定 stage | ✅ **真实** |
 | Commands | `interaction.commands` | （registry 内建） | headless REPL | ✅ |
+| MCP | `mcp.mcp` | `mcp-stdio`（stdio；HTTP 挂 it27.1） | `mcp.tool` | ✅（it27；清单冻结 + `mcp/catalog`）|
 | Subagent / Web / LSP / Terminal / Compaction | 各 Definition | —（留接口）| — | 🔌 接口 |
 
 留接口的 seam：Definition 模块完整定义接口和 `ServiceKey`，但不提供 Provider；组合时不挂载即可，未来加 Provider 不改任何 Consumer。

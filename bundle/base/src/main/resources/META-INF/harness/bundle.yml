@@ -66,6 +66,14 @@ rows:
     config:
       cwd: ${cwd}
   - plugin: skill-tool
+  # MCP 工具生态（it27）：stdio transport 与工具消费。servers 缺省为空 = 零噪声
+  # （不拉进程、不落事件、不注册工具）；装配期拉起全部已配 server（成本口径 07）。
+  # server 是 harness 直接子进程、以用户全权运行（不入沙箱——治理边界在工具调用面）。
+  # 工具名 mcp__<server>__<raw>，恒需审批（approvalExempt=false，无豁免出口）。
+  - plugin: mcp-stdio
+    config:
+      servers: []
+  - plugin: mcp-tool
   # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
   - plugin: todo
     config:

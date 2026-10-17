@@ -26,6 +26,7 @@ public final class McpCatalogCodec implements SessionEventCodec<McpCatalogEvent>
             entries.add(JsonValue.object()
                 .set("serverId", entry.serverId())
                 .set("name", entry.name())
+                .set("publicName", entry.publicName())
                 .set("description", entry.description())
                 .set("schema", entry.schema())
                 .build());
@@ -44,9 +45,16 @@ public final class McpCatalogCodec implements SessionEventCodec<McpCatalogEvent>
         }
         List<McpCatalogEvent.Entry> entries = new ArrayList<>(arr.items().size());
         for (JsonValue item : arr.items()) {
+            String publicName = item.get("publicName").asString();
+            if (publicName == null) {
+                // 归一化之前（it27 停 2/停 3 开发期）的账无法无损重建注册面
+                throw new IllegalStateException(
+                    "mcp/catalog entry missing 'publicName' (pre-normalization ledger)");
+            }
             entries.add(new McpCatalogEvent.Entry(
                 item.get("serverId").asString(),
                 item.get("name").asString(),
+                publicName,
                 item.get("description").asString(),
                 item.get("schema").asString()));
         }

@@ -1,0 +1,35 @@
+it27 收口 —— integration/verify-consumer.sh candidate（候选腿 + 四负例）
+日期: 2026-10-17 20:51:47
+工作区: /Users/abel_yang/study/deepseek/javanatic-harness（master）
+JAVA_HOME: /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+mvn: /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn
+
+$ MVN=$HOME/Documents/apache-maven-3.10.0/bin/mvn integration/verify-consumer.sh candidate
+仓库：/Users/abel_yang/study/deepseek/javanatic-harness
+候选版本：0.3.0-SNAPSHOT（取自根 pom）
+工作目录：/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T//consumer-sample.qG1U3w
+Maven：/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn
+Apache Maven 3.10.0 (c43a36b8d67be7e0805a411bc0898af1a51f5472)
+Maven home: /Users/abel_yang/Documents/apache-maven-3.10.0
+Java version: 25.0.4.1, vendor: Eclipse Adoptium, runtime: /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+Java：/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/java
+openjdk version "25.0.4.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS)
+== 腿 candidate：harness.version=0.3.0-SNAPSHOT，隔离本地仓 /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T//consumer-sample.qG1U3w/repo-candidate ==
+  ok   候选：工作树 install → 隔离仓（跳测试）
+  ok   candidate：示例编译
+  ok   candidate：运行类路径
+  ok   candidate：治理自证运行
+  ok   candidate：自证通过
+  ok   candidate：自有工具可见
+  ok   candidate：自有工具可执行
+  用时 324s
+== 四负例（候选仓 / 候选构建产物）==
+  ok   负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+  ok   负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+  ok   负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+  ok   负例④生产档撞 AUTO 审批必须 boot 抛错（已拒，文案含「policy=PRODUCTION 但审批为 AUTO」）
+
+== 汇总：candidate ==
+失败项：0
+EXIT=0

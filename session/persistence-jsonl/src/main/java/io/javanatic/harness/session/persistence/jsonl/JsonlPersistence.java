@@ -9,6 +9,7 @@ import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.session.event.ExtensionEvent;
 import io.javanatic.harness.session.event.LoggedEvent;
 import io.javanatic.harness.kernel.config.CompositionManifest;
+import io.javanatic.harness.kernel.config.ConfigValues;
 import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.persistence.JsonValue;
 import io.javanatic.harness.session.persistence.SessionCodecRegistry;
@@ -534,7 +535,8 @@ public final class JsonlPersistence implements SessionPersistence {
                 java.util.List<JsonValue> rows = new java.util.ArrayList<>();
                 for (CompositionManifest.Row row : header.manifest().rows()) {
                     JsonValue.Builder config = JsonValue.object();
-                    row.config().forEach((key, value) ->
+                    // 写入期脱敏:单点规则与 dump 同源——R1 fold 只需键名,不需 env 值
+                    ConfigValues.masked(row.config()).forEach((key, value) ->
                         config.set(key, configValue(row.plugin(), key, value)));
                     rows.add(JsonValue.object().set("plugin", row.plugin())
                         .set("config", config.build()).build());
@@ -565,7 +567,12 @@ public final class JsonlPersistence implements SessionPersistence {
                 (int) obj.get("seedLength").asLong(), manifest);
         }
 
-        /** manifest config 值只允许原语(YAML 边界),其余 fail loud。 */
+        /**
+         * manifest config 值：JSON 树值（原语 / 数组 / 对象，it27 起含结构化行配置如
+         * MCP {@code servers[]}），其余 fail loud。数字仍落 {@link JsonValue.Num}(long，
+         * 与事件词表一致)；嵌套 null 以 {@link JsonValue.Null} 表示（仅嵌套——Row 顶层
+         * 拒绝 null，见 {@code CompositionManifest.Row}）。
+         */
         private static JsonValue configValue(String plugin, String key, Object value) {
             if (value instanceof String text) {
                 return new JsonValue.Str(text);
@@ -576,8 +583,29 @@ public final class JsonlPersistence implements SessionPersistence {
             if (value instanceof Boolean bool) {
                 return new JsonValue.Bool(bool);
             }
+            if (value == null) {
+                return JsonValue.Null.INSTANCE;
+            }
+            if (value instanceof java.util.List<?> list) {
+                java.util.List<JsonValue> items = new java.util.ArrayList<>(list.size());
+                for (Object item : list) {
+                    items.add(configValue(plugin, key, item));
+                }
+                return new JsonValue.Arr(items);
+            }
+            if (value instanceof java.util.Map<?, ?> map) {
+                JsonValue.Builder object = JsonValue.object();
+                for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
+                    if (!(entry.getKey() instanceof String field)) {
+                        throw new IllegalStateException("manifest config '" + key + "' for '" + plugin
+                            + "' has non-string map key: " + entry.getKey());
+                    }
+                    object.set(field, configValue(plugin, key + "." + field, entry.getValue()));
+                }
+                return object.build();
+            }
             throw new IllegalStateException("manifest config '" + key + "' for '" + plugin
-                + "' not primitive: " + value.getClass().getSimpleName());
+                + "' not a JSON value: " + value.getClass().getSimpleName());
         }
 
         private static Object plainValue(JsonValue value) {
@@ -585,7 +613,20 @@ public final class JsonlPersistence implements SessionPersistence {
                 case JsonValue.Str str -> str.value();
                 case JsonValue.Num num -> num.value();
                 case JsonValue.Bool bool -> bool.value();
-                default -> throw new IllegalStateException("manifest config value not primitive: " + value);
+                case JsonValue.Null ignored -> null;
+                case JsonValue.Arr arr -> {
+                    java.util.List<Object> items = new java.util.ArrayList<>(arr.items().size());
+                    for (JsonValue item : arr.items()) {
+                        items.add(plainValue(item));
+                    }
+                    // 允许嵌套 null，且保持配置序（Map.copyOf/List.copyOf 会拒绝 null）
+                    yield java.util.Collections.unmodifiableList(items);
+                }
+                case JsonValue.Obj obj -> {
+                    java.util.Map<String, Object> fields = new java.util.LinkedHashMap<>();
+                    obj.fields().forEach((key, field) -> fields.put(key, plainValue(field)));
+                    yield java.util.Collections.unmodifiableMap(fields);
+                }
             };
         }
     }

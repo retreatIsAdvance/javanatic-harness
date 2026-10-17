@@ -1,5 +1,6 @@
 package io.javanatic.harness.session.persistence.jsonl;
 
+import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.kernel.scope.Scope;
@@ -161,6 +162,83 @@ class JsonlPersistenceTest {
             assertThat(Files.readAllLines(dir.resolve("log.jsonl"))).hasSize(2);
             assertThat(Files.readAllLines(dir.resolve("log.jsonl")).getFirst())
                 .contains("\"seq\":0").contains("\"type\":\"turn/start\"");
+        }
+    }
+
+    /** it27：manifest 的结构化行配置（MCP servers[]）递归落盘并逐层还原。 */
+    @Test
+    void manifestConfigRoundTripsNestedValues() throws Exception {
+        CompositionManifest manifest = new CompositionManifest(List.of(
+            new CompositionManifest.Row("mcp-stdio", Map.of(
+                "servers", List.of(Map.of(
+                    "id", "fixture",
+                    "args", List.of("a", "b"),
+                    "env", Map.of("MODE", "x"))),
+                "enabled", true))));
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(CompositionManifest.KEY, manifest);
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+
+            // map 键序不承诺（Map.copyOf），只钉树形：数组/对象两层的结构而非字符串化
+            assertThat(Files.readString(root.resolve("s1/header.json")))
+                .contains("\"servers\":[{")
+                .contains("\"args\":[\"a\",\"b\"]")
+                .contains("\"env\":{\"MODE\":\"x\"}")
+                .contains("\"enabled\":true");
+            SessionPersistence.Loaded loaded =
+                rt.root().require(SessionPersistence.KEY).load(live.id());
+            assertThat(loaded.header().manifest()).isEqualTo(manifest);
+        }
+    }
+
+    /** F-new：header/manifest 是凭据可能落盘的路径——任意深度脱敏、键保留、非敏感值原样。 */
+    @Test
+    @SuppressWarnings("unchecked")
+    void headerManifestMasksSensitiveValuesRecursively() throws Exception {
+        CompositionManifest manifest = new CompositionManifest(List.of(
+            new CompositionManifest.Row("mcp-stdio", Map.of(
+                "apiKey", "top-secret",
+                "servers", List.of(
+                    Map.of("id", "fixture",
+                        "env", Map.of("GITHUB_TOKEN", "ghp-secret", "MODE", "dev")),
+                    Map.of("id", "other",
+                        "env", Map.of("API_KEY", "other-secret"))))),
+            new CompositionManifest.Row("llm-openai-compat",
+                Map.of("apiKey", "sk-secret"))));
+        try (Runtime rt = new Runtime()) {
+            rt.root().provide(CompositionManifest.KEY, manifest);
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(root)));
+            Session live = liveSession(rt);
+            live.append(new TurnStart(1, 1));
+
+            String header = Files.readString(root.resolve("s1/header.json"));
+            assertThat(header).doesNotContain("top-secret")
+                .doesNotContain("ghp-secret")
+                .doesNotContain("other-secret")
+                .doesNotContain("sk-secret")
+                .contains("\"apiKey\":\"****\"")
+                .contains("\"GITHUB_TOKEN\":\"****\"")
+                .contains("\"MODE\":\"dev\"")
+                .contains("\"API_KEY\":\"****\"");
+
+            // load 还原的是脱敏后的清单（header 是写入期一次性脱敏，读取不再二次处理）
+            CompositionManifest loaded = rt.root().require(SessionPersistence.KEY)
+                .load(live.id()).header().manifest();
+            CompositionManifest.Row mcp = loaded.rows().stream()
+                .filter(row -> row.plugin().equals("mcp-stdio")).findFirst().orElseThrow();
+            assertThat(mcp.config()).containsEntry("apiKey", "****");
+            Map<String, Object> server = ((List<Map<String, Object>>) mcp.config().get("servers")).getFirst();
+            assertThat((Map<String, Object>) server.get("env"))
+                .containsEntry("GITHUB_TOKEN", "****")
+                .containsEntry("MODE", "dev");
+            assertThat(loaded.rows().stream()
+                .filter(row -> row.plugin().equals("llm-openai-compat"))
+                .findFirst().orElseThrow().config())
+                .containsEntry("apiKey", "****");
         }
     }
 

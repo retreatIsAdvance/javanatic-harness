@@ -128,9 +128,15 @@ class McpStdioPluginTest {
         assertStartFails(McpProtocolException.class, "--protocol-version", "2025-06-18");
     }
 
+    /** raw 名含 "__" 是合法远端名（消费面确定性归一）；装配不拒，原样进入冻结清单。 */
     @Test
-    void startFailsLoudOnReservedToolName() {
-        assertStartFails(McpProtocolException.class, "--bad-name");
+    void doubleUnderscoreRawNameIsAcceptedAtTransport() {
+        try (Runtime rt = runtimeWith(List.of(serverEntry("alpha", "--bad-name")))) {
+            new PluginLoader().loadAll(rt, List.of(new McpStdioPlugin()));
+            assertThat(rt.root().require(McpClientService.KEY).connection("alpha").orElseThrow().tools())
+                .extracting(McpToolDescriptor::name)
+                .contains("bad__name");
+        }
     }
 
     @Test

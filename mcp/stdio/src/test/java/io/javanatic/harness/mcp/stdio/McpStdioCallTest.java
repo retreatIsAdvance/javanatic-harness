@@ -173,6 +173,20 @@ class McpStdioCallTest {
         }
     }
 
+    /** 大输出真帧：1 MiB 结果经单行 JSON-RPC 帧完整往返（读侧无行上限、无截断）。 */
+    @Test
+    void oneMebibyteResultFrameRoundTripsIntact() {
+        int size = 1024 * 1024;
+        StdioMcpConnection connection = StdioMcpConnection.start(Fixtures.server("alpha",
+            Duration.ofSeconds(10), "--tools", "big", "--big-bytes", Integer.toString(size)), FAST);
+        try {
+            String content = connection.call("big", "{}", AbortSignal.never()).content();
+            assertThat(content).hasSize(size).isEqualTo("x".repeat(size));
+        } finally {
+            connection.close();
+        }
+    }
+
     /** JUL 捕获器：挂在 peer 日志树根部，全量收集（测试自行按级别/内容过滤）。 */
     private static final class RecordingHandler extends Handler {
 

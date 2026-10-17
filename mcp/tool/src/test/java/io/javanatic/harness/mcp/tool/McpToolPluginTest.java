@@ -130,23 +130,67 @@ class McpToolPluginTest {
         }
     }
 
-    /** `__` 拒绝规则消费侧廉价防御：fail loud + 局部回滚（不注册任何 MCP 工具）。 */
+    /** T2 增补：raw 含 "__" 不再拒收——确定性归一 + WARN；注册面用公开名、调用桥用 raw 名。 */
     @Test
-    void dunderNamesFailLoudAndRollBack() {
-        try (Runtime rt = new Runtime()) {
+    void dunderRawNamesNormalizeDeterministicallyAndRemainCallable() {
+        try (Runtime rt = new Runtime();
+             Fakes.LogCapture logs = new Fakes.LogCapture("io.javanatic.harness.mcp.tool")) {
+            Fakes.FakeConnection connection = new Fakes.FakeConnection("beta",
+                Fakes.tool("beta", "a__b", "bad", "{\"type\": \"object\"}"));
             rt.root().provide(McpClientService.KEY, new Fakes.FakeClient(
-                new Fakes.FakeConnection("alpha", Fakes.tool("alpha", "ok", "fine", "{\"type\": \"object\"}")),
-                new Fakes.FakeConnection("beta", Fakes.tool("beta", "a__b", "bad", "{\"type\": \"object\"}"))));
-            assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(
+                new Fakes.FakeConnection("alpha",
+                    Fakes.tool("alpha", "ok", "fine", "{\"type\": \"object\"}")),
+                connection));
+            new PluginLoader().loadAll(rt, List.of(
                 new SessionStorePlugin(), new ApprovalAutoPlugin(), new ToolsPlugin(),
-                new McpToolPlugin())))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("mcp-tool")
-                .hasRootCauseMessage("mcp tool naming conflict: '__' in 'beta/a__b'");
+                new McpToolPlugin()));
+
             assertThat(rt.root().require(ToolRegistry.KEY).definitions(rt.root()).stream()
-                .filter(definition -> definition.name().startsWith("mcp__")))
-                .isEmpty(); // alpha/ok 先注册也被回滚
+                .map(ToolDefinition::name).filter(name -> name.startsWith("mcp__")))
+                .containsExactly("mcp__alpha__ok", "mcp__beta__a_b_ff2d9f4e");
+            assertThat(logs.warnings()).anyMatch(warning -> warning.contains(
+                "mcp tool name normalized: beta/a__b -> mcp__beta__a_b_ff2d9f4e"));
+
+            Session session = Session.create(Session.newId("normalized"), null, null);
+            var results = rt.root().require(ToolExecutor.KEY).execute(List.of(
+                new ToolUseBlock(CallId.of("c1"), "mcp__beta__a_b_ff2d9f4e", "{}")),
+                session, 0, 0, rt.root(), AbortSignal.never());
+            assertThat(results.getFirst().event().block().isError()).isFalse();
+            assertThat(connection.lastToolName()).isEqualTo("a__b"); // raw 名直下 transport
         }
+    }
+
+    /** 归一纯函数：合法名零变化；非法/超长确定性有界；server id 过长/含 "__" fail loud。 */
+    @Test
+    void publicNameIsPureBoundedAndFailLoudOnImpossiblePrefix() {
+        McpToolDescriptor clean = Fakes.tool("alpha", "echo", "d", "{\"type\": \"object\"}");
+        assertThat(McpToolPlugin.publicName(clean))
+            .isEqualTo(new McpToolPlugin.PublicName("mcp__alpha__echo", false));
+
+        McpToolDescriptor invalid = Fakes.tool("alpha", "My Tool.v2", "d", "{\"type\": \"object\"}");
+        McpToolPlugin.PublicName normalized = McpToolPlugin.publicName(invalid);
+        assertThat(normalized.value()).isEqualTo("mcp__alpha__My_Tool_v2_4d1308b1");
+        assertThat(normalized.normalized()).isTrue();
+        // 名字只由 server/raw 决定（description/schema 不参与）
+        assertThat(McpToolPlugin.publicName(Fakes.tool("alpha", "My Tool.v2", "other",
+            "{\"type\": \"object\"}"))).isEqualTo(normalized);
+        assertThat(McpToolPlugin.publicName(Fakes.tool("alpha", "My_Tool_v2", "d",
+            "{\"type\": \"object\"}")).value()).isNotEqualTo(normalized.value()); // 合法名不加哈希
+
+        String longPublic = McpToolPlugin.publicName(
+            Fakes.tool("alpha", "x".repeat(80), "d", "{\"type\": \"object\"}")).value();
+        assertThat(longPublic).hasSize(64)
+            .startsWith("mcp__alpha__")
+            .endsWith("_1cca3f0b");
+
+        assertThatThrownBy(() -> McpToolPlugin.publicName(
+            Fakes.tool("a".repeat(60), "x", "d", "{\"type\": \"object\"}")))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("exceeds 64 chars");
+        assertThatThrownBy(() -> McpToolPlugin.publicName(
+            Fakes.tool("bad__id", "x", "d", "{\"type\": \"object\"}")))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("'__' in server id");
     }
 
     /** 撞名（预注册同层同名）fail loud：apply 失败包插件 id，根因是注册面拒绝。 */
@@ -193,8 +237,8 @@ class McpToolPluginTest {
                 .filter(McpCatalogEvent.class::isInstance)
                 .map(McpCatalogEvent.class::cast)
                 .findFirst().orElseThrow();
-            assertThat(catalog.entries()).containsExactly(
-                new McpCatalogEvent.Entry("alpha", "echo", "Echo text back", ECHO_SCHEMA));
+            assertThat(catalog.entries()).containsExactly(new McpCatalogEvent.Entry(
+                "alpha", "echo", "mcp__alpha__echo", "Echo text back", ECHO_SCHEMA));
             assertThat(rt.root().require(ToolRegistry.KEY).schemas(rt.root()))
                 .extracting(schema -> schema.name())
                 .contains("mcp__alpha__echo");

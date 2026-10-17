@@ -1,0 +1,85 @@
+it27 停 3-S3 取证：R1 折叠/回放 + 外部消费闭包 + 全量回归
+采集时间：2026-10-17 10:31–10:35 (+08:00)
+基线：08cc1e9 + 停 3 未提交工作树
+
+## 1. R1：mcp/catalog 折叠重建（零联网零进程）
+
+全量回归中 mcp/tool 三测试类全绿（/tmp/it27-full-test.log:2169–2198）：
+
+    McpToolPluginTest         Tests run: 7,  Failures: 0, Errors: 0
+    McpCatalogLedgerTest      Tests run: 8,  Failures: 0, Errors: 0
+    McpSchemaMappingTest      Tests run: 11, Failures: 0, Errors: 0
+
+其中 R1 两个关键用例：
+- `McpCatalogLedgerTest#foldRebuildsRegisteredSurfaceFromLedgerOnly`：
+  dispatch 落账后，fold 面只读 `McpCatalogEvent.Entry`（serverId/name/description/schema
+  原文），经 `McpSchemaMapping.map` 重映射 + `ValueSchema.toJson` 重建 ToolSchema 列表，
+  与注册侧 `ToolRegistry.schemas` 逐字段相等；**不触碰 client**（注释与代码路径均无
+  connections()/call()）。
+- `McpCatalogLedgerTest#catalogEventRoundTripsThroughJsonl`：
+  真实 `SessionStore + JsonlPersistencePlugin + McpToolPlugin` 组合，dispatch 落账 →
+  flush → `SessionPersistence.load` → `loaded.events()` 与内存 appended 相等。
+
+schema 映射确定性另由 `McpSchemaMappingTest` 11 例覆盖（含 Opt 语义、enum/const 降级、
+两档排除、树比较规避 Map 序、弱化面登记）。
+
+真实会话侧证（停 3-S2 产物）：
+- 真跑日志含 `mcp/catalog`（4 条目，echo 富 schema 原文完整）；
+- fake server 停掉后 `--resume` 该会话（MCP 行 disabled，base-url 指向 127.0.0.1:1）
+  exit 0，pgrep 无 MCP 进程 → JSONL 会话可独立加载，无网络/无子进程。
+
+## 2. 外部消费闭包（candidate 腿 + 四负例）
+
+    MVN=<maven> JAVA=<temurin-25>/bin/java CONSUMER_WORK=/tmp/it27-consumer \
+      integration/verify-consumer.sh candidate
+    EXIT=0
+
+    == 腿 candidate：harness.version=0.3.0-SNAPSHOT ==
+      ok   候选：工作树 install → 隔离仓（跳测试）
+      ok   candidate：示例编译
+      ok   candidate：运行类路径
+      ok   candidate：治理自证运行
+      ok   candidate：自证通过
+      ok   candidate：自有工具可见
+      ok   candidate：自有工具可执行
+      用时 67s
+    == 四负例 ==
+      ok   负例①坏版本（9.9.9）必须解析失败
+      ok   负例②去显式版本必须构建失败
+      ok   负例③坏治理配置必须 boot 抛错
+      ok   负例④生产档撞 AUTO 审批必须 boot 抛错
+    失败项：0
+
+闭包实证（run-candidate.log）：
+- classpath 含 harness-mcp-mcp / harness-mcp-stdio / harness-mcp-tool 三个候选 jar；
+- `rows.composed=31 rows.enabled=26`，dump 内含：
+      mcp-stdio {servers=[]}
+      mcp-tool
+- `tool.schemas=12`（base 11 + 自有 word_count；servers 空 → 无 mcp__* 工具，零噪声）；
+- `SELF-CHECK OK`。
+这一步同时证明：mcp-stdio 的 META-INF/services 在 classpath 通道可见（装配期双向校验通过）。
+
+## 3. 全量回归 + validate
+
+    ~/Documents/apache-maven-3.10.0/bin/mvn -B test
+    EXIT=0；BUILD SUCCESS；Finished at 2026-10-17T10:32:45+08:00；1:09 min
+
+计数口径（命令 + 测量面）：
+    python3: 遍历 **/target/surefire-reports/*.txt，逐类取首行 "Tests run: ..."
+    → modules_with_reports=35 tests=692 failures=0 errors=0 skipped=23
+
+23 skip 全部为条件跳过：DeepSeek/真实模型 E2E 需 key（2）、Windows/Landlock 平台用例
+（OS 条件）。非失败。
+
+    ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+    VALIDATE_EXIT=0
+
+## 4. 行集四处消费面复核
+
+| 面 | 落点 | 实证 |
+|---|---|---|
+| jlink | dist/jh modules += io.javanatic.harness.mcp / mcp.stdio / mcp.tool | 镜像构建绿；S2 真跑 |
+| headless | examples/headless compile 依赖 += mcp 三坐标 | 82 例绿；S2 真跑 |
+| consumer-sample | candidate-closure += mcp 三坐标 | candidate 腿绿 |
+| docs/embedding §2 | 基础 15 条不变；候选闭包另记 6 坐标 | 与 pom 逐条核对 |
+| 内部测试闭包 | bundle/base test 依赖 + AppBootTest 发现清单 | 31 例绿 |

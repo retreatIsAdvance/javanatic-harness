@@ -11,13 +11,14 @@
  *   --pid-file P              启动即写自身 pid 到 P
  *   --stderr-lines N          启动即向 stderr 打 N 行 fixture-stderr-i
  *   --tools csv               替换默认工具清单
- *   --big-bytes N             big 工具返回的文本长度（默认 4096）
+ *   --big-bytes N             big 工具返回的文本长度（默认 4096；夹具上限 16,000,000）
  *   --protocol-version V      initialize 协商返回的版本（默认 2026-07-28）
  *   --page-size K             tools/list 按 K 分页（nextCursor 跟进用）
  *   --endless-pages           tools/list 永远给 nextCursor（client 页数上限用）
  *   --dup-tools               tools/list 追加重复名 echo（重名 fail loud 用）
- *   --bad-name                tools/list 追加 bad__name（T2 名校验用）
+ *   --bad-name                tools/list 追加 bad__name（消费面归一 + WARN 用）
  *   --missing-schema          echo 条目省略 inputSchema（缺必填字段用）
+ *   --rich-schema             echo 条目返回富 inputSchema（嵌套/数组/可选字段；停 3 真跑用）
  *   --exit-immediately        启动即 exit(0)（装配失败用）
  *   --exit-immediately-if M   marker 已在 → 启动即 exit(0)；不存在 → 建 marker 正常跑
  *   --exit-after-list-once M  marker 刚建 → 应答首个 tools/list 后 exit(0)
@@ -52,6 +53,18 @@ public final class FixtureServer {
     private static final Pattern CURSOR = Pattern.compile("\"cursor\"\\s*:\\s*\"([^\"]*)\"");
     private static final Pattern REQUEST_ID = Pattern.compile("\"requestId\"\\s*:\\s*(\\d+)");
 
+    /** 停 3 jlink 真跑：白名单全构造（string/integer/number/boolean/array/object、required 与可选项）。 */
+    private static final String RICH_SCHEMA = "{\"type\":\"object\",\"description\":\"echo args\","
+        + "\"properties\":{"
+        + "\"message\":{\"type\":\"string\",\"description\":\"text to echo\"},"
+        + "\"repeat\":{\"type\":\"integer\",\"description\":\"repeat count\"},"
+        + "\"ratio\":{\"type\":\"number\",\"description\":\"scale\"},"
+        + "\"loud\":{\"type\":\"boolean\",\"description\":\"uppercase\"},"
+        + "\"tags\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"labels\"},"
+        + "\"nested\":{\"type\":\"object\",\"properties\":{\"inner\":{\"type\":\"string\"}},"
+        + "\"description\":\"wrapper\"}},"
+        + "\"required\":[\"message\"]}";
+
     private static List<String> tools = List.of("echo", "big", "env", "fail");
     private static String protocolVersion = "2026-07-28";
     private static long bigBytes = 4096;
@@ -60,6 +73,7 @@ public final class FixtureServer {
     private static boolean dupTools;
     private static boolean badName;
     private static boolean missingSchema;
+    private static boolean richSchema;
     private static Path pidFile;
     private static int stderrLines;
     private static boolean exitImmediately;
@@ -124,6 +138,7 @@ public final class FixtureServer {
                 case "--dup-tools" -> dupTools = true;
                 case "--bad-name" -> badName = true;
                 case "--missing-schema" -> missingSchema = true;
+                case "--rich-schema" -> richSchema = true;
                 case "--exit-immediately" -> exitImmediately = true;
                 case "--exit-immediately-if" -> exitImmediatelyIf = Path.of(args[++i]);
                 case "--exit-after-list-once" -> exitAfterListOnce = Path.of(args[++i]);
@@ -242,7 +257,8 @@ public final class FixtureServer {
                 String message = messageMatch.find() ? messageMatch.group(1) : "";
                 send(out, result(id, "echo: " + message, false));
             }
-            case "big" -> send(out, result(id, "x".repeat((int) Math.min(bigBytes, 1_000_000)), false));
+            case "big" -> send(out, result(id,
+                "x".repeat((int) Math.min(bigBytes, 16_000_000)), false));
             case "env" -> send(out, result(id, envDump(), false));
             case "fail" -> send(out, result(id, "fixture failure", true));
             default -> send(out, result(id, "unknown tool: " + name, true));
@@ -286,8 +302,9 @@ public final class FixtureServer {
     }
 
     private static String toolEntry(String name, boolean omitSchema) {
+        String schema = richSchema && "echo".equals(name) ? RICH_SCHEMA : "{\"type\":\"object\"}";
         return "{\"name\":\"" + name + "\",\"description\":\"fixture tool " + name + "\""
-            + (omitSchema ? "" : ",\"inputSchema\":{\"type\":\"object\"}") + "}";
+            + (omitSchema ? "" : ",\"inputSchema\":" + schema) + "}";
     }
 
     private static void send(PrintWriter out, String json) {

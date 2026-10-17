@@ -745,10 +745,35 @@ public final class HeadlessMain {
                 + " discovered, " + booted.unreferenced() + " unreferenced",
             "  approval: " + approval.mode() + " (" + mountedRow(manifest, "approval-").plugin()
                 + "; exempt=" + exemptText(root) + ")",
+            "  mcp: " + mcpText(root),
             "  audit: " + audit.plugin().replaceFirst("^persistence-", "") + " "
                 + configText(audit, "root") + (persistence.durable() ? " (durable)" : " (non-durable)"),
             "  stop: max-turns=" + limits.maxTurns() + " max-steps=" + limits.maxStepsPerTurn()
                 + " budget=" + (budget > 0 ? Long.toString(budget) : "unlimited"));
+    }
+
+    /**
+     * MCP 声明面（it27）：base 两行在场 + 已注册工具（名称序）。工具名恒
+     * {@code mcp__<server>__<raw>}、恒需审批（approvalExempt=false，插件无豁免出口）——
+     * 有工具时注记 approval-required，与 approval 行的 exempt 名单互证。
+     * 两行被 profile 移除时印 `-`（自定义组合合法，不猜）。
+     */
+    private static String mcpText(Scope root) {
+        List<String> rows = root.require(CompositionManifest.KEY).rows().stream()
+            .map(CompositionManifest.Row::plugin)
+            .filter(plugin -> plugin.equals("mcp-stdio") || plugin.equals("mcp-tool"))
+            .toList();
+        List<String> tools = root.resolve(ToolRegistry.KEY)
+            .map(registry -> registry.definitions(root).stream()
+                .map(ToolDefinition::name)
+                .filter(name -> name.startsWith("mcp__"))
+                .sorted()
+                .toList())
+            .orElseGet(List::of);
+        String mounted = rows.isEmpty() ? "-" : String.join(" + ", rows);
+        return tools.isEmpty()
+            ? mounted + "; tools=0"
+            : mounted + "; tools=" + String.join(",", tools) + " (approval-required)";
     }
 
     /**
