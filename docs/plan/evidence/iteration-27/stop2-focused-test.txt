@@ -1,0 +1,50 @@
+# it27 停 2-S2 聚焦与全链回归（2026-10-16）
+
+改动面：core/tools（ValueSchema.Opt 三文件批，取证见 stop2-s1-opt-mutations.txt）+
+mcp/tool（pom / module-info / services 两文件 / McpCatalogEvent / McpCatalogCodec /
+McpSchemaMapping / McpToolPlugin + 三测试类）。mcp/mcp 与 mcp/stdio 本停点无新改动
+（DRIFTED 批取证见 stop2-drifted-refinement.txt）。
+
+## 聚焦（S2 三测试类 26 例）
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/tool -am test \
+    -Dtest='Mcp*' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=0，BUILD SUCCESS（日志 /tmp/it27-s2-tool.log，16:55 实跑）——本模块套件计数：
+
+```text
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpToolPluginTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpCatalogLedgerTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpSchemaMappingTest
+```
+
+## 全链回归（mcp/tool -am，无测试选择器，含全部既有 use-site）
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/tool -am test
+```
+
+EXIT=0，BUILD SUCCESS（日志 /tmp/it27-s2-final.log，16:58 实跑；突变 MA–MD 还原后复绿轮）。
+逐模块计数（日志原文）：
+
+```text
+harness-kernel-brand            Tests run: 2
+harness-kernel-core             Tests run: 36
+harness-kernel-config           Tests run: 12
+harness-core-session            Tests run: 41
+harness-core-system-prompt      Tests run: 6
+harness-llm-llm                 Tests run: 13
+harness-core-tools              Tests run: 31   （ScopedRegistry 5 / ToolArgs 6 / ToolExecutor 20）
+harness-session-persistence-jsonl  Tests run: 31
+harness-core-agent              Tests run: 13
+harness-llm-replay              Tests run: 6
+harness-core-agent-loop         Tests run: 57
+harness-mcp-tool                Tests run: 26   （7+8+11，同聚焦）
+合计 274, Failures: 0, Errors: 0, Skipped: 0
+```
+
+注：mcp/stdio 不在 mcp/tool 编译依赖链（插件装配为运行期发现），其面由
+stop2-drifted-refinement.txt 19 例覆盖；两批并集 = 本停点全改动面。

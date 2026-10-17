@@ -4,8 +4,8 @@ import java.util.Objects;
 
 /**
  * 远端工具描述（tools/list 快照条目，it27）：schema 为 wire 原文（String）——
- * JSON 库只在 transport 边界模块；映射到 ValueSchema（白名单）由消费面做
- * （05 schema 边界）。
+ * JSON 解析在边界模块（transport 组帧与消费面映射各自持有，同 core/tools
+ * 信任边界先例）；映射到 {@code ValueSchema}（白名单）由消费面做（05 schema 边界）。
  *
  * @param serverId 来源 server id
  * @param name raw 工具名（拒含 "__"：配置校验 + tools/list 结果校验两处）

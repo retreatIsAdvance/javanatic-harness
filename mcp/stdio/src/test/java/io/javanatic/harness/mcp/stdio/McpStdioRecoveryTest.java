@@ -51,8 +51,8 @@ class McpStdioRecoveryTest {
         }
     }
 
-    /** T4 落点：重连后清单不一致 → FAILED（终态），调用抛 McpCatalogDriftException，
-     * 诊断含「请重开会话」与漂移摘要。 */
+    /** T4 落点：重连后清单不一致 → DRIFTED（终态，与 FAILED 分档），调用抛
+     * McpCatalogDriftException，诊断含「请重开会话」与漂移摘要；close 不降级该终态。 */
     @Test
     void catalogDriftOnReconnectFailsServerWithRestartDiagnosis() {
         Path exitMarker = tmp.resolve("exit-after-list");
@@ -63,13 +63,17 @@ class McpStdioRecoveryTest {
             "--exit-after-list-once", exitMarker.toString(),
             "--variant-tools", variantMarker.toString(), "echo,drifted"), FAST);
         try {
-            Fixtures.awaitTrue("FAILED after catalog drift",
-                () -> connection.state() == McpServerState.FAILED);
+            Fixtures.awaitTrue("DRIFTED after catalog drift",
+                () -> connection.state() == McpServerState.DRIFTED);
 
             assertThatThrownBy(() -> connection.call("echo", "{}", AbortSignal.never()))
                 .isInstanceOf(McpCatalogDriftException.class)
                 .hasMessageContaining("请重开会话")
                 .hasMessageContaining("added=[drifted]");
+
+            // close 不降级漂移终态：判定须在 teardown 后依然成立（消费面据 state 落轮终）
+            connection.close();
+            assertThat(connection.state()).isEqualTo(McpServerState.DRIFTED);
         } finally {
             connection.close();
         }

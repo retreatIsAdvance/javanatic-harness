@@ -27,7 +27,8 @@ import java.util.Set;
 /**
  * 单 server 的 stdio 连接（子进程 + JSON-RPC 会话 + 冻结清单 + 有限重连，it27）。
  * 状态机：CONNECTED --断线--> RECONNECTING --（退避 ×N，逐次重建 + 清单对账）-->
- * CONNECTED，或 --（退避耗尽 / 对账漂移 T4）--> FAILED（终态，会话内不恢复）。
+ * CONNECTED，或 --（退避耗尽）--> FAILED / --（对账漂移 T4）--> DRIFTED
+ * （均终态、会话内不恢复；DRIFTED 供消费面区分轮终落点）。
  * <p>
  * 装配期启动：{@link #start} 同步完成 initialize 协商（协议版本钉 2026-07-28）与
  * tools/list，失败即 fail loud（装配失败，不留半装配）；工具清单启动即冻结，
@@ -53,7 +54,6 @@ final class StdioMcpConnection implements McpServerConnection {
     private volatile JsonRpcPeer peer;
     private volatile McpServerState state = McpServerState.FAILED;
     private volatile String failedReason;
-    private volatile boolean drift;
     private volatile int attempt;
     private volatile Thread reconnector;
     private volatile boolean closed;
@@ -126,11 +126,11 @@ final class StdioMcpConnection implements McpServerConnection {
     public McpCallResult call(String toolName, String argumentsJson, AbortSignal signal) {
         Objects.requireNonNull(signal, "signal");
         McpServerState current = state;
+        if (current == McpServerState.DRIFTED) {
+            throw new McpCatalogDriftException(failedReason == null
+                ? "mcp server '" + config.id() + "' catalog drifted" : failedReason);
+        }
         if (closed || current == McpServerState.FAILED) {
-            if (drift) {
-                throw new McpCatalogDriftException(failedReason == null
-                    ? "mcp server '" + config.id() + "' failed" : failedReason);
-            }
             throw new McpConnectionException("mcp server '" + config.id() + "' unavailable: "
                 + (failedReason == null ? "not started" : failedReason));
         }
@@ -162,7 +162,10 @@ final class StdioMcpConnection implements McpServerConnection {
                 return;
             }
             closed = true;
-            state = McpServerState.FAILED;
+            if (state != McpServerState.DRIFTED) {
+                // 漂移是更强的终态判别（消费面据此落轮终）：close 不降级为普通 FAILED
+                state = McpServerState.FAILED;
+            }
             if (failedReason == null) {
                 failedReason = "closed";
             }
@@ -191,7 +194,7 @@ final class StdioMcpConnection implements McpServerConnection {
         }
     }
 
-    /** 有限重连：退避逐档重试（重建进程 + 握手 + 对账）。漂移即终态 FAILED（T4）。
+    /** 有限重连：退避逐档重试（重建进程 + 握手 + 对账）。漂移即终态 DRIFTED（T4）。
      * 断裂方会话（stale）一切退出路径都回收——成功换到新 peer 后它不再被任何引用
      * 持有，不回收就是孤儿进程。 */
     private void reconnectLoop() {
@@ -268,8 +271,7 @@ final class StdioMcpConnection implements McpServerConnection {
             return;
         }
         failedReason = message;
-        drift = true;
-        state = McpServerState.FAILED;
+        state = McpServerState.DRIFTED;
         log.log(System.Logger.Level.ERROR, message);
     }
 

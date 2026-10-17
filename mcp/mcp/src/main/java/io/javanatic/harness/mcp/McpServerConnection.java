@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * 单个 MCP server 的连接面（子进程 + 协议会话的只读视图，it27）。
  * 清单快照会话启动即冻结（R1/T4）：重连只做续命 + 对账，绝不等价于热变更——
- * 对账不一致抛 {@link McpCatalogDriftException}，server 转 FAILED。
+ * 对账不一致抛 {@link McpCatalogDriftException}，server 转 DRIFTED。
  * call() 阻塞（虚拟线程下安全）、取消经 {@link AbortSignal} 传播（checkAbort
  * 轮询 + onCancel 中止等待并尽力通知远端；取消是正常路径，
  * {@link io.javanatic.harness.llm.AbortedException} 向上传播，不落工具错误结果）。

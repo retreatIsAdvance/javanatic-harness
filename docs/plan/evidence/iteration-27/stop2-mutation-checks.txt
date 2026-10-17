@@ -1,0 +1,92 @@
+# it27 停 2-S2 突变检查 — 漂移优先级 / 排除工具过滤 / 未知关键字 / Opt 包裹 四杀（2026-10-16）
+
+性质：四项均为承载逻辑的突变杀（破坏必红 → 还原复绿），逐项独立实施。被改文件处于未提交
+工作区（S2 改动自身待停 2 收口提交），还原 = 备份 `cp` 回 + `shasum` 逐字节对照（备份存
+`/tmp/it27-s2-bak/`）。基线 shasum：McpToolPlugin.java `75813b86…49cbe`、
+McpSchemaMapping.java `06b57296…fd952`——四项还原后 shasum 均与基线一致。
+
+命令（逐项执行，只跑本杀判别用例；JAVA_HOME 同惯例）：
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/tool -am test \
+    -Dtest='<判别用例>' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+## MA — 漂移优先级反转（checkpoint 对账先判、漂移后判）
+
+预期红：driftWinsOverLedgerMismatch（DRIFTED 与清单不等同时在场——对账先判会抛 ISE，
+类型断言 `isInstanceOf McpCatalogDriftException` 即优先级断言）。EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpCatalogLedgerTest
+[ERROR] McpCatalogLedgerTest.driftWinsOverLedgerMismatch:158
+Expecting actual throwable to be an instance of:
+  io.javanatic.harness.mcp.McpCatalogDriftException
+but was:
+  java.lang.IllegalStateException: mcp catalog 与会话启动不一致，请重开会话（added=[alpha/extra], removed=[], changed=[]）
+```
+
+还原：shasum `75813b86…49cbe` 一致。
+
+## MB — 排除工具过滤失效（entries() 不重映射过滤，排除工具漏进账）
+
+预期红：firstRequestAppendsFrozenCatalogAndEqualStaysSilent（账条目含 broken）+
+foldRebuildsRegisteredSurfaceFromLedgerOnly（折叠面与注册面不再逐字段相等）。EXIT=1：
+
+```text
+[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpCatalogLedgerTest
+[ERROR] McpCatalogLedgerTest.firstRequestAppendsFrozenCatalogAndEqualStaysSilent:104
+Expecting actual:
+  [Entry[serverId=alpha, name=broken, description=uses oneOf, schema={"type": "object", "oneOf": []}],
+    Entry[serverId=alpha, name=echo, …]]
+to contain exactly (and in same order):
+  [Entry[serverId=alpha, name=echo, …]]
+[ERROR] McpCatalogLedgerTest.foldRebuildsRegisteredSurfaceFromLedgerOnly:211
+```
+
+还原：shasum `75813b86…49cbe` 一致。
+
+## MC — 未知关键字放行（scanKeywords 白名单外 `throw` → `continue`）
+
+预期红：unsupportedConstructsExcludeWholeTool（"somethingNew" 不再点名诊断、warnings 空）。
+EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpSchemaMappingTest
+[ERROR] McpSchemaMappingTest.unsupportedConstructsExcludeWholeTool:220
+Expecting actual:
+  []
+to contain exactly (and in same order):
+  ["t excluded: unknown keyword: somethingNew"]
+```
+
+还原：shasum `06b57296…fd952` 一致。
+
+## MD — Opt 包裹规则反转（required 名单包 Opt、未列者裸）
+
+预期红：mapsSupportedConstructsWithWireEquivalence（必填 text 变 Opt）+
+optionalFieldsValidateOnlyWhenPresent（未列 count 变裸 → 缺失即报「missing required argument」）。
+EXIT=1：
+
+```text
+[ERROR] Tests run: 2, Failures: 1, Errors: 1, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpSchemaMappingTest
+[ERROR] McpSchemaMappingTest.mapsSupportedConstructsWithWireEquivalence:61
+Expecting actual:
+  Opt[schema=Str[description=the text]]
+to be an instance of:
+  io.javanatic.harness.tools.ValueSchema.Str
+[ERROR] McpSchemaMappingTest.optionalFieldsValidateOnlyWhenPresent:104 » IllegalArgument missing required argument: count
+```
+
+还原：shasum `06b57296…fd952` 一致。
+
+## 还原后复绿（并入终局全链回归）
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/tool -am test
+EXIT=0, BUILD SUCCESS
+```
+
+reactor 12 模块全绿（kernel/core/session/llm/tools/agent/agent-loop/replay 既有面 + mcp/tool
+26 例；见 stop2-focused-test.txt 逐模块计数与总 274 例）。

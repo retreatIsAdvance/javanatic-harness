@@ -26,5 +26,47 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-tools</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-session</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-session-persistence</artifactId>
+        </dependency>
+        <!-- REQUEST 检查点（轮首、先于 llm/request）经真实 loop 验证 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-agent-loop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-llm-llm</artifactId>
+        </dependency>
+        <!-- schema 映射边界：MCP server 的 JSON Schema 原文是信任边界输入（08 §6 同款理据） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- 下面三个只在测试：loop rig 与 jsonl 往返 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-system-prompt</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-llm-replay</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-session-persistence-jsonl</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

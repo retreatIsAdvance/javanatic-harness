@@ -1,0 +1,38 @@
+# it27 停 2 评审处置（round 1）— 放行 + 三项备注处置（2026-10-17）
+
+评审总判（用户）：通过放行——26+31 例独立复绿、validate EXIT=0、六项偏离全部合理且已点名
+待裁决；F1 处置轮合格。三条【低】备注不阻塞，停 3/收口顺手处理；六项偏离裁决全部接受。
+
+## 一、评审备注与处置
+
+| # | 级别 | 发现 | 处置 |
+|---|---|---|---|
+| 1 | 低 | `ExcludedException` / `PropertyStructuralFailure` 是控制流异常（AGENTS「不用异常做流程控制」条款） | 两处 javadoc 补「控制流豁免」注记：解析器递归下降的最近捕获点语义、非错误路径；返回值表达会让分支逐层判空回传、白名单分档失真。（同批落地） |
+| 2 | 低 | `requires "mcp-stdio"` 使 consumer 绑死具体 transport（mcp/tool 实际依赖 transport 无关的 McpClientService） | 挂 it27.1：HTTP transport 引入时把 provides/requires 耦合 id 定为 transport 中立（或 consumer requires 可插拔清单）——一行决策记，现不动 |
+| 3 | 低 | `entries()` 每请求全量重映射（每工具一次 JSON parse） | 挂账效率注记：可在 connection 层缓存映射结果（schema 冻结）；现状正确性无虞（映射确定性是 fold == 注册面前提） |
+
+## 二、六项偏离裁决（全部接受）
+
+1. Jackson 扩至 mcp/tool——接受；02 白名单 +1 于收口落。
+2. 依赖边超计划 4 条——接受；02 依赖列按实登记（收口落）。
+3. DRIFTED 独立变体——接受（本停最有价值偏离：拆「破 R1」× 「进程不可用」）；03/05/07 按实现措辞收口落。
+4. integer → Num 弱化——接受（加变体超批准面；只放宽不收紧）。
+5. 序列化单点抽取——接受（Opt 解包与 fold 重建共享同一序列化）。
+6. map() 纯函数 + apply 单点 WARN——接受（每 REQUEST 重映射确定性的前提）。
+
+收口纪律：标注「收口落」的 02/03/05/07 同步面在停 3/收口批一次性落，勿散落。
+
+## 三、处置后复验（备注 1 落地后）
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/tool -am test \
+    -Dtest='Mcp*' -Dsurefire.failIfNoSpecifiedTests=false
+EXIT=0, BUILD SUCCESS
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpToolPluginTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpCatalogLedgerTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpSchemaMappingTest
+
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+EXIT=0（仅 spotless 惯例警告 4 行）
+```

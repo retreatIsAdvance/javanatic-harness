@@ -1,7 +1,5 @@
 package io.javanatic.harness.tools;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.javanatic.harness.kernel.scope.Disposable;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.llm.ToolSchema;
@@ -21,8 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * root、agent 挂载落 agentScope;层随 owner 关闭回收(R3)。
  */
 final class ScopedRegistry implements ToolRegistry {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final ScopedLayers<Map<String, ToolDefinition>> layers =
         new ScopedLayers<>(ConcurrentHashMap::new);
@@ -48,7 +44,7 @@ final class ScopedRegistry implements ToolRegistry {
         List<ToolSchema> schemas = new ArrayList<>(names.size());
         for (String name : names) {
             ToolDefinition tool = merged.get(name);
-            schemas.add(new ToolSchema(tool.name(), tool.description(), toJson(tool.parameters())));
+            schemas.add(new ToolSchema(tool.name(), tool.description(), ValueSchema.toJson(tool.parameters())));
         }
         return List.copyOf(schemas);
     }
@@ -79,46 +75,5 @@ final class ScopedRegistry implements ToolRegistry {
             merged.putAll(chain.get(i));
         }
         return merged;
-    }
-
-    /** ValueSchema → JSON Schema 文本(wire 侧唯一序列化点)。 */
-    private static String toJson(ValueSchema schema) {
-        try {
-            return MAPPER.writeValueAsString(toNode(schema));
-        } catch (Exception e) {
-            throw new IllegalStateException("tool schema serialization failed", e);
-        }
-    }
-
-    private static ObjectNode toNode(ValueSchema schema) {
-        ObjectNode node = MAPPER.createObjectNode();
-        switch (schema) {
-            case ValueSchema.Object o -> {
-                node.put("type", "object");
-                ObjectNode props = node.putObject("properties");
-                for (var entry : o.properties().entrySet()) {
-                    props.set(entry.getKey(), toNode(entry.getValue()));
-                }
-                node.put("description", o.description());
-            }
-            case ValueSchema.Str s -> {
-                node.put("type", "string");
-                node.put("description", s.description());
-            }
-            case ValueSchema.Num n -> {
-                node.put("type", "number");
-                node.put("description", n.description());
-            }
-            case ValueSchema.Bool b -> {
-                node.put("type", "boolean");
-                node.put("description", b.description());
-            }
-            case ValueSchema.Arr a -> {
-                node.put("type", "array");
-                node.set("items", toNode(a.items()));
-                node.put("description", a.description());
-            }
-        }
-        return node;
     }
 }

@@ -1,0 +1,68 @@
+# it27 停 2-S1 突变检查 — Opt 豁免 / Opt 在场解包 / wire 解包 / rawJson 原文 四杀（2026-10-16）
+
+性质：四项均为承载逻辑的突变杀（破坏必红 → 还原复绿），逐项独立实施。被改文件处于未提交工作区（S1 改动自身待停 2 收口提交），还原 = 备份 `cp` 回 + `shasum` 逐字节对照（备份存 `/tmp/it27-s1-bak/`）。基线 shasum：ToolArgs.java `d91032b4…c7a5`、ValueSchema.java `c885320c…911a`——四项还原后 shasum 均与基线一致。
+
+命令（逐项执行，过滤新测试类）：
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl core/tools -am test \
+    -Dtest='ToolArgsTest' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+## M1 — 缺失放行豁免移除（Object 分支 Opt continue 整块删除）
+
+预期红：optionalFieldMayBeAbsent / optionalNestedObjectValidatesInnerRequiredWhenPresent / rawJsonPreservesWireTextVerbatim（后用例输入同样缺 opt——豁免失效即 parse 抛错）。EXIT=1：
+
+```text
+[ERROR] Tests run: 6, Failures: 0, Errors: 3, Skipped: 0, Time elapsed: 0.158 s <<< FAILURE! -- in io.javanatic.harness.tools.ToolArgsTest
+[ERROR] io.javanatic.harness.tools.ToolArgsTest.optionalFieldMayBeAbsent -- Time elapsed: 0.003 s <<< ERROR!
+[ERROR] io.javanatic.harness.tools.ToolArgsTest.optionalNestedObjectValidatesInnerRequiredWhenPresent -- Time elapsed: 0.001 s <<< ERROR!
+[ERROR] io.javanatic.harness.tools.ToolArgsTest.rawJsonPreservesWireTextVerbatim -- Time elapsed: 0.001 s <<< ERROR!
+[ERROR] Tests run: 6, Failures: 0, Errors: 3, Skipped: 0
+```
+
+还原：shasum `d91032b4…c7a5` 一致。
+
+## M2 — Opt 在场解包失效（validate 的 Opt case → `requireType(true, …)` 空操作）
+
+预期红：presentOptionalFieldIsValidatedRecursively / optionalNestedObjectValidatesInnerRequiredWhenPresent（「在场按内层校验」的判别力）。EXIT=1：
+
+```text
+[ERROR] Tests run: 6, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.429 s <<< FAILURE! -- in io.javanatic.harness.tools.ToolArgsTest
+[ERROR] ...presentOptionalFieldIsValidatedRecursively -- Time elapsed: 0.304 s <<< FAILURE!
+[ERROR] ...optionalNestedObjectValidatesInnerRequiredWhenPresent -- Time elapsed: 0.004 s <<< FAILURE!
+```
+
+还原：shasum `d91032b4…c7a5` 一致。
+
+## M3 — wire 解包失效（toNode 的 Opt case → `node.put("type","object")`）
+
+预期红：optSerializesTransparentlyToWire（wrapped 与 plain 不再字节相等）。EXIT=1：
+
+```text
+[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.164 s <<< FAILURE! -- in io.javanatic.harness.tools.ToolArgsTest
+[ERROR] io.javanatic.harness.tools.ToolArgsTest.optSerializesTransparentlyToWire -- Time elapsed: 0.010 s <<< FAILURE!
+```
+
+还原：shasum `c885320c…911a` 一致。
+
+## M4 — rawJson 原文透传失效（parse 存 `root.toString()` 重序列化）
+
+预期红：rawJsonPreservesWireTextVerbatim（输入空白丢失）。EXIT=1：
+
+```text
+[ERROR] Tests run: 6, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.158 s <<< FAILURE! -- in io.javanatic.harness.tools.ToolArgsTest
+[ERROR] io.javanatic.harness.tools.ToolArgsTest.rawJsonPreservesWireTextVerbatim -- Time elapsed: 0.005 s <<< FAILURE!
+```
+
+还原：shasum `d91032b4…c7a5` 一致。
+
+## 还原后全量（含既有 use-site 回归）
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl core/tools -am test
+EXIT=0, BUILD SUCCESS
+```
+
+reactor 全部模块绿（kernel/llm/session 依赖模块同跑）；core/tools 三测试类共 31 测试 0 失败（ScopedRegistryTest 5 / ToolArgsTest 6 / ToolExecutorTest 20）。

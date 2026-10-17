@@ -1,0 +1,18 @@
+# it27 停 2 validate — 全 reactor（2026-10-16）
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+EXIT=0
+```
+
+输出仅 spotless 惯例警告 4 行（sun.misc.Unsafe，停 1 同款，无涉本停点改动）：
+
+```text
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper …
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+```
+
+（spotless:check + checkstyle:check 全 reactor 通过，含 mcp/tool 新源码与测试。）

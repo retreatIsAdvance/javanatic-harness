@@ -1,0 +1,28 @@
+# it27 停 2 前置批 — DRIFTED 精化（mcp/mcp + mcp/stdio）聚焦回归（2026-10-16）
+
+性质：DRIFTED 状态精化批（McpServerState 新增变体；StdioMcpConnection 删布尔漂移字段、
+call() 先档抛 McpCatalogDriftException、close() 不降级；McpStdioRecoveryTest 增断言）——
+改动面 = mcp/mcp 两文件 + mcp/stdio 两文件 + mcp/stdio 一测试文件。本批为本轮 S2（mcp/tool）
+之前完成，此后两模块源文件未再触碰（mtime 16:38:57–16:39:06，早于 S2 tool 面改动 16:55+）。
+
+命令（当轮实跑；过滤选择器 McpStdio*，与日志套件构成一致——三套件 19 例，未含 McpServerConfigTest）：
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/stdio -am test \
+    -Dtest='McpStdio*' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=0，BUILD SUCCESS；reactor 12 模块（…harness-mcp-mcp → harness-mcp-stdio）。关键输出行
+（日志原文，/tmp/it27-s2-drifted.log，16:39 实跑）：
+
+```text
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.434 s -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.043 s -- in io.javanatic.harness.mcp.stdio.McpStdioCallTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.388 s -- in io.javanatic.harness.mcp.stdio.McpStdioPluginTest
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+DRIFTED 语义钉死新增/改动断言（含在 19 例内）：重连后清单不一致 → 连接转 DRIFTED（不静默
+续用）；DRIFTED 后 close() 不降级（保持可判）。

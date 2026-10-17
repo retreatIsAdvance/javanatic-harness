@@ -16,13 +16,16 @@ public final class ToolArgs {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final JsonNode node;
+    private final String rawJson;
 
-    private ToolArgs(JsonNode node) {
+    private ToolArgs(JsonNode node, String rawJson) {
         this.node = node;
+        this.rawJson = rawJson;
     }
 
     /**
      * @throws IllegalArgumentException 不是 JSON 对象、必填字段缺失或类型不符
+     *     （{@link ValueSchema.Opt} 包字段缺失放行）
      */
     public static ToolArgs parse(String argumentsJson, ValueSchema schema) {
         Objects.requireNonNull(schema, "schema");
@@ -36,7 +39,7 @@ public final class ToolArgs {
             throw new IllegalArgumentException("tool arguments must be a JSON object");
         }
         validate(root, schema, "");
-        return new ToolArgs(root);
+        return new ToolArgs(root, argumentsJson);
     }
 
     private static void validate(JsonNode node, ValueSchema schema, String path) {
@@ -45,11 +48,15 @@ public final class ToolArgs {
                 for (var entry : o.properties().entrySet()) {
                     JsonNode child = node.get(entry.getKey());
                     if (child == null) {
+                        if (entry.getValue() instanceof ValueSchema.Opt) {
+                            continue; // 可选字段缺失：放行
+                        }
                         throw new IllegalArgumentException("missing required argument: " + path + entry.getKey());
                     }
                     validate(child, entry.getValue(), path + entry.getKey() + ".");
                 }
             }
+            case ValueSchema.Opt opt -> validate(node, opt.schema(), path); // 在场：按内层校验
             case ValueSchema.Str s -> requireType(node.isTextual(), path, "a string");
             case ValueSchema.Num n -> requireType(node.isNumber(), path, "a number");
             case ValueSchema.Bool b -> requireType(node.isBoolean(), path, "a boolean");
@@ -67,6 +74,11 @@ public final class ToolArgs {
             String field = path.endsWith(".") ? path.substring(0, path.length() - 1) : path;
             throw new IllegalArgumentException("argument '" + field + "' must be " + expected);
         }
+    }
+
+    /** 实参 JSON 文本：顶层 = wire 原文（原样透传，不经重序列化）；子 reader = 元素节点回写文本。 */
+    public String rawJson() {
+        return rawJson;
     }
 
     /** 读必填字符串字段（parse 已保证存在且类型正确）。 */
@@ -93,8 +105,17 @@ public final class ToolArgs {
         JsonNode list = node.get(field);
         List<ToolArgs> items = new ArrayList<>(list.size());
         for (JsonNode item : list) {
-            items.add(new ToolArgs(item));
+            items.add(new ToolArgs(item, serialize(item)));
         }
         return List.copyOf(items);
+    }
+
+    /** 子实参文本（元素出自已解析树，回写即规范化文本）。 */
+    private static String serialize(JsonNode item) {
+        try {
+            return MAPPER.writeValueAsString(item);
+        } catch (Exception e) {
+            throw new IllegalStateException("tool argument serialization failed", e);
+        }
     }
 }

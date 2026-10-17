@@ -96,10 +96,10 @@
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
 | 根 `pom.xml`（modules） | 新增 `mcp` 组注册 | ☑（ace05fb） |
-| `core/tools` `ValueSchema` | 新增 `Opt` 变体（sealed permits 扩展）——**跨模块共享词表扩展（停 2 核心评审对象）** | ☐ |
-| `core/tools` `ToolArgs.validate` | 缺失 + `Opt` 放行（一次改动，全既有 use-site 回归） | ☐ |
-| `core/tools` `ScopedRegistry.register` | **零改动**——MCP 工具复用既有注册面（锚在此防误改） | ☐ |
-| `core/session` 事件 codec 登记面（ServiceLoader） | `mcp/catalog` codec 挂载（`skill/catalog` 先例） | ☐ |
+| `core/tools` `ValueSchema` | 新增 `Opt` 变体（sealed permits 扩展）——**跨模块共享词表扩展（停 2 核心评审对象）** | ☑ |
+| `core/tools` `ToolArgs.validate` | 缺失 + `Opt` 放行（一次改动，全既有 use-site 回归） | ☑ |
+| `core/tools` `ScopedRegistry.register` | **零改动**——MCP 工具复用既有注册面（锚在此防误改）；本批仅序列化重定位（`toJson` 上移 `ValueSchema`，register 语义未动，见停 2 评审记录） | ☑ |
+| `core/session` 事件 codec 登记面（ServiceLoader） | `mcp/catalog` codec 挂载（`skill/catalog` 先例） | ☑ |
 | `bundle/base` `bundle.yml` | 两行（`mcp-stdio` 缺省 `servers: []` / `mcp-tool`） | ☐ |
 | `examples/headless` / `dist/jh` / `integration/consumer-sample` / `docs/embedding.md` | 行集同步面四处（jlink 清单 / 叠加依赖 / 闭包 profile / 计数） | ☐ |
 | `examples/headless` `HeadlessMain`（exempt 面） | 核对：MCP 工具无豁免路径（构造即定，无配置出口） | ☐ |
@@ -110,7 +110,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1（承载契约 + 新词表） | `mcp/mcp`（`McpClientService` 契约 / 类型 / 错误分档）+ `mcp/stdio`（JSON-RPC 帧 / 协商 / 子进程生命周期 / 重连退避） | ☑ |
-| 停 2（跨模块效应 + R1） | `ValueSchema.Opt` 扩展（共享词表——全部既有 use-site 回归）+ `mcp/tool`（schema 映射白名单 / `mcp/catalog` codec / 注册面 / 声明面） | ☐ |
+| 停 2（跨模块效应 + R1） | `ValueSchema.Opt` 扩展（共享词表——全部既有 use-site 回归）+ `mcp/tool`（schema 映射白名单 / `mcp/catalog` codec / 注册面 / 声明面） | ☑ |
 | 停 3（组合面 + 验收取证） | `bundle/base` 行 + `--verify` 断言 + 夹具 server 真跑与故障注入档 + R1 回放 | ☐ |
 
 ## 停 1 评审记录（2026-10-16）
@@ -123,6 +123,12 @@
 | F2 | 低 | `apply` 启动竞态残余：`onClose` 只覆盖已 start 返回的连接（close 与第 N 个 start 并发时该进程不在回收名单） | 双管：① `apply` 循环 cheap 护栏——start 后发现 `scope.isClosed()` 即自收口 + fail loud；② 装配单线程假设入设计增量（装载契约：`PluginLoader.loadAllUnder` 同步 apply；effect 注册为 check-then-act，插件侧无闭环语义，完整不变量以装载契约收口） |
 | F3 | 低 | 饱和跑清理脚本静默失手（`jobs -p` 在无作业控制 shell 下回空，遗留 `yes` 压满 CPU 制造假红） | 固化「同 shell `pkill -x yes` + 收尾 `pgrep -x yes` 验空」入 AGENTS.md 已知坑（按实测形态固化，`jobs -p` 不采用）；本轮饱和轮按新纪律执行 `CLEANED-OK` |
 
+## 停 2 评审记录（2026-10-17）
+
+**总判：通过放行**——26+31 例独立复绿、validate EXIT=0、六项偏离全部合理且已点名待裁决；F1 处置轮合格。三项【低】备注不阻塞（处置见修正表），六项偏离裁决全部接受（见设计偏离表）。证据 `stop2-review-round1.txt`。
+
+亮点（评审点名）：DRIFTED/FAILED 拆分 + MA 突变钉优先级（类型断言防重构退化）；fold == registry.schemas 逐字段相等是 R1 检验最强形态；S1（Opt）独立成批 + 四杀先行，批准边界执行到位。
+
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-27/）
 
 | 文件 | 覆盖（停点/验收项） |
@@ -133,6 +139,12 @@
 | `stop1-mutation-checks.txt` | 停 1：突变 A 对账失效 / B 歧义防护失效 / C 耗尽终态移除，各自红→还原→（复绿并入终局套件） |
 | `stop1-flake-and-hardening.txt` | 停 1：收尾期宿主机负载假红（`yes` 遗留）→ 根因取证 → 用例加固（1s→2s，语义不变）与复验 |
 | `stop1-review-round1.txt` | 停 1 评审处置：F1 修复 + 钉死用例（终态 35 例复跑绿）+ 突变 D1/D2 红→逐字节还原 + 饱和轮（新清理纪律 CLEANED-OK）+ validate 复跑 |
+| `stop2-s1-opt-mutations.txt` | 停 2-S1：`Opt` 豁免 / 在场解包 / wire 解包 / `rawJson` 原文四杀（M1–M4 红→还原）+ core/tools 31 例复绿 |
+| `stop2-drifted-refinement.txt` | 停 2 前置批：DRIFTED 精化聚焦 19 例 EXIT=0（4+5+10） |
+| `stop2-focused-test.txt` | 停 2：聚焦 26 例（7+8+11）+ 全链回归 274 例（12 模块逐计数，含 core/tools 31 例） |
+| `stop2-mutation-checks.txt` | 停 2：突变 MA 漂移优先级 / MB 排除工具过滤 / MC 未知关键字 / MD Opt 包裹，各自红→shasum 逐字节还原 |
+| `stop2-validate.txt` | 停 2：`mvn -B -q validate` 全 reactor EXIT=0（spotless 惯例警告 4 行） |
+| `stop2-review-round1.txt` | 停 2 评审处置：三项备注（控制流异常豁免注记落地 / transport 中立挂 27.1 / entries 缓存挂账）+ 六项偏离裁决 + 复验 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
@@ -158,8 +170,17 @@
 | 停 1 评审修正批（同停 1 提交） | 评审 F1（中）：取消链轮询路径绕过 `cancelPending`——槽泄漏 + 远端悬挂 + 撤销记忆漏记（消费面接上取消链将成真实语义洞；证据 `stop1-review-round1.txt`） | 等待循环收口（try/catch → `cancelPending` → 重抛）+ 钉死用例 + 突变 D1/D2 |
 | 同上 | 评审 F2（低）：`apply` 启动竞态残余（close 与第 N 个 start 并发面） | cheap 护栏（start 后发现 closed 即自收口 + fail loud）+ 装配单线程假设入设计增量 |
 | 同上 | 评审 F3（低）：饱和跑清理纪律未固化 | 入 AGENTS.md 已知坑（`pkill -x yes` + `pgrep` 验空；按实测形态，`jobs -p` 无作业控制 shell 下回空不采用） |
+| 停 2 评审修正批（同停 2 提交） | 评审备注 1（低）：控制流异常未登记豁免（AGENTS「不用异常做流程控制」） | 两处异常 javadoc 补「控制流豁免」注记（解析器递归下降最近捕获点语义，非错误路径；证据 `stop2-review-round1.txt`） |
+| 同上 | 评审备注 2（低）：`requires "mcp-stdio"` 使 consumer 绑死具体 transport | 挂 it27.1（HTTP transport 引入时定 transport 中立 provides/requires 或可插拔清单）；现不动 |
+| 同上 | 评审备注 3（低）：`entries()` 每请求全量重映射（每工具一次 JSON parse） | 挂账效率注记（connection 层缓存映射结果；schema 冻结下正确性无虞） |
 
 ## 设计偏离（如有）
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
+| `02` Jackson 边界白名单（原：stdio 边界模块） | `mcp/tool` 也需 Jackson（`inputSchema` 字符串原文映射） | 信任边界输入解析，同 core/tools 08 §6 先例 | 收口落：02 白名单 +1 |
+| `02` 依赖边（计划书：mcp/tool → mcp/mcp + core-tools） | 增 core-session / session-persistence / core-agent / core-agent-loop / llm | REQUEST 检查点（Agent/AgentEvents/Session）与 codec 落点决定 | 收口落：02 依赖列按实登记 |
+| T4 落点措辞「server failed」 | 独立 `DRIFTED` 变体（重连后清单不一致 → 落轮终）；FAILED（进程不可用）不拦轮，call 侧降级 | R1 边界是注册面/请求指纹，非进程存活；清单变才破 R1 | 收口落：03/05/07 按实现措辞 |
+| `type: integer` 映射 | `ValueSchema.Num`（wire "number"） | 词表无整数变体；加变体超出「只加 Opt」批准面；弱化仅放宽校验 | 已登记（测试注释）；不新增变体 |
+| `Opt` wire 零变化 | `ValueSchema.toJson` + 嵌套 `Serialization`（ScopedRegistry 的 toJson/toNode 上移） | Opt 解包与 fold 重建必须共享唯一序列化点；嵌套类保最小导出面 | 评审接受；收口同步 05/12 导出面措辞 |
+| `mcp/catalog` 条目映射告警 | map() 纯函数不落日志；warnings 自包含 label；apply() 单点 WARN | 同一 map 注册面/fold 面共用；确定性是 R1 前提；防每 REQUEST 重复告警 | 评审接受，无需同步 |

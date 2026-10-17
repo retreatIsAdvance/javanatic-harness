@@ -17,7 +17,7 @@ import java.util.Objects;
  * server 进程是 harness 的直接子进程、以用户全权运行（不入沙箱——治理边界
  * 是工具调用面而非进程面，见 module-info）；进程树随本 scope close 回收。
  * 断线有限重连（缺省 500ms→30s ×10 档），重连后清单与会话启动不一致即
- * FAILED（T4：不静默降级，诊断「请重开会话」——会话内清单冻结 R1/T4）。
+ * DRIFTED 终态（T4：不静默降级，诊断「请重开会话」——会话内清单冻结 R1/T4）。
  */
 public final class McpStdioPlugin implements Plugin {
 
