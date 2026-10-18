@@ -15,9 +15,7 @@ import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.llm.AbortSignal;
 import io.javanatic.harness.llm.LlmCallConfig;
 import io.javanatic.harness.llm.ToolSchema;
-import io.javanatic.harness.mcp.McpCatalogDriftException;
 import io.javanatic.harness.mcp.McpClientService;
-import io.javanatic.harness.mcp.McpServerState;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.SessionStore;
@@ -45,8 +43,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * 清单账四态（零噪声 / 首轮落账 / 冻结一致 / 不一致 fail loud）+ 漂移优先 +
+ * 清单账四态（零噪声 / 首轮落账 / 一致 / 不一致 fail loud）+
  * codec/jsonl 往返 + R1 折叠重建（只凭账、零联网零进程）。
+ * （it27.1 停 1 过渡态：换代屏障落地后，不一致将改为新代落账——停 3 重写。）
  */
 class McpCatalogLedgerTest {
 
@@ -137,28 +136,6 @@ class McpCatalogLedgerTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("请重开会话")
                 .hasMessageContaining("changed=[alpha/echo]");
-        }
-    }
-
-    /** 漂移优先：DRIFTED 与清单不等同时在场时，落轮终异常胜出（不落账、不静默）。 */
-    @Test
-    void driftWinsOverLedgerMismatch() {
-        Fakes.FakeClient client = new Fakes.FakeClient(new Fakes.FakeConnection("alpha",
-            Fakes.tool("alpha", "echo", "Echo text back", ECHO_SCHEMA)));
-        try (Runtime rt = runtimeWith(client)) {
-            Session session = Session.create(Session.newId("drift"), null, null);
-            dispatch(rt, session);
-            // 现场漂移侧：同名 + 新增工具（对账本会判不等——但漂移必须先胜出）
-            Fakes.FakeConnection drifted = new Fakes.FakeConnection("alpha",
-                Fakes.tool("alpha", "echo", "Echo text back", ECHO_SCHEMA),
-                Fakes.tool("alpha", "extra", "new since start", "{\"type\": \"object\"}"));
-            drifted.state(McpServerState.DRIFTED);
-            client.connections(List.of(drifted));
-            assertThatThrownBy(() -> dispatch(rt, session))
-                .isInstanceOf(McpCatalogDriftException.class) // 若对账先判会抛 ISE——类型断言即优先级断言
-                .hasMessageContaining("alpha")
-                .hasMessageContaining("请重开会话");
-            assertThat(catalogs(session)).hasSize(1);
         }
     }
 

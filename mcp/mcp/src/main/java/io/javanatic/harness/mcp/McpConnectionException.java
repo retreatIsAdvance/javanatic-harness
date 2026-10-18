@@ -5,7 +5,7 @@ package io.javanatic.harness.mcp;
  * 工具级错误不走异常（{@link McpCallResult} isError 数据面）。
  */
 public sealed class McpConnectionException extends RuntimeException
-    permits McpProtocolException, McpTimeoutException, McpCatalogDriftException {
+    permits McpProtocolException, McpTimeoutException, McpCatalogSwapException {
 
     /** @param message 失败说明 */
     public McpConnectionException(String message) {

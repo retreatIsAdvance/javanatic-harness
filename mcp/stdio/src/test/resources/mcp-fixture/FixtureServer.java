@@ -28,7 +28,11 @@
  *   --rpc-error-once M        marker 刚建 → 首个 tools/call 应答 error 成员
  *   --delay-once M ms         marker 刚建 → 首个 tools/call 延迟 ms 后再应答
  *   --record-cancel-to P      收到 notifications/cancelled 时把 requestId 写入 P（取消链路观测）
- *   --variant-tools M csv     marker 已在 → 工具清单换 csv（重连漂移用）；刚建 → 默认
+ *   --variant-tools M csv     marker 已在 → 工具清单换 csv（重连换代用）；刚建 → 默认
+ *   --list-changed-once M csv marker 刚建 → 首个 tools/call 应答后发 tools/list_changed，
+ *                             并把清单换成 csv（通知驱动换代用）
+ *   --garble-refresh-once M   marker 刚建 → 首个 tools/call 应答后发 tools/list_changed，
+ *                             且随后首个 tools/list 返回非 JSON 垃圾（刷新畸形→重连用）
  */
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -88,6 +92,9 @@ public final class FixtureServer {
     private static Path variantMarker;
     private static List<String> variantCsv;
     private static Path recordCancelTo;
+    private static Path listChangedOnce;
+    private static List<String> listChangedCsv;
+    private static Path garbleRefreshOnce;
 
     private static boolean exitAfterListArmed;
     private static boolean garbleArmed;
@@ -95,6 +102,9 @@ public final class FixtureServer {
     private static boolean missingResultArmed;
     private static boolean rpcErrorArmed;
     private static boolean delayArmed;
+    private static boolean listChangedArmed;
+    private static boolean garbleRefreshArmed;
+    private static boolean garbleNextList;
 
     private FixtureServer() {
     }
@@ -119,8 +129,10 @@ public final class FixtureServer {
         missingResultArmed = missingResultOnce != null && armOnce(missingResultOnce);
         rpcErrorArmed = rpcErrorOnce != null && armOnce(rpcErrorOnce);
         delayArmed = delayMarker != null && armOnce(delayMarker);
+        listChangedArmed = listChangedOnce != null && armOnce(listChangedOnce);
+        garbleRefreshArmed = garbleRefreshOnce != null && armOnce(garbleRefreshOnce);
         if (variantMarker != null && !armOnce(variantMarker)) {
-            tools = variantCsv; // 重启档:清单换形(重连对账漂移的来源)
+            tools = variantCsv; // 重启档:清单换形(重连换代的来源)
         }
         serve();
     }
@@ -155,6 +167,11 @@ public final class FixtureServer {
                     variantMarker = Path.of(args[++i]);
                     variantCsv = csv(args[++i]);
                 }
+                case "--list-changed-once" -> {
+                    listChangedOnce = Path.of(args[++i]);
+                    listChangedCsv = csv(args[++i]);
+                }
+                case "--garble-refresh-once" -> garbleRefreshOnce = Path.of(args[++i]);
                 default -> {
                     System.err.println("fixture: unknown flag " + args[i]);
                     System.exit(2);
@@ -248,6 +265,22 @@ public final class FixtureServer {
             return;
         }
         respond(out, id, name, line);
+        if (listChangedArmed || garbleRefreshArmed) {
+            boolean notify = listChangedArmed || garbleRefreshArmed;
+            if (listChangedArmed) {
+                listChangedArmed = false;
+                if (listChangedCsv != null) {
+                    tools = new ArrayList<>(listChangedCsv); // 刷新重取时看到新清单
+                }
+            }
+            if (garbleRefreshArmed) {
+                garbleRefreshArmed = false;
+                garbleNextList = true; // 通知后的首个 tools/list 报文畸形
+            }
+            if (notify) {
+                send(out, "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/tools/list_changed\"}");
+            }
+        }
     }
 
     private static void respond(PrintWriter out, long id, String name, String line) {
@@ -271,6 +304,10 @@ public final class FixtureServer {
     }
 
     private static String toolsListJson(long id, String line) {
+        if (garbleNextList) {
+            garbleNextList = false;
+            return "this line is not json {";
+        }
         Matcher cursorMatch = CURSOR.matcher(line);
         if (endlessPages) {
             int page = cursorMatch.find() ? Integer.parseInt(cursorMatch.group(1)) : 1;

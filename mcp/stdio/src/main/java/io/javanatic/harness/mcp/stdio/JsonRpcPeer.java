@@ -51,6 +51,7 @@ final class JsonRpcPeer {
     private final String serverId;
     private final System.Logger log;
     private final Consumer<JsonRpcPeer> onBroken;
+    private final Consumer<JsonRpcPeer> onListChanged;
     private final BufferedWriter writer;
     private final Object writeLock = new Object();
     private final Map<Long, PendingSlot> pending = new ConcurrentHashMap<>();
@@ -71,11 +72,14 @@ final class JsonRpcPeer {
      * @param process 已启动的 server 进程（stdin/stdout/stderr 为管道）
      * @param serverId server id（日志与诊断定位）
      * @param onBroken 会话断裂回调（每 peer 至多一次；调用线程 = 读线程或写失败线程）
+     * @param onListChanged 清单变化通知回调（调用线程 = 读线程；实现方不得阻塞帧读取）
      */
-    JsonRpcPeer(Process process, String serverId, Consumer<JsonRpcPeer> onBroken) {
+    JsonRpcPeer(Process process, String serverId, Consumer<JsonRpcPeer> onBroken,
+                Consumer<JsonRpcPeer> onListChanged) {
         this.process = process;
         this.serverId = serverId;
         this.onBroken = onBroken;
+        this.onListChanged = onListChanged;
         this.log = System.getLogger("io.javanatic.harness.mcp.stdio." + serverId);
         this.writer = new BufferedWriter(
             new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
@@ -86,6 +90,11 @@ final class JsonRpcPeer {
     /** 会话是否已断裂（读侧或写侧判定；可靠性的唯一权威 = 读线程）。 */
     boolean isBroken() {
         return broken.get();
+    }
+
+    /** 外部判定的会话级失败（如清单刷新协议畸形）：按断裂处理（级联 + 重连）。 */
+    void invalidate(McpConnectionException cause) {
+        broke(cause);
     }
 
     /**
@@ -273,10 +282,14 @@ final class JsonRpcPeer {
         String method = message.path("method").asText("");
         if (method.startsWith("notifications/")) {
             if ("notifications/tools/list_changed".equals(method)) {
-                // T4:会话内清单冻结——不热采纳;漂移在重连对账处 fail loud,此处只告知不改行为
-                log.log(System.Logger.Level.WARNING, "mcp server '" + serverId
-                    + "' signaled tools/list_changed; the catalog stays session-frozen (T4),"
-                    + " adopt changes by restarting the session");
+                // T4 重裁（it27.1）：清单变化不再是冻结/漂移——交给连接层异步重取并按代发布。
+                // 回调异常不得杀死读线程（否则一次坏刷新拖垮整个会话的可观测性）
+                try {
+                    onListChanged.accept(this);
+                } catch (RuntimeException e) {
+                    log.log(System.Logger.Level.WARNING, "mcp server '" + serverId
+                        + "' list_changed callback failed: " + e.getMessage());
+                }
             } else {
                 log.log(System.Logger.Level.DEBUG, "mcp notification '" + method + "' ignored");
             }

@@ -5,10 +5,8 @@ import io.javanatic.harness.agentloop.AgentEvents;
 import io.javanatic.harness.kernel.plugin.Plugin;
 import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.mcp.McpCallResult;
-import io.javanatic.harness.mcp.McpCatalogDriftException;
 import io.javanatic.harness.mcp.McpClientService;
 import io.javanatic.harness.mcp.McpServerConnection;
-import io.javanatic.harness.mcp.McpServerState;
 import io.javanatic.harness.mcp.McpToolDescriptor;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.event.LoggedEvent;
@@ -31,15 +29,17 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * MCP 工具消费插件（id "mcp-tool"，requires "tools" + "mcp-stdio"，it27 停 2）：
- * 已连接 server 的冻结清单 → 既有 {@code ScopedRegistry} 注册
+ * MCP 工具消费插件（id "mcp-tool"，requires "tools" + "mcp-registry"，it27.1）：
+ * 已连接 server 的当前清单 → 既有 {@code ScopedRegistry} 注册
  * （{@code mcp__<server>__<raw>} 命名；raw 名不合法/超长时确定性归一为
  * {@code mcp__<server>__<清洗(raw)>_<hash8>} + WARN；{@code approvalExempt=false}
  * 恒真、无豁免出口）+ 每轮 REQUEST 检查点（先于 loop 的
- * {@code LlmRequestEvent}）：漂移（DRIFTED）落轮终（请重开会话）；首个请求落
- * mcp/catalog 事件；此后冻结清单一致零噪声、不一致 fail loud——清单事实在
- * 日志里，回放重建零联网零进程（R1/T4）。schema 映射白名单见
+ * {@code LlmRequestEvent}）落 mcp/catalog 事件；一致零噪声、不一致 fail loud——
+ * 清单事实在日志里，回放重建零联网零进程（R1/T4）。schema 映射白名单见
  * {@link McpSchemaMapping}（不支持构造该工具排除 + WARN）。
+ *
+ * <p>it27.1 停 1 仅完成 transport 中立装配（消费面经注册表聚合）；清单代际的
+ * 轮屏障换代（TURN_STOPPING / PRE_STEP）与失败路径在后续停点落地。
  */
 public final class McpToolPlugin implements Plugin {
 
@@ -64,7 +64,7 @@ public final class McpToolPlugin implements Plugin {
 
     @Override
     public Set<String> requires() {
-        return Set.of("tools", "mcp-stdio");
+        return Set.of("tools", "mcp-registry");
     }
 
     @Override
@@ -180,22 +180,9 @@ public final class McpToolPlugin implements Plugin {
         };
     }
 
-    /** 轮首检查点：漂移优先（轮终语义——先于任何清单落账），随后清单对账。 */
+    /** 轮首检查点：清单对账（首个请求落账；一致零噪声；不一致 fail loud）。 */
     static void checkpoint(Session session, McpClientService client) {
-        throwIfDrifted(client);
         syncCatalogLedger(session, entries(client));
-    }
-
-    /** DRIFTED（重连后清单不一致）→ 落轮终异常；普通不可用（FAILED/RECONNECTING）不拦（call 侧按错误结果降级）。 */
-    static void throwIfDrifted(McpClientService client) {
-        List<String> drifted = client.connections().stream()
-            .filter(connection -> connection.state() == McpServerState.DRIFTED)
-            .map(McpServerConnection::serverId)
-            .toList();
-        if (!drifted.isEmpty()) {
-            throw new McpCatalogDriftException("mcp server '" + String.join("', '", drifted)
-                + "' 清单与会话启动不一致，请重开会话");
-        }
     }
 
     /** 已注册（映射成功）工具条目——排除工具不进账（fold 只重建注册面）；按 (serverId, name) 规范排序。 */

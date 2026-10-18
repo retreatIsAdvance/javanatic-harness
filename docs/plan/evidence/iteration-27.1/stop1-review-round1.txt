@@ -1,0 +1,61 @@
+# it27.1 停 1 评审（2026-10-18）— 用户独立复跑 + 关键面核验
+
+## 用户评审（原文）
+
+**总判：通过放行。** 门禁独立复绿（mcp/mcp 3 + stdio 38 + tool 26 EXIT=0，validate EXIT=0），
+T8 裁决被正确执行，注册表形状走 skill 先例。四条备注不阻塞。
+
+### 一、关键核验
+
+| 项 | 核验 | 结果 |
+|---|---|---|
+| **T8 裁决遵守**（不加 generation 字段） | `McpCatalogEvent.Entry` = (serverId, name, **publicName**, description, schema)——**无 generation 字段**；`catalogGeneration()` 只存在于 `McpServerConnection` 接口（内部刷新去重计数：「内容变化才递增」） | ✅ 按我的改裁执行：代际是连接内部去重手段，不进事件形状 |
+| T2 增补承接 | 账内 `publicName` 字段落位（fold 直接重建注册名） | ✅ 上迭代命名归一的账面闭环 |
+| 注册表形状 | `McpRegistry`（按 id 排序、`putIfAbsent` 撞 id fail loud、Disposable 条件摘除）+ `McpRegistryPlugin`——SkillService.register 同构；`StdioClientService` 删除（聚合上移） | ✅ skill 先例第二次应用，与裁定一致 |
+| DRIFTED 退役 | `McpCatalogDriftException` 删除（git D 状态）、状态机改写 | ✅ T5 落地 |
+| 门禁 | 独立复跑 + validate | ✅ 双 EXIT=0 |
+| `list_changed` 合并刷新 | 读线程只置位 + 虚拟线程合并刷新（防通知风暴重复握手）；刷新超时/网络保旧代、协议畸形才断链——分层正确 | ✅ |
+| Javadoc 精度自纠 | 「transport 层无法感知轮，异步刷新任意时刻发布新代，消费面才在轮屏障采纳」——职责边界写对了 | ✅ |
+
+### 二、偏离处置评价
+
+- **D1（过渡态：mcp/tool 仍在 REQUEST 跑旧检查点）**：可接受——失败是 fail loud 非静默，
+  且生命周期只有一个停点。**提醒**：停 2 期间若跑真实 loop 用例，轮内刷新会随机触发这个旧
+  fail loud（非确定性红）——聚焦面若出现「偶发红」，先查这里再怀疑协议层。
+- **D2（bundle/base + headless 预期红）**：机制行为正确（unreferenced discovered plugin
+  fail loud 正是双向显式组合在工作）。**代价要认清**：停 1~停 3 之间全量 package 跑不了绿
+  ——停 3 补行时记得同批补 `AppBootTest` 的 rootOverlays/discover 断言（it27 停 3 有现成
+  改法），且收尾双跑（package + consumer candidate）只能在补行后跑。
+- **D7（词表归停 3）**：可，但重申单源要求——`ConfigValues.masked` 词表加 `auth/cookie` 时
+  与 T6 的 HTTP 头校验共用同一常量。
+
+### 三、备注（不阻塞）
+
+1. **【低】突变 3 的红是超时红**：「通知刷新用例超时」只能证明「没在时限内刷新」，与「其它
+   原因挂死」不可区分。建议该用例改断言红（轮询断言连接代际递增 / 夹具记录收到通知），超时
+   只是兜底不是判据——下轮突变/回归顺手改。
+2. **【低】插件 id `mcp-registry`**：skill 先例的 base 插件 id 用的是能力名（`skill`），这里
+   用的是机制名（`mcp-registry`）。不是错误，但 02 模块表落笔时给一句为什么（注册表是独立
+   可发现插件而非附属于某 capability）——免得后来者以为是笔误。
+3. **【核对项→停 2】T7 的 8 MiB 帧上限**：`JsonRpcPeer` 在本批改动名单里——确认停 1 是否已含
+   stdio 侧帧帽，还是随停 2 HTTP 同批（计划口径两 transport 同批即可，别漏 stdio 侧）。
+
+### 四、结论
+
+**放行停 1**：提交含本评审记录 → 停点表停 1 转已提交 → 进停 2（mcp/http 协议面 + 夹具矩阵，
+注意 JDK HttpClient 已知坑与 SSE 流式读的帧帽落点）。停 3 清单预警：bundle 两行
+（mcp-registry + mcp-http）+ 四处消费面 + D2 转绿 + 锚序测试重排（catalog 首落账随屏障移
+PRE_STEP）+ T7 stdio 侧确认 + 突变 3 断言化——一次性收，别散。
+
+## 本批处置
+
+- **放行动作**：停 1 全部改动 + 本评审记录 + 停 1 packet/取证随本提交入库（不 push；push 仍需
+  用户新鲜点名）。
+- **备注 1 承接**：非阻塞，登记至停 2/3 测试轮——通知刷新用例改为「先等夹具侧可观测完成信号
+  （刷新取数已发生），再纯断言代际 == 2」，把「未换代」与「未刷新/挂死」的失败面拆开；突变
+  检查仍以超时为兜底判据。停 2 若改该用例，将在停 2 packet 明示。
+- **备注 2 承接**：停 3 设计文档 02 模块表落笔时补一句：`mcp-registry` 以机制命名，因为它是
+  独立可发现的聚合插件（不隶属于 stdio/HTTP 任一 capability），与能力名 `skill` 的命名差异
+  是有意的。
+- **备注 3 承接（已核）**：停 1 `JsonRpcPeer` **未含** 8 MiB 帧帽（`readLine()` 仍无界）；T7
+  归停 2，与 HTTP 有界响应/单 SSE 事件同批落地，stdio 侧不遗漏。计划停 2 行已补该范围。

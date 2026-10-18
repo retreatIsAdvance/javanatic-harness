@@ -8,6 +8,7 @@ import io.javanatic.harness.mcp.McpCallResult;
 import io.javanatic.harness.mcp.McpClientService;
 import io.javanatic.harness.mcp.McpConnectionException;
 import io.javanatic.harness.mcp.McpProtocolException;
+import io.javanatic.harness.mcp.McpRegistryPlugin;
 import io.javanatic.harness.mcp.McpServerConnection;
 import io.javanatic.harness.mcp.McpToolDescriptor;
 
@@ -50,7 +51,7 @@ class McpStdioPluginTest {
         try (Runtime rt = runtimeWith(List.of(
                 serverEntry("beta", "--tools", "echo"),
                 serverEntry("alpha", "--tools", "echo,fail")))) {
-            new PluginLoader().loadAll(rt, List.of(new McpStdioPlugin()));
+            new PluginLoader().loadAll(rt, List.of(new McpRegistryPlugin(), new McpStdioPlugin()));
             McpClientService service = rt.root().require(McpClientService.KEY);
 
             assertThat(service.connections())
@@ -80,7 +81,7 @@ class McpStdioPluginTest {
             "args", List.of(Fixtures.fixtureSource(), "--tools", "env"),
             "env", Map.of("FIXTURE_MARKER", "on"), "timeoutSeconds", 5);
         try (Runtime rt = runtimeWith(List.of(entry))) {
-            new PluginLoader().loadAll(rt, List.of(new McpStdioPlugin()));
+            new PluginLoader().loadAll(rt, List.of(new McpRegistryPlugin(), new McpStdioPlugin()));
             String dump = rt.root().require(McpClientService.KEY).connection("alpha").orElseThrow()
                 .call("env", "{}", AbortSignal.never()).content();
 
@@ -101,7 +102,7 @@ class McpStdioPluginTest {
         Path pidFile = tmp.resolve("alpha.pid");
         long pid;
         try (Runtime rt = runtimeWith(List.of(serverEntry("alpha", "--pid-file", pidFile.toString())))) {
-            new PluginLoader().loadAll(rt, List.of(new McpStdioPlugin()));
+            new PluginLoader().loadAll(rt, List.of(new McpRegistryPlugin(), new McpStdioPlugin()));
             pid = Fixtures.readPid(pidFile);
             assertThat(Fixtures.alive(pid)).isTrue();
         }
@@ -112,7 +113,8 @@ class McpStdioPluginTest {
     @Test
     void doubleUnderscoreServerIdFailsLoudAtConfig() {
         try (Runtime rt = runtimeWith(List.of(serverEntry("bad__id")))) {
-            assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(new McpStdioPlugin())))
+            assertThatThrownBy(() -> new PluginLoader().loadAll(rt,
+                List.of(new McpRegistryPlugin(), new McpStdioPlugin())))
                 .hasRootCauseInstanceOf(IllegalStateException.class)
                 .rootCause().hasMessageContaining("must not contain '__'");
         }
@@ -132,7 +134,7 @@ class McpStdioPluginTest {
     @Test
     void doubleUnderscoreRawNameIsAcceptedAtTransport() {
         try (Runtime rt = runtimeWith(List.of(serverEntry("alpha", "--bad-name")))) {
-            new PluginLoader().loadAll(rt, List.of(new McpStdioPlugin()));
+            new PluginLoader().loadAll(rt, List.of(new McpRegistryPlugin(), new McpStdioPlugin()));
             assertThat(rt.root().require(McpClientService.KEY).connection("alpha").orElseThrow().tools())
                 .extracting(McpToolDescriptor::name)
                 .contains("bad__name");
@@ -156,7 +158,8 @@ class McpStdioPluginTest {
 
     private void assertStartFails(Class<? extends RuntimeException> rootCause, String... fixtureArgs) {
         try (Runtime rt = runtimeWith(List.of(serverEntry("alpha", fixtureArgs)))) {
-            assertThatThrownBy(() -> new PluginLoader().loadAll(rt, List.of(new McpStdioPlugin())))
+            assertThatThrownBy(() -> new PluginLoader().loadAll(rt,
+                List.of(new McpRegistryPlugin(), new McpStdioPlugin())))
                 .hasRootCauseInstanceOf(rootCause);
         }
     }

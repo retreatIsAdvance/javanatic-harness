@@ -9,15 +9,17 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
- * MCP stdio 供应插件（id "mcp-stdio"，it27）：装配期解析行配置 servers[]
+ * MCP stdio 供应插件（id "mcp-stdio"，it27.1）：装配期解析行配置 servers[]
  * （id / command / args / env 白名单 / timeoutSeconds），拉起全部已配 server
- * 子进程（哪怕本轮不用；成本口径 07），以 {@link McpClientService} 提供连接面。
- * server 进程是 harness 的直接子进程、以用户全权运行（不入沙箱——治理边界
- * 是工具调用面而非进程面，见 module-info）；进程树随本 scope close 回收。
- * 断线有限重连（缺省 500ms→30s ×10 档），重连后清单与会话启动不一致即
- * DRIFTED 终态（T4：不静默降级，诊断「请重开会话」——会话内清单冻结 R1/T4）。
+ * 子进程（哪怕本轮不用；成本口径 07），并向 {@link McpClientService} 注册表
+ * 逐条注册（跨 transport 由 {@code mcp-registry} 统一聚合）。server 进程是
+ * harness 的直接子进程、以用户全权运行（不入沙箱——治理边界是工具调用面而非
+ * 进程面，见 module-info）；进程树随本 scope close 回收。断线有限重连
+ * （缺省 500ms→30s ×10 档）；清单变化（通知 / 重连对账）递增代际，由消费面在
+ * 轮屏障采纳（T4）。
  */
 public final class McpStdioPlugin implements Plugin {
 
@@ -46,7 +48,13 @@ public final class McpStdioPlugin implements Plugin {
     }
 
     @Override
+    public Set<String> requires() {
+        return Set.of("mcp-registry");
+    }
+
+    @Override
     public void apply(Scope scope) {
+        McpClientService client = scope.require(McpClientService.KEY);
         List<McpServerConfig> servers = McpServerConfig.parseAll(
             scope.require(ConfigService.KEY).configFor(id()), id());
         List<StdioMcpConnection> started = new ArrayList<>(servers.size());
@@ -63,7 +71,7 @@ public final class McpStdioPlugin implements Plugin {
                     "mcp-stdio: scope closed during assembly; started connection rolled back");
             }
             started.add(connection);
+            scope.onClose(client.register(connection)); // LIFO:先摘注册面,再收连接/进程
         }
-        scope.provide(McpClientService.KEY, new StdioClientService(started));
     }
 }

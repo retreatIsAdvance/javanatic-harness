@@ -1,0 +1,140 @@
+# it27.1 停 1 取证 — 注册表 / 代际 / stdio 刷新与重连换代（2026-10-18）
+
+性质：停 1（承载契约 + 连接注册表 + stdio 适配）的验证取证；工作区未提交（停点要求）。
+基线：it27 收口提交 `2ee5514`（已推送）。环境：`JAVA_HOME=$(/usr/libexec/java_home -v 25)`；
+mvn = `~/Documents/apache-maven-3.10.0/bin/mvn`。
+
+## 1. 聚焦测试（最终树，EXIT=0）
+
+命令：
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/mcp,mcp/stdio,mcp/tool -am test
+```
+
+关键输出（2026-10-18 11:57，完整日志 `/tmp/it271-stop1-final-green.log`）：
+
+```text
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.054 s -- in io.javanatic.harness.mcp.McpRegistryPluginTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.059 s -- in io.javanatic.harness.mcp.stdio.McpServerConfigTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.765 s -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.732 s -- in io.javanatic.harness.mcp.stdio.McpStdioCallTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.807 s -- in io.javanatic.harness.mcp.stdio.McpStdioPluginTest
+[INFO] Tests run: 38, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.201 s -- in io.javanatic.harness.mcp.tool.McpToolPluginTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.055 s -- in io.javanatic.harness.mcp.tool.McpCatalogLedgerTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in io.javanatic.harness.mcp.tool.McpSchemaMappingTest
+[INFO] Tests run: 26, Failures: 0, Errors: 0, Skipped: 0
+[INFO] harness-mcp-mcp .................................... SUCCESS [  0.355 s]
+[INFO] harness-mcp-stdio .................................. SUCCESS [ 21.682 s]
+[INFO] harness-mcp-tool ................................... SUCCESS [  0.607 s]
+[INFO] BUILD SUCCESS
+EXIT=0
+```
+
+计数测量面：上述同一命令的 surefire 分模块汇总行（mcp/mcp 3 / mcp/stdio 38 / mcp/tool 26）；
+上游 `-am` 模块同命令一并复跑通过（kernel 57 等），不与其它命令/迭代的计数互比。
+
+## 2. 突变检查（三项；破坏必红 → 还原复绿）
+
+命令（逐项执行；只跑判别用例，JAVA_HOME 同惯例）：
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl <module> -am test \
+    -Dtest='<判别用例>' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+### MA — 注册去重失效（`putIfAbsent` → `put`）
+
+文件：`mcp/mcp/src/main/java/io/javanatic/harness/mcp/McpRegistry.java`
+判别用例：`McpRegistryPluginTest#duplicateServerIdFailsLoudAndKeepsRegisteredConnection`
+预期：重复 server id 不再抛 `IllegalStateException` → 用例红。
+实测 `EXIT=1`：
+
+```text
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.074 s <<< FAILURE! -- in io.javanatic.harness.mcp.McpRegistryPluginTest
+[ERROR] io.javanatic.harness.mcp.McpRegistryPluginTest.duplicateServerIdFailsLoudAndKeepsRegisteredConnection -- Time elapsed: 0.008 s <<< FAILURE!
+java.lang.AssertionError:
+[ERROR] BUILD FAILURE
+```
+
+还原：`putIfAbsent` 原样回填；还原后 shasum 与基线一致
+`60ca22a37b6eea848baa0327f6f413811dae8e4d37ff3099cca9f2b8f4957658`。
+
+### MB — 刷新换代不递增（`generation + 1` → `generation`）
+
+文件：`mcp/stdio/src/main/java/io/javanatic/harness/mcp/stdio/StdioMcpConnection.java`
+（`adoptRefresh`）
+判别用例：`McpStdioRecoveryTest#listChangedNotificationRefreshesCatalogGeneration`
+预期：通知已触发重取，但内容变化不换代 → 等待 `generation == 2` 超时红。
+实测 `EXIT=1`：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 10.66 s <<< FAILURE! -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+[ERROR] io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest.listChangedNotificationRefreshesCatalogGeneration -- Time elapsed: 10.65 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: catalog generation bumped by list_changed
+[ERROR]   McpStdioRecoveryTest.listChangedNotificationRefreshesCatalogGeneration:96 timed out awaiting: catalog generation bumped by list_changed
+[ERROR] BUILD FAILURE
+```
+
+还原：`+ 1` 原样回填；还原后 shasum 与基线一致
+`1056af117553dcfb5bf0d847e6532c4af6c4f5c4f357132dd97c04f6dde0e07f`。
+
+### MC — 通知触发被摘除（`onListChanged.accept(this)` 注释）
+
+文件：`mcp/stdio/src/main/java/io/javanatic/harness/mcp/stdio/JsonRpcPeer.java`
+（`handleRemoteMessage` 的 `notifications/tools/list_changed` 分支）
+判别用例：`McpStdioRecoveryTest#listChangedNotificationRefreshesCatalogGeneration`
+预期：通知不再回调连接层 → 不触发刷新 → 同上超时红。
+实测 `EXIT=1`：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 10.63 s <<< FAILURE! -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+[ERROR] io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest.listChangedNotificationRefreshesCatalogGeneration -- Time elapsed: 10.61 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: catalog generation bumped by list_changed
+[ERROR]   McpStdioRecoveryTest.listChangedNotificationRefreshesCatalogGeneration:96 timed out awaiting: catalog generation bumped by list_changed
+[ERROR] BUILD FAILURE
+```
+
+还原：回调语句原样回填；还原后 shasum 与基线一致
+`8e334e7eb473667b7e0e97cc23ec8e73fff045c5dcdff27698cad0dbc48adcd2`。
+
+复核：`grep -rn "MUTATION" mcp/` 无命中（`GREP_EXIT=1`）；三项还原后最终树复跑第 1 节
+全绿（EXIT=0）。
+
+## 3. validate（spotless / checkstyle）
+
+命令：
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+```
+
+实测 `EXIT=0`；`-q` 输出仅 JDK 对 spotless 内部 `sun.misc.Unsafe` 的弃用警告
+（非本项目代码）。Javadoc 精度修订后另跑
+`mvn -B -q -pl mcp/mcp,mcp/stdio,mcp/tool -am -DskipTests compile`，`COMPILE_EXIT=0`，
+随后再跑 validate 仍 `EXIT=0`。
+
+## 4. 附注
+
+- 停 1 边界：只跑 MCP 三模块聚焦矩阵 + validate（计划「停 1 取证」口径）；全量
+  package / consumer / jlink 属停 3 收口。
+- `bundle/base` 与 `examples/headless` 在停 3 补 `mcp-registry` 行前预期不满足
+  （计划内停点边界，packet 偏离清单 D2 已登记）。已实测代表用例，`EXIT=1`：
+
+  ```sh
+  $ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl bundle/base -am test \
+      -Dtest='AppBootTest#bootsBaseProfileAndManifestFlowsIntoHeader' \
+      -Dsurefire.failIfNoSpecifiedTests=false
+  ```
+
+  ```text
+  [ERROR] AppBootTest.bootsBaseProfileAndManifestFlowsIntoHeader:86 » IllegalState 发现的插件未被任何行引用: mcp-registry
+  [ERROR] harness-bundle-base ................................ FAILURE [  0.493 s]
+  EXIT=1
+  ```
+
+  原因：`mcp/mcp` 现 provides `mcp-registry`，base 组合尚未增加对应行（装载器对
+  「已发现未引用」fail loud）；停 3 补行后转绿。

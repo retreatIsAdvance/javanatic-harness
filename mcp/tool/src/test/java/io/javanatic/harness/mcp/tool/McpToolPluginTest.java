@@ -22,8 +22,6 @@ import io.javanatic.harness.mcp.McpToolDescriptor;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.LoggedEvent;
-import io.javanatic.harness.session.event.TurnEnd;
-import io.javanatic.harness.session.event.TurnEndReason;
 import io.javanatic.harness.session.message.CallId;
 import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.ToolUseBlock;
@@ -242,37 +240,6 @@ class McpToolPluginTest {
             assertThat(rt.root().require(ToolRegistry.KEY).schemas(rt.root()))
                 .extracting(schema -> schema.name())
                 .contains("mcp__alpha__echo");
-        }
-    }
-
-    /** 漂移：轮终 TurnEndReason.Error（请重开会话）+ 清单不落账（漂移判定先于对账）。 */
-    @Test
-    void driftEndsTurnWithErrorAndNoCatalog() {
-        try (Runtime rt = new Runtime()) {
-            Fakes.FakeConnection connection = new Fakes.FakeConnection("alpha", echo());
-            rt.root().provide(McpClientService.KEY, new Fakes.FakeClient(connection));
-            bootLoop(rt, new McpToolPlugin());
-
-            AgentHandle handle = rt.root().require(AgentRegistry.KEY)
-                .create(rt.root(), CreateAgentOptions.of(Session.newId("drift"), OPTIONS));
-            Session session = handle.agent().session();
-            connection.state(McpServerState.DRIFTED);
-            handle.agent().followup(UserMessage.of("hi", new MessageSource.User()));
-            handle.agent().whenIdle().join();
-
-            List<String> types = session.events().stream().map(LoggedEvent::type).toList();
-            assertThat(types).doesNotContain("mcp/catalog").doesNotContain("llm/request");
-            TurnEnd end = session.events().stream()
-                .map(LoggedEvent::event)
-                .filter(TurnEnd.class::isInstance)
-                .map(TurnEnd.class::cast)
-                .reduce((first, second) -> second)
-                .orElseThrow();
-            assertThat(end.reason()).isInstanceOf(TurnEndReason.Error.class);
-            assertThat(((TurnEndReason.Error) end.reason()).message())
-                .contains("McpCatalogDriftException")
-                .contains("alpha")
-                .contains("请重开会话");
         }
     }
 
