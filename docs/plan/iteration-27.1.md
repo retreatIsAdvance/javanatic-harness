@@ -1,4 +1,4 @@
-# 迭代 27.1 — MCP 硬化：Streamable HTTP、连接注册表与轮屏障热换代（状态：已裁定·2026-10-18）
+# 迭代 27.1 — MCP 硬化：Streamable HTTP、连接注册表与轮屏障热换代（状态：已收口·2026-10-19）
 
 模块：`mcp/mcp`（Definition：新增连接注册表插件 `mcp-registry`，`McpClientService` 增注册面，`McpServerConnection` 增清单代际；零第三方不变）· `mcp/http`（**新增** Provider：Streamable HTTP，插件 id `mcp-http`；JDK `java.net.http` + Jackson 边界）· `mcp/stdio`（Provider：适配注册表与清单代际，退役会话冻结/DRIFTED）· `mcp/tool`（Consumer：轮屏障换代 + 256 KiB 结果上限 + 映射缓存）· `kernel/config`（敏感词表扩 `auth`/`cookie`，公开 `isSensitiveKey`）· `bundle/base`（装配行）· 行集同步面（`dist/jh` jlink / `examples/headless` / `integration/consumer-sample` / `docs/embedding.md`）· 设计文档 02/03/05/07/12 + `AGENTS.md`。
 
@@ -131,12 +131,12 @@
 | `mcp/mcp` 新 `McpRegistryPlugin` + `module-info` | 插件 id `mcp-registry`、provides Plugin | ☑（停 1） |
 | `mcp/stdio` `McpStdioPlugin` / `StdioMcpConnection` / `JsonRpcPeer` | requires 注册表 + 注册；刷新/重连换代；通知回调；删漂移终态 | ☑（停 1） |
 | `mcp/http`（新模块） | HTTP 客户端 + 配置 + 夹具 + 测试 | ☑（停 2，已提交） |
-| `mcp/tool` `McpToolPlugin` | requires 注册表；双屏障换代（预检先于注册面改动）；PRE_STEP 落账；截断；缓存 | ☐ |
-| `kernel/config` `ConfigValues` | 词表加 `auth`/`cookie`；公开 `isSensitiveKey`（与 `masked` 单源） | ☐ |
-| `bundle/base` `bundle.yml` | `mcp-registry` + `mcp-http` 行 | ☐ |
-| `examples/headless` `HeadlessMain` | `mcp:` 行认 `mcp-registry`/`mcp-http`；计数 | ☐ |
-| 根 `pom.xml` / `dist/jh` / `examples/headless/pom.xml` / `integration/consumer-sample` / `docs/embedding.md` | 模块与坐标/计数同步 | ☐ |
-| 设计文档 `02`/`03`/`05`/`07`/`12` + `AGENTS.md` | 上表同步（同一提交） | ☐ |
+| `mcp/tool` `McpToolPlugin` | requires 注册表；双屏障换代（预检先于注册面改动）；PRE_STEP 落账；截断；缓存 | ☑（停 3） |
+| `kernel/config` `ConfigValues` | 词表加 `auth`/`cookie`；公开 `isSensitiveKey`（与 `masked` 单源） | ☑（停 3） |
+| `bundle/base` `bundle.yml` | `mcp-registry` + `mcp-http` 行 | ☑（停 3） |
+| `examples/headless` `HeadlessMain` | `mcp:` 行认 `mcp-registry`/`mcp-http`；计数 | ☑（停 3） |
+| 根 `pom.xml` / `dist/jh` / `examples/headless/pom.xml` / `integration/consumer-sample` / `docs/embedding.md` | 模块与坐标/计数同步 | ☑（停 3） |
+| 设计文档 `02`/`03`/`05`/`07`/`12` + `AGENTS.md` | 上表同步（同一提交） | ☑（停 3） |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行）
 
@@ -144,22 +144,28 @@
 |---|---|---|
 | 停 1（承载契约 + 共享词表） | `mcp/mcp` 注册表 + `catalogGeneration` + `DRIFTED` 退役/异常更名 + `mcp/stdio` 适配（通知/刷新/重连换代） | ☑（已提交，评审记录 `evidence/iteration-27.1/stop1-review-round1.txt`） |
 | 停 2（新协议面） | `mcp/http` 客户端 + 配置校验 + HTTP 夹具与故障矩阵（会话/SSE/404/DELETE/超时/取消/大帧）+ T7 8 MiB 帧帽（stdio 有界行读 + HTTP 有界响应/单 SSE 事件，两 transport 同批） | ☑（已提交，评审记录 `evidence/iteration-27.1/stop2-review-round1.txt`） |
-| 停 3（消费面 + 装配 + 验收取证） | `mcp/tool` 换代屏障（预检先于注册面改动）/PRE_STEP 落账/结果上限/缓存 + `kernel/config` 词表 + base 两行 + 四处同步面 + `--verify` + jlink 真跑 + R1 跨代回放 + 文档 | ☐ |
+| 停 3（消费面 + 装配 + 验收取证） | `mcp/tool` 换代屏障（预检先于注册面改动）/PRE_STEP 落账/结果上限/缓存 + `kernel/config` 词表 + base 两行 + 四处同步面 + `--verify` + jlink 真跑 + R1 跨代回放 + 文档 | ☑（已提交，评审记录 `evidence/iteration-27.1/stop3-review-packet.md`） |
+
+## 停 3 评审记录（2026-10-19）
+
+**总判：通过放行 → 收口**——门禁独立复绿（`mcp/tool,bundle/base -am` EXIT=0）；新流程件（五行 TL;DR、ADR、状态卡）首次实战到位；`adopt` 实现与 packet「若只能改一处」逐行吻合。五个裁决点全部批准：① 账在 `PRE_STEP` 且仅在 `Enter` 后落（拒绝轮不采纳不落账）；② 空清单退役落账、首次全空不落账；③ URL query 先 percent-decode 再判；④ `mcp/http` 补 `META-INF/services`（classpath 消费必需）；⑤ `--verify` 计数 27 rows / 32 discovered、base 32 = 19 可配 + 13 无配。
+
+犯错回填（评审点名，属 it27 重犯）：新 Provider 模块 `module-info provides` 与 `META-INF/services` **双通道缺一不可**——已作为出厂检查单一行写入 `AGENTS.md` 已知坑（it27 stdio / it27.1 http 两次实撞，防第三次）。
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] HTTP transport：初始化/`Mcp-Session-Id` 捕获回传、JSON 与 SSE 双响应、GET 通知、404 会话失效（`tools/call` 不自动重试、安全请求重做）、DELETE 收尾、405 降级、超时/取消/有限重连——`mcp/http` 测试矩阵 + HTTP 夹具
-- [ ] 连接注册表：stdio + HTTP 同时在场、消费面 transport 中立、跨 transport 撞 server id fail loud、`connections()` 排序稳定——`mcp/mcp` 注册表测试 + 装配测试
-- [ ] T4 换代：轮间变化在 `TURN_STOPPING`/`PRE_STEP` 采纳、轮内变化延后、请求 schema 与账本代际一致、换代失败旧代保活 + 轮 Error + 下一轮重试、`mcp/catalog` 按代全量快照（日志序即代）、resume 对账采纳——换代矩阵 + R1 回放
-- [ ] 结果上限：256 KiB 缺省、UTF-8 完整字符、截断标记、成功/错误同待遇、配置覆盖；transport 1 MiB 单帧仍无截断——`mcp/tool` + `mcp/stdio` 测试
-- [ ] 凭据：`Authorization`/`Cookie`/`X-Auth-*` 在 dump/header 恒 `****`；URL userinfo/敏感 query/保留头/控制字符 fail loud——`ConfigValuesTest` + `mcp/http` 配置测试
-- [ ] 治理不破：MCP 工具恒非豁免（`--verify`）、`tool/call` + `tool/result` 审计不变、执行仍走 `ToolExecutor` pipeline
-- [ ] 大输出/帧安全：1 MiB 真帧；T7 通过则 8 MiB 超限 fail loud（stdio 断裂重连 / HTTP 请求失败）
-- [ ] 行集同步面四处 + 根 pom + `--verify` 计数（base 32 = 19 可配 + 13 无配；示例 27 rows / 32 discovered）
-- [ ] jlink `jh` keyless 真跑：stdio + HTTP 混合、两轮换代、`mcp/catalog` 与审计落账、启停与零噪声面
-- [ ] R1：回放/重建零联网零进程；跨代账本 fold == 注册面（逐字段）；请求指纹闭包
-- [ ] 全量 `mvn -B -q package` + `mvn -B -q validate` + `verify-consumer.sh candidate`
-- [ ] 设计文档 02/03/05/07/12 + `AGENTS.md` + `docs/embedding.md` 同步
+- [x] HTTP transport：初始化/`Mcp-Session-Id` 捕获回传、JSON 与 SSE 双响应、GET 通知、404 会话失效（`tools/call` 不自动重试、安全请求重做）、DELETE 收尾、405 降级、超时/取消/有限重连——`mcp/http` 测试矩阵 + HTTP 夹具
+- [x] 连接注册表：stdio + HTTP 同时在场、消费面 transport 中立、跨 transport 撞 server id fail loud、`connections()` 排序稳定——`mcp/mcp` 注册表测试 + 装配测试
+- [x] T4 换代：轮间变化在 `TURN_STOPPING`/`PRE_STEP` 采纳、轮内变化延后、请求 schema 与账本代际一致、换代失败旧代保活 + 轮 Error + 下一轮重试、`mcp/catalog` 按代全量快照（日志序即代）、resume 对账采纳——换代矩阵 + R1 回放
+- [x] 结果上限：256 KiB 缺省、UTF-8 完整字符、截断标记、成功/错误同待遇、配置覆盖；transport 1 MiB 单帧仍无截断——`mcp/tool` + `mcp/stdio` 测试
+- [x] 凭据：`Authorization`/`Cookie`/`X-Auth-*` 在 dump/header 恒 `****`；URL userinfo/敏感 query/保留头/控制字符 fail loud——`ConfigValuesTest` + `mcp/http` 配置测试
+- [x] 治理不破：MCP 工具恒非豁免（`--verify`）、`tool/call` + `tool/result` 审计不变、执行仍走 `ToolExecutor` pipeline
+- [x] 大输出/帧安全：1 MiB 真帧；T7 通过则 8 MiB 超限 fail loud（stdio 断裂重连 / HTTP 请求失败）
+- [x] 行集同步面四处 + 根 pom + `--verify` 计数（base 32 = 19 可配 + 13 无配；示例 27 rows / 32 discovered）
+- [x] jlink `jh` keyless 真跑：stdio + HTTP 混合、两轮换代、`mcp/catalog` 与审计落账、启停与零噪声面
+- [x] R1：回放/重建零联网零进程；跨代账本 fold == 注册面（逐字段）；请求指纹闭包
+- [x] 全量 `mvn -B -q package` + `mvn -B -q validate` + `verify-consumer.sh candidate`
+- [x] 设计文档 02/03/05/07/12 + `AGENTS.md` + `docs/embedding.md` 同步
 - [ ] 模型在环 runbook——待有 `DEEPSEEK_API_KEY` 环境回填（不伪造通过）
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 `docs/plan/evidence/iteration-27.1/`）

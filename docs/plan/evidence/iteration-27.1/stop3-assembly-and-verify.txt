@@ -1,0 +1,59 @@
+停 3 — 装配面与 --verify 计数（S3 取证）
+日期：2026-10-19
+命令环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)；Maven ~/Documents/apache-maven-3.10.0/bin/mvn
+
+== 1. base bundle 行集 ==
+$ grep -c '^  - plugin:' bundle/base/src/main/resources/META-INF/harness/bundle.yml
+32
+
+新增/变更（行序即装载序）：
+  - plugin: mcp-registry          （无配；聚合 stdio + http）
+  - plugin: mcp-stdio
+    config: { servers: [] }
+  - plugin: mcp-http
+    config: { servers: [] }
+  - plugin: mcp-tool
+    config: { maxResultBytes: 262144 }   （由无配转可配）
+口径：32 行 = 19 可配 + 13 无配（docs/design/12 §行集；mcp-tool 移入可配，
+mcp-registry 入无配，mcp-http 入可配）。
+
+== 2. --verify 真跑（经 HeadlessMain.run + 默认 headless profile） ==
+HeadlessVerifyTest 断言钉死（非正则）：
+  composition: 27 rows, 32 discovered, 0 unreferenced
+  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool; tools=0
+夹具 server profile：
+  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool;
+       tools=mcp__verify-fixture__echo (approval-required)
+  approval: AUTO (approval-auto; exempt=ask_user)   ← MCP 工具不在豁免名单
+
+$ mvn -B -pl bundle/base,examples/headless -am \
+      -Dtest='AppBootTest,HeadlessVerifyTest' -Dsurefire.failIfNoSpecifiedTests=false test
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0 -- AppBootTest
+[INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0 -- HeadlessVerifyTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+发现并修复（停 2 漏项，S3 装配面暴露）：
+  mcp/http 原只有 module-info 的 provides，缺 classpath 的
+  META-INF/services/io.javanatic.harness.kernel.plugin.Plugin。
+  红：AppBootTest 4 failures + 7 errors，均为
+    IllegalState 行引用的插件未发现: mcp-http
+  修复：新增该 service 文件 → 上述两组全绿。bundle AppBootTest 的
+  discoverFindsAllRegisteredPlugins 现点名 mcp-registry/mcp-http（回归护栏）。
+
+== 3. 四处同步面（坐标/模块） ==
+1) 根 pom.xml dependencyManagement：+ harness-mcp-http（0.3.0-SNAPSHOT）。
+2) dist/jh/pom.xml moditect modules：+ io.javanatic.harness.mcp.http
+   （jlink 根模块显式清单；漏列由镜像内 verify 冒烟兜底）。
+3) examples/headless/pom.xml：+ harness-mcp-http（base 四行运行时 ServiceLoader 可见）。
+4) integration/consumer-sample/pom.xml candidate-closure：+ harness-mcp-http
+   （发布腿 0.2.0 停用该 profile；4 负例依赖候选腿不变）。
+附：bundle/base/pom.xml test scope + harness-mcp-http（装配测试发现面）。
+docs/embedding.md：mcp 三坐标 → 四坐标（mcp-mcp / mcp-stdio / mcp-http / mcp-tool；
+mcp-mcp 提供 mcp-registry 行，其余各为一行）；基础 16 条不变。
+integration/verify-consumer.sh 头注：candidate-closure = skill 三件 + mcp 四坐标。
+
+== 4. 未决/挂账 ==
+- 字面 --verify stdout 行在 S5 jlink jh 真跑时落盘（本档先用 HeadlessMain.run 真路径断言）。
+- 模型在环 runbook 仍待 DEEPSEEK_API_KEY（不伪造）。

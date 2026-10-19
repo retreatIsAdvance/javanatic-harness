@@ -70,15 +70,16 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-skill-local` | Provider | 四根本地发现（项目/用户 × `.harness`/`.agents`，近者胜）——**停 3 落地**（dsh 对照：`skill/skill-filesystem`）|
 | `harness-skill-tool` | Consumer | `skill` 装载工具 + 轮首目录装载（`agent/pre-step` 挂点）+ `skill/catalog` 扩展事件 + Dynamic 目录段；**首个非 examples 依赖 `core-agent-loop` 的模块**（插件 id `skill-tool`）|
 
-#### MCP（外部工具服务器，it27）
+#### MCP（外部工具服务器，it27 / it27.1）
 
 | 模块 | 角色 | 职责 |
 |---|---|---|
-| `harness-mcp-mcp` | Definition | `McpClientService` 契约（按 server 取连接面：冻结工具清单 / 调用 / 状态）+ `McpToolDescriptor`/`McpCallResult` + 连接错误分档（`McpConnectionException`/`McpProtocolException`/`McpTimeoutException`/`McpCatalogDriftException`）。JPMS 名 `io.javanatic.harness.mcp`；零第三方依赖（取消词表复用 `llm.llm` 的 `AbortSignal`）|
-| `harness-mcp-stdio` | Provider | JSON-RPC 2.0 over stdio 手写客户端（插件 id `mcp-stdio`）：换行分帧、`initialize` 协商、`tools/list`（分页上限 100）、`tools/call`、stderr 转日志、有限重连（500ms→30s ×10）；子进程装配期启动、随 scope 回收；env = 最小环境 + 行配置白名单；超时 60s（server 级覆盖）。**Jackson 边界** |
-| `harness-mcp-tool` | Consumer | 冻结清单 → 既有 `ScopedRegistry` 注册（插件 id `mcp-tool`）：`mcp__<server>__<raw>` 公开名（raw 不合法/超长确定性归一 + `_hash8` + WARN；server id 配置面拒 `__`）、`approvalExempt=false` 无豁免出口、JSON Schema → `ValueSchema` 白名单映射（`Opt`/`enum` 降级/不支持构造排除 + WARN）、`mcp/catalog` 扩展事件（`ignorable=false`）+ 每轮 REQUEST 检查点。**Jackson 边界** |
+| `harness-mcp-mcp` | Definition | `McpClientService` 连接注册表（`connections()` 按 id 排序 / `connection(id)` / `register` 幂等注销）+ `McpServerConnection`（`state()` / `tools()` / `catalogGeneration()` / `call`）+ `McpToolDescriptor`/`McpCallResult` + 连接错误分档（`McpConnectionException`/`McpProtocolException`/`McpTimeoutException`/`McpCatalogSwapException`）。插件 id `mcp-registry`（机制名 = 独立可发现的聚合插件，**非笔误**；transport 提供者向它注册，跨 transport 撞 server id fail loud）。JPMS 名 `io.javanatic.harness.mcp`；零第三方依赖（取消词表复用 `llm.llm` 的 `AbortSignal`）|
+| `harness-mcp-stdio` | Provider | JSON-RPC 2.0 over stdio 手写客户端（插件 id `mcp-stdio`）：换行分帧（T7 8 MiB 单帧帽）、`initialize` 协商、`tools/list`（分页上限 100）、`tools/call`、stderr 转日志、通知触发刷新、有限重连（500ms→30s ×10，重连对账换代）；子进程装配期启动、随 scope 回收；env = 最小环境 + 行配置白名单；超时 60s（server 级覆盖）。**Jackson 边界** |
+| `harness-mcp-http` | Provider | Streamable HTTP 手写客户端（插件 id `mcp-http`，it27.1 **新增**）：POST JSON/SSE 响应分流、`Mcp-Session-Id` 捕获回传、`MCP-Protocol-Version`、GET 通知通道（405/中断只 WARN）、404 会话失效（安全请求重做，`tools/call` 不自动重试）、DELETE 收尾、`Redirect.NEVER`、超时/取消/有限重连、T7 8 MiB 响应与单 SSE 事件帽；URL 拒 userinfo/敏感 query、headers 拒保留头/控制字符、大小写不敏感重名。**Jackson 边界** |
+| `harness-mcp-tool` | Consumer | 注册表聚合 → 既有 `ScopedRegistry` 注册（插件 id `mcp-tool`）：双屏障换代（`TURN_STOPPING` 换面 / `PRE_STEP` 补换代 + 落账；轮内绝不换）、候选快照全量预检先于注册面改动（撞名 = `McpCatalogSwapException`，旧代保活 + 轮 Error + 下轮重试）、`mcp__<server>__<raw>` 公开名（非法/超长确定性归一 + `_hash8` + WARN）、`approvalExempt=false` 无豁免出口、JSON Schema → `ValueSchema` 白名单映射（`Opt`/`enum` 降级/不支持构造排除 + WARN）、`mcp/catalog` 每代全量快照（`ignorable=false`）、结果 256 KiB 上限（UTF-8 完整边界）、映射缓存（WARN 每键一次）。**Jackson 边界** |
 
-依赖边（实况，登记口径）：`mcp/mcp` → `kernel` + `llm.llm`；`mcp/stdio` → `mcp/mcp` + `kernel` + `kernel.config` + `llm.llm` + Jackson；`mcp/tool` → `mcp/mcp` + `core.tools` + `core.session` + `session.persistence` + `core.agent` + `core.agent-loop` + `llm.llm` + Jackson。工具侧运行期不 `requires` transport 模块（`mcp-tool` 只经 `McpClientService` 取连接面）；插件 `requires "mcp-stdio"` 是**组合面**绑定（Streamable HTTP 引入时改 transport 中立 provides/requires，挂账 it27.1）。
+依赖边（实况，登记口径）：`mcp/mcp` → `kernel` + `llm.llm`；`mcp/stdio` → `mcp/mcp` + `kernel` + `kernel.config` + `llm.llm` + Jackson；`mcp/http` → `mcp/mcp` + `kernel` + `kernel.config` + `llm.llm` + Jackson + `java.net.http`；`mcp/tool` → `mcp/mcp` + `core.tools` + `core.session` + `session.persistence` + `core.agent` + `core.agent-loop` + `kernel.config` + `llm.llm` + Jackson。工具侧运行期不 `requires` transport 模块（`mcp-tool` 只经 `McpClientService` 取连接面）；插件 `requires "mcp-registry"` 是**组合面**绑定，transport 形态对消费面不可见。
 
 #### Shell（命令执行）
 
@@ -174,9 +175,10 @@ flowchart TD
     end
 
     subgraph mcp[MCP]
-        mcpdef[harness-mcp-mcp]
+        mcpdef[harness-mcp-mcp<br/>+ plugin mcp-registry]
         mcpstdio[harness-mcp-stdio]
         mcptool[harness-mcp-tool]
+        mcpedge[harness-mcp-http]
     end
 
     subgraph shell[Shell]
@@ -239,7 +241,11 @@ flowchart TD
     skilldef --> skilltool
     skilltool --> agentloop
     mcpdef --> mcpstdio
+    mcpdef --> mcpedge
     mcpdef --> mcptool
+    kconfig --> mcpstdio
+    kconfig --> mcpedge
+    kconfig --> mcptool
     session --> mcptool
     tools --> mcptool
     agent --> mcptool
@@ -258,6 +264,7 @@ flowchart TD
     skilllocal --> base
     skilltool --> base
     mcpstdio --> base
+    mcpedge --> base
     mcptool --> base
     local --> base
     docker --> base
@@ -275,7 +282,7 @@ flowchart TD
     headlessex --> distjh
 ```
 
-Jackson 只出现在 `core-tools`、`llm/openai-compat`、`persistence-jsonl`、`mcp/stdio` 与 `mcp/tool` 五个边界模块（model/tool JSON、wire JSON、codec JSON、JSON-RPC 帧、tool JSON Schema）；`core-session` 及全部 domain 模块零 Jackson。
+Jackson 只出现在 `core-tools`、`llm/openai-compat`、`persistence-jsonl`、`mcp/stdio`、`mcp/http` 与 `mcp/tool` 六个边界模块（model/tool JSON、wire JSON、codec JSON、JSON-RPC 帧、HTTP/SSE JSON 帧、tool JSON Schema）；`core-session` 及全部 domain 模块零 Jackson。
 
 ## 4. module-info.java 示例
 
@@ -410,9 +417,10 @@ harness/
 ├── sandbox/…
 ├── mcp/
 │   ├── pom.xml                      ← 聚合
-│   ├── mcp/pom.xml                  ← McpClientService 契约 + McpToolDescriptor（零 Jackson）
-│   ├── stdio/pom.xml                ← stdio transport（JSON-RPC 2.0 + 子进程生命周期）
-│   └── tool/pom.xml                 ← 工具注册 + mcp/catalog 扩展事件
+│   ├── mcp/pom.xml                  ← McpClientService 注册表契约 + 连接面/清单代际（零 Jackson；提供 mcp-registry 行）
+│   ├── stdio/pom.xml                ← stdio transport（JSON-RPC 2.0 + 子进程生命周期 + 通知刷新/重连对账）
+│   ├── http/pom.xml                 ← Streamable HTTP transport（POST/SSE、Mcp-Session-Id、通知通道、DELETE 收尾；it27.1）
+│   └── tool/pom.xml                 ← 工具注册 + 轮屏障换代 + mcp/catalog 扩展事件 + 结果截断
 ├── session/
 │   ├── pom.xml
 │   ├── persistence/pom.xml          ← SessionStore SPI + SessionEventCodec
@@ -832,7 +840,7 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `interaction/user-approval` | `interaction.approval` | ✅ **真实三模式**（非 stub）|
 | `interaction/commands` | `interaction.commands` | ✅（it14 实装；dsh `@deepseek-ai/dsh-commands` 形状）|
 | （dsh 无对应：问答走审批通道）| `interaction.ask` | ✅（it22；`ask_user` 免审批 + 停轮结果——与审批分离的澄清通道）|
-| `mcp/mcp-client` | `mcp.stdio`（stdio transport + JSON-RPC；Streamable HTTP 与 transport 中立 provides/requires 挂 it27.1）| ✅（it27，stdio only）|
+| `mcp/mcp-client` | `mcp.mcp`（传输中立契约 + `mcp-registry` 注册表）+ `mcp.stdio` + `mcp.http`（两个 transport Provider，it27.1）| ✅（it27.1：stdio + Streamable HTTP）|
 | `mcp/mcp-resources` | — | ❌ 首版不做（二版边界：Resources 三共享工具 + server instructions，对照留档）|
 | `bundle/base` | `bundle.base` | ✅ |
 | `core/agent-default-model` | （合并进 agent-loop）| ✅ 简化 |
@@ -845,12 +853,12 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `acp` | — | ❌ 不做 |
 | `python/`, `native/` | — | N/A |
 
-**MCP schema 边界与 dsh 对照挂账（it27 收口登记，执行面均在本迭代白名单之外）**：
+**MCP schema 边界与 dsh 对照挂账（it27 收口登记，it27.1 复核维持）**：
 `oneOf` 组合语义不映射（未知构造排除 + WARN）；`enum` 进 schema 但**不执法**（模型面提示，非强校验）；
 `outputSchema` 不消费（结果统一 `content` 文本面）；`taskSupport` 不实现（无异步任务协商）；
 哈希消歧退路——`_hash8` 与合法 raw 名理论上可撞（如 raw 恰为 `x_1234abcd`），注册表 fail loud，
-届时退到 dsh 的 hash12 或前缀转义（同属命名算法变更，须重裁 catalog 算法版本）。前四项随 Streamable
-HTTP 一并重访（it27.1/28）。
+届时退到 dsh 的 hash12 或前缀转义（同属命名算法变更，须重裁 catalog 算法版本）。五项均为**消费面
+语义**，与 transport 无关：it27.1 引入 Streamable HTTP 后逐项复核，结论不变（T9）。
 
 ## 7. 模块边界纪律（移植 dsh 约定）
 

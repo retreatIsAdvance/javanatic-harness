@@ -1,0 +1,69 @@
+停 3 — 全量构建（package）取证（S5）
+日期：2026-10-19 09:13–09:15 (+08:00)
+命令环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)；Maven ~/Documents/apache-maven-3.10.0/bin/mvn
+
+== 命令 ==
+$ mvn -B package
+（本停工作树，未提交；package 含 validate/compile/test/checkstyle/spotless/jlink）
+
+== 结果 ==
+[INFO] BUILD SUCCESS
+[INFO] Total time:  02:00 min
+[INFO] Finished at: 2026-10-19T09:15:56+08:00
+EXIT=0
+
+== 测试汇总（模块级 summary 行；37 个测试模块，688 例，0 失败/错误/跳过） ==
+harness-kernel-brand              Tests run: 2
+harness-kernel-core               Tests run: 36
+harness-kernel-config             Tests run: 18
+harness-core-session              Tests run: 41
+harness-core-system-prompt        Tests run: 6
+harness-llm-llm                   Tests run: 13
+harness-core-tools                Tests run: 31
+harness-session-persistence-jsonl Tests run: 33
+harness-core-todo                 Tests run: 6
+harness-core-agent                Tests run: 13
+harness-llm-replay                Tests run: 6
+harness-core-agent-loop           Tests run: 57
+harness-core-plan                 Tests run: 6
+harness-fs-local                  Tests run: 33
+harness-sandbox-sandbox           Tests run: 3
+harness-shell-local               Tests run: 5
+harness-sandbox-local             Tests run: 5
+harness-sandbox-policy            Tests run: 3
+harness-fs-tool                   Tests run: 21
+harness-core-preset               Tests run: 4
+harness-llm-openai-compat         Tests run: 23
+harness-llm-deepseek              Tests run: 1
+harness-skill-skill               Tests run: 10
+harness-skill-tool                Tests run: 13
+harness-skill-local               Tests run: 9
+harness-mcp-mcp                   Tests run: 3
+harness-mcp-stdio                 Tests run: 39
+harness-mcp-http                  Tests run: 53
+harness-mcp-tool                  Tests run: 36
+harness-shell-tool                Tests run: 3
+harness-shell-docker              Tests run: 11
+harness-interaction-approval      Tests run: 12
+harness-interaction-ask           Tests run: 5
+harness-interaction-commands      Tests run: 11
+harness-bundle-base               Tests run: 32
+harness-examples-agent-spine      Tests run: 3
+harness-examples-headless         Tests run: 82
+
+计数口径：取各模块 surefire 最终 summary 行（不是逐类 "Running" 行），避免粘连/双计；
+37 个有测试的模块求和 = 688。另：`mvn -B -q validate` 在 package 前单跑 EXIT=0。
+
+== 关键模块变化（相对 it27 收口） ==
+- mcp-mcp 3：注册表契约/重复 id/Disposable 语义。
+- mcp-stdio 39：换代、8 MiB 行帽、重连/耗尽、结果面。
+- mcp-http 53：协议面（session/SSE/GET/DELETE）、敏感 query/头校验、Redirect.NEVER、
+  8 MiB 帧帽、故障矩阵。
+- mcp-tool 36：双屏障、预检先于注册面改动、账本、截断 UTF-8 边界、entries 缓存。
+- kernel-config 18：公开 isSensitiveKey + 同源词表（auth/cookie）。
+- bundle-base 32：32 行行集与配置面。
+- examples-headless 82：--verify 摘要（mcp 行 + tools=0/工具名）与 E2E 回归。
+
+== jlink 镜像 ==
+dist/jh SUCCESS；镜像 dist/jh/target/jlink-image/bin/jh 由本构建产出，
+真跑取证见 stop3-jlink-realrun.txt。

@@ -75,7 +75,8 @@ class AppBootTest {
             "approval-deny", "tools", "fs-local", "fs-tool", "shell-local",
             "shell-tool", "shell-docker", "todo", "plan", "commands", "sandbox-local", "sandbox-policy",
             "presets", "compaction", "agent-loop",
-            "skill", "skill-local", "skill-tool", "mcp-stdio", "mcp-tool")) {
+            "skill", "skill-local", "skill-tool", "mcp-stdio", "mcp-tool",
+            "mcp-registry", "mcp-http")) {
             assertThat(discovered).containsKey(id);
         }
     }

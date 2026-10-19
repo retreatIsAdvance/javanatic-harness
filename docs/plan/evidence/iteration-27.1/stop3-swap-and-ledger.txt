@@ -1,0 +1,82 @@
+停 3 — mcp/tool 双屏障换代 + PRE_STEP 落账 + 截断/缓存（S1 取证）
+日期：2026-10-19
+命令环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)；Maven ~/Documents/apache-maven-3.10.0/bin/mvn
+（未提交；本文件随停 3 评审包一同接受审查）
+
+== 1. 聚焦测试（S1 实现态，绿） ==
+$ mvn -B -pl mcp/tool -am -Dtest='McpCatalogLedgerTest,McpToolPluginTest' \
+      -Dsurefire.failIfNoSpecifiedTests=false test
+
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpToolPluginTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0 -- in io.javanatic.harness.mcp.tool.McpCatalogLedgerTest
+[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+覆盖点：
+- 双屏障：轮内目录变化在 TURN_STOPPING 前不换面（同轮 llm/request 的 toolsSchemaSha256 不变）；
+  轮末换面、下一次 accepted PRE_STEP 才落账。
+- 预检先于注册面改动：外来同名工具在场 → McpCatalogSwapException（“撞名”），旧代句柄
+  与 server CONNECTED 状态保留，账不追加；解除冲突后下一轮补采纳。
+- PRE_STEP 裁决 Enter 才采纳/落账；拒绝轮不采纳、不落账。
+- 按代全量快照：首非空代落账、等代零噪声、变更代/移除 server 落账（含空代退役）。
+- resume 对账：以既有账为基线，新 runtime 采纳差异代并落账。
+- 账本 codec/JSONL 往返；fold 仅凭账重建注册面（注册面==最后一笔全量快照）。
+- 结果上限：max=5 时 "ab你好cd" → "ab你 (output truncated)"（UTF-8 完整边界；
+  success/error 同待遇）；恰等上限不截断；配置 maxResultBytes=4 生效、0 fail loud。
+- 缓存：映射/归一 WARN 跨代仅一次。
+
+== 2. 突变验证（每个突变→红，还原→绿；25 项基线） ==
+M1 预检移除（build 后直接 swap）:
+  red: Tests run: 25, Failures: 1, Errors: 0
+    McpCatalogLedgerTest.swapPrecheckFailureKeepsOldGenerationAndRetriesNextTurn:255
+  说明：旧代先被摘下再注册撞名，无法保活；预检先于注册面改动是必要的。
+
+M2 PRE_STEP 采纳移除（waterfall 仅透传 args.next()）:
+  red: McpToolPluginTest 5 failures；McpCatalogLedgerTest 7 failures + 3 errors
+    含 firstPreStepAppendsFullSnapshotAndEqualStaysSilent、
+    preStepAdoptsNewGenerationAndAppendsLedger、turnStoppingSwapsSurfaceButLedgerWaitsForNextPreStep、
+    rejectedTurnDoesNotAdoptOrAppend、removedServerAdoptsEmptyRetirementLedger、
+    resumeWithChangedCatalogAdoptsNewGeneration、foldRebuildsRegisteredSurfaceFromLedgerOnly、
+    loopAppendsCatalogAtPreStepBeforeUserMessageAndRequest 等
+  说明：PRE_STEP 屏障承担首轮/延迟采纳与落账，不可缺。
+
+M3 缓存复用移除（每代重算 compute）:
+  red: Tests run: 25, Failures: 1, Errors: 0
+    McpToolPluginTest.mappingAndNormalizationWarningsEmitOnceAcrossGenerations:496
+  说明：entries 缓存是 WARN 一次语义的承载。
+
+M4 UTF-8 字节计长改为码点计 1:
+  red: Tests run: 25, Failures: 1, Errors: 0
+    McpToolPluginTest.resultCapTruncatesAtCompleteUtf8BoundaryAndKeepsErrorFlag:430
+  说明：字节上限与完整字符边界被钉死。
+
+M5 TURN_STOPPING 采纳移除（空监听）:
+  red: Tests run: 25, Failures: 3, Errors: 0
+    McpToolPluginTest.midTurnCatalogChangeDefersSwapUntilTurnStopping:366
+    McpToolPluginTest.swapFailureAtTurnStoppingEndsTurnAndNextTurnRetries:404
+    McpCatalogLedgerTest.turnStoppingSwapsSurfaceButLedgerWaitsForNextPreStep:169
+  说明：轮末换面 + 失败即轮 Error 的语义由 TURN_STOPPING 承载。
+
+还原后复跑：
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0 -- McpToolPluginTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0 -- McpCatalogLedgerTest
+[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+== 3. 变更面（S1） ==
+ mcp/tool/pom.xml                                    |  +harness-kernel-config 依赖
+ mcp/tool/src/main/java/module-info.java             |  requires kernel.config + 文档语义
+ mcp/tool/.../McpToolPlugin.java                     |  双屏障/PRE_STEP 落账/截断/缓存/预检
+ mcp/tool/.../McpCatalogEvent.java                   |  Javadoc：按代全量快照、日志序即代
+ mcp/tool/.../Fakes.java                             |  目录换代 + 代际 + 一次性钩子
+ mcp/tool/.../McpCatalogLedgerTest.java              |  换代/落账/resume/fold 矩阵
+ mcp/tool/.../McpToolPluginTest.java                 |  屏障顺序/延后/失败/截断/缓存矩阵
+
+== 4. R1 真跑（S5，详见 stop3-jlink-realrun.txt §4） ==
+- 真实会话 headless-1792372745200-fa67（两代账本 8 → 6）复制到 replay-home；
+  MCP 四行 disabled，--base-url=http://127.0.0.1:1（不可达），stdin 仅 /exit：
+    EXIT=0；resume 提示；pgrep mcp fixture = none（零联网零进程）。
+- 回放后日志仅追加 session/end-seed + /exit 的 command/run+done；无 mcp/catalog
+  追加（无 turn admit 即不落账）。
+- 账本 fold 的逐字段重建由本节 §1 的 foldRebuildsRegisteredSurfaceFromLedgerOnly
+  与 catalogEventRoundTripsThroughJsonl 钉住；真跑补足“真实 JSONL 可独立加载”。

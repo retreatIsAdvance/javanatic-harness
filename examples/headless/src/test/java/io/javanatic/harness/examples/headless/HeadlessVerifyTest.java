@@ -36,9 +36,9 @@ class HeadlessVerifyTest {
         assertThat(result.exit()).isZero();
         assertThat(result.stdout())
             .contains("Profile: headless   policy: STANDARD")
-            .containsPattern("  composition: \\d+ rows, \\d+ discovered, 0 unreferenced")
+            .contains("  composition: 27 rows, 32 discovered, 0 unreferenced")
             .contains("  approval: AUTO (approval-auto; exempt=ask_user)")
-            .contains("  mcp: mcp-stdio + mcp-tool; tools=0")
+            .contains("  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool; tools=0")
             .contains("  audit: jsonl " + sessions + " (durable)")
             .contains("  stop: max-turns=50 max-steps=40 budget=unlimited");
     }
@@ -90,7 +90,8 @@ class HeadlessVerifyTest {
         Result result = run("--verify", "--profile=" + mcpProfile());
         assertThat(result.exit()).isZero();
         assertThat(result.stdout())
-            .contains("  mcp: mcp-stdio + mcp-tool; tools=mcp__verify-fixture__echo (approval-required)")
+            .contains("  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool;"
+                + " tools=mcp__verify-fixture__echo (approval-required)")
             .contains("  approval: AUTO (approval-auto; exempt=ask_user)");
         assertThat(result.stderr()).isEmpty(); // 零噪声：server 不写 stderr，摘要不混诊断
     }

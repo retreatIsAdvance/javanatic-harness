@@ -1,0 +1,115 @@
+停 3 — jlink 双 transport 真跑 + 两代账本 + R1 回放（S5 取证）
+日期：2026-10-19 09:15–09:20 (+08:00)
+镜像：dist/jh/target/jlink-image/bin/jh（0.3.0-SNAPSHOT，构建自本停工作树；全量 package 见
+      stop3-closeout-package.txt）
+隔离：-Duser.home=/tmp/it271-s5/home（JDK_JAVA_OPTIONS；sessions 落隔离目录，不碰真实 HOME）
+夹具：mcp/stdio FixtureServer.java（jh 子进程）+ mcp/http FixtureHttpServer.java（外部进程，
+      模拟真实远端 MCP server；session id 由夹具签发）
+假模型：127.0.0.1:18731 最小 OpenAI SSE 服务（keyless，--api-key=fake），按最后一条消息路由
+说明：输出中的 "NOTE: Picked up JDK_JAVA_OPTIONS" 是 JDK 提示，非 jh/MCP 输出。
+
+== 1. 默认组合 --verify：零噪声、四行在场 ==
+$ JDK_JAVA_OPTIONS=-Duser.home=/tmp/it271-s5/home \
+    dist/jh/target/jlink-image/bin/jh --verify --workspace=/tmp/it271-s5/ws
+
+Profile: headless   policy: STANDARD
+  composition: 27 rows, 32 discovered, 0 unreferenced
+  approval: AUTO (approval-auto; exempt=ask_user)
+  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool; tools=0
+  audit: jsonl /tmp/it271-s5/home/.harness/sessions (durable)
+  stop: max-turns=50 max-steps=40 budget=unlimited
+EXIT=0
+
+- 27/32 与 docs/design/07 §6 同步值一致（headless 27 行 = base 32 行经 headless patch 后；
+  discovered 32）。
+- servers 缺省空：`pgrep -fl mcp-fixture/FixtureServer` verify 前后均 none；
+  外部 HTTP 夹具的记录文件（http-inits/http-gets/http-calls）此刻**不存在**——没有
+  initialize/GET/call，即未建连。
+- 默认组合不含 transport server，HTTP 面不发网络（外部夹具虽在跑，未被连接）。
+
+== 2. 双 transport 启用（rich profile）==
+profile rows（replace: true）：
+  mcp-stdio.servers[0] = {id: local, command: <temurin-25 java>,
+                          args: [FixtureServer.java, --pid-file, .../stdio.pid,
+                                 --big-bytes, 300000], timeoutSeconds: 30}
+  mcp-http.servers[0]  = {id: remote, url: http://127.0.0.1:62202/mcp, timeoutSeconds: 30}
+
+    mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool;
+         tools=mcp__local__big,mcp__local__echo,mcp__local__env,mcp__local__fail,
+               mcp__remote__big,mcp__remote__echo,mcp__remote__env,mcp__remote__fail
+         (approval-required)
+    EXIT=0
+
+- 8 个工具 = 两 server × 各 4（名称序；恒注记 approval-required）。
+- stdio 子进程 pid 写入 /tmp/it271-s5/stdio.pid，verify 退出后 kill -0 失败 → PROCESS_REAPED。
+- HTTP 面：夹具记录 `initialize` 与 `get`（通知通道建立）；进程退出时记录 DELETE
+  （http-deletes.txt: `it271-session`）→ 会话收尾不是“断网即弃”。
+- 首跑未带 --session-id 时客户端日志 "issued no Mcp-Session-Id; notification channel
+  disabled"：无会话 id 时通知无法归属，客户端按约不建 GET 通道（非缺陷；重启用
+  --session-id 后 `get` 记录出现）。
+
+== 3. 三轮真跑：轮内 list_changed 不换面、轮末换代、下一轮落账 ==
+驱动（stdin 顺序喂入；fake 模型在 tool 结果后延迟 0.35s，给刷新线程留时）：
+  turn 1 "run http-echo"  → fake 要 mcp__remote__echo {"message":"hello-http"}
+  turn 2 "status please"  → 纯文本
+  turn 3 "run big-test"   → fake 要 mcp__local__big {}
+  /exit
+命令（REPL；省略 --api-key=... 之外的 key 值）：
+  jh --profile=/tmp/it271-s5/rich.yml --workspace=/tmp/it271-s5/ws \
+     --provider=fixture --model=fixture-1 --base-url=http://127.0.0.1:18731 --api-key=fake
+EXIT=0
+
+stdout（节选）：
+  → mcp__remote__echo {"message": "hello-http"}
+  ← echo: hello-http
+  tool-round-done
+  stats: turn=1 steps=2 ...
+  text-round-done
+  stats: turn=2 steps=1 ...
+  → mcp__local__big {}
+  ← xxxxx…（屏幕省略号裁剪）
+  stats: turn=3 steps=2 ...
+
+stderr 关键行（刷新线程）：
+  mcp server 'remote' catalog generation 1 -> 2 (2 tools, list_changed)
+
+会话日志（headless-1792372745200-fa67/log.jsonl；关键序）：
+  seq 0  turn/start
+  seq 2  mcp/catalog  entries=8（local 4 + remote 4；无 generation 字段）
+  seq 3  user/message
+  seq 10 tool/call    mcp__remote__echo（arguments {"message": "hello-http"}）
+  seq 11 tool/result  contentLen=16（echo: hello-http）
+  seq 19 turn/end     ← 轮末屏障换代（1→2）
+  seq 20 turn/start
+  seq 22 mcp/catalog  entries=6（local 4 + remote echo/updated；无 generation 字段）
+  seq 23 user/message ← PRE_STEP 落账先于 admit 后的 user/message
+  seq 33 user/message（turn 3）
+  seq 34 step/start   ← turn 3 无 mcp/catalog：清单不变 = 零噪声
+  seq 40 tool/call    mcp__local__big
+  seq 41 tool/result  contentLen=262163，含 " (output truncated)"
+
+- 两代账本：8 → 6 条，日志顺序即代（事件不带 generation 字段）；turn 2 请求的工具面
+  已换成 mcp__remote__echo + mcp__remote__updated（fake 服务记录），证明**轮内**收到
+  list_changed 后未在同一轮改面，TURN_STOPPING 才采纳。
+- 结果上限：262163 = 262144 字节正文 + 19 字节 marker（" (output truncated)" 不计入上限）；
+  ASCII 大结果在完整字符边界截断。
+
+== 4. R1 回放：真实会话零联网零进程续跑 ==
+把会话目录复制到 replay-home（不污染取证日志），MCP 四行关闭：
+    rows: mcp-stdio / mcp-http / mcp-tool  disabled: true
+    jh --resume=headless-1792372745200-fa67 --profile=/tmp/it271-s5/disabled.yml \
+       --base-url=http://127.0.0.1:1 --api-key=fake  （stdin: /exit）
+EXIT=0
+stdout: jh 交互模式 / session=headless-…（续跑提示）
+stderr: 信息: resume session=headless-1792372745200-fa67
+pgrep mcp fixture: none
+
+- base URL 不可达（127.0.0.1:1）且从未发请求（无 turn admit）→ 无联网。
+- 回放后日志 52 → 55 行：仅追加 session/end-seed + /exit 的 command/run+done；
+  **无 mcp/catalog 追加**（无 turn admit 即不落账）。
+- 账本 fold（末值胜、按条目重建注册面）由 McpCatalogLedgerTest 取证（见
+  stop3-swap-and-ledger.txt）。
+
+== 5. 清理 ==
+- 外部 HTTP 夹具与 fake 模型已停止；`pgrep -fl 'FixtureHttpServer|fake_openai'` none。
+- stdio 夹具无残留；/tmp/it271-s5 保留为证据现场（不属仓库）。

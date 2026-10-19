@@ -28,14 +28,15 @@ final class Fakes {
         return new McpToolDescriptor(serverId, name, description, schemaJson);
     }
 
-    /** 连接桩：tools 冻结、state 可变、调用结果可编程且留痕。 */
+    /** 连接桩：tools 与代际可变（模拟异步清单发布）、state 可变、调用结果可编程且留痕。 */
     static final class FakeConnection implements McpServerConnection {
 
         private final String serverId;
-        private final List<McpToolDescriptor> tools;
+        private volatile List<McpToolDescriptor> tools;
         private McpServerState state = McpServerState.CONNECTED;
-        private long catalogGeneration = 1;
+        private volatile long catalogGeneration = 1;
         private McpCallResult next = McpCallResult.success("ok");
+        private Runnable onNextCall;
         private String lastToolName;
         private String lastArgumentsJson;
 
@@ -44,12 +45,32 @@ final class Fakes {
             this.tools = List.of(tools);
         }
 
+        /** 发布新清单（内容变化才换代，与 provider 契约同口径）。 */
+        void catalog(List<McpToolDescriptor> tools) {
+            this.tools = List.copyOf(tools);
+            this.catalogGeneration++;
+        }
+
+        /** 发布新清单（varargs 便利）。 */
+        void catalog(McpToolDescriptor... tools) {
+            catalog(List.of(tools));
+        }
+
+        /** 下一次 call 的副作用（用于「轮内清单变化」用例）。 */
+        void onNextCall(Runnable hook) {
+            this.onNextCall = hook;
+        }
+
         void state(McpServerState state) {
             this.state = state;
         }
 
         void next(McpCallResult next) {
             this.next = next;
+        }
+
+        long generation() {
+            return catalogGeneration;
         }
 
         String lastToolName() {
@@ -84,6 +105,11 @@ final class Fakes {
         public McpCallResult call(String toolName, String argumentsJson, AbortSignal signal) {
             lastToolName = toolName;
             lastArgumentsJson = argumentsJson;
+            Runnable hook = onNextCall;
+            onNextCall = null;
+            if (hook != null) {
+                hook.run();
+            }
             return next;
         }
     }

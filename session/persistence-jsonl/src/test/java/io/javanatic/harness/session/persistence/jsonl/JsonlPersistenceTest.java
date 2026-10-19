@@ -207,7 +207,16 @@ class JsonlPersistenceTest {
                     Map.of("id", "other",
                         "env", Map.of("API_KEY", "other-secret"))))),
             new CompositionManifest.Row("llm-openai-compat",
-                Map.of("apiKey", "sk-secret"))));
+                Map.of("apiKey", "sk-secret")),
+            new CompositionManifest.Row("mcp-http", Map.of(
+                "servers", List.of(Map.of(
+                    "id", "remote",
+                    "url", "https://h/mcp",
+                    "headers", Map.of(
+                        "Authorization", "Bearer auth-secret",
+                        "Cookie", "sid=cookie-secret",
+                        "X-Auth-User", "alice",
+                        "X-Tenant", "acme")))))));
         try (Runtime rt = new Runtime()) {
             rt.root().provide(CompositionManifest.KEY, manifest);
             new PluginLoader().loadAll(rt, List.of(
@@ -220,10 +229,16 @@ class JsonlPersistenceTest {
                 .doesNotContain("ghp-secret")
                 .doesNotContain("other-secret")
                 .doesNotContain("sk-secret")
+                .doesNotContain("auth-secret")
+                .doesNotContain("cookie-secret")
                 .contains("\"apiKey\":\"****\"")
                 .contains("\"GITHUB_TOKEN\":\"****\"")
                 .contains("\"MODE\":\"dev\"")
-                .contains("\"API_KEY\":\"****\"");
+                .contains("\"API_KEY\":\"****\"")
+                .contains("\"Authorization\":\"****\"")
+                .contains("\"Cookie\":\"****\"")
+                .contains("\"X-Auth-User\":\"****\"")
+                .contains("\"X-Tenant\":\"acme\"");
 
             // load 还原的是脱敏后的清单（header 是写入期一次性脱敏，读取不再二次处理）
             CompositionManifest loaded = rt.root().require(SessionPersistence.KEY)

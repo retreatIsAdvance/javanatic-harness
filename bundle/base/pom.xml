@@ -84,11 +84,16 @@
             <artifactId>harness-skill-tool</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- it27 mcp 两行入 base bundle：测试模块路径需可见 ServiceLoader 插件;
-             servers 缺省空 → 装配不拉进程(零噪声) -->
+        <!-- it27/it27.1 mcp 四行入 base bundle：测试模块路径需可见 ServiceLoader 插件;
+             servers 缺省空 → 装配不拉进程/不发网络(零噪声) -->
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-mcp-stdio</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-mcp-http</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

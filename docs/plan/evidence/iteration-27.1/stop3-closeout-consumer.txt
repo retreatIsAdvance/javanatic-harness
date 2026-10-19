@@ -1,0 +1,41 @@
+停 3 — 外部消费方 candidate 腿 + 四负例（S5 收口）
+日期：2026-10-19 09:20–09:24 (+08:00)
+命令环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)；Maven ~/Documents/apache-maven-3.10.0/bin/mvn
+命令：
+  MVN=$HOME/Documents/apache-maven-3.10.0/bin/mvn \
+  CONSUMER_WORK=/tmp/it271-s5/consumer \
+  integration/verify-consumer.sh candidate
+工作目录：/tmp/it271-s5/consumer（隔离本地仓 repo-candidate；不碰本机仓库）
+
+== 1. 候选腿 ==
+- 工作树 install → 隔离仓（跳测试）：
+    [INFO] Total time:  03:42 min
+    [INFO] BUILD SUCCESS
+- 示例编译（候选闭包，含 mcp 四坐标）：ok candidate：示例编译
+- 运行类路径聚合：ok candidate：运行类路径
+- 治理自证运行：ok candidate：治理自证运行
+    tool.schemas=12 word_count.visible=true
+    word_count.invoke.error=false content=words=3
+    SELF-CHECK OK
+- 有效行集（节选，示例 profile = base + consumer-sample）：
+    mcp-registry
+    mcp-stdio {servers=[]}
+    mcp-http {servers=[]}
+    mcp-tool {maxResultBytes=262144}
+  → 新版 base 四行随发布 POM 之外的自持坐标一起被消费方装配，空 servers 零噪声。
+- 用时 229s；失败项 0。
+
+== 2. 四负例（候选仓 / 候选构建产物） ==
+  ok 负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+  ok 负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+  ok 负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+  ok 负例④生产档撞 AUTO 审批必须 boot 抛错（已拒，文案含「policy=PRODUCTION 但审批为 AUTO」）
+
+== 3. 汇总 ==
+失败项：0
+EXIT=0
+
+== 4. 范围说明 ==
+- 只跑 candidate 腿：脚本口径 release 腿不进 CI（公网依赖不作门禁）；发布面仍冻结
+  0.2.0，mcp 四坐标属 0.3.0 候选闭包（docs/embedding.md §2）。
+- 负例依赖候选构建产物，故与 candidate 腿同批；本停未改负例语义。

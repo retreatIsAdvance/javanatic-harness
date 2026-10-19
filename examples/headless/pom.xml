@@ -103,7 +103,8 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-skill-tool</artifactId>
         </dependency>
-        <!-- it27 mcp 两行 + 契约件：base bundle 引用行，运行时 ServiceLoader 需在模块路径 -->
+        <!-- it27/it27.1 mcp 四行（注册表 + 两 transport + 消费）：base bundle 引用行，
+             运行时 ServiceLoader 需在模块路径 -->
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-mcp-mcp</artifactId>
@@ -111,6 +112,10 @@
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-mcp-stdio</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-mcp-http</artifactId>
         </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>

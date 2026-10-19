@@ -13,7 +13,8 @@
 - [总体阶段性迭代路线](../design/README.md#phased-evolution-plan)：0.2.0（it17–25 + it25.1 发布工程）可靠单 Agent → 0.3 工具生态 → 0.4 后台任务与受控多 Agent；长期范围、依赖与阶段验收只在该处维护，路线落盘不等于单轮开工。
 - `docs/design/`：目标态——是什么、为什么这样设计
 - `docs/plan/`：逐迭代的范围承诺与验收状态——做没做、验没验
-- 未来 `.agents/notes/`：决策史——为什么改（AGENTS.md「修改本文件」的阈值触发时启用，不要把决策史写进本目录）
+- 未来 `.agents/notes/` → **已启用（it27.1）**：决策史——为什么改、推翻了什么；索引在 `.agents/notes/README.md`，设计目标态仍在 `docs/design/`（不要把决策史写进本目录）。
+- [当前状态卡](current-state.md)：一页纸的版本 / 模块 / 组合 / 验证现状；[边界登记表](boundary-register.md)：外部输入、信任面与刻意不做项的单一登记处。
 
 ## 设计同步触发规则
 

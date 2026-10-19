@@ -17,9 +17,13 @@ import java.util.Objects;
  */
 public final class ConfigValues {
 
-    /** 敏感键子串（不区分大小写）；子串匹配宁多掩，不漏掩。 */
+    /**
+     * 敏感键子串（不区分大小写）；子串匹配宁多掩，不漏掩。
+     * 唯一词表：{@link #masked(Map)} 的脱敏与 {@link #isSensitiveKey(String)}
+     * （HTTP URL query 校验等复用面）共用，不允许另起一份。
+     */
     private static final List<String> SENSITIVE_MARKERS =
-        List.of("apikey", "token", "secret", "password", "key");
+        List.of("apikey", "token", "secret", "password", "key", "auth", "cookie");
 
     private ConfigValues() {
     }
@@ -145,7 +149,7 @@ public final class ConfigValues {
 
     /**
      * 敏感配置脱敏（dump 与会话 header 写入共用）：任意深度递归，键名（不区分
-     * 大小写）含 {@code apikey|token|secret|password|key} 即把值替换为
+     * 大小写）命中 {@link #isSensitiveKey(String)} 即把值替换为
      * {@code ****}，键保留、键序保留；列表按元素递归。非字符串 map 键 fail loud
      * （与 manifest 序列化的 JSON 对象键约束同源）。R1 无损：fold 只需键名，
      * 不需要环境变量值；header 在写入期脱敏，不构成派生失真。
@@ -164,7 +168,7 @@ public final class ConfigValues {
             if (!(entry.getKey() instanceof String key)) {
                 throw new IllegalStateException("config map has non-string key: " + entry.getKey());
             }
-            out.put(key, sensitive(key) ? "****" : maskValue(entry.getValue()));
+            out.put(key, isSensitiveKey(key) ? "****" : maskValue(entry.getValue()));
         }
         return Collections.unmodifiableMap(out);
     }
@@ -183,9 +187,17 @@ public final class ConfigValues {
         return value;
     }
 
-    /** 敏感键判定：子串匹配（dsh 同口径），不按词边界——宁多掩，不漏掩。 */
-    private static boolean sensitive(String key) {
-        String lower = key.toLowerCase(Locale.ROOT);
+    /**
+     * 敏感键判定（唯一实现）：键名不区分大小写，含任一
+     * {@code apikey|token|secret|password|key|auth|cookie} 子串即敏感。
+     * 子串匹配、不按词边界——宁多掩，不漏掩；{@link #masked(Map)} 与
+     * HTTP URL query 校验等消费面共用此判定，不得另起词表。
+     *
+     * @param key 键名（不可为 null）
+     * @return 命中敏感词表时 true
+     */
+    public static boolean isSensitiveKey(String key) {
+        String lower = Objects.requireNonNull(key, "key").toLowerCase(Locale.ROOT);
         for (String marker : SENSITIVE_MARKERS) {
             if (lower.contains(marker)) {
                 return true;

@@ -90,4 +90,29 @@ class ConfigValuesTest {
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("non-string key");
     }
+
+    /** T6 增补：Authorization/Cookie/X-Auth-* 与 OAuth 类键命中的是同一份词表。 */
+    @Test
+    void sensitiveKeyCoversAuthorizationCookieAndAuthFamily() {
+        assertThat(ConfigValues.isSensitiveKey("Authorization")).isTrue();
+        assertThat(ConfigValues.isSensitiveKey("cookie")).isTrue();
+        assertThat(ConfigValues.isSensitiveKey("X-Auth-Token")).isTrue();
+        assertThat(ConfigValues.isSensitiveKey("oauth_client")).isTrue();
+        assertThat(ConfigValues.isSensitiveKey("tenant")).isFalse();
+        assertThat(ConfigValues.isSensitiveKey("content-type")).isFalse();
+    }
+
+    @Test
+    void masksAuthorizationCookieAndAuthFamilyThroughTheSameWordList() {
+        Map<String, Object> masked = ConfigValues.masked(linked(
+            "Authorization", "Bearer sk-top",
+            "Cookie", "sid=abc",
+            "X-Auth-User", "alice",
+            "X-Tenant", "acme"));
+
+        assertThat(masked).containsEntry("Authorization", "****")
+            .containsEntry("Cookie", "****")
+            .containsEntry("X-Auth-User", "****")
+            .containsEntry("X-Tenant", "acme");
+    }
 }

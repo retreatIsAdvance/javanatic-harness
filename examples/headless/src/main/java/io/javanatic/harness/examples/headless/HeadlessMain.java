@@ -753,15 +753,16 @@ public final class HeadlessMain {
     }
 
     /**
-     * MCP 声明面（it27）：base 两行在场 + 已注册工具（名称序）。工具名恒
+     * MCP 声明面（it27/it27.1）：base 四行在场 + 已注册工具（名称序）。工具名恒
      * {@code mcp__<server>__<raw>}、恒需审批（approvalExempt=false，插件无豁免出口）——
      * 有工具时注记 approval-required，与 approval 行的 exempt 名单互证。
-     * 两行被 profile 移除时印 `-`（自定义组合合法，不猜）。
+     * 四行被 profile 移除时印 `-`（自定义组合合法，不猜）。
      */
     private static String mcpText(Scope root) {
         List<String> rows = root.require(CompositionManifest.KEY).rows().stream()
             .map(CompositionManifest.Row::plugin)
-            .filter(plugin -> plugin.equals("mcp-stdio") || plugin.equals("mcp-tool"))
+            .filter(plugin -> plugin.equals("mcp-registry") || plugin.equals("mcp-stdio")
+                || plugin.equals("mcp-http") || plugin.equals("mcp-tool"))
             .toList();
         List<String> tools = root.resolve(ToolRegistry.KEY)
             .map(registry -> registry.definitions(root).stream()

@@ -117,6 +117,41 @@ class McpHttpServerConfigTest {
         assertRejected(servers(Map.of("id", "alpha", "url", "http://h/ mcp")), "invalid URI");
     }
 
+    /** T6：query 参数名命中敏感词表（与脱敏单源）即拒；凭据只走 headers。 */
+    @Test
+    void sensitiveQueryNamesRejected() {
+        assertRejected(servers(Map.of("id", "alpha",
+            "url", "https://h/mcp?access_token=abc")), "looks sensitive");
+        assertRejected(servers(Map.of("id", "alpha",
+            "url", "https://h/mcp?tenant=a&api_key=k")), "looks sensitive");
+        assertRejected(servers(Map.of("id", "alpha",
+            "url", "https://h/mcp?Cookie=sid")), "looks sensitive");
+        assertRejected(servers(Map.of("id", "alpha",
+            "url", "https://h/mcp?X-Auth=1")), "looks sensitive");
+        assertRejected(servers(Map.of("id", "alpha",
+            "url", "https://h/mcp?author=bob")), "looks sensitive");
+    }
+
+    @Test
+    void percentEncodedSensitiveQueryNameStillRejected() {
+        assertRejected(servers(Map.of("id", "alpha",
+            "url", "https://h/mcp?%61uth=1")), "looks sensitive");
+    }
+
+    @Test
+    void nonSensitiveQueryAllowed() {
+        assertThat(parseOne(Map.of("id", "alpha",
+            "url", "https://h/mcp?tenant=acme&page=2")).url())
+            .hasToString("https://h/mcp?tenant=acme&page=2");
+    }
+
+    @Test
+    void malformedPercentEncodingInQueryNameRejected() {
+        // URI 构造期即拒坏转义（URLDecoder 的 catch 是廉价防御，不可达面不伪测）
+        assertRejected(servers(Map.of("id", "alpha",
+            "url", "https://h/mcp?bad%ZZ=1")), "invalid URI");
+    }
+
     @Test
     void headersMustBeMap() {
         assertRejected(servers(Map.of("id", "alpha", "url", "http://h/mcp", "headers", List.of())),

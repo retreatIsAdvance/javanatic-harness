@@ -66,14 +66,23 @@ rows:
     config:
       cwd: ${cwd}
   - plugin: skill-tool
-  # MCP 工具生态（it27）：stdio transport 与工具消费。servers 缺省为空 = 零噪声
-  # （不拉进程、不落事件、不注册工具）；装配期拉起全部已配 server（成本口径 07）。
-  # server 是 harness 直接子进程、以用户全权运行（不入沙箱——治理边界在工具调用面）。
-  # 工具名 mcp__<server>__<raw>，恒需审批（approvalExempt=false，无豁免出口）。
+  # MCP 工具生态（it27/it27.1）：注册表聚合 stdio 与 Streamable HTTP 两种 transport；
+  # 两者 servers 缺省为空 = 零噪声（不拉进程/不发网络、不落事件、不注册工具）；
+  # 装配期拉起全部已配 server（成本口径 07）。
+  # server 是组合者显式配置的信任面：stdio 为 harness 直接子进程、以用户全权运行；
+  # HTTP 走 JDK HttpClient（Redirect.NEVER，凭据只走 headers，不入沙箱）。
+  # 工具名 mcp__<server>__<raw>，恒需审批（approvalExempt=false，无豁免出口）；
+  # 结果统一 256 KiB 上限（maxResultBytes 可覆盖；UTF-8 完整边界）。
+  - plugin: mcp-registry
   - plugin: mcp-stdio
     config:
       servers: []
+  - plugin: mcp-http
+    config:
+      servers: []
   - plugin: mcp-tool
+    config:
+      maxResultBytes: 262144
   # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
   - plugin: todo
     config:

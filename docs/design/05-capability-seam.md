@@ -610,34 +610,46 @@ public final class PersistencePlugin implements Plugin {
 
 ---
 
-## 7.1 完整 Seam：MCP（it27）
+## 7.1 完整 Seam：MCP（it27；it27.1 注册表 + 双 transport + 轮屏障换代）
 
 ### Definition（`harness.mcp.mcp`，零第三方）
 
 ```java
-public interface McpClientService {
+public interface McpClientService {                      // 插件 mcp-registry 提供
     ServiceKey<McpClientService> KEY = new ServiceKey<>("mcp");
-    List<McpServerConnection> connections();            // 按 server id 排序（稳定面）
+    List<McpServerConnection> connections();              // 按 server id 排序（稳定面）
     Optional<McpServerConnection> connection(String serverId);
+    Disposable register(McpServerConnection connection);  // 装配期；跨 transport 撞 id fail loud
 }
 
 public interface McpServerConnection {
     String serverId();
-    McpServerState state();                              // CONNECTED/RECONNECTING/FAILED/DRIFTED
-    List<McpToolDescriptor> tools();                     // 会话启动清单快照，冻结
+    McpServerState state();                              // CONNECTED / RECONNECTING / FAILED
+    List<McpToolDescriptor> tools();                     // 当前已知清单（刷新异步发布）
+    long catalogGeneration();                            // 内容变化才递增（仅顺序变化不算）
     McpCallResult call(String toolName, String argumentsJson, AbortSignal signal);
 }
 ```
 
-`McpToolDescriptor(serverId, name, description, inputSchemaJson)` 的 schema 为 wire 原文 String——JSON 解析留在边界模块（transport 组帧与消费面映射各自持有，同 `core/tools` 信任边界先例）。`McpCallResult(content, isError)`：**工具级错误是数据**（远端 `isError` 标记，不抛、不炸 turn）；传输/协议失败走异常分档（`McpTimeoutException` / `McpProtocolException` / `McpCatalogDriftException` / `McpConnectionException`）。
+`McpToolDescriptor(serverId, name, description, inputSchemaJson)` 的 schema 为 wire 原文 String——JSON 解析留在边界模块（transport 组帧与消费面映射各自持有，同 `core/tools` 信任边界先例）。`McpCallResult(content, isError)`：**工具级错误是数据**（远端 `isError` 标记，不抛、不炸 turn）；传输/协议失败走异常分档（`McpTimeoutException` / `McpProtocolException` / `McpConnectionException`）。**`DRIFTED` 已删除**（T5）：清单变化不是状态，只是代际差异；不可用事实才落 `state()`。消费面的候选快照预检失败另有 `McpCatalogSwapException`（见 Consumer）。
 
 ### Provider（`harness.mcp.stdio`，plugin id `mcp-stdio`）
 
-手写最小 JSON-RPC 2.0 stdio 客户端：换行分帧、`initialize` 协商、`tools/list`（分页上限 100 页）、`tools/call`、错误分档；子进程**装配期启动**、随 scope 回收（进程树清理）、stderr 转日志；env = 最小环境 + 行配置白名单；超时缺省 60s（server 级覆盖）；重连 500ms→30s ×10。官方 Java SDK 不采（绑 Reactor + 不定版本面，与同步写法/虚拟线程纪律冲突；dsh 亦自持 mcp-client）。进程**不经沙箱**：MCP server 是组合者显式配置的信任面（同插件本身），启动失败装配期 fail loud 并回滚已启动的 server。
+手写最小 JSON-RPC 2.0 stdio 客户端：换行分帧（**T7 单帧 8 MiB 帽**）、`initialize` 协商、`tools/list`（分页上限 100 页）、`tools/call`、错误分档；子进程**装配期启动**、随 scope 回收（进程树清理）、stderr 转日志；env = 最小环境 + 行配置白名单；超时缺省 60s（server 级覆盖）；重连 500ms→30s ×10。远端 `notifications/tools/list_changed` 触发刷新，重连成功亦对账——清单内容变化递增 `catalogGeneration()`（仅顺序变化不算）。官方 Java SDK 不采（绑 Reactor + 不定版本面，与同步写法/虚拟线程纪律冲突；dsh 亦自持 mcp-client）。进程**不经沙箱**：MCP server 是组合者显式配置的信任面（同插件本身），启动失败装配期 fail loud 并回滚已启动的 server。
+
+### Provider（`harness.mcp.http`，plugin id `mcp-http`，it27.1 新增）
+
+手写最小 Streamable HTTP 客户端：POST JSON-RPC、JSON 与 SSE 响应分流、`Mcp-Session-Id` 捕获回传、`MCP-Protocol-Version` 头、GET SSE 通知通道（405/中断只 WARN）、404 会话失效（安全请求重做；`tools/call` 不自动重试）、DELETE 收尾；`HttpClient.Redirect.NEVER`（不跟重定向）、建连 10s 与单请求超时分离、断线 500ms→30s ×10 有限重连；**T7 8 MiB 帽同时覆盖响应体与单条 SSE 事件**。配置面（`McpHttpServerConfig`）校验：URL 拒 userinfo / fragment / **敏感 query 参数名**（percent-decode 后过 `ConfigValues.isSensitiveKey` 同一词表）、headers 拒保留头与控制字符、大小写不敏感重名 fail loud。连接只向 `mcp-registry` 注册，**不自己 provide `McpClientService`**（两个 transport 可同时在场，消费面只经注册表聚合）。
+
+### Registry（`harness.mcp.mcp`，plugin id `mcp-registry`）
+
+注册表是传输中立的组合面：server id 全局唯一（跨 transport 撞 id fail loud，不静默遮蔽）；`connections()` 按 id 排序；注销凭据随提供者 scope 收口（R3）。装配期零 server = 空列表（零连接、零网络、零进程、零事件、零工具）。stdio 与 HTTP 提供者只 `register`，**同一 key 不重复 provide**（kernel 同 scope 重复 provide fail loud）。
 
 ### Consumer（`harness.mcp.tool`，plugin id `mcp-tool`）
 
-经 `McpClientService` 取连接面 → 按启动清单注册进既有 `ScopedRegistry`（`approvalExempt=false`——MCP 工具**恒需审批**，无豁免出口）→ `mcp/catalog` 扩展事件落账（`ignorable=false`）→ 每轮 REQUEST 检查点核对状态（`DRIFTED` 抛 `McpCatalogDriftException` 落轮终；`FAILED` 按调用级 error result 降级，不牵连当前轮）。运行期**不 import transport**；插件 `requires "mcp-stdio"` 是组合面绑定（Streamable HTTP 引入时改 transport 中立 provides/requires，挂 it27.1）。
+经 `McpClientService` 取连接面 → 候选快照全量构建（publicName / schema 映射 / 快照内去重 / 外部撞名预检）→ **预检先于注册面改动** → 换面（先 Dispose 旧句柄、再注册新句柄）。采纳只在**轮屏障**（T4）：`TURN_STOPPING`（notifyOrdered，监听异常包 `CompletionException`）换面；`PRE_STEP`（waterfall，异常原样传播；只有 `PreStepDecision.Enter` 才补换代并落账）。**轮内清单变化一律推迟**——REQUEST 之前 schema 已被读取，换面会造成请求 schema 与执行账本错位。预检失败 → `McpCatalogSwapException`：旧代保活、本轮 `TurnEndReason.Error`、server 仍是 `CONNECTED`，下一 `PRE_STEP` 重试；**被拒轮既不采纳也不落账**。`mcp/catalog` 每代全量快照（`ignorable=false`；**无 generation 字段，日志顺序即代际**，T8）：首非空 / 内容变化 / 空集退役才 append，与上代相等静默。请求 schema 读取用稳定读（前后代际一致，3 次探测防撕裂）。运行期**不 import transport**；插件 `requires "mcp-registry"` 是组合面绑定，transport 形态对消费面不可见。
+
+结果处理：单条工具结果 **256 KiB 上限**（`mcp-tool.maxResultBytes`，正整数可配；UTF-8 完整字符边界；`" (output truncated)"` 标记不计入上限；成功与工具级错误同口径）。transport 的 T7 8 MiB 帧帽是**读侧协议上限**，与本上限分层——前者防单帧爆内存，后者控模型上下文面。schema 映射结果按 `(serverId, rawName, schema)` 缓存，WARN 每键一次；缓存键集随采纳代收缩（有界）。
 
 ### 公开命名（T2，纯函数）
 
@@ -645,15 +657,17 @@ public interface McpServerConnection {
 
 ### Schema 边界（白名单）
 
-wire JSON Schema → `ValueSchema` 白名单映射：`type`（object/string/number/integer/boolean/array，递归）+ `description` + `properties`/`required`（未列者包 `Opt`）+ `items`（单对象形）；`enum`/`const` 降级拼进 description（**提示，不执法**）。不支持构造（`oneOf`/`anyOf`/`allOf`/`not`/`$ref` 系/if-then-else/`prefixItems`/`contains`/依赖族/`unevaluated*`/`additionalProperties` 模式形/白名单外关键字）→ **该工具排除 + WARN**；顶层非 object 同排除；属性级结构失败 → 该属性排除 + WARN、工具仍注册。远端结果 `content` 文本化面统一（`outputSchema` 不消费）。工具级 byte cap 不在本版：transport 读侧对单帧无行上限（1 MiB 真帧取证），且**没有统一 MCP 结果字节上限**（既有 fs/shell 限额不适用于 MCP）——挂 it27.1。
+wire JSON Schema → `ValueSchema` 白名单映射：`type`（object/string/number/integer/boolean/array，递归）+ `description` + `properties`/`required`（未列者包 `Opt`）+ `items`（单对象形）；`enum`/`const` 降级拼进 description（**提示，不执法**）。不支持构造（`oneOf`/`anyOf`/`allOf`/`not`/`$ref` 系/if-then-else/`prefixItems`/`contains`/依赖族/`unevaluated*`/`additionalProperties` 模式形/白名单外关键字）→ **该工具排除 + WARN**；顶层非 object 同排除；属性级结构失败 → 该属性排除 + WARN、工具仍注册。远端结果 `content` 文本化面统一（`outputSchema` 不消费）。
 
-### 状态与 T4
+### 状态、取消与 T4 定论
 
-清单会话启动冻结。重连只做续命 + 对账；对账不一致 → `DRIFTED`（终态）→ 消费面落轮终 `TurnEndReason.Error` +「请重开会话」，**不静默换面**。热换代（generation swap）机制上 JH 更简单（单线程轮屏障免双代），但必须走 **T4 修订**，不进 it27——与 Streamable HTTP 合并重裁（it27.1/28）。取消沿 `AbortSignal` 传播（checkAbort 轮询 + onCancel 中止等待并尽力通知远端；取消是正常路径，不落工具错误结果）。
+`CONNECTED` / `RECONNECTING` / `FAILED` 三态只描述连接可用性；清单变化经 `catalogGeneration()` 表达，消费面在轮屏障比较代际决定是否换代。`FAILED` 时工具面保留当前清单，`call` 快速失败（连接错误结果降级，不静默挂起、不牵连当前轮）。取消沿 `AbortSignal` 传播（checkAbort 轮询 + onCancel 中止等待并尽力通知远端；取消是正常路径，`AbortedException` 向上传播，不落工具错误结果）。
 
-### dsh 对照挂账（it27 收口登记）
+**T4 热换代已落地（it27.1）**：单线程轮屏障下免双代——`TURN_STOPPING` 覆盖正常轮末，`PRE_STEP` 覆盖轮首补漏与被拒轮；两挂点各自必要（此前 M2/M3 突变证明删任一即漏换代）。
 
-`oneOf` 组合语义不映射；`enum`/`const` 只提示不执法；`outputSchema` 不消费；`taskSupport`（任务协商）不实现；`_hash8` 与合法 raw 名理论上可撞（如 raw 恰为 `x_1234abcd`），注册表 fail loud，退路为 dsh hash12 或前缀转义（命名算法变更须重裁 catalog 条目）。前四项随 Streamable HTTP 一并重访。
+### dsh 对照挂账（it27 收口登记；it27.1 复核维持，T9）
+
+`oneOf` 组合语义不映射；`enum`/`const` 只提示不执法；`outputSchema` 不消费；`taskSupport`（任务协商）不实现；`_hash8` 与合法 raw 名理论上可撞（如 raw 恰为 `x_1234abcd`），注册表 fail loud，退路为 dsh hash12 或前缀转义（命名算法变更须重裁 catalog 条目）。五项均为消费面语义，与 transport 无关——it27.1 引入 Streamable HTTP 后逐项复核，结论不变。
 
 ---
 
@@ -823,7 +837,7 @@ public record ToolDefinition(
 | Session Persistence | `session.persistence` | `jsonl` | persistence 插件 | ✅ |
 | Approval | `interaction.approval` | `auto` / `ask` / `deny` | ToolExecutor 固定 stage | ✅ **真实** |
 | Commands | `interaction.commands` | （registry 内建） | headless REPL | ✅ |
-| MCP | `mcp.mcp` | `mcp-stdio`（stdio；HTTP 挂 it27.1） | `mcp.tool` | ✅（it27；清单冻结 + `mcp/catalog`）|
+| MCP | `mcp.mcp` | `mcp-stdio`（stdio）+ `mcp-http`（Streamable HTTP，it27.1）；两者经 `mcp-registry` 聚合 | `mcp.tool` | ✅（it27.1；轮屏障换代 + `mcp/catalog` + 双 transport）|
 | Subagent / Web / LSP / Terminal / Compaction | 各 Definition | —（留接口）| — | 🔌 接口 |
 
 留接口的 seam：Definition 模块完整定义接口和 `ServiceKey`，但不提供 Provider；组合时不挂载即可，未来加 Provider 不改任何 Consumer。

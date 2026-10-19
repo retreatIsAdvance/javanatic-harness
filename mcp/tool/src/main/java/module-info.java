@@ -1,13 +1,15 @@
 /**
  * harness-mcp-tool — MCP 工具消费（插件 id "mcp-tool"，requires "tools" +
- * "mcp-stdio"，it27 停 2）：已连接 server 的冻结清单 → 既有 ScopedRegistry
+ * "mcp-registry"，it27.1）：已连接 server 的当前清单 → 既有 ScopedRegistry
  * 注册（mcp__&lt;server&gt;__&lt;raw&gt; 命名，approvalExempt=false 恒真、无
- * 豁免出口）+ 每轮 REQUEST 检查点（漂移落轮终 / 首轮落 mcp/catalog 事件 /
- * 冻结一致零噪声）+ JSON Schema → ValueSchema 白名单映射（不支持构造该工具
- * 排除 + WARN；Jackson 是映射边界的解析手段，同 core/tools 信任边界先例）。
+ * 豁免出口）+ 轮屏障换代（TURN_STOPPING / PRE_STEP；预检先于注册面改动）+
+ * PRE_STEP 落 mcp/catalog 全量快照 + 结果 256 KiB 截断 + 映射缓存 +
+ * JSON Schema → ValueSchema 白名单映射（不支持构造该工具排除 + WARN；
+ * Jackson 是映射边界的解析手段，同 core/tools 信任边界先例）。
  */
 module io.javanatic.harness.mcp.tool {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
     requires io.javanatic.harness.mcp;
     requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.core.session;

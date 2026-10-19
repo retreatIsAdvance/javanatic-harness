@@ -2,6 +2,8 @@ package io.javanatic.harness.mcp.http;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,16 +16,18 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import io.javanatic.harness.kernel.config.ConfigValues;
+
 /**
  * mcp-http 行配置的一个 server 条目（07）：id / url / headers / timeoutSeconds。
  * 默认值在插件侧 resolve（08 §7）：timeout 缺省 {@link #DEFAULT_TIMEOUT_SECONDS}，
  * headers 缺省空。全部校验 fail loud 带定位（插件 id + 条目序）。
  *
- * <p>URL 只接受绝对 {@code http}/{@code https}，拒绝 userinfo 与 fragment
- * （凭据只走 headers；fragment 不上线，写了就是误配）。headers 拒绝保留头、
+ * <p>URL 只接受绝对 {@code http}/{@code https}，拒绝 userinfo、fragment 与敏感
+ * query 参数名（凭据只走 headers；fragment 不上线，写了就是误配；query 判定复用
+ * {@link ConfigValues#isSensitiveKey(String)} 的同一份词表）。headers 拒绝保留头、
  * CR/LF/控制字符、大小写不敏感重名——这些头由 transport 自己产生，用户再写
- * 一份会与协议面打架。敏感 query/头的词表校验在消费面配置硬化批次落地
- * （同一份 {@code ConfigValues} 词表），本类不另起词表。
+ * 一份会与协议面打架。
  *
  * @param id server id（kebab-case；拒含 "__"）
  * @param url Streamable HTTP 端点（绝对 URI，无 userinfo/fragment）
@@ -126,7 +130,41 @@ record McpHttpServerConfig(String id, URI url, Map<String, String> headers, Dura
         if (uri.getFragment() != null) {
             throw new IllegalStateException(where + ".url: fragment is not allowed");
         }
+        rejectSensitiveQuery(uri, where);
         return uri;
+    }
+
+    /**
+     * T6：query 参数名命中 {@link ConfigValues#isSensitiveKey(String)}（与 dump/header
+     * 脱敏同一份词表）即 fail loud——凭据只走 headers，不落 URL/清单。参数名先按
+     * percent-encoding 解码再判（{@code %61uth} 不能绕过）；坏编码 fail loud。
+     */
+    private static void rejectSensitiveQuery(URI uri, String where) {
+        String query = uri.getRawQuery();
+        if (query == null || query.isEmpty()) {
+            return;
+        }
+        for (String pair : query.split("&", -1)) {
+            if (pair.isEmpty()) {
+                continue;
+            }
+            int equals = pair.indexOf('=');
+            String rawName = equals < 0 ? pair : pair.substring(0, equals);
+            if (rawName.isEmpty()) {
+                continue;
+            }
+            String name;
+            try {
+                name = URLDecoder.decode(rawName, StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalStateException(where + ".url: invalid percent-encoding in query"
+                    + " parameter name '" + rawName + "'", e);
+            }
+            if (ConfigValues.isSensitiveKey(name)) {
+                throw new IllegalStateException(where + ".url: query parameter '" + name
+                    + "' looks sensitive (matched the credential word list); put credentials in headers");
+            }
+        }
     }
 
     private static Map<String, String> parseHeaders(Object raw, String where) {

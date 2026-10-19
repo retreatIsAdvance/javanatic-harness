@@ -1,0 +1,80 @@
+停 3 — 结果上限 + 凭据脱敏与 URL/头校验（S1/S2 取证）
+日期：2026-10-19
+命令环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)；Maven ~/Documents/apache-maven-3.10.0/bin/mvn
+
+== 1. 结果上限（S1，详情见 stop3-swap-and-ledger.txt） ==
+McpToolPluginTest.resultCapTruncatesAtCompleteUtf8BoundaryAndKeepsErrorFlag
+  max=5, "ab你好cd" → "ab你 (output truncated)"；success 与 tool error 同待遇；
+  恰等上限 "abcde" 不截断。
+McpToolPluginTest.resultCapComesFromPluginConfigAndInvalidFailsLoud
+  config maxResultBytes=4 生效；0 → load fail loud（cause 含 maxResultBytes）。
+缺省 262144 字节（DEFAULT_MAX_RESULT_BYTES）；marker 不计入上限（与 fs 同口径）。
+突变 M4（按码点计长）→ 上述边界用例红；还原绿（25 tests）。
+
+== 2. 词表单源与公开判定（S2） ==
+$ mvn -B -pl mcp/http -am -Dtest='ConfigValuesTest,McpHttpServerConfigTest' \
+      -Dsurefire.failIfNoSpecifiedTests=false test
+
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0 -- ConfigValuesTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 26, Failures: 0, Errors: 0, Skipped: 0 -- McpHttpServerConfigTest
+[INFO] Tests run: 26, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+单源结构：`ConfigValues.SENSITIVE_MARKERS =
+apikey|token|secret|password|key|auth|cookie`（唯一常量）；`masked(...)` 与
+公开 `isSensitiveKey(String)` 共用；`mcp/http` 只调 `isSensitiveKey`，不另起词表。
+调用面实核：dump = bundle/base AppBoot.java:143；会话 header = persistence-jsonl
+JsonlPersistence.java:539——两路都经 `ConfigValues.masked`。
+
+URL/头规则（McpHttpServerConfig，测试矩阵）：
+- userinfo / fragment / 非 http(s) / 缺 host：拒绝（既有断言仍绿）。
+- 敏感 query 参数名：access_token、api_key、Cookie、X-Auth、author 均拒；
+  `%61uth`（percent-encoded）仍拒；非敏感 `tenant`/`page` 放行。
+- 保留头（Host/Content-Length/Content-Type/Accept/Mcp-Session-Id/
+  MCP-Protocol-Version/Connection/Transfer-Encoding）拒绝；
+  头名非法 token / CR/LF/控制字符 / 大小写不敏感重名拒绝（既有断言仍绿）。
+- 凭据只走 headers：header 值本身不做敏感词拒绝（允许 Authorization/Cookie）。
+
+== 3. header 落盘端到端（S2 增补） ==
+JsonlPersistenceTest.headerManifestMasksSensitiveValuesRecursively 追加 mcp-http 行：
+  headers: Authorization/Bearer auth-secret, Cookie/sid=cookie-secret,
+           X-Auth-User/alice, X-Tenant/acme
+断言 header.json：不含 auth-secret / cookie-secret；
+  "Authorization":"****"、"Cookie":"****"、"X-Auth-User":"****"；"X-Tenant":"acme"。
+
+$ mvn -B -pl session/persistence-jsonl -am -Dtest='JsonlPersistenceTest' \
+      -Dsurefire.failIfNoSpecifiedTests=false test
+[INFO] Tests run: 26, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+== 4. 突变验证 ==
+M6 词表移除 auth/cookie（config 模块先跑）:
+  red: ConfigValuesTest 2 failures
+    sensitiveKeyCoversAuthorizationCookieAndAuthFamily:97
+    masksAuthorizationCookieAndAuthFamilyThroughTheSameWordList:113
+M6b 同一突变下跑 header 端到端:
+  red: JsonlPersistenceTest 1 failure
+    headerManifestMasksSensitiveValuesRecursively:232
+  说明：词表回退会同时打穿 dump/header 共用脱敏路径。
+
+M7 移除 URL query 校验调用:
+  red: McpHttpServerConfigTest 2 failures
+    sensitiveQueryNamesRejected:123
+    percentEncodedSensitiveQueryNameStillRejected:137
+
+M8 绕过 percent-decoding（用 rawName 判定）:
+  red: McpHttpServerConfigTest 1 failure
+    percentEncodedSensitiveQueryNameStillRejected:137
+  说明：`%61uth` 类绕过被钉死。
+
+还原后复跑：
+ConfigValuesTest 6 / McpHttpServerConfigTest 26 / JsonlPersistenceTest 26 全绿，
+BUILD SUCCESS。
+
+== 5. 变更面（S2） ==
+ kernel/config/.../ConfigValues.java             词表 + 公开 isSensitiveKey（单源）
+ kernel/config/.../ConfigValuesTest.java         词表/脱敏/match 新用例
+ mcp/http/.../McpHttpServerConfig.java           URL 敏感 query 校验（decoded 名）
+ mcp/http/.../McpHttpServerConfigTest.java       敏感/编码绕过/放行/坏转义矩阵
+ session/persistence-jsonl/.../JsonlPersistenceTest.java  header 端到端增补

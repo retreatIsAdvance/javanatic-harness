@@ -6,8 +6,8 @@
 #           取件走 settings-central.xml（公共代理）：公司 mirror 对发布件的 jar 曾持续 404（0.1.0 时
 #           16 个 jar 全缺、pom 正常）——发布腿一律经公共 Central 代理取件
 #           坐标：0.2.0 起发布件含 harness-shell-local（it25 S-b 新坐标），旧坐标覆写已退役（见 leg()）
-#           行集：0.2.0 发布面冻结于 it26 之前，bundle 行集不含 skill 三行——示例 pom 的
-#           candidate-closure profile（skill 三依赖）必须停用（-P '!candidate-closure'，见 leg()）
+#           行集：0.2.0 发布面冻结于 it26 之前，bundle 行集不含 skill/mcp 新行——示例 pom 的
+#           candidate-closure profile（skill 三件 + mcp 四坐标）必须停用（-P '!candidate-closure'，见 leg()）
 #   负例：坏版本 / 去显式版本 / 坏治理配置 / 生产档撞 AUTO 审批——各须构建必败或 boot 必抛，诊断可读
 #
 # 用法：integration/verify-consumer.sh [candidate|release|all]   （缺省 all）
