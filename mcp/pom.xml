@@ -17,6 +17,7 @@
     <modules>
         <module>mcp</module>
         <module>stdio</module>
+        <module>http</module>
         <module>tool</module>
     </modules>
 </project>

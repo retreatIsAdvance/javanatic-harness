@@ -47,6 +47,9 @@ final class JsonRpcPeer {
     private static final int CANCELLED_MEMORY = 1024;
     private static final int ABBREVIATE_LIMIT = 200;
 
+    /** 单帧安全上限（T7）：超限协议失败并按会话断裂处理；与消费面 256 KiB 分层。 */
+    static final int MAX_FRAME_BYTES = 8 * 1024 * 1024;
+
     private final Process process;
     private final String serverId;
     private final System.Logger log;
@@ -225,8 +228,8 @@ final class JsonRpcPeer {
     }
 
     private void readLoop() {
-        try (BufferedReader lines = new BufferedReader(
-                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+        try (BoundedLineReader lines = new BoundedLineReader(
+                process.getInputStream(), MAX_FRAME_BYTES)) {
             String line;
             while ((line = lines.readLine()) != null) {
                 dispatch(line);
@@ -235,6 +238,8 @@ final class JsonRpcPeer {
                 }
             }
             broke(new McpConnectionException("mcp server '" + serverId + "' closed stdout (process exited)"));
+        } catch (McpProtocolException e) {
+            broke(e); // 超限帧:残帧后流不可再信,按会话断裂处理(重连)
         } catch (IOException e) {
             broke(new McpConnectionException("mcp server '" + serverId + "' read failed: " + e.getMessage(), e));
         }

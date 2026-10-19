@@ -153,6 +153,33 @@ class McpStdioRecoveryTest {
         }
     }
 
+    /** T7 传输层帧帽（stdio 侧）：超 8 MiB 单行 = 残帧不可再信 → 在途调用协议级联
+     * 失败 + 断链重连；恢复后同一 server 继续可用（不静默截断）。 */
+    @Test
+    void overCapFrameCascadesAndReconnects() {
+        Path pidFile = tmp.resolve("alpha.pid");
+        StdioMcpConnection connection = StdioMcpConnection.start(Fixtures.server("alpha",
+            Duration.ofSeconds(10),
+            "--pid-file", pidFile.toString(),
+            "--big-bytes", "9000000"), new Duration[]{Duration.ofMillis(400), Duration.ofMillis(800)});
+        try {
+            long pid1 = Fixtures.readPid(pidFile);
+
+            assertThatThrownBy(() -> connection.call("big", "{}", AbortSignal.never()))
+                .isInstanceOf(McpProtocolException.class)
+                .hasMessageContaining("mcp frame exceeds 8388608 bytes");
+
+            Fixtures.awaitTrue("run 2 adopted after over-cap frame", () -> !Fixtures.alive(pid1)
+                && !String.valueOf(pid1).equals(Fixtures.readPidOrNull(pidFile))
+                && connection.state() == McpServerState.CONNECTED);
+            assertThat(connection.call("echo", "{\"message\":\"ok\"}", AbortSignal.never()).content())
+                .isEqualTo("echo: ok");
+            assertThat(connection.catalogGeneration()).isEqualTo(1); // 清单一致不换代
+        } finally {
+            connection.close();
+        }
+    }
+
     /** 畸形帧 = 残帧流不可再信：在途调用协议级联失败 + 重连；重建期调用快速失败
      * （不静默挂起）；恢复后清单一致仍可用且代际不变。 */
     @Test

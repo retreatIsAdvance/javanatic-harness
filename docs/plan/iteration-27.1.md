@@ -130,7 +130,7 @@
 | `mcp/mcp` `McpServerConnection` / `McpServerState` / 异常 | 增 `catalogGeneration`；`tools()` 语义；删 `DRIFTED`；异常更名 | ☑（停 1） |
 | `mcp/mcp` 新 `McpRegistryPlugin` + `module-info` | 插件 id `mcp-registry`、provides Plugin | ☑（停 1） |
 | `mcp/stdio` `McpStdioPlugin` / `StdioMcpConnection` / `JsonRpcPeer` | requires 注册表 + 注册；刷新/重连换代；通知回调；删漂移终态 | ☑（停 1） |
-| `mcp/http`（新模块） | HTTP 客户端 + 配置 + 夹具 + 测试 | ☐ |
+| `mcp/http`（新模块） | HTTP 客户端 + 配置 + 夹具 + 测试 | ☑（停 2，已提交） |
 | `mcp/tool` `McpToolPlugin` | requires 注册表；双屏障换代（预检先于注册面改动）；PRE_STEP 落账；截断；缓存 | ☐ |
 | `kernel/config` `ConfigValues` | 词表加 `auth`/`cookie`；公开 `isSensitiveKey`（与 `masked` 单源） | ☐ |
 | `bundle/base` `bundle.yml` | `mcp-registry` + `mcp-http` 行 | ☐ |
@@ -143,7 +143,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1（承载契约 + 共享词表） | `mcp/mcp` 注册表 + `catalogGeneration` + `DRIFTED` 退役/异常更名 + `mcp/stdio` 适配（通知/刷新/重连换代） | ☑（已提交，评审记录 `evidence/iteration-27.1/stop1-review-round1.txt`） |
-| 停 2（新协议面） | `mcp/http` 客户端 + 配置校验 + HTTP 夹具与故障矩阵（会话/SSE/404/DELETE/超时/取消/大帧）+ T7 8 MiB 帧帽（stdio 有界行读 + HTTP 有界响应/单 SSE 事件，两 transport 同批） | ☐ |
+| 停 2（新协议面） | `mcp/http` 客户端 + 配置校验 + HTTP 夹具与故障矩阵（会话/SSE/404/DELETE/超时/取消/大帧）+ T7 8 MiB 帧帽（stdio 有界行读 + HTTP 有界响应/单 SSE 事件，两 transport 同批） | ☑（已提交，评审记录 `evidence/iteration-27.1/stop2-review-round1.txt`） |
 | 停 3（消费面 + 装配 + 验收取证） | `mcp/tool` 换代屏障（预检先于注册面改动）/PRE_STEP 落账/结果上限/缓存 + `kernel/config` 词表 + base 两行 + 四处同步面 + `--verify` + jlink 真跑 + R1 跨代回放 + 文档 | ☐ |
 
 ## 验收（证据 = 实际执行的命令与结果）
@@ -167,7 +167,7 @@
 | 文件（拟） | 覆盖（停点/验收项） |
 |---|---|
 | `stop1-registry-and-generation.txt` | 停 1：注册表/代际/stdio 刷新与重连换代聚焦测试 + 突变（注册去重、代际递增、通知触发）+ validate |
-| `stop2-http-focused.txt` | 停 2：HTTP 矩阵（JSON/SSE/会话/404/DELETE/405/超时/取消/畸形）+ 1 MiB 帧 + 夹具真跑 |
+| `stop2-http-focused.txt` | 停 2：HTTP 矩阵（JSON/SSE/会话/404/DELETE/405/超时/取消/畸形）+ 1 MiB 帧 + T7 8 MiB 两 transport + 夹具真跑 + 突变 7 |
 | `stop3-swap-and-ledger.txt` | 停 3：双屏障换代、轮内延后、换代失败旧代保活、按代全量快照、resume、R1 跨代 fold + 突变 |
 | `stop3-cap-and-masking.txt` | 停 3：256 KiB/UTF-8/标记/配置覆盖；auth/cookie 脱敏与 URL/头校验 + 突变 |
 | `stop3-assembly-and-verify.txt` | 停 3：base 32 行、四处同步面、`--verify` 27/32、mcp 四行 |

@@ -1,0 +1,224 @@
+# it27.1 停 2 取证 — mcp/http 协议面 / 夹具故障矩阵 / T7 帧帽（2026-10-18）
+
+性质：停 2（Streamable HTTP Provider + 配置校验 + HTTP 夹具与故障矩阵 + 两
+transport 8 MiB 帧帽）的验证取证；工作区**未提交**（停点要求）。
+基线：it27 收口提交 `2ee5514`（已推送）；停 1 已按放行提交。环境：
+`JAVA_HOME=$(/usr/libexec/java_home -v 25)`；mvn =
+`~/Documents/apache-maven-3.10.0/bin/mvn`。
+
+## 1. 聚焦测试（最终树，EXIT=0）
+
+命令：
+
+```sh
+$ export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl mcp/mcp,mcp/stdio,mcp/http -am test
+```
+
+关键输出（2026-10-18 16:50:32，完整日志 `/tmp/it271-stop2-final3.log`）：
+
+```text
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.047 s -- in io.javanatic.harness.mcp.McpRegistryPluginTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.055 s -- in io.javanatic.harness.mcp.stdio.McpServerConfigTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.872 s -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.616 s -- in io.javanatic.harness.mcp.stdio.McpStdioCallTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 25.71 s -- in io.javanatic.harness.mcp.stdio.McpStdioPluginTest
+[INFO] Tests run: 39, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.077 s -- in io.javanatic.harness.mcp.http.McpHttpServerConfigTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 18.53 s -- in io.javanatic.harness.mcp.http.McpHttpCallTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.923 s -- in io.javanatic.harness.mcp.http.McpHttpRecoveryTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.530 s -- in io.javanatic.harness.mcp.http.McpHttpPluginTest
+[INFO] Tests run: 49, Failures: 0, Errors: 0, Skipped: 0
+[INFO] harness-mcp-mcp .................................... SUCCESS [  0.317 s]
+[INFO] harness-mcp-stdio .................................. SUCCESS [ 41.566 s]
+[INFO] harness-mcp-http ................................... SUCCESS [ 24.484 s]
+[INFO] BUILD SUCCESS
+[INFO] Total time:  01:11 min
+[INFO] Finished at: 2026-10-18T16:50:32+08:00
+EXIT=0
+```
+
+计数测量面：上述同一命令的 surefire 分模块汇总行（mcp/mcp 3 / mcp/stdio 39 /
+mcp/http 49）；上游 `-am` 模块同命令一并复跑（kernel 54 / session 41 / llm 13），
+全 reactor 27 个逐类行 / 199 例 / 0 失败 / 0 跳过。不与其它命令、其它迭代的计数
+互比。
+
+说明：期间两次后台套件（`b3dcycdom` / `b7xoic0kk`）在夹具或测试编辑中途启动
+（均 exit 0），源在运行中被改动，**不作为证据**；上表来自冻结态重跑（`final3`）。
+
+## 2. 停 2 验收面对照（HTTP 矩阵 + 两 transport T7）
+
+| 验收面 | 判别用例（模块） |
+|---|---|
+| JSON 传输 + 关闭 DELETE | `McpHttpCallTest#jsonTransportInitializesListsCallsAndDeletesOnClose` |
+| SSE 响应分流（initialize/list/call 全事件流） | `McpHttpCallTest#sseTransportHandlesSingleEventResponses` |
+| `Mcp-Session-Id` 捕获回传 + `MCP-Protocol-Version` 时点 | `McpHttpCallTest#requestHeadersCarrySessionAndProtocolVersion` |
+| GET 通知通道 405 降级（不轮询、主连接可用） | `McpHttpCallTest#getNotificationChannel405DegradesGracefully` |
+| 3xx 不跟随（`Redirect.NEVER`） | `McpHttpCallTest#redirectIsNotFollowed` |
+| 畸形响应 / 错 id / 缺 result / rpc error 分档 | `McpHttpCallTest#malformedResponseFailsCallWithoutKillingSession`、`#wrongIdResponseFailsCall`、`#missingResultFailsCall`、`#rpcErrorMemberFailsCall` |
+| 超时（响应头阶段）不失效会话 | `McpHttpCallTest#timeoutFailsCall` |
+| 超时（响应体阶段）看门狗关流 → 快速超时、会话仍可用 | `McpHttpCallTest#bodyStallFailsCallAsTimeoutButKeepsSession` |
+| 取消 → `AbortedException` + 尽力 `notifications/cancelled` | `McpHttpCallTest#cancelAbortsCallAndSendsCancelledNotification` |
+| 取消（响应体停顿时）→ 立即 abort、取消记录落地、会话仍可用 | `McpHttpCallTest#cancelDuringBodyStallAbortsCall` |
+| 分页 `nextCursor` 跟进按序合并 | `McpHttpCallTest#paginatedToolsListIsMergedInOrder` |
+| 游标不终止 → 100 页帽 fail loud | `McpHttpCallTest#endlessPaginationFailsLoudAtStart` |
+| 1 MiB 真帧不截断（截断在消费面 256 KiB，停 3） | `McpHttpCallTest#oneMebibyteFrameIsNotTruncated` |
+| T7 HTTP JSON 体 > 8 MiB → 该请求协议失败、会话仍可用 | `McpHttpCallTest#overEightMebibyteFrameFailsRequestButKeepsSession` |
+| T7 单 SSE 事件累计 > 8 MiB（多行 data）→ 同上 | `McpHttpCallTest#overEightMebibyteSseEventFailsRequestButKeepsSession` |
+| T7 stdio 单帧 > 8 MiB → 协议级联断裂并重连 | `McpStdioRecoveryTest#overCapFrameCascadesAndReconnects`（停 2 新增） |
+| 404 会话失效 → 有限重连 + 新清单换代 | `McpHttpRecoveryTest#sessionExpiryReconnectsAndSwapsCatalogGeneration` |
+| 通知 `list_changed` → 异步重取 + 内容变化换代 | `McpHttpRecoveryTest#listChangedOverGetChannelBumpsGeneration` |
+| 刷新响应畸形 → 断链重连（不静默 KEEP） | `McpHttpRecoveryTest#malformedRefreshCascadesAndReconnects` |
+| 退避耗尽 → `FAILED` 终态 | `McpHttpRecoveryTest#reconnectExhaustionFailsServer` |
+| 插件形状 / 零 server 零噪声 / 装配排序 / scope 关闭 DELETE / 跨 transport 撞 id | `McpHttpPluginTest` 5 例 |
+| 配置矩阵（形状/缺键/坏值/重名/URL/headers/timeout） | `McpHttpServerConfigTest` 22 例 |
+
+夹具真跑：全部 HTTP 用例经单文件 JDK `com.sun.net.httpserver` 夹具
+（`mcp/http/src/test/resources/mcp-http-fixture/FixtureHttpServer.java`，
+`java --add-modules jdk.httpserver` 直跑、虚拟线程、marker 一次性故障注入）；
+跨 transport 撞 id 用例另起 `MinimalStdioServer.java` 真子进程。夹具仅测试资源，
+生产零影响。
+
+## 3. 突变检查（七项；破坏必红 → 还原复绿）
+
+命令（逐项执行；只跑判别用例）：
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl <module> -am test \
+    -Dtest='<判别用例>' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+### M1 — SSE 分流摘除
+
+文件：`mcp/http/.../HttpRpcSession.java`（`request` 的 Content-Type 分支，条件改为
+永不匹配）。判别用例：`McpHttpCallTest#sseTransportHandlesSingleEventResponses`。
+预期：SSE 响应被当作不支持的类型 → 启动握手失败 → 红。实测 `EXIT=1`：
+
+```text
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.726 s <<< FAILURE! -- in io.javanatic.harness.mcp.http.McpHttpCallTest
+io.javanatic.harness.mcp.McpProtocolException: mcp 'initialize' on 'alpha': unsupported response Content-Type: text/event-stream
+[ERROR] BUILD FAILURE
+```
+
+### M2 — `Mcp-Session-Id` 回传摘除
+
+文件：`HttpRpcSession.java`（`requestBuilder` 的会话头）。判别用例：
+`McpHttpCallTest#requestHeadersCarrySessionAndProtocolVersion`。
+预期：后续请求不带会话 → 夹具拒绝 → 红。实测 `EXIT=1`：
+
+```text
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.767 s <<< FAILURE! -- in io.javanatic.harness.mcp.http.McpHttpCallTest
+io.javanatic.harness.mcp.McpConnectionException: mcp server 'alpha' session expired (HTTP 404)
+[ERROR] BUILD FAILURE
+```
+
+### M3 — 404 不置会话失效
+
+文件：`HttpRpcSession.java`（`execute` 的 404 分支删 `invalidate(expired)`）。
+判别用例：`McpHttpRecoveryTest#sessionExpiryReconnectsAndSwapsCatalogGeneration`。
+预期：无重连、代际停在 1 → 等待断言红。实测 `EXIT=1`（断言红，非挂起）：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 10.86 s <<< FAILURE! -- in io.javanatic.harness.mcp.http.McpHttpRecoveryTest
+java.lang.AssertionError: timed out awaiting: reconnected with swapped catalog
+[ERROR] BUILD FAILURE
+```
+
+### M4 — HTTP JSON 体帧帽失效
+
+文件：`HttpRpcSession.java`（`readBounded` 的上限改为 1000×）。判别用例：
+`McpHttpCallTest#overEightMebibyteFrameFailsRequestButKeepsSession`。
+预期：9 MB 体被接收 → 不再抛协议异常 → 红。实测 `EXIT=1`：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.992 s <<< FAILURE! -- in io.javanatic.harness.mcp.http.McpHttpCallTest
+java.lang.AssertionError:
+Expecting code to raise a throwable.
+[ERROR] BUILD FAILURE
+```
+
+### M5 — SSE 单事件累计帽失效
+
+文件：`HttpRpcSession.java`（`readEventStream` 的 `eventBytes` 上限改为 1000×）。
+判别用例：`McpHttpCallTest#overEightMebibyteSseEventFailsRequestButKeepsSession`。
+预期：多行 data 累计超过 8 MiB 仍被接收 → 不再抛「event exceeds」→ 红。实测
+`EXIT=1`：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 1.091 s <<< FAILURE! -- in io.javanatic.harness.mcp.http.McpHttpCallTest
+java.lang.AssertionError:
+Expecting throwable message:
+[ERROR] BUILD FAILURE
+```
+
+### M6 — stdio 有界行读失效
+
+文件：`mcp/stdio/.../JsonRpcPeer.java`（`BoundedLineReader` 上限改为
+`Integer.MAX_VALUE`）。判别用例：`McpStdioRecoveryTest#overCapFrameCascadesAndReconnects`。
+预期：9 MB 单行长帧被读完 → 不再断裂重连 → 红。实测 `EXIT=1`：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.868 s <<< FAILURE! -- in io.javanatic.harness.mcp.stdio.McpStdioRecoveryTest
+java.lang.AssertionError:
+Expecting code to raise a throwable.
+[ERROR] BUILD FAILURE
+```
+
+### M7 — 响应体看门狗关流摘除
+
+文件：`HttpRpcSession.java`（`BodyGuard.watch` 删除 `closeQuietly(body)`，只置超时
+标志不关流）。判别用例：`McpHttpCallTest#bodyStallFailsCallAsTimeoutButKeepsSession`。
+预期：1s 超时不关流 → 调用一直等到夹具 5s 后写出截断体，以畸形响应失败而非超时，
+且耗时越过 <3s 断言 → 红。实测 `EXIT=1`（5.769s，类型断言先红）：
+
+```text
+[ERROR] io.javanatic.harness.mcp.http.McpHttpCallTest.bodyStallFailsCallAsTimeoutButKeepsSession -- Time elapsed: 5.769 s <<< FAILURE!
+java.lang.AssertionError:
+Expecting actual throwable to be an instance of:
+  io.javanatic.harness.mcp.McpTimeoutException
+but was:
+  io.javanatic.harness.mcp.McpProtocolException: mcp 'tools/call' on 'alpha': malformed response: ...
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原复核（同一判别用例）：`Tests run: 1, Failures: 0 ... Time elapsed: 1.928 s`、
+`BUILD SUCCESS`（该次 Maven wall-clock 为 16:16，系 macOS 系统休眠计入，用例自身
+1.928s；非代码或测试停顿）。`grep -rn "MUTATION" mcp/` → `GREP_EXIT=1`（无命中）；七项还原后
+最终树复跑第 1 节全绿（EXIT=0）。还原后目标文件 shasum：
+
+```text
+388ff280d8490944fb4692a2ea26a17e49fb2dd01849d9504dbdba6b28f01e2c  mcp/http/src/main/java/io/javanatic/harness/mcp/http/HttpRpcSession.java
+df7fd89c82f4d961f469854468cff02f16c4da5345a1fd1f9937a0df5eb1be39  mcp/stdio/src/main/java/io/javanatic/harness/mcp/stdio/JsonRpcPeer.java
+```
+
+## 4. validate（spotless / checkstyle）
+
+命令：
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+```
+
+实测 `EXIT=0`（还原后重跑）；`-q` 输出仅 JDK 对 spotless 内部 `sun.misc.Unsafe`
+的弃用警告（非本项目代码）。
+
+## 5. 附注
+
+- 停 2 边界：只跑 MCP 三模块聚焦矩阵 + validate（计划「停 2 取证」口径）；
+  全量 package / consumer / jlink 属停 3 收口。
+- 停 1 已登记偏离 D2（`bundle/base` 与 `examples/headless` 未挂 `mcp-registry`
+  行 → 装配测试预期红）仍成立；停 3 补两行后转绿，本停点未改消费面。
+- JDK HttpClient 已知坑的落地：`HttpRequest.timeout` 只覆盖响应头阶段，正文另由
+  `BodyGuard` 看门狗按流关闭收口；JDK 自带 `HttpTimeoutException` 与看门狗同归
+  「超时」档（`McpTimeoutException`），**不失效会话、不触发重连**——由
+  `timeoutFailsCall` 的 `state == CONNECTED` 断言钉死。
+- SSE 帧帽按 UTF-8 字节累计（多行 `data:` 之间计换行），防「每行在行帽下、事件
+  无界累计」绕过；HTTP 响应体帽与单事件帽同用 `MAX_FRAME_BYTES = 8 MiB`。
+- 分页两条用例在夹具增补 `--pages` / `--endless-pages` 后补入，覆盖 stdio 既有
+  分页平价（合并顺序 / 页帽 fail loud）。
+- 响应体停顿夹具 `--stall-body-once <marker> <ms>` 采用 **chunked**（`sendResponseHeaders
+  (200, 0)`）：先写半个 JSON 再停。定长 Content-Length 在 M7 变异下会让服务端无限等
+  客户端读、测试挂起；chunked 在停顿后写尾段并关流，变异被干净地暴露为「畸形响应 +
+  耗时超限」，而不是挂起。正常路径则由看门狗 1s 关流收口。
