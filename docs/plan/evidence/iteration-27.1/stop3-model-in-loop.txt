@@ -1,0 +1,117 @@
+it27.1 模型在环真跑（真 key；key 仅交互式 shell 环境注入，不入任何档）
+
+日期：2026-10-20 08:23–08:24 (+08:00)
+镜像：dist/jh/target/jlink-image/bin/jh（0.3.0-SNAPSHOT；停 3 收口构建，与提交 4722928 同代码）
+模型：deepseek-chat（真实 API；DEEPSEEK_API_KEY 由交互式 zsh 环境提供，档内不记录值）
+隔离：-Duser.home=/tmp/it271-loop2/home（sessions/审计落隔离目录，不碰真实 HOME）
+夹具：mcp/stdio FixtureServer.java（jh 子进程）+ mcp/http FixtureHttpServer.java
+      （外部进程；--session-id it271-loop2 --notifications
+       --list-changed-once ... "echo,updated"；记录 init/get/call/delete）
+profile：/tmp/it271-loop2/dual.yml（base + mcp-stdio 一行 local + mcp-http 一行 remote）
+驱动：/tmp/it271-loop2/drive.py（逐字读 stdout/stderr；stats 行判定轮末；
+      见 [y/N] 自动回 y；两轮间留 6s 给通知刷新线程）
+说明：输出中的 "NOTE: Picked up JDK_JAVA_OPTIONS" 是 JDK 提示，非 jh/MCP 输出。
+      首轮排练现场 /tmp/it271-loop 因驱动脚本二进制 stdin 缺陷产生一次空会话
+      与一组多余 init/get/delete，未采信；本档全部取自干净现场 loop2。
+
+== Run A — 双 transport + 轮间换代（STANDARD + auto）==
+
+命令（key 在环境，命令行不含 key）：
+  LOOP_BASE=/tmp/it271-loop2 zsh -ic 'python3 /tmp/it271-loop2/drive.py A'
+
+输入两轮：
+  turn 1：调用 mcp__local__echo 与 mcp__remote__echo（message=http-loop），只复述原文
+  turn 2：调用 mcp__remote__updated（message=after-swap），只复述原文
+
+stdout：
+  jh 交互模式 —— 输入消息回车提交;/help 命令;/exit 或 Ctrl-D 退出
+  session=headless-1792455828165-8260（续跑: jh --resume=headless-1792455828165-8260）
+  → mcp__local__echo {}
+  → mcp__remote__echo {"message": "http-loop"}
+  ← echo:
+  ← echo: http-loop
+  echo:
+  echo: http-loop
+  stats: turn=1 steps=2 tokens_in=3714 tokens_out=65 elapsed=1.5s
+  → mcp__remote__updated {"message": "after-swap"}
+  ← updated: after-swap
+  updated: after-swap
+  stats: turn=2 steps=2 tokens_in=3738 tokens_out=48 elapsed=1.2s
+  RUN=A EXIT=0 APPROVALS=0
+
+stderr（刷新线程）：
+  信息: session=headless-1792455828165-8260
+  信息: mcp server 'remote' catalog generation 1 -> 2 (2 tools, list_changed)
+
+会话账（/tmp/it271-loop2/home/.harness/sessions/headless-1792455828165-8260/log.jsonl，79 行）：
+  seq 2   mcp/catalog entries=8（local 4 + remote echo/big/env/fail；无 generation 字段）
+  seq 3   user/message（turn 1）      ← PRE_STEP 落账先于 user/message
+  seq 22  tool/call mcp__local__echo {}
+  seq 23  tool/call mcp__remote__echo {"message": "http-loop"}
+  seq 24  tool/result mcp__local__echo  isError=false  "echo: "
+  seq 25  tool/result mcp__remote__echo isError=false  "echo: http-loop"
+  seq 40  turn/end completed           ← TURN_STOPPING 采纳第 2 代
+  seq 41  turn/start
+  seq 43  mcp/catalog entries=6（local 4 + remote echo/updated；无 generation 字段）
+  seq 44  user/message（turn 2）      ← 仍在 user/message 之前
+  seq 62  tool/call mcp__remote__updated {"message": "after-swap"}
+  seq 63  tool/result mcp__remote__updated isError=false "updated: after-swap"
+  seq 76  turn/end completed
+
+HTTP 夹具记录（整场两轮）：
+  http-inits.txt:   initialize（Run A）
+  http-gets.txt:    get（通知通道建立）
+  http-calls.txt:   echo → updated（换代前调用旧工具、换代后调用新工具）
+  http-deletes.txt: it271-loop2（关闭时 DELETE 收尾）
+stdio 子进程：进程退出后 pgrep mcp-fixture/FixtureServer = none（无残留）。
+
+判定：
+- 真实模型在同一轮同时经 stdio 与 HTTP 两个 transport 调工具（R2 唯一执行路径）✓
+- 轮内收到 list_changed 未当轮换面；turn 2 的请求工具面已是 updated，
+  且模型成功调用 mcp__remote__updated——轮间换代对真实模型可见 ✓
+- mcp/catalog 两代 8→6、无 generation 字段、日志序即代、两代均先于 user/message ✓
+- HTTP 会话 initialize/GET/DELETE 全链在场；stdio 子进程回收 ✓
+- 注：模型对 local echo 选择传 {}（schema 仅 {"type":"object"}，合法），
+  HTTP echo 的 message 往返成功；这是模型填参行为，非产品偏离。
+
+== Run B — MCP 工具仍走人闸（PRODUCTION + ask + budget）==
+
+命令：
+  LOOP_BASE=/tmp/it271-loop2 zsh -ic 'python3 /tmp/it271-loop2/drive.py B'
+  （等效 flags：--policy=PRODUCTION --approval=ask --budget=100000 --approval-timeout=120）
+
+stdout：
+  jh 交互模式 —— 输入消息回车提交;/help 命令;/exit 或 Ctrl-D 退出
+  session=headless-1792455858445-ed24（续跑: jh --resume=headless-1792455858445-ed24）
+  → mcp__local__echo {}
+  ← echo:
+  工具返回原文：
+  ```
+  echo:
+  ```
+  stats: turn=1 steps=2 tokens_in=3419 tokens_out=34 elapsed=1.3s
+  RUN=B EXIT=0 APPROVALS=1
+
+stderr（审批行原文）：
+  信息: session=headless-1792455858445-ed24
+  [approval] allow mcp__local__echo mcp__local__echo {}? [y/N]
+
+会话账（headless-1792455858445-ed24/log.jsonl，32 行）：
+  seq 2   mcp/catalog entries=6（夹具已处换代后清单：local 4 + remote echo/updated）
+  seq 3   user/message                  ← catalog 先于 user/message
+  seq 11  tool/call mcp__local__echo {}
+  seq 12  tool/result isError=false "echo: "
+  seq 29  turn/end completed
+
+判定：
+- MCP 工具在 PRODUCTION + ask 下触发人闸（1 次审批；驱动回 y 后放行），
+  无豁免通道；tool/call 先落账、裁决后果落 tool/result ✓
+- 注：模型本轮又选择传 {}（提示中给了 message），审批与执行语义不受影响；
+  message 往返已由 Run A 的 HTTP echo 取证。
+
+== 清理 ==
+- Run A/B 进程均退出（EXIT=0）；stdio 无残留；HTTP 夹具已停止。
+- /tmp/it271-loop2 保留为证据现场（不属仓库）；仓库内无 key、无环境值。
+
+结论：模型在环验收项成立——真实模型经两个 transport 调工具、跨代调用新工具、
+MCP 工具不豁免审批；未使用任何伪造模型或伪造会话账。

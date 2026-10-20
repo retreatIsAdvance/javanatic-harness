@@ -1,4 +1,4 @@
-# 迭代 27.1 — MCP 硬化：Streamable HTTP、连接注册表与轮屏障热换代（状态：已收口·2026-10-19）
+# 迭代 27.1 — MCP 硬化：Streamable HTTP、连接注册表与轮屏障热换代（状态：已收口·2026-10-20）
 
 模块：`mcp/mcp`（Definition：新增连接注册表插件 `mcp-registry`，`McpClientService` 增注册面，`McpServerConnection` 增清单代际；零第三方不变）· `mcp/http`（**新增** Provider：Streamable HTTP，插件 id `mcp-http`；JDK `java.net.http` + Jackson 边界）· `mcp/stdio`（Provider：适配注册表与清单代际，退役会话冻结/DRIFTED）· `mcp/tool`（Consumer：轮屏障换代 + 256 KiB 结果上限 + 映射缓存）· `kernel/config`（敏感词表扩 `auth`/`cookie`，公开 `isSensitiveKey`）· `bundle/base`（装配行）· 行集同步面（`dist/jh` jlink / `examples/headless` / `integration/consumer-sample` / `docs/embedding.md`）· 设计文档 02/03/05/07/12 + `AGENTS.md`。
 
@@ -166,7 +166,7 @@
 - [x] R1：回放/重建零联网零进程；跨代账本 fold == 注册面（逐字段）；请求指纹闭包
 - [x] 全量 `mvn -B -q package` + `mvn -B -q validate` + `verify-consumer.sh candidate`
 - [x] 设计文档 02/03/05/07/12 + `AGENTS.md` + `docs/embedding.md` 同步
-- [ ] 模型在环 runbook——待有 `DEEPSEEK_API_KEY` 环境回填（不伪造通过）
+- [x] 模型在环 runbook——真实 `deepseek-chat` 双 transport + 轮间换代 + 审批人闸实跑（2026-10-20；`evidence/iteration-27.1/stop3-model-in-loop.txt`）
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 `docs/plan/evidence/iteration-27.1/`）
 
@@ -178,6 +178,7 @@
 | `stop3-cap-and-masking.txt` | 停 3：256 KiB/UTF-8/标记/配置覆盖；auth/cookie 脱敏与 URL/头校验 + 突变 |
 | `stop3-assembly-and-verify.txt` | 停 3：base 32 行、四处同步面、`--verify` 27/32、mcp 四行 |
 | `stop3-jlink-realrun.txt` | 停 3：jlink jh + stdio/HTTP 夹具真跑、两轮换代、审计、零噪声 |
+| `stop3-model-in-loop.txt` | 停 3：模型在环 A/B（真实 deepseek-chat；双 transport + 轮间换代 + 审批人闸） |
 | `stop3-closeout-package.txt` / `stop3-closeout-consumer.txt` | 收口：全量 package 计数 + consumer candidate（候选腿 + 负例）EXIT=0 |
 
 ---

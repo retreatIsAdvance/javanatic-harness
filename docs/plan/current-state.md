@@ -40,7 +40,7 @@
 
 ## 当前进行中
 
-- **无进行中迭代**。it27.1 已收口并提交（验收清单全勾；证据 `evidence/iteration-27.1/`），**未推送**。
-- 待用户点名：① push（含 it26 尾 `82b6b67` 起的全部未推提交）；② 模型在环 runbook 回填（待 `DEEPSEEK_API_KEY`，不伪造）。
+- **无进行中迭代**。it27.1 已收口并提交（验收清单全勾，含真实模型在环；证据 `evidence/iteration-27.1/`），**未推送**。
+- 待用户点名：push（含 it27.1 的 3 个提交 `d69484d` / `6b3b0bb` / `4722928`）。模型在环 runbook 已于 2026-10-20 用真实 `deepseek-chat` 回填（`stop3-model-in-loop.txt`）。
 - 下一项：0.3 顺序 3「网络资料获取」——四确认待启动（按新格式：内容 / 目标 / 为什么 / 不做）。
 - 挂账（转下一迭代议程）：MCP `_hash8` 撞名退路（hash12/前缀转义）属命名算法变更，须重裁；Resources / Prompts / Sampling / Roots / Elicitation 首版不做。
