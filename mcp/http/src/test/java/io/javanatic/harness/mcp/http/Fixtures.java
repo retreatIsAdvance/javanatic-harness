@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
@@ -95,6 +96,7 @@ final class Fixtures {
                 sleep(20);
             }
             process.destroyForcibly();
+            awaitExit(process);
             throw new AssertionError("fixture port file never written; log:\n" + readOrEmpty(logFile));
         } catch (IOException e) {
             throw new AssertionError("cannot start mcp http fixture", e);
@@ -155,12 +157,30 @@ final class Fixtures {
         }
     }
 
-    /** 夹具进程句柄：close = 强制回收（夹具无优雅停机协议）。 */
+    /**
+     * 等强杀真正生效（有界）。Windows 下子进程未退出前仍持有 stdout 重定向的
+     * fixture-N.log 句柄，JUnit 随后清 @TempDir 会报「文件被另一进程占用」；
+     * close 必须等退出再返回（测试体已过，失败只出在清理面）。
+     */
+    private static void awaitExit(Process process) {
+        try {
+            if (!process.waitFor(AWAIT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)) {
+                throw new AssertionError("fixture process " + process.pid()
+                    + " still alive after destroyForcibly");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("interrupted while awaiting fixture exit", e);
+        }
+    }
+
+    /** 夹具进程句柄：close = 强制回收并等退出（夹具无优雅停机协议）。 */
     record Fixture(Process process, int port) implements AutoCloseable {
 
         @Override
         public void close() {
             process.destroyForcibly();
+            awaitExit(process);
         }
     }
 
