@@ -1,0 +1,50 @@
+# it28 停 1 评审（2026-10-21）— 用户独立复跑 + 安全核心抽查
+
+## 用户评审（原文）
+
+**总判：通过放行。** 门禁独立复绿（web/web 8 + fetch-http 113 = **121 例**，validate EXIT=0），T2 三条件全部有实证，两项残余安全问题的定性准确。裁决如下。
+
+## 一、关键核验
+
+| 项 | 核验 | 结果 |
+|---|---|---|
+| **TOCTOU 闭合** | `AddressGate.verify(host, addresses)` 与 `AddressResolver` 拆成接口——解析一次、整组过闸、钉 InetAddress 连接；字面 IP 走 `InetAddress.ofLiteral` 同闸（`FetchUrlPolicy:145/:221`） | ✅ 整组拒绝语义（一个非公网 → 连接前全拒）是对 dsh 单地址判定的加固 |
+| **重定向逐跳** | 301/302/303/307/308 一律 GET、每跳重跑 URL 策略 + 重解析、`MAX_REDIRECTS = 5`、不转发头、拒降级；**302 缺 Location 的缺口停点内自捕**（原会当普通结果返回），M7 + 用例钉死 | ✅ 「发现真实缺口→用例+突变固定」是停点机制的正样本 |
+| **T2 条件①** chunked | 扩展/chunk-extension、trailer、严格 CRLF、超限截断 + 端到端测试（证据 `stop1-wire-chunked.txt`） | ✅ 上轮三条条件逐条闭合 |
+| **T2 条件②** gzip | 显式 `WEB_UNSUPPORTED_CONTENT_TYPE`，不解码 | ✅ |
+| **T2 条件③** 字面 IP | 同闸 | ✅ |
+| 测试矩阵 | PublicAddressGateTest **47 例**（地址闸单独 47 例——这个面值得）、协议 18、URL 策略 13、钉地址客户端 22、内容 9、插件 4、契约 8；钉地址用例 3×22 稳定复跑 | ✅ 安全面的测试密度配得上它的风险等级 |
+
+## 二、两项残余安全问题——裁决：接受为已登记限制
+
+1. **DNS 解析阻塞不可中断**：真 JVM 限制——`InetAddress.getAllByName` 底层系统调用不受虚拟线程 parking / 中断影响，deadline 与 cancel 都掐不断它。**接受**，理由与边界：① `AddressResolver` 接口已经是可替换缝——将来若需要，可注入「独立解析线程 + 限时 join」的可中断实现，机制无残留；② 实际影响有界（解析挂死只拖长单次 fetch，30s deadline 在解析返回后照常生效）。要求：边界登记表（B17）条目写明「解析期不受 deadline/cancel 约束」这一精确范围，别泛化为「网络不受限」。
+2. **自定义 NAT64 前缀（RFC 7050）延后 B17**：接受——dsh 同样整体阻断 translated 地址而不做前缀发现；RFC 7050 的 DNS TXT 发现路径在企业网外罕见，well-known 前缀 `64:ff9b::/96` 已在阻断清单内。B17 条目同样写明范围。
+
+## 三、三项口径——全部批准
+
+1. **3xx 正文丢弃**：正确——RFC 语义上重定向正文无意义，且不转发/不保留符合「重定向面最小化」。
+2. **夹具用原始 `SSLServerSocket` 替代 HttpsServer**：批准——测试专用的畸形 TLS/帧控制需要原始套接字级掌控，`HttpsServer` 反而给不出这种控制力；仅测试资源，无生产面。
+3. **1xx 作为传输层拒绝**：批准——100 Continue 是传输层机制；补充一句确认：**101 Switching Protocols 不应作为结果透传**（客户端没请求升级），实现里如遇 101 走同一传输层拒绝路径即可，一行测试钉住。
+
+## 四、结论
+
+**放行停 1**：提交（含本评审记录与两处 B17 边界条目）→ 进停 2（搜索 Provider）。
+
+停 2 的评审重点预告，按草案自己的失败闸：① 探针**失败时是否真的停下**（不静默换 provider、不降级 prose-scraping）——这是 T4 裁定的核心承诺，我会当第一个看；② 请求头断言（`x-api-key` + `Authorization` 双发、`anthropic-version`、`max_uses`）与「错误不回显 key」；③ 映射层只取结构化结果与引用 snippet、URL 去重、无结果块 = `WEB_PROVIDER_ERROR` 的负路径。另提醒：探针真跑会消耗你的 DeepSeek 账户配额（max_uses 5 × 真 web search），量级很小但非零——取证时把请求/响应体积写进证据即可。
+
+## 本批处置
+
+- **101 补测**：`FetchProtocolTest#rejectsMalformedStatusLines` 增
+  `HTTP/1.1 101 Switching Protocols` 用例；突变 M9（`status < 200` 放行 101）实测红
+  `rejectsMalformedStatusLines:44`，还原后 18/18 复绿。证据补入
+  `stop1-wire-chunked.txt` §3b。
+- **B17 登记**：`boundary-register.md` B17 写明两项精确范围——① 解析期
+  `getAllByName` 不受 deadline/cancel 约束（deadline 自解析返回后生效；
+  `AddressResolver` 为可替换缝）；② 不做 RFC 7050 自定义 NAT64 前缀发现（只封
+  `64:ff9b::/96` 与 `64:ff9b:1::/48`）。
+- **packet 事实订正**：实现接受 `HTTP/1.0` 与 `HTTP/1.1` 的 2xx–5xx（原 packet 写
+  “只接受 HTTP/1.1”，已改）；1xx/101 仍在传输层拒绝。
+- **提交面**：停 1 全部改动 + 本评审记录 + packet/四份取证 + B17 + 停点表状态随本次
+  提交入库；**不 push**（push 仍需用户新鲜点名）。
+- **停 2 承接**：探针真跑会消耗 DeepSeek 配额；证据将记录请求/响应体积，不含 key。
+  探针失败即停，不换 provider、不降级 prose-scraping。

@@ -1,6 +1,6 @@
 # 边界登记表
 
-> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-19（it27.1）。
+> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-21（it28 停 1）。
 
 | # | 边界 | 规则 | 落地位置 | 状态 / 证据 |
 |---|---|---|---|---|
@@ -20,6 +20,7 @@
 | B14 | 审批 | MCP 工具 `approvalExempt=false`，**恒需审批**；无豁免出口 | `mcp/tool` | 已实施（it27） |
 | B15 | 零噪声 | MCP `servers: []` → 零进程、零网络、零工具、零事件、零注册 | 两个 transport + registry | 已实施 |
 | B16 | 消息/事件形状 | `mcp/catalog` 每代全量快照、**无 generation 字段**（日志序即代，fold 末值胜） | `mcp/tool`（T8） | 已实施；`stop3-swap-and-ledger.txt` |
+| B17 | Web 抓取网络信任与解析残余 | 抓取只经公网地址闸（DNS 整组 + 字面 IP 同闸）；egress 不受沙箱治理（治理 = 审批 + 审计 + 公网闸）。**解析期 `getAllByName` 不受 deadline/cancel 约束**：deadline 自解析返回后生效，取消不能唤醒系统解析调用（`AddressResolver` 为可替换缝，升级路径 = 独立解析线程 + 限时 join）。**不做** RFC 7050 自定义 NAT64 前缀发现：只封 `64:ff9b::/96` 与 `64:ff9b:1::/48`，自定义前缀在地址形态上仍是 `2000::/3` 全球单播 | `web/fetch-http` `PinnedHttpClient` / `PublicAddressGate`；05/07 | 已实施（it28 停 1）；残余范围见 `stop1-fetch-policy.txt` §6、`stop1-pinning-and-redirect.txt` §4 |
 
 ## 维护规则
 

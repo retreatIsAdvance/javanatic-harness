@@ -1,0 +1,190 @@
+# it28 停 1 证据 — URL 策略 / 公网地址闸 / 内容策略 / 上限与取消（2026-10-21）
+
+性质：停 1 聚焦取证。命令均在仓库根执行，Maven = `~/Documents/apache-maven-3.10.0/bin/mvn`，
+JDK 25（默认 `java`）。被验证代码为未跟踪新模块 `web/web` 与 `web/fetch-http`。
+
+## 0. 契约与聚焦测试
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/web,web/fetch-http -am test
+```
+
+EXIT=0（决定性行）：
+
+```text
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.049 s -- in io.javanatic.harness.web.WebContractTest
+Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.065 s -- in io.javanatic.harness.web.fetch.http.FetchProtocolTest
+Tests run: 47, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in io.javanatic.harness.web.fetch.http.PublicAddressGateTest
+Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.570 s -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.022 s -- in io.javanatic.harness.web.fetch.http.FetchUrlPolicyTest
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in io.javanatic.harness.web.fetch.http.FetchContentTest
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in io.javanatic.harness.web.fetch.http.WebFetchHttpPluginTest
+Tests run: 113, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
+计数口径：`web/web` 模块汇总 8；`web/fetch-http` 模块汇总 113（含 PinnedHttpClientTest 22）。
+`-am` 同时跑了依赖模块的既有测试，本文件不把它们相加（项目计数惯例：按模块汇总行）。
+
+契约测试 `WebContractTest` 覆盖：9 码词表逐名钉死、请求/结果 fail-loud、sealed body、
+来源归一工厂（null/空白 → `Optional.empty`，不编造）、来源列表不可变副本、`WebException`
+的 code 与 cause。`WebFetchRequest` 明确只保证非 null；空串交由 Provider 的 URL 策略拒绝。
+
+## 1. URL 策略（`FetchUrlPolicyTest`，13）
+
+命令：
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/fetch-http -am test \
+    -Dtest=FetchUrlPolicyTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=0：
+
+```text
+Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.022 s -- in io.javanatic.harness.web.fetch.http.FetchUrlPolicyTest
+```
+
+覆盖事实（方法名即断言）：
+
+- `normalizesHostPortPathAndStripsFragment`：host 小写、缺省 443 不进 Host 头、fragment 不进请求目标。
+- `convertsIdnToPunycodeAndEncodesNonAsciiPath`：`例え.jp` → `xn--r8jz45g.jp`；路径/查询按 UTF-8 百分号编码。
+- `stripsTrailingDotAndNormalizesMissingPath`：尾点去除、空路径归一 `/`。
+- `ipv6LiteralRequiresBracketsAndKeepsThemInHostHeader`：IPv6 仅方括号形态；Host 头带括号与端口。
+- `literalIpv4IsMarkedAndCanonicalized`：`127.1` → `127.0.0.1`，`ipLiteral=true`（字面 IP 与 DNS 结果同闸的入口）。
+- `preservesExistingPercentEncodingAndRejectsBrokenOne`：既有 `%20` 保留并大写；`%2` → `WEB_INVALID_URL`
+  （消息为稳定的 `invalid percent-encoding in url`，不回显原 URL）。
+- `rejectsNonHttpsAndMalformedShapes`：http/ftp/无 scheme、userinfo、host 百分号、非规范 IPv4
+  `999.1.1.1`、端口 0/65536/非数字/空、未加括号 IPv6、空格、反斜杠、超 2048 全部 `WEB_INVALID_URL`。
+- `relativeRedirectResolvesAgainstCurrentUrl` / `schemeRelativeAndCrossOriginRedirectsStayHttps`：
+  相对、`..`、scheme-relative 与跨源 Location 均解析并保持 https。
+- `redirectToPlainHttpIsBlocked`：https→http 降级 `WEB_REDIRECT_BLOCKED`。
+- `badOrMissingLocationIsBlocked`：null/空白/坏方括号/`javascript:` 全部 `WEB_REDIRECT_BLOCKED`。
+- `overlongRedirectTargetIsBlocked`：逐跳规范化后仍受 2048 上限约束。
+
+## 2. 公网地址闸（`PublicAddressGateTest`，47）
+
+命令：
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/fetch-http -am test \
+    -Dtest=PublicAddressGateTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=0：
+
+```text
+Tests run: 47, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in io.javanatic.harness.web.fetch.http.PublicAddressGateTest
+```
+
+逐网段表（参数化输入即断言集）：
+
+| 组 | 拒绝（节选） | 放行（节选） |
+|---|---|---|
+| IPv4 | `0.0.0.0` `10.0.0.1` `127.0.0.1` `169.254.169.254` `100.64.0.1` `100.127.255.254` `172.16.0.1` `172.31.255.254` `192.168.1.1` `192.0.0.9` `192.0.2.1` `192.88.99.1` `198.18.0.1` `198.19.255.254` `198.51.100.1` `203.0.113.1` `224.0.0.1` `239.255.255.255` `240.0.0.1` `255.255.255.255` | `8.8.8.8` `1.1.1.1` `93.184.216.34` `203.0.114.1` `198.51.99.1` |
+| IPv6 | `::` `::1` `fe80::1` `fc00::1` `fd00::1` `ff02::1` `2001:db8::1` `2002:808:808::1` `2001::1` `2001:2::1` `3fff::1` `64:ff9b::808:808` `64:ff9b:1::808:808` `::127.0.0.1` | `2001:4860:4860::8888` `2606:4700:4700::1111` `2a00:1450:4001:80f::200e` `3ff0::1` |
+| IPv4-mapped | `::ffff:127.0.0.1` `::ffff:10.0.0.1` | `::ffff:8.8.8.8`（按内嵌 IPv4 同判） |
+
+整组与字面量：
+
+- `anyNonPublicAnswerRejectsWholeSet`：`[8.8.8.8, 10.0.0.1]` → `WEB_BLOCKED_ADDRESS`，消息含 host 与命中地址。
+- `allPublicAnswersPassAndEmptySetFailsLoud`：全公网放行；空集 fail loud（不静默绕过）。
+- `literalIpGoesThroughTheSameGate`：`127.0.0.1` 与 `::1` 作为“字面 IP”喂同一闸仍被拒（T2 条件 ③ 的闸侧）。
+
+## 3. 内容策略（`FetchContentTest`，9）
+
+命令：
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/fetch-http -am test \
+    -Dtest=FetchContentTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=0：
+
+```text
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in io.javanatic.harness.web.fetch.http.FetchContentTest
+```
+
+覆盖事实：
+
+- `text/html`、`application/xhtml+xml` → `Html`；其余 `text/*`、JSON、XML、`+json`、`+xml` → `Text`。
+- 缺 `Content-Type`、白名单外（如 `application/octet-stream`）→ `WEB_UNSUPPORTED_CONTENT_TYPE`，消息含状态码。
+- charset 缺省 UTF-8；`charset=utf-8` 带引号可解析；未知标签与 UTF-16/UTF-32 → `WEB_UNSUPPORTED_CONTENT_TYPE`。
+- 非法字节序列 → U+FFFD（REPLACE），BOM 去除（内容事实，不猜测编码）。
+- **T2 条件 ②**：`Content-Encoding: gzip`（含大小写变体）→ 显式 `WEB_UNSUPPORTED_CONTENT_TYPE`，
+  消息说明 identity-only 且 no decoding attempted；`identity` 与缺失放行。
+- 端到端同断言在 `PinnedHttpClientTest#gzipIsExplicitlyUnsupportedWithoutDecoding`（回环 HTTPS 真响应）。
+
+## 4. 上限 / 超时 / 取消
+
+（同一全量命令 EXIT=0；方法名与断言）
+
+- `declaredTooLargeFailsBeforeBody`：`Content-Length: 9999999` 且 cap 1024 → `WEB_TOO_LARGE`，不读体。
+- `streamedOverCapIsTruncatedNotAnError`：无 CL 的 2048 字节正文、cap 1024 → 结果 1024 字节、
+  `truncated=true`（内容事实，不是错误）。
+- `stalledResponseTimesOut`：夹具延迟 3s，客户端 `timeoutSeconds=1` → `WEB_TIMEOUT`；
+  断言实际耗时 < 2500 ms（截止时间确实生效，而不是等到 3s）。
+- `cancelWakesBlockedReadAsAbortedException`：阻塞读期间取消 → socket 被关闭、调用线程退出，
+  异常类型是 `AbortedException`（非 `WebException`、非错误结果）。
+- 协议侧 `chunkedOverCapStopsAndMarksTruncated` / `chunkedExactlyAtCapIsNotMarkedTruncated`
+  见 `stop1-wire-chunked.txt`。
+
+## 5. 突变检查（破坏必红 → 还原复绿）
+
+基线备份 `/tmp/it28-mut/*.java`；每次还原后 `diff -q` 静默并核对 shasum。
+全链结束 `grep -rn MUTATION web/ --include="*.java"` 零命中。
+
+### M5 — gzip 失配被放行（`FetchContent.requireIdentityEncoding` 增加 gzip 例外）
+
+EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.470 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+[ERROR]   PinnedHttpClientTest.gzipIsExplicitlyUnsupportedWithoutDecoding:233
+Expecting code to raise a throwable.
+[ERROR] Tests run: 9, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.019 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.FetchContentTest
+[ERROR]   FetchContentTest.nonIdentityContentEncodingIsExplicitlyUnsupported:78->assertUnsupported:109
+[ERROR] Tests run: 10, Failures: 2, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`diff -q` 静默；`FetchContent.java` shasum `fdb85daf…f172` 与基线一致。
+复绿：后续全量命令 `Tests run: 113 ... Failures: 0`、BUILD SUCCESS。
+
+### M6 — 整组校验退化为只看第一条（`PublicAddressGate.verify` 遍历 `subList(0, 1)`）
+
+EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.041 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.PublicAddressGateTest
+[ERROR]   PublicAddressGateTest.anyNonPublicAnswerRejectsWholeSet:68
+Expecting code to raise a throwable.
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`diff -q` 静默；`PublicAddressGate.java` shasum `fbb2fac3…d2d2` 与基线一致。
+
+### M8 — 契约状态码上界放宽（`WebFetchResult` 599 → 600）
+
+EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.047 s <<< FAILURE! -- in io.javanatic.harness.web.WebContractTest
+[ERROR]   WebContractTest.fetchResultValidatesStatusAndReferences:38
+Expecting code to raise a throwable.
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`diff -q` 静默；`WebFetchResult.java` shasum `781af2d6…a8a8` 与基线一致。
+
+## 6. 已知残余（留给评审裁决，不在本停点静默处理）
+
+- **DNS 解析不可被总截止时间硬中断**：总 30s 截止约束连接/握手/读写；系统 `getAllByName`
+  若自身阻塞，`AbortSignal` 无法唤醒该调用。当前结构是“解析一次 + 钉地址”，解析时长由系统 resolver
+  决定。是否升级为异步解析 + 超时放弃，交评审裁。
+- **自定义 NAT64 前缀**：只封标准/本地前缀（R2 已登记 B17）；自定义 RFC 7050 前缀在地址形态上仍是
+  `2000::/3` 全球单播，本闸无法仅凭地址识别其转换语义。
+- **无代理/Cookie/Authenticator**：结构性不读取进程级默认值；本项目前没有“显式代理”需求，故无配置面。

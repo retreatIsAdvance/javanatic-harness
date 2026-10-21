@@ -157,7 +157,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1（承载契约 + 传输安全） | `web/web` 契约 + `web/fetch-http` 钉地址客户端/URL/地址闸/重定向逐跳/chunked/内容策略/上限/超时取消 + 夹具矩阵 + 突变；包 `stop1-review-packet.md` 与证据 | ☐ |
+| 停 1（承载契约 + 传输安全） | `web/web` 契约 + `web/fetch-http` 钉地址客户端/URL/地址闸/重定向逐跳/chunked/内容策略/上限/超时取消 + 夹具矩阵 + 突变；包 `stop1-review-packet.md` 与证据 | ☑（已提交，评审记录 `evidence/iteration-28/stop1-review-round1.txt`） |
 | 停 2（新外部协议面 + 探针闸） | `web/search-deepseek` 请求/映射/配置/错误/取消 + 夹具 + **真实端点探针**；探针失败即停请裁；包 `stop2-review-packet.md` | ☐ |
 | 停 3（消费面 + 装配 + 验收取证） | `web/tool` 两工具/HTML 提取矩阵/信任前缀与提示段/截断；base 三行；四处同步面；`--verify`；jlink 真实抓取；R1；模型在环；文档；包 `stop3-review-packet.md` | ☐ |
 

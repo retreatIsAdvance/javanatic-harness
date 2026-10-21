@@ -1,0 +1,124 @@
+# it28 停 1 证据 — HTTP/1.1 线路矩阵与 chunked 解码（T2 条件 ①）（2026-10-21）
+
+性质：协议解析纯单元测试（`ByteArrayInputStream` 喂原始字节）+ 回环 HTTPS 端到端各一条。
+解析器不依赖 socket 行为，畸形线路可逐字节构造。
+
+## 0. 聚焦测试
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/fetch-http -am test \
+    -Dtest=FetchProtocolTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=0：
+
+```text
+Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.077 s -- in io.javanatic.harness.web.fetch.http.FetchProtocolTest
+```
+
+端到端（TLS 夹具，chunked + trailer 真响应）：
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/fetch-http -am test \
+    -Dtest='PinnedHttpClientTest#decodesChunkedEndToEnd' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+`Tests run: 1, Failures: 0, Errors: 0`；正文 = `Wikipedia`，`truncated=false`。
+
+## 1. 状态行与头区
+
+- `parsesStatusAndHeadersWithOwsAndDuplicates`：`Content-Type:  text/plain ` 去 OWS；
+  `Set-Cookie` 重复值保序；头名大小写不敏感。
+- `acceptsNon2xxStatusAsAResult`：503 是结果（客户端侧 `non2xxIsAResultWithBody` 再证 404 带正文）。
+- `rejectsMalformedStatusLines`：HTTP/2、ICY、1xx（100 Continue、**101 Switching Protocols**）、
+  非数字、999、空响应全部 `WEB_NETWORK_ERROR`。状态行接受 `HTTP/1.0` 与 `HTTP/1.1` 的
+  2xx–5xx；101 属“客户端未请求升级”的传输层拒绝路径，不作为结果透传（评审补测，M9）。
+- `rejectsObsFoldAndBadHeaderShapes`：折行、非法头名、控制字符、无冒号均拒。
+- `enforcesHeaderCountAndSizeBounds`：>100 头；头区 >64 KiB；单行 >8 KiB。
+- `requiresStrictCrlf`：裸 LF 与裸 CR。
+- `rejectsSmugglingShapesAndInconsistentLengths`：CL+TE 同时出现、TE 非 chunked、
+  不一致 CL、`+4` 非数字 CL；`acceptsIdenticalRepeatedContentLength` 允许相同重复 CL。
+- `noBodyStatusesIgnoreFramingHeaders`：204/304 不读体，即使带 CL/TE。
+- `readsContentLengthBodyAndRejectsShortBody`：短体（声明 10 实际 5）→ 截断协议错。
+
+## 2. chunked 解码（T2 条件 ①）
+
+正向：
+
+- `decodesChunkedWithExtensionsAndTrailers`：`4;foo=bar` 扩展被忽略；0 块后 trailer 读到空行；正文拼接正确。
+- `decodesUppercaseHexChunkSize`：`A` 十六进制大小写均可。
+- `chunkedExactlyAtCapIsNotMarkedTruncated`：恰好到达上限不置截断（边界不误报）。
+- `chunkedOverCapStopsAndMarksTruncated`：超上限停收、保留前缀、`truncated=true`（不报错）。
+
+负向（同一用例 `rejectsMalformedChunkFraming`）：
+
+| 输入 | 期望 |
+|---|---|
+| `ZZ` / 空行 | 坏 chunk size |
+| `4\r\nabc` | 块内截断（`truncated`） |
+| `4\r\nabcdX\r\n...` | 数据后非 CRLF（`chunk data is not CRLF-terminated`） |
+| `4\r\nabcd\n\n0\r\n\r\n` | 数据后裸 LF（`chunk data is not CRLF-terminated`；本停点新增用例，专杀“跳过 CRLF 校验”） |
+| `4\r\nabcd\r\n` | 缺 0 块（截断） |
+| `0\r\n bad-fold\r\n\r\n` | trailer obs-fold 拒 |
+| `0\r\nX: v` | trailer 未终止（截断） |
+| 17 个十六进制字符 | size 溢出/超长 |
+| 8200 字节 size 行 | 超 8 KiB 行界 |
+
+## 3. 突变检查 M4 — 跳过 chunk 数据后的 CRLF 校验
+
+改动：`FetchProtocol.expectCrlf` 条件加 `if (false && ...)`（读完两字节但不校验）。
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/fetch-http -am test \
+    -Dtest='FetchProtocolTest#rejectsMalformedChunkFraming' -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+EXIT=1，红线：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.049 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.FetchProtocolTest
+[ERROR]   FetchProtocolTest.rejectsMalformedChunkFraming:145->assertProtocolError:222
+Expecting throwable message:
+  "malformed HTTP response: chunk size line is not CRLF-terminated"
+to contain:
+  "chunk data is not CRLF-terminated"
+but did not.
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+突变暴露了原断言的判别力不足（只断言泛化的 `CRLF`，跳过校验后另一条错误消息也含 `CRLF`）。
+已把该用例改为断言**专用消息** `chunk data is not CRLF-terminated`，并新增裸 LF 变体
+`4\r\nabcd\n\n0\r\n\r\n`（跳过校验时会静默接受、测试将因“未抛异常”而红）。
+
+还原：`FetchProtocol.java` shasum `6815aa43…c463` 与基线一致；复跑该用例
+`Tests run: 1, Failures: 0`、BUILD SUCCESS。
+
+## 3b. 评审补测 M9 — 101 Switching Protocols 不作为结果透传
+
+评审要求（2026-10-21）：101 不应作为结果透传，客户端从未请求升级。补一行用例：
+
+```java
+assertProtocolError("HTTP/1.1 101 Switching Protocols\r\n\r\n", "status");
+```
+
+突变：`parseStatus` 的 `status < 200` 改为 `(status < 200 && status != 101)`（放行 101）。
+
+EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.053 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.FetchProtocolTest
+[ERROR]   FetchProtocolTest.rejectsMalformedStatusLines:44->assertProtocolError:217
+Expecting code to raise a throwable.
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`FetchProtocol.java` shasum `6815aa43…c463` 与基线一致；复跑
+`Tests run: 18, Failures: 0`、BUILD SUCCESS。
+
+## 4. 与内容层的分工
+
+线路层只负责帧正确性与有界读取；`Content-Encoding`/`Content-Type`/charset 在 `FetchContent`
+（见 `stop1-fetch-policy.txt` §3）。gzip 不做传输层解码——按 T2 条件 ② 显式
+`WEB_UNSUPPORTED_CONTENT_TYPE`，不猜测。

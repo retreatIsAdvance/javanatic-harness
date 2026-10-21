@@ -1,0 +1,147 @@
+# it28 停 1 证据 — 钉地址传输（TOCTOU 闭合）与重定向逐跳复验（2026-10-21）
+
+性质：停 1 评审重点 A/B。测试为**回环 HTTPS 真跑**：运行时 `keytool` 生成自签 EC PKCS#12
+（SAN `dns:pinned.test,dns:second.test,ip:127.0.0.1`，`@TempDir`，不入库），原始
+`SSLServerSocket` 逐字节写响应；客户端注入 `MapResolver` / `RecordingGate` / 自签信任的
+`SSLContext`，生产装配才用系统解析 + `PublicAddressGate` + JDK 默认信任面。
+
+## 0. 聚焦测试（含重复稳定跑）
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/fetch-http -am test \
+    -Dtest=PinnedHttpClientTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+三次重复（时间敏感用例：1s 超时、取消唤醒）：
+
+```text
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.677 s -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+[INFO] BUILD SUCCESS
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.704 s -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+[INFO] BUILD SUCCESS
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.672 s -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+[INFO] BUILD SUCCESS
+```
+
+## 1. TOCTOU 闭合的四条可观测性质
+
+实现：`resolve` 每跳一次 → `gate.verify` 整组 → 循环 `plain.connect(new InetSocketAddress(address, port))`
+→ `SSLSocketFactory.createSocket(plain, urlHost, port, true)`（SNI/endpoint identification 用 URL 主机，
+TCP 目标保持钉住）→ 期间不再解析。
+
+| 性质 | 用例 | 断言（测试文件行号） |
+|---|---|---|
+| 每跳解析恰一次 | `pinsAddressAndSendsOnlyFixedHeaders` | `resolver.calls() == ["pinned.test"]`（:58） |
+| 解析结果整组过闸 | 同上 | `gate.calls() == ["pinned.test=1"]`（:59） |
+| TLS 用 URL 主机名而非地址 | 同上 | 服务端 SNI 观察 `["pinned.test"]`（:60）；Host 头 `pinned.test:<port>` |
+| 字面 IP 不回落解析器、但仍过同一闸 | `literalIpSkipsResolverButStillGoesThroughGate` | resolver 被设为“调用即 AssertionError”，实际零调用；`gate.calls() == ["127.0.0.1=1"]`（:88）；无 SNI（:89） |
+| 连接目标 == 解析返回地址 | 全部真跑用例 | 夹具只监听 `127.0.0.1`；解析器返回回环；请求实际到达（每例请求/正文断言） |
+| endpoint identification 用 URL 主机 | `hostnameVerificationFailureIsNetworkError` | `mismatch.test` 解析到回环（证书 SAN 含 `ip:127.0.0.1` 但不含该名）→ 握手失败 `WEB_NETWORK_ERROR`，消息含 `mismatch.test`（:127） |
+| 多答案任一非公网 → 连之前整组拒 | `anyNonPublicAnswerRejectsWholeSetBeforeConnecting` | 答案 `[93.184.216.34, 10.0.0.1]`（公网在前）→ `WEB_BLOCKED_ADDRESS`、消息含 `10.0.0.1`、夹具零请求；resolver 恰一次（:112） |
+
+请求面固定头只含 `Host`/`User-Agent`/`Accept`/`Accept-Encoding: identity`/`Connection: close`；
+用例断言 `Cookie`/`Authorization`/`Referer` 均为 null（:65-:70），并断言 `Accept` 精确值。
+
+## 2. 重定向逐跳复验
+
+| 性质 | 用例 | 证据 |
+|---|---|---|
+| 跨源逐跳：URL 策略 + 重新解析 + 重新过闸 + 重新钉地址 | `followsCrossOriginRedirectWithPerHopResolutionAndNoForwardedHeaders` | resolver 恰 `["pinned.test", "second.test"]`（:165）；gate 恰两跳各一次（:166）；第二跳 Host/SNI = `second.test`；无转发头 |
+| 相对 Location 以当前 URL 为基准 | `followsRelativeRedirectOnSameOrigin` | `/a` → `/b`，最终 URL 与正文正确 |
+| 301/302/303/307/308 一律按 GET 重发 | `followsAllRedirectStatusesAsGet`（参数化 5 例） | 第二请求行 `GET /next HTTP/1.1`（:142）；最终 200 |
+| https→http 降级拒绝 | `rejectsRedirectDowngrade` | `WEB_REDIRECT_BLOCKED`，且只有首跳一次请求（未发出明文请求） |
+| 缺 Location 拒绝（不把 302 当普通结果） | `rejectsRedirectWithoutLocation` | `WEB_REDIRECT_BLOCKED`，消息含 `Location` |
+| ≤ 5 跳 | `stopsAfterFiveRedirects` | 第 6 个 3xx 处 `WEB_REDIRECT_BLOCKED`，消息含 `5`；请求数 6 |
+| 坏/缺/空 Location、`javascript:`、坏方括号 | `FetchUrlPolicyTest#badOrMissingLocationIsBlocked` | 全部 `WEB_REDIRECT_BLOCKED`（见 `stop1-fetch-policy.txt`） |
+
+注：实现中 `resolveRedirect` 在重定向分支内调用，**先于正文读取与内容类型检查**；3xx 的正文不进入
+内容白名单判定，但缺 Location 不再被当作可返回的结果（本停点修正）。
+
+## 3. 突变检查（破坏必红 → 还原复绿）
+
+基线备份 `/tmp/it28-mut/*.java`；还原后 `diff -q` 静默并核对 shasum；全链结束
+`grep -rn MUTATION web/ --include="*.java"` 零命中。
+
+### M1 — 字面 IP 绕过地址闸（`gate.verify` 加 `if (!target.ipLiteral())`）
+
+EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.546 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+[ERROR]   PinnedHttpClientTest.literalIpSkipsResolverButStillGoesThroughGate:84
+Expecting actual:
+  []
+to contain exactly (and in same order):
+  ["127.0.0.1=1"]
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`PinnedHttpClient.java` shasum `f47956c2…3b8c` 与基线一致。
+
+### M2 — 每跳解析两次（`open` 中重复调用 `resolve`）
+
+EXIT=1：
+
+```text
+[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.544 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+[ERROR]   PinnedHttpClientTest.followsCrossOriginRedirectWithPerHopResolutionAndNoForwardedHeaders:146
+[ERROR]   PinnedHttpClientTest.pinsAddressAndSendsOnlyFixedHeaders:56
+Expecting actual:
+  ["pinned.test", "pinned.test"]
+to contain exactly (and in same order):
+  ["pinned.test"]
+but some elements were not expected:
+  ["pinned.test"]
+Expecting actual:
+  ["pinned.test", "pinned.test", "second.test", "second.test"]
+to contain exactly (and in same order):
+  ["pinned.test", "second.test"]
+[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`PinnedHttpClient.java` shasum 与基线一致（同上）。
+
+### M3 — URL 策略接受 http（降级防线拆除）
+
+EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.495 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+[ERROR]   PinnedHttpClientTest.rejectsRedirectDowngrade:174
+Expecting code to raise a throwable.
+[ERROR] Tests run: 13, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.027 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.FetchUrlPolicyTest
+[ERROR]   FetchUrlPolicyTest.rejectsNonHttpsAndMalformedShapes:76->assertInvalid:145
+[ERROR]   FetchUrlPolicyTest.redirectToPlainHttpIsBlocked:117
+Expecting code to raise a throwable.
+[ERROR] Tests run: 14, Failures: 3, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`FetchUrlPolicy.java` shasum `35ae5f53…75ae` 与基线一致。
+
+### M7 — 缺 Location 回退为“普通结果”（重定向防线拆口）
+
+改动：重定向分支恢复为 `isRedirect(status) && location != null`。
+
+EXIT=1：
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.465 s <<< FAILURE! -- in io.javanatic.harness.web.fetch.http.PinnedHttpClientTest
+[ERROR]   PinnedHttpClientTest.rejectsRedirectWithoutLocation:188
+Expecting code to raise a throwable.
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] BUILD FAILURE
+```
+
+还原：`PinnedHttpClient.java` shasum 与基线一致；复跑该用例 22/22 绿（见 §0）。
+说明：该用例是本停点补的护栏——实现原先确实存在“302 无 Location 当普通结果”的口径缺口，
+与四确认 T3「坏/缺 Location 拒绝」不符，已在停点内修正。
+
+## 4. 残余（交评审）
+
+- **DNS 解析期间的总截止/取消不可强制**：解析一次是 TOCTOU 闭合的前提，但系统 resolver 的阻塞
+  不能被 `AbortSignal` 唤醒；连接/握手/读写均受剩余时间约束。当前接受该残余，未引入异步解析线程。
+- **跨源允许**（T3 裁定）：不转发任何头/凭据，逐跳完整复验；跨源重定向本身不是同源策略，
+  若未来需要收紧，应作为独立策略面而不是在传输层临时加白名单。

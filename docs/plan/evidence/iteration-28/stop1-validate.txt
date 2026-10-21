@@ -1,0 +1,90 @@
+# it28 停 1 验证 — validate 与聚焦测试（2026-10-21）
+
+环境：仓库根 `javanatic-harness`；Maven `~/Documents/apache-maven-3.10.0/bin/mvn`；
+JDK 25（默认 `java`）。本停点新增模块为未跟踪文件（`web/`），根 `pom.xml` 仅注册聚合与
+依赖管理；停点按要求**不 commit**。
+
+## 1. 仓库级 validate
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+VALIDATE_EXIT=0
+```
+
+输出仅 Spotless 的 JDK 弃用告警（`sun.misc.Unsafe::staticFieldBase`，来自 spotless-lib），
+无 checkstyle/spotless 违规：
+
+```text
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper
+VALIDATE_EXIT=0
+```
+
+## 2. 聚焦测试全量
+
+```sh
+$ ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/web,web/fetch-http -am test
+```
+
+EXIT=0。**按模块汇总行计数**（不把 `-am` 依赖模块的用例相加）：
+
+```text
+[INFO] Tests run: 8,   Failures: 0, Errors: 0, Skipped: 0  -- in io.javanatic.harness.web.WebContractTest
+[INFO] Tests run: 18,  Failures: 0, Errors: 0, Skipped: 0  -- in ...FetchProtocolTest
+[INFO] Tests run: 47,  Failures: 0, Errors: 0, Skipped: 0  -- in ...PublicAddressGateTest
+[INFO] Tests run: 22,  Failures: 0, Errors: 0, Skipped: 0  -- in ...PinnedHttpClientTest
+[INFO] Tests run: 13,  Failures: 0, Errors: 0, Skipped: 0  -- in ...FetchUrlPolicyTest
+[INFO] Tests run: 9,   Failures: 0, Errors: 0, Skipped: 0  -- in ...FetchContentTest
+[INFO] Tests run: 4,   Failures: 0, Errors: 0, Skipped: 0  -- in ...WebFetchHttpPluginTest
+[INFO] Tests run: 8,   Failures: 0, Errors: 0, Skipped: 0   → harness-web-web 模块汇总
+[INFO] Tests run: 113, Failures: 0, Errors: 0, Skipped: 0   → harness-web-fetch-http 模块汇总
+[INFO] BUILD SUCCESS
+```
+
+`web/fetch-http` 113 = 18 + 47 + 22 + 13 + 9 + 4。
+`web/web` 8 = `WebContractTest`。
+
+时间敏感用例（1s 超时、取消唤醒）连续重复 3 次：
+
+```text
+Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.677 s -- in ...PinnedHttpClientTest  BUILD SUCCESS
+Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.704 s -- in ...PinnedHttpClientTest  BUILD SUCCESS
+Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.672 s -- in ...PinnedHttpClientTest  BUILD SUCCESS
+```
+
+## 3. 突变链收口
+
+- 基线备份：`/tmp/it28-mut/*.java`；M1/M2/M3/M4/M5/M6/M7 逐项“破坏必红 → 还原复绿”。
+- 每次还原 `diff -q` 静默；shasum 与基线一致。
+- `grep -rn "MUTATION" web/ --include="*.java"` → 零命中。
+- 还原后全量复跑 = 上节 121 个用例全绿。
+
+已核对的主源码 shasum（停 1 终态）：
+
+```text
+fdb85dafe66a2af3900c6128c8a169da8660f172  FetchContent.java
+6815aa4317f72c73d5dbfe872590747a675ec463  FetchProtocol.java
+35ae5f53db5b91d6d66e8f1c64cedd43b5c075ae  FetchUrlPolicy.java
+f47956c2242e695b3bcf0b7af90cd81d7efb3b8c  PinnedHttpClient.java
+fbb2fac3ee8f2bb8b74d1c91a5616ef25babd2d2  PublicAddressGate.java
+781af2d67dc8bb829f0124386d587e9a9c9ba8a8  WebFetchResult.java
+```
+
+## 4. 文件面（停 1 新增，未跟踪）
+
+```text
+web/pom.xml                                  聚合器（本停点只含 web / fetch-http）
+web/web/pom.xml                              契约模块
+web/web/src/main/java/module-info.java
+web/web/src/main/java/io/javanatic/harness/web/*.java   11 个契约类
+web/web/src/test/java/.../WebContractTest.java
+web/fetch-http/pom.xml
+web/fetch-http/src/main/java/module-info.java
+web/fetch-http/src/main/java/io/javanatic/harness/web/fetch/http/*.java  11 个实现类
+web/fetch-http/src/main/resources/META-INF/services/...Plugin
+web/fetch-http/src/test/java/.../{TlsFixture, *Test}.java  7 个测试/夹具
+```
+
+零第三方依赖（两个 pom 无新增 `<dependency>` 坐标；只用 JDK + 仓内 kernel/llm 模块）。
+根 `pom.xml` 的改法是模块注册与 dependencyManagement 登记（`web` 聚合 + 四模块预留，
+本停点只实装两模块），不引入外部库。
