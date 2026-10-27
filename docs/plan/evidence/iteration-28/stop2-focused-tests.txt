@@ -1,0 +1,55 @@
+# it28 停 2 聚焦测试与门禁证据（2026-10-21）
+
+基线：b8f9631（停 1 已提交）；本停点工作区未提交。
+
+## 命令
+
+```sh
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home \
+~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/search-deepseek -am \
+  -Dtest='DeepSeekSearchConfigTest,AnthropicSearchMapperTest,DeepSeekSearchProviderTest,WebSearchDeepSeekPluginTest,DeepSeekSearchProbeTest' \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+## 结果（默认环境，未设 -Djh.web.probe=true）
+
+```text
+AnthropicSearchMapperTest   Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+WebSearchDeepSeekPluginTest Tests run:  5, Failures: 0, Errors: 0, Skipped: 0
+DeepSeekSearchProbeTest     Tests run:  1, Failures: 0, Errors: 0, Skipped: 1  <- 探针默认跳过
+DeepSeekSearchProviderTest  Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
+DeepSeekSearchConfigTest    Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+模块汇总                    Tests run: 45, Failures: 0, Errors: 0, Skipped: 1
+```
+
+执行数 = 44（45 − 1 skipped）；探针只有同时满足
+`DEEPSEEK_API_KEY` + `-Djh.web.probe=true` 才执行，真跑证据见 `stop2-real-probe.txt`。
+
+## 静态门禁
+
+```sh
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home \
+~/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+```
+
+```text
+EXIT=0
+```
+
+（validate 覆盖 spotless/checkstyle；新模块 6 个主源码 + 5 个测试/夹具均过格式与规则检查。）
+
+## 用例明细
+
+- `DeepSeekSearchConfigTest`（12）：缺省值、全键解析、尾斜杠归一、数字字符串、
+  字面 key 优先于 env、env 兜底、缺失返回 null、toString 遮蔽、未知键、非 https、
+  userinfo/query/fragment/坏端口、空 model/凭据形态、数值边界。
+- `AnthropicSearchMapperTest`（11）：结构化映射与引用 snippet、跨块 URL 去重
+  （首次出现胜）、截断标志、空结果块合法、无 content 合法、散文无结果块即错、
+  错误对象、根/块形状畸形、未知项跳过、坏引用忽略。
+- `DeepSeekSearchProviderTest`（16）：请求头/请求体逐字段、截断、401 脱敏、
+  429 非 JSON 有界、500 provider message、坏 JSON、散文不刮取、不跟随 3xx、
+  >1 MiB 成功体上限、超时、取消、成功/错误两态体积观测、错误文本 512 字符截断、
+  超大错误体只读 16 KiB 前缀且保留状态码、空 key/控制字符拒绝。
+- `WebSearchDeepSeekPluginTest`（5）：插件形状、装配面客户端策略
+  （`Redirect.NEVER` + 10s connect timeout）、无网络 provide、坏配置回滚、
+  无 key fail loud 且只点名环境变量。

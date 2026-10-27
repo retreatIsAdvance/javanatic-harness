@@ -158,7 +158,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1（承载契约 + 传输安全） | `web/web` 契约 + `web/fetch-http` 钉地址客户端/URL/地址闸/重定向逐跳/chunked/内容策略/上限/超时取消 + 夹具矩阵 + 突变；包 `stop1-review-packet.md` 与证据 | ☑（已提交，评审记录 `evidence/iteration-28/stop1-review-round1.txt`） |
-| 停 2（新外部协议面 + 探针闸） | `web/search-deepseek` 请求/映射/配置/错误/取消 + 夹具 + **真实端点探针**；探针失败即停请裁；包 `stop2-review-packet.md` | ☐ |
+| 停 2（新外部协议面 + 探针闸） | `web/search-deepseek` 请求/映射/配置/错误/取消 + 夹具 + **真实端点探针**；探针失败即停请裁；包 `stop2-review-packet.md` | ☑（已提交，评审记录 `evidence/iteration-28/stop2-review-round1.txt`） |
 | 停 3（消费面 + 装配 + 验收取证） | `web/tool` 两工具/HTML 提取矩阵/信任前缀与提示段/截断；base 三行；四处同步面；`--verify`；jlink 真实抓取；R1；模型在环；文档；包 `stop3-review-packet.md` | ☐ |
 
 ## 验收（证据 = 实际执行的命令与结果）
@@ -192,8 +192,10 @@
 | `stop1-pinning-and-redirect.txt` | 停 1：resolver 一次性/连接目标/逐跳复验/降级/超跳 + HTTPS 夹具真跑 + 突变 |
 | `stop1-wire-chunked.txt` | 停 1：chunked（扩展/trailer/截断/坏 size/超长行）、CL+TE、obs-fold、头界 |
 | `stop1-validate.txt` | 停 1：`mvn -B -q validate` 与 `-pl web/fetch-http -am test` 计数 |
-| `stop2-search-fixture.txt` | 停 2：请求形状/认证头/映射/去重/空结果/无块/错误/超时/取消/`Redirect.NEVER` + 突变 |
+| `stop2-focused-tests.txt` | 停 2：请求形状/认证头/映射/去重/空结果/无块/错误/超时/取消/`Redirect.NEVER` 聚焦用例与计数 |
+| `stop2-mutation-checks.txt` | 停 2：M1–M11 破坏必红 + 逐字节还原 + 终检零残留 |
 | `stop2-real-probe.txt` | 停 2：真实端点探针（状态、块类型、来源数；**无 key**）+ 闸结论 |
+| `stop2-review-round1.txt` | 停 2：用户评审原文与放行结论 |
 | `stop3-tools-html-trust.txt` | 停 3：工具注册/审批/HTML 矩阵/信任前缀与提示段/截断 + 两处突变 |
 | `stop3-assembly-and-verify.txt` | 停 3：base 35、verify 29/31、工具面 12/13、Jackson 7、`web:` 行 |
 | `stop3-jlink-network.txt` | 停 3：jlink keyless verify + 真实公网抓取 + 负例（私网/明文/重定向） |

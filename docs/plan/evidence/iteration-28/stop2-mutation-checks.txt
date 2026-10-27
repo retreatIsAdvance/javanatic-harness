@@ -1,0 +1,44 @@
+# it28 停 2 突变检查（2026-10-21）
+
+纪律：逐项破坏 → 指定用例必红 → `cp` 还原 → `cmp` 逐字节一致 → 终检 grep 零残留。
+每项用 `-pl web/search-deepseek -am -Dtest=<Class#method>` 单测运行。
+
+| # | 变异 | 目标用例 | 结果 |
+|---|---|---|---|
+| M1 | `Authorization` 头尾追加 `x`（双发鉴权被破坏） | `sendsDshRequestBodyAndDualAuthHeadersWithoutKeyInBody` | 红（Tests run 1, Failures 1） |
+| M2 | 请求体 `max_uses` 由配置改为 0 | 同上 | 红 |
+| M3 | `if (!sawResultBlock)` → `if (false)`（无结果块不再报错） | `proseWithoutResultBlockIsAProviderError` | 红 |
+| M4 | `if (!seen.add(url))` → `if (false)`（URL 去重失效） | `dedupesAcrossResultBlocksAndFirstOccurrenceWins` | 红 |
+| M5 | 同时删去“精确 key 替换 + sk- 形态替换” | `non2xxIncludesStatusAndRedactedProviderText` | 红 |
+| M6 | 装配客户端 `Redirect.NEVER` → `NORMAL` | `assembledClientNeverFollowsRedirectsAndPinsConnectTimeout` | 红 |
+| M7 | `MAX_RESPONSE_BYTES` 1 MiB → 2 MiB | `responseBodyOverOneMiBIsAProviderError` | 红 |
+| M8 | 取消钩子 `future.cancel(true)` → 空动作 | `cancellationSurfacesAbortedExceptionAndStopsQuickly` | 红（10.63s，worker 未及时停） |
+| M9 | 错误响应观测字节数 `+1` | `observerSeesErrorStatusAndBodySize` | 红（expected `400:3`） |
+| M10 | `MAX_ERROR_DETAIL_CHARS` 512 → 100000 | `providerErrorTextIsTruncatedToTheLimit` | 红 |
+| M11 | `MAX_ERROR_BODY_BYTES` 16 KiB → 1 MiB（错误体不再截断） | `hugeErrorBodyIsBoundedAndKeepsStatus` | 红（expected `500:16384`） |
+
+## 过程中的两个校准（如实记录）
+
+1. **M7 首轮是假绿**：原用例用 `"x".repeat(MAX_RESPONSE_BYTES)` 造超限正文，
+   常量被一起改大后仍不超限。已改为字面量 `1024 * 1024 + 4096` 并断言
+   `exceeds 1048576 bytes`；重跑 M7 转红。
+2. **M9 首轮被 spotless 拦下**：删除整行留下空白行导致格式检查先失败、未跑到测试。
+   改为等价的“字节数 +1”变异（不引入空白），重跑按预期在断言处转红。
+
+## 还原与终检
+
+- 11 项均打印 `restored byte-identical`（`cmp -s` 通过）。
+- 终检 grep（变异标记）零命中：
+
+```text
+Bearer " + apiKey + "x"      -> 0
+put("max_uses", 0)           -> 0
+if (false) {                 -> 0
+String redacted = text;      -> 0
+Redirect.NORMAL              -> 0
+MAX_RESPONSE_BYTES = 2 * ... -> 0
+MAX_ERROR_DETAIL_CHARS = 100000 -> 0
+onCancel(() -> { })          -> 0
+errorBody.length + 1         -> 0
+MAX_ERROR_BODY_BYTES = 1024 * 1024 -> 0
+```

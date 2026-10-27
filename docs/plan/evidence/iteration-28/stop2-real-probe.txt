@@ -1,0 +1,71 @@
+# it28 停 2 真实探针证据（2026-10-21）
+
+## 闸门
+
+`DeepSeekSearchProbeTest` 同时要求：
+
+- 环境变量 `DEEPSEEK_API_KEY` 非空（key 由交互式 zsh 注入，值不入档、不入对话）；
+- 系统属性 `-Djh.web.probe=true`。
+
+默认门禁（无属性）实测：`DeepSeekSearchProbeTest` Skipped 1（见
+`stop2-focused-tests.txt`），不会因本机有 key 而误耗配额。
+
+## 命令
+
+```sh
+zsh -ic 'cd /Users/abel_yang/study/deepseek/javanatic-harness; \
+  export JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home; \
+  ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl web/search-deepseek -am \
+    -Dtest=DeepSeekSearchProbeTest -Djh.web.probe=true \
+    -Dsurefire.failIfNoSpecifiedTests=false test'
+```
+
+## 最终代码真跑（错误体上限补丁之后复跑）
+
+```text
+PROBE_OK endpoint=api.deepseek.com/anthropic/v1/messages model=deepseek-v4-flash
+         max_tokens=4096 max_uses=5 request_bytes=262 observed=200:62461
+         sources=5 truncated=true elapsed_ms=8420
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+EXIT=0
+```
+
+实际端点：`https://api.deepseek.com/anthropic/v1/messages`（打印省略 scheme）。
+观察器：status 200、响应体 62,461 字节；来源 5 条（结构化
+`web_search_result`）；耗时 8.4s；`truncated=true`——真实响应给出的来源多于
+`maxResults=5`，seam 截断在真跑中被触发。
+
+补充运行（同一代码路径，前两轮补丁之前）：`200:11235`、来源 2 条、7.1s；
+`200:10008`、来源 1 条、5.8s。三次均 200，均来自真实 DeepSeek 账户；
+配额消耗 = 3 次请求 × `max_uses=5` 上限。
+
+## key 不回显
+
+```sh
+zsh -ic 'if grep -qF "$DEEPSEEK_API_KEY" /tmp/it28-probe-final2.log; then echo KEY_IN_LOG; else echo key-in-log-NO; fi'
+# -> key-in-log: NO
+```
+
+请求体不含 key（用例断言 `request.bodyText()).doesNotContain(KEY)`）；错误文本经
+`replace(apiKey, "****")` + `sk-...` 形态双遮断（M5 突变必红）。
+
+## 失败闸的静态事实（不是口头承诺）
+
+```text
+$ grep -rn "implements WebSearchService" web/search-deepseek/src/main
+DeepSeekSearchProvider.java:40:final class DeepSeekSearchProvider implements WebSearchService {
+```
+
+- 模块内只有这一个 `WebSearchService` 实现；没有第二 provider、没有重试/换源代码。
+- 主源码无 HTML 解析/正文抓取：`grep -rniE "fallback|scrap|html"` 仅命中配置默认值
+  `intValue(..., int fallback, ...)`，不是网络降级路径。
+- 探针失败时 `catch (WebException)` 打印
+  `PROBE_FAILED code=... observed=... detail=...` 后原样抛出；测试断言失败即红，
+  不存在“失败后换一条路继续”的分支。
+
+## 真跑失败时的处置约定
+
+若探针返回非 2xx、工具未触发（无 `web_search_tool_result`）、或形状不符：
+**停下并原样报告输入、状态码、响应体积/块类型，不切换 provider，不刮取散文。**
+本次未发生。

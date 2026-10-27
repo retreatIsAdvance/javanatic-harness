@@ -17,6 +17,7 @@
     <modules>
         <module>web</module>
         <module>fetch-http</module>
-        <!-- search-deepseek（停 2）与 tool（停 3）随各自停点加入 -->
+        <module>search-deepseek</module>
+        <!-- tool（停 3）随停点加入 -->
     </modules>
 </project>
