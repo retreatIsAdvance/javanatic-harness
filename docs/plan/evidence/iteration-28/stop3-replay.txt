@@ -1,0 +1,60 @@
+停 3 · R1 回放：含 web 工具调用的会话离线重建（零网络、零新事件）
+时间：2026-10-27
+用例：examples/headless/src/test/java/io/javanatic/harness/examples/headless/WebReplayTest.java
+（单测 1 条，两腿同一方法内完成：live 落账 → replay 只读盘）
+
+------------------------------------------------------------------------
+一、运行
+------------------------------------------------------------------------
+命令：
+
+  mvn -B -pl examples/headless -am test -Dtest=WebReplayTest \
+      -Dsurefire.failIfNoSpecifiedTests=false
+  EXIT=0
+  Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+    -- in io.javanatic.harness.examples.headless.WebReplayTest
+  BUILD SUCCESS
+
+（-Dtest 只命中该模块；-am 保证 reactor 内解析最新 SNAPSHOT；其余模块的
+ “没有指定测试”以 failIfNoSpecifiedTests=false 放行。）
+
+------------------------------------------------------------------------
+二、live 腿断言（先证“真的发生了”）
+------------------------------------------------------------------------
+手装最小组合（session-store / jsonl 持久化 / agents / loop-guard / system-prompt /
+llm / approval-auto / tools / fake-web-fetch / web-tool / replay / agent-loop），
+replay 模型脚本 turn1 发 web_fetch("https://example.com/page")，turn2 收尾。
+
+断言：
+- fake 抓取 provider 恰被调用 1 次（liveFetch.calls() == 1）；
+- 工具结果首行 == 信任前缀常量；
+- 结果含最终 URL（https://example.com/final）、Status 200、
+  Content-Type: text/html; charset=utf-8、Truncated: false；
+- HTML 经提取器转文本：含 "# Replay" / "Body text"，**不含**脚本体 "bad()"
+  （<script> 整块被剔除）；
+- 事件类型集合 noneMatch(startsWith("web/"))，且含 tool/call + tool/result
+  —— **零新事件**；
+- 唯一的 tool/call 名恰为 web_fetch；
+- 存盘（SessionPersistence.save）。
+
+------------------------------------------------------------------------
+三、replay 腿断言（新 Runtime 只载盘）
+------------------------------------------------------------------------
+- 工具结果按原样入账：JSONL 往返后 content 与 live 逐字相等；
+- 事件序列 containsExactlyElementsOf(liveEvents)（含顺序）；
+- 两个 LlmRequestEvent 锚点上做**前缀折叠重建**：
+    Session.create(id, events.subList(0, i), header)
+  → prompts.assemble(folded) 含信任前缀段，
+    sha256(assembled) == anchor.systemPromptSha256()（系统提示词含 Static(70) 段）；
+    sha256(toolSchemaFingerprint(registry.schemas)) == anchor.toolsSchemaSha256()
+    （工具 schema 集合稳定，含 web_fetch）；
+- 回放路径 **fake provider 零调用**（replayFetch.calls() == 0）——抓取只来自日志，
+  没有任何网络动作。
+
+------------------------------------------------------------------------
+四、与设计文档的对应
+------------------------------------------------------------------------
+- 03-session-event-sourcing.md「（it28）Web 零新事件」：外部内容只作为
+  tool/result 内容入账（首行通知），审计 = tool/call + tool/result；
+  回放零网络——本用例把两句话变成断言。
+- 05-capability-seam.md §7.2：信任前缀与 Static(70) 提示段同源，重建立即命中。

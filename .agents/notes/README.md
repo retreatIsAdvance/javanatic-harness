@@ -20,6 +20,8 @@
 | [0004](0004-mcp-registry-transport-neutral.md) | 注册表居中：`mcp-registry` 聚合，transport 不 provide | 已实施 | it27.1 | [stop1-registry-and-generation](../../docs/plan/evidence/iteration-27.1/stop1-registry-and-generation.txt) |
 | [0005](0005-mcp-external-input-boundaries.md) | 凭据词表单源 + HTTP URL/header 外部输入校验 | 已实施 | it27.1 | [stop3-cap-and-masking](../../docs/plan/evidence/iteration-27.1/stop3-cap-and-masking.txt) |
 | [0006](0006-mcp-result-budget-layering.md) | 结果预算分层：transport 8 MiB 帧帽 / 消费面 256 KiB | 已实施 | it27.1 | [stop3-cap-and-masking](../../docs/plan/evidence/iteration-27.1/stop3-cap-and-masking.txt) |
+| [0007](0007-web-egress-pinned-public-only.md) | Web 出口：钉地址公网抓取，egress 不受沙箱治理 | 已实施 | it28 | [stop1-pinning-and-redirect](../../docs/plan/evidence/iteration-28/stop1-pinning-and-redirect.txt) |
+| [0008](0008-web-search-provider-and-token-gap.md) | 搜索 Provider：原生结构化来源，keyless 双态与 token 缺口 | 已实施 | it28 | [stop2-real-probe](../../docs/plan/evidence/iteration-28/stop2-real-probe.txt) |
 
 ## 与停点评审的关系
 

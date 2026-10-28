@@ -1,0 +1,120 @@
+停 3 · 装配面与 `--verify`：base 35、双态计数、工具面、模块/包/Jackson、同步面
+时间：2026-10-27
+环境：JAVA_HOME=/usr/libexec/java_home -v 25，
+      Maven=~/Documents/apache-maven-3.10.0/bin/mvn
+说明：`--verify` 的两态输出已在 stop3-jlink-network.txt §二逐字落盘；本节只做
+      装配计数与同步面核对，不重复贴镜像运行日志。
+
+------------------------------------------------------------------------
+一、聚焦测试（EXIT=0）
+------------------------------------------------------------------------
+命令（跨模块必须 -am：裸 -pl 会解析本地仓库旧 SNAPSHOT）：
+
+  mvn -B -pl bundle/base,examples/headless -am test > /tmp/it28-s3/assembly-tests.log 2>&1
+  EXIT=0
+
+关键模块汇总行（模块摘要计数）：
+
+  bundle/base        Tests run: 32, Failures: 0, Errors: 0, Skipped: 0
+    - AppBootTest 23 / RowComposerTest 4 / YamlRowsTest 5
+  examples/headless  Tests run: 83, Failures: 0, Errors: 0, Skipped: 0
+    - HeadlessVerifyTest 7
+    - HostileInstructionsTest 1（工具面 12 名逐位断言，含 web_fetch）
+    - WebReplayTest 1（R1 回放，详见 stop3-replay.txt）
+    - HeadlessFakeServerE2ETest 1（任意兼容厂商直跑）
+
+同一次 reactor 的 web 模块计数（回归面未破）：
+
+  web/web                    8
+  web/fetch-http           113
+  web/search-deepseek       45（Skipped 1 = 真实探针门，无 key 时按设计跳过）
+  web/tool                  37（Config 5 / Plugin 11 / Html 10 / Caps 7 / Trust 4）
+
+------------------------------------------------------------------------
+二、base bundle 行数（35 = 22 可配 + 13 无配）
+------------------------------------------------------------------------
+源文件：bundle/base/src/main/resources/META-INF/harness/bundle.yml
+
+  grep -c "^  - plugin:" .../bundle.yml  → 35
+
+无 config 的 13 行（名称即 12-api-stability.md 的同一份清单）：
+
+  session-store, agents, system-prompt, llm, approval-auto, approval-deny,
+  tools, sandbox-local, fs-tool, ask-user, commands, skill, mcp-registry
+
+其余 22 行有 config 块（web 三行均属可配）：
+  web-fetch-http: timeoutSeconds=30, maxBodyBytes=2097152
+  web-search-deepseek: baseUrl=…/anthropic/v1, model=deepseek-v4-flash,
+    apiKeyEnv=DEEPSEEK_API_KEY, maxTokens=4096, maxUses=5, timeoutSeconds=30
+    disabled: ${env:DEEPSEEK_API_KEY} == null
+  web-tool: maxSourceChars=524288, maxOutputBytes=262144, maxResults=8
+
+------------------------------------------------------------------------
+三、`--verify` 双态（jlink jh，命令与完整输出见 stop3-jlink-network.txt §二）
+------------------------------------------------------------------------
+keyless（env -u DEEPSEEK_API_KEY）：EXIT=0
+
+  composition: 29 rows, 35 discovered, 0 unreferenced
+  web: web-fetch-http + web-tool; tools=web_fetch (approval-required)
+
+keyed（DEEPSEEK_API_KEY=dummy，仅证明行随 key 启用）：EXIT=0
+
+  composition: 31 rows, 35 discovered, 0 unreferenced
+  web: web-fetch-http + web-search-deepseek + web-tool; tools=web_fetch,web_search (approval-required)
+
+结论：discovered 恒 35（行集不变）；enabled 29 → 31 恰为 llm-openai-compat 与
+web-search-deepseek 两行；mcp 组不变（tools=0）；web 行外显两态。
+
+------------------------------------------------------------------------
+四、工具面 12（keyless）/ 13（keyed）
+------------------------------------------------------------------------
+keyless：HostileInstructionsTest 用 `containsExactlyInAnyOrder` 钉死 12 名——
+  ask_user, shell, exit_plan_mode, fs_delete, fs_edit, fs_list, fs_read,
+  fs_search, fs_write, todo_write, skill, web_fetch
+（fs 三 + shell 一 + plan 一 + todo 一 + skill 一 + ask_user 一 + web_fetch 一，
+  合计 12；本轮跑绿。）
+
+keyed：verify 的 `web:` 行点名 `web_fetch,web_search` → 12 + 1 = 13。
+搜索 provider 缺席时**不注册**（不是运行时失败），由 `.filter(WebSearchService::available)`
+与 M4 突变（删除过滤 → WebToolPluginTest 红）双重覆盖，见 stop3-tools-html-trust.txt。
+
+------------------------------------------------------------------------
+五、模块 / 导出包 / Jackson 边界
+------------------------------------------------------------------------
+命令：
+
+  find . -name module-info.java -not -path '*/target/*' | wc -l        → 44
+  grep -rh '^ *exports ' --include=module-info.java . | wc -l          → 48
+  grep -rl 'requires com.fasterxml.jackson.databind' --include=module-info.java . | wc -l → 7
+
+Jackson 七个边界模块：
+
+  core/tools, llm/openai-compat, mcp/http, mcp/stdio, mcp/tool,
+  session/persistence-jsonl, web/search-deepseek（it28 第七个）
+
+------------------------------------------------------------------------
+六、五处同步面（行集变化同提交同步）
+------------------------------------------------------------------------
+1. 根 pom.xml：`<module>web</module>`（line 57）+ dependencyManagement 四坐标
+   （harness-web-web / fetch-http / search-deepseek / tool）。
+2. dist/jh/pom.xml：jlink `--add-modules` 四行
+   （io.javanatic.harness.web / .fetch.http / .search.deepseek / .tool，line 83–86）。
+   构建后 `bin/java --list-modules` 四行均在（stop3-jlink-network.txt §一）。
+3. examples/headless/pom.xml：四模块依赖（line 124–142）。
+4. integration/consumer-sample/pom.xml：`candidate-closure` profile 四坐标
+   （line 192–214；与 skill 3 + mcp 4 合计 11 个候选坐标）。
+5. docs/embedding.md §2：基础块 16 条显式依赖 + 候选腿 11 个坐标的 web 四坐标说明
+   （line 45–54）。
+
+外加：`bundle/base` 三行（web-fetch-http / web-search-deepseek / web-tool）与
+`docs/embedding.md` 的「16 条基础 + 11 条候选」计数同源。双通道检查单
+（`module-info provides` + `META-INF/services`）逐模块核对：
+  fetch-http：provides WebFetchService；META-INF/services 同名文件在场
+  search-deepseek：provides WebSearchService；同名文件在场
+  tool：不提供 SPI，无 service 文件（消费者，仅注册工具）
+
+------------------------------------------------------------------------
+结论
+------------------------------------------------------------------------
+行集 35、双态 29/31、web 行两态、工具面 12/13、Jackson 7、模块 44/包 48 全部与
+iteration-28 的四确认稿及设计文档 07/12 的计数一致；五处同步面均已在同一工作树内。

@@ -14,7 +14,7 @@
 
 ## 2. 包级 API（JPMS 导出面）
 
-`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（40 个 reactor 代码模块 / 44 个包；前缀 `io.javanatic.harness.` 省略）：
+`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（44 个 reactor 代码模块 / 48 个包；前缀 `io.javanatic.harness.` 省略）：
 
 | 模块 | 导出包 |
 |---|---|
@@ -43,6 +43,10 @@
 | mcp/stdio | `mcp.stdio` |
 | mcp/http | `mcp.http` |
 | mcp/tool | `mcp.tool` |
+| web/web | `web` |
+| web/fetch-http | `web.fetch.http` |
+| web/search-deepseek | `web.search.deepseek` |
+| web/tool | `web.tool` |
 | shell/shell | `shell.shell` |
 | shell/local | `shell.local` |
 | shell/docker | `shell.docker` |
@@ -72,6 +76,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | `LlmService` / `LlmAdapter` / `StreamChunk` / `AbortSignal` | `llm` | seam 三角色、阻塞流、取消（[05](05-capability-seam.md)）|
 | `FsService` / `ShellExecutor` / `SandboxProvider` / `SandboxPolicyService` / `BackendStatus` | `fs` / `shell.shell` / `sandbox.sandbox` | capability 入口（换 Provider 即换环境）|
 | `McpClientService` / `McpServerConnection` / `McpToolDescriptor` / `McpCallResult` / `McpServerState` / `McpCatalogSwapException` | `mcp` | MCP 传输中立连接面（it27.1）：注册表 + 当前清单/代际 + call/状态/错误分档；Provider 换 transport 不动契约 |
+| `WebFetchService` / `WebSearchService` / `WebFetchResult` / `WebFetchBody` / `WebSearchResult` / `WebSearchSource` / `WebErrorCode` / `WebException` | `web` | Web 双能力 seam（it28）：抓取/搜索入口、sealed 正文分类、结构化来源、稳定错误码；Provider 可替换，Consumer 不 import 实现 |
 | `SessionPersistence` / `SessionEventCodec` / `JsonValue` | `session.persistence` | 持久化 seam 与 codec SPI（ServiceLoader）|
 | `ApprovalPrompt` | `interaction.approval` | 人闸回调（ask 模式） |
 | `CommandRegistry` / `Command` / `Handler` / `CommandResult` | `interaction.commands` | 命令面（registry / slash 解析 / 事件对，it14） |
@@ -94,6 +99,8 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 **0.3.0 增量（it27 MCP）**：新增导出包 `mcp`（`McpClientService` / `McpServerConnection` / `McpToolDescriptor` / `McpCallResult` / `McpServerState`）、`mcp.stdio`（插件行 `mcp-stdio`）、`mcp.tool`（插件行 `mcp-tool`）；`mcp/catalog` 扩展事件（条目含 `publicName`；读侧缺该字段 fail loud——0.3.0 前不存在此事件，无兼容垫片）。公开工具名 `mcp__<server>__<raw>` 是稳定面；raw 非法/超长的确定性归一（清洗 + `_hash8` + WARN）与 catalog 记录 `publicName` 都是**算法事实**，算法变更按事件 schema 迁移处理（不得静默改读）。组合清单 config 结构化（嵌套保序）+ 写入期递归脱敏：header 敏感值恒 `****`、键名保留。MCP 工具**恒需审批**（无 `approvalExempt` 出口）。
 
 **0.3.0 增量（it27.1 MCP 硬化，同属 0.3.0 未发布面）**：新增导出包 `mcp.http`（插件行 `mcp-http`，Streamable HTTP）；新增插件行 `mcp-registry`（家 `mcp`，传输中立注册表；`McpClientService.register(...)` 返回注销凭据）。`McpServerConnection` 增 `catalogGeneration()`，`tools()` 语义由「启动冻结」改为「当前已知清单」；`McpServerState` **删除 `DRIFTED`**（三态 CONNECTED/RECONNECTING/FAILED），并删除 `McpCatalogDriftException`；新增 `McpCatalogSwapException`（消费面候选预检失败，旧代保活 + 轮 Error）。`mcp/catalog` 语义：每代全量快照、**无 generation 字段**（日志顺序即代际）、`PRE_STEP` 落账且被拒轮不落；未知读取方按出现序覆盖。`mcp-tool` 新增配置 `maxResultBytes`（缺省 262144）；`McpCatalogEvent.Entry` 字段不变。脱敏词表增加 `auth` / `cookie`（`ConfigValues.isSensitiveKey` 公开且与 `masked` 同源）；`mcp-http` URL 拒敏感 query 参数名。
+
+**0.3.0 增量（it28 Web，同属 0.3.0 未发布面）**：新增导出包 `web`（`WebFetchService` / `WebSearchService` / `WebFetchResult` / `WebFetchBody` / `WebSearchResult` / `WebSearchSource` / `WebErrorCode` / `WebException`）、`web.fetch.http`（插件行 `web-fetch-http`）、`web.search.deepseek`（插件行 `web-search-deepseek`）、`web.tool`（插件行 `web-tool`）。**零新会话事件**：外部内容只作为 `tool/result` 入账，回放零联网。工具面契约：`web_fetch` **恒注册**（抓取 Provider 缺失装配期 fail loud）、`web_search` 仅 Provider 在场且 `available()` 时注册（keyless 少一个工具），两者**恒需审批**（无 `approvalExempt` 出口）。成功结果首行恒为 `EXTERNAL_WEB_CONTENT_NOTICE`（与 `Static(70)` 提示段同源常量）——文案是**软防线**，硬边界是公网地址闸 / 钉地址 / 逐跳复验 / 无凭据转发 / 审批审计。错误码 9 个进稳定面；`WebFetchResult.contentType` 属停 1 契约增补（0.3.0 内成形，无旧日志兼容问题）。搜索辅助 token 不进 agent 预算账（T9 显式口径）。
 
 ## 4. 事件 schema
 
@@ -128,8 +135,11 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | mcp-stdio | `servers` | MCP server 清单（it27；缺省 `[]` = 零噪声）。条目键 `id` / `command` / `args` / `env` / `timeoutSeconds`：`id` kebab-case 且拒 `__`；`env` 为白名单叠加（最小环境 `PATH`/`HOME`/`TMPDIR`）；`timeoutSeconds` 正数、缺省 60；命令以用户全权运行、不入沙箱；装配期启动，失败 fail loud 并回滚（[07 §5](07-profile-bundle.md)）|
 | mcp-http | `servers` | MCP Streamable HTTP server 清单（it27.1；缺省 `[]` = 零噪声）。条目键 `id` / `url` / `headers` / `timeoutSeconds`：`id` 规则同 stdio；`url` 仅 http/https 且拒 userinfo / fragment / 敏感 query 参数名（词表同脱敏）；`headers` 拒保留头与控制字符、大小写不敏感重名 fail loud；`timeoutSeconds` 正数、缺省 60；`Redirect.NEVER` + 有限重连（[07 §5](07-profile-bundle.md)）|
 | mcp-tool | `maxResultBytes` | 单条 MCP 工具结果上限（it27.1；正整数，缺省 262144 = 256 KiB）；UTF-8 完整边界截断 + `" (output truncated)"` 标记（不计入上限）；success 与工具级错误同口径 |
+| web-fetch-http | `timeoutSeconds` / `maxBodyBytes` | 抓取超时（it28；正数，缺省 30）与读侧上限（正整数，缺省 2097152 = 2 MiB）；声明超限 → `WEB_TOO_LARGE`，流式/缺 CL 截断为 `truncated` 事实 |
+| web-search-deepseek | `baseUrl` / `model` / `apiKeyEnv` / `maxTokens` / `maxUses` / `timeoutSeconds` | DeepSeek 原生搜索（it28）：端点 / 模型 / **环境变量名（不写值）** / 辅助调用 token 与次数上限 / 超时；keyless 行 `disabled`，`available()` 以 key 在场为准 |
+| web-tool | `maxSourceChars` / `maxOutputBytes` / `maxResults` | 消费面上限（it28）：源码字符（缺省 524288）、输出字节（缺省 262144，UTF-8 完整边界）、搜索来源数（缺省 8）；三者均有硬上限 |
 
-无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`ask-user`、`commands`、`skill`、`mcp-registry`（32 个 base 行 id = 19 可配 + 13 无配）。
+无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`ask-user`、`commands`、`skill`、`mcp-registry`（35 个 base 行 id = 22 可配 + 13 无配）。
 
 - **插值白名单**（[07](07-profile-bundle.md)）：`${env:NAME}` / `${props:NAME}` / `${cwd}` / `${home}` / `:-默认值`；比较式 `==` / `!=`（右操作数 `null` 或 `'literal'`）——无任意代码；源不在白名单 fail loud。
 - **键名白名单（it23，0.2.0 迁移面）**：profile 顶层 / bundle 顶层 / 行三层均为 allowlist，未列名键（含拼写错误）**装载期 fail loud**（`YamlRows`；**0.1.0 为静默忽略**）——键集与拒绝文案见 [07 §1](07-profile-bundle.md)。

@@ -671,6 +671,48 @@ wire JSON Schema → `ValueSchema` 白名单映射：`type`（object/string/numb
 
 ---
 
+## 7.2 完整 Seam：Web（it28；双 Provider + 信任前缀）
+
+### Definition（`harness.web.web`，零第三方）
+
+```java
+public interface WebFetchService {
+    ServiceKey<WebFetchService> KEY = new ServiceKey<>("web-fetch");
+    String id();
+    String displayName();
+    boolean available();                                       // 廉价本地检查，绝不联网
+    WebFetchResult fetch(WebFetchRequest request, AbortSignal signal) throws WebException;
+}
+
+public interface WebSearchService {
+    ServiceKey<WebSearchService> KEY = new ServiceKey<>("web-search");
+    String id();
+    String displayName();
+    boolean available();                                       // 如凭据在场
+    WebSearchResult search(WebSearchRequest request, AbortSignal signal) throws WebException;
+}
+```
+
+`WebFetchResult(url, statusCode, contentType, body, truncated)`：`statusCode` 非 2xx **也是结果**（不抛），`body` 是 sealed 联合 `Html`/`Text`（Provider 已按内容策略分类并解码）；`truncated` 是内容事实（读侧上限），不是错误。`WebSearchResult(summary, sources, truncated)` + `WebSearchSource(url, title, snippet, pageAge)`。失败走 `WebException` 携带 9 码 `WebErrorCode`（`WEB_INVALID_URL` / `WEB_BLOCKED_ADDRESS` / `WEB_REDIRECT_BLOCKED` / `WEB_UNSUPPORTED_CONTENT_TYPE` / `WEB_TOO_LARGE` / `WEB_TIMEOUT` / `WEB_NETWORK_ERROR` / `WEB_PROVIDER_UNAVAILABLE` / `WEB_PROVIDER_ERROR`）；取消是 `AbortedException`，不包装、不翻译。`Content-Type` 进结果属**停 1 契约增补**（消费面外显 `Content-Type` 需要，且断言在停 1 测试内钉住）。
+
+### Provider（`harness.web.fetch.http`，plugin id `web-fetch-http`）
+
+钉地址公网抓取，零第三方。**URL 策略**：仅 `https`、拒 userinfo、长度 ≤ 2048、fragment 不参与请求。**地址闸（T2 ③）**：URL 字面 IP 与 DNS 解析结果走同一公网校验闸（IPv4/IPv6/NAT64/6to4/Teredo/mapped 全覆盖），一次解析、整组校验、钉住其一连接——JDK `HttpClient` 无逐请求地址钩子（DNS rebinding TOCTOU），`HttpsURLConnection` 继承进程级 Cookie/Authenticator/代理默认值，故手写 `SSLSocket`（SNI + endpoint identification、ALPN http/1.1）。**重定向（T3）**：301/302/303/307/308 一律按 GET 重发；跨源允许但**逐跳**重跑完整 URL 策略 + 地址闸 + 重新解析 + 重新钉地址；绝不转发请求头/凭据（本就没有）；拒 https→http 降级、坏/缺 `Location`、超 5 跳；相对 `Location` 按当前 URL resolve。**内容策略**：白名单 `text/html`、`application/xhtml+xml`（→ `Html`）与其余 `text/*`、JSON/XML 及 `+json`/`+xml`（→ `Text`）；缺头或不支持即 `WEB_UNSUPPORTED_CONTENT_TYPE`；charset 缺省 UTF-8，非法字节替换 U+FFFD（内容事实，不猜编码）；只接受 `Content-Encoding: identity`（T2 ②：服务器回 gzip/br/deflate 即显式 `WEB_UNSUPPORTED_CONTENT_TYPE`，不解码不猜测不重试）。**上限/超时/取消**：`Content-Length` 声明 > `maxBodyBytes`（缺省 2 MiB）→ `WEB_TOO_LARGE`（不读体）；缺 CL 或 chunked 读到上限即停收、置 `truncated=true`；超时 30s（连接 10s，读用剩余时间，可配）；`onCancel` 关闭 socket 唤醒阻塞读，捕获 `IOException` 后**先** `checkAbort()` 再翻译 `WEB_NETWORK_ERROR`。HTTP/1.1 与 chunked 手写解码（含 trailer 忽略、截断探测）。测试缝（resolver / gate / `SSLContext` 注入）只服务测试，不演化为生产回调面。
+
+### Provider（`harness.web.search.deepseek`，plugin id `web-search-deepseek`）
+
+DeepSeek 原生搜索（Jackson 边界）：`POST {baseUrl}/messages`（缺省 `https://api.deepseek.com/anthropic/v1`，模型缺省 `deepseek-v4-flash`，`anthropic-version: 2023-06-01`，`max_tokens` 4096，`max_uses` 5），请求体与 dsh 同形（`messages[0].content[0]` 为 `text`，文本 `Perform a web search for the query: <query>`；tools 单条 `web_search_20250305`）。映射只认结构化面：遍历 `content[]` 的 `web_search_tool_result` 块 → `web_search_result` 项（`url`/`title`/`page_age`）；snippet 来自 `text` 块 `citations[]` 的 `cited_text`（按 url 首次出现，dsh 同口径）；按 url 去重；`maxResults` 在 seam 侧截断并置 `truncated`。**无 `web_search_tool_result` 块 = `WEB_PROVIDER_ERROR`，绝不把散文答案刮成来源**；块在但零结果 = 合法空结果。传输 `Redirect.NEVER`、超时/取消/响应上限/错误分档；**凭据只进请求头**（不入日志/错误/结果）；`available()` 以 key 在场为准（keyless 组合该行 `disabled`，工具面少 `web_search`）。**错误消息有界**：非 2xx 错误体只读 16 KiB 前缀（保留状态码，超限不因体积再报错），消息经凭据遮断后截到 512 字符。
+
+### Consumer（`harness.web.tool`，plugin id `web-tool`）
+
+`web_fetch` **恒注册**：抓取 provider 缺失即装配期 `scope.require(WebFetchService.KEY)` fail loud（网络权限由组合者显式给）。`web_search` 仅在搜索 provider 在场且 `available()` 时注册——缺 key 是**少一个工具**，不是运行时失败（工具面双态：keyless 12 / keyed 13）。两工具均 `ToolDefinition.of`（**恒需审批，无豁免出口**）；单字段 schema（`url` / `query`）。`WebException` → 带稳定码的错误结果 `CODE: message`；`AbortedException` 原样穿透。
+
+**信任前缀（T7）**：`WebContentTrust.EXTERNAL_WEB_CONTENT_NOTICE` 单源常量——两个成功结果首行恒为它；同一常量注册 `PromptSection.Static(70, …)` 系统提示段（plan=50、skill=60 之后；只读事实，R1 无损）。这是**软防线**：硬边界是公网地址闸、无凭据转发、审批与审计（B17 残余登记）。
+
+**分层截断**：源码先按 `maxSourceChars`（缺省 512K 字符）截断；HTML 走线性提取（script/style/模板等剔除，标签中间截断 fail-soft）；再按 `maxOutputBytes`（缺省 256 KiB）在 **UTF-8 完整字符边界**截断（按码点累计字节、不整串编码；未配对代理按 3 字节计，宁早截不越上限；`" (output truncated)"` 标记不计入上限）；搜索侧 `maxResults`（缺省 8）截断、零来源显示 `No sources returned`；搜索结果首部外显 provider/model（辅助调用可审计）与来源字段实况 `Sources: N (titles: x, snippets: y)`——只陈述实际存在的字段，不诱导模型声明数据不支持的来源；工具描述同步声明 snippet 仅在 provider 提供时出现。**零新事件**：审计事实 = `tool/call` + `tool/result`，外部内容随结果入账，回放零联网。
+
+---
+
 ## 8. ToolRegistry 与 ToolExecutor — R2 的落点
 
 > **R2（执行一致性）**：模型发起的副作用有且仅有一条路径——ToolCall → ToolExecutor pipeline（校验 → 审批 → 超时 → 执行 → 审计落账）。插件代码直接调 capability 是代码发起（过 review），不在此约束内。
@@ -838,7 +880,8 @@ public record ToolDefinition(
 | Approval | `interaction.approval` | `auto` / `ask` / `deny` | ToolExecutor 固定 stage | ✅ **真实** |
 | Commands | `interaction.commands` | （registry 内建） | headless REPL | ✅ |
 | MCP | `mcp.mcp` | `mcp-stdio`（stdio）+ `mcp-http`（Streamable HTTP，it27.1）；两者经 `mcp-registry` 聚合 | `mcp.tool` | ✅（it27.1；轮屏障换代 + `mcp/catalog` + 双 transport）|
-| Subagent / Web / LSP / Terminal / Compaction | 各 Definition | —（留接口）| — | 🔌 接口 |
+| Web | `web.web` | `web-fetch-http`（钉地址公网抓取）+ `web-search-deepseek`（原生搜索，keyless 行 disabled）| `web.tool` | ✅（it28；双 Provider + 信任前缀 + 分层截断）|
+| Subagent / LSP / Terminal / Compaction | 各 Definition | —（留接口）| — | 🔌 接口 |
 
 留接口的 seam：Definition 模块完整定义接口和 `ServiceKey`，但不提供 Provider；组合时不挂载即可，未来加 Provider 不改任何 Consumer。
 

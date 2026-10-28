@@ -108,8 +108,8 @@ final class PinnedHttpClient {
                     throw translate(e, deadline, signal, target);
                 }
                 WebFetchBody content = FetchContent.decode(head, body.bytes());
-                return new WebFetchResult(target.base().toString(), head.statusCode(), content,
-                    body.truncated());
+                return new WebFetchResult(target.base().toString(), head.statusCode(),
+                    head.first("content-type"), content, body.truncated());
             }
         }
     }

@@ -1,0 +1,39 @@
+停 3 收口 · 全量门禁与打包
+时间：2026-10-27
+环境：JAVA_HOME=/usr/libexec/java_home -v 25，
+      Maven=~/Documents/apache-maven-3.10.0/bin/mvn
+无 key：两次运行均 env -u DEEPSEEK_API_KEY（真实探针门按设计跳过，不发网络）
+
+------------------------------------------------------------------------
+一、validate（EXIT=0）
+------------------------------------------------------------------------
+命令：
+
+  env -u DEEPSEEK_API_KEY mvn -B -q validate > /tmp/it28-s3/validate.log 2>&1
+  echo EXIT=$?
+  EXIT=0
+
+（-q 下只有 spotless/Unsafe 的 JDK 终止警告；无 checkstyle/spotless 违规输出。）
+
+------------------------------------------------------------------------
+二、全量 package（EXIT=0）
+------------------------------------------------------------------------
+命令：
+
+  env -u DEEPSEEK_API_KEY mvn -B -q package > /tmp/it28-s3/package.log 2>&1
+  echo EXIT=$?
+  EXIT=0
+
+Surefire 汇总（解析全部 target/surefire-reports/TEST-*.xml）：
+
+  tests=974  failures=0  errors=0  skipped=31
+  modules-with-reports=41（其余为 aggregator / 无测试模块）
+
+web 四模块计数（本次全量内）：
+
+  web/web                    8
+  web/fetch-http           113
+  web/search-deepseek       45（Skipped 1 = 真实探针门，无 key 按设计跳过）
+  web/tool                  37
+
+打包产物包含 jlink 镜像（dist/jh SUCCESS；镜像真跑见 stop3-jlink-network.txt）。

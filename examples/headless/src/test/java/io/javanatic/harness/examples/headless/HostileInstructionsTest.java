@@ -124,11 +124,13 @@ class HostileInstructionsTest {
         try (Runtime rt = bootProduction(profile, scripts)) {
             ApprovalService approvals = rt.root().require(ApprovalService.KEY);
             assertThat(approvals.mode()).isEqualTo(ApprovalService.Mode.HUMAN_GATE);
-            // 工具面 = 组合给定（base bundle 十一个，it26 增 skill）；文件既加不了也删不了任何 schema
+            // 工具面 = 组合给定（base bundle 十二个，it26 增 skill、it28 增 web_fetch；keyless
+            // 口径——有 key 时另加 web_search 共十三，见 it28 停 3 证据）；文件既加不了也删不了任何 schema
             assertThat(rt.root().require(ToolRegistry.KEY).schemas(rt.root()))
                 .extracting(schema -> schema.name())
                 .containsExactlyInAnyOrder("ask_user", "shell", "exit_plan_mode", "fs_delete", "fs_edit",
-                    "fs_list", "fs_read", "fs_search", "fs_write", "todo_write", "skill");
+                    "fs_list", "fs_read", "fs_search", "fs_write", "todo_write", "skill",
+                    "web_fetch");
 
             AgentHandle handle = rt.root().require(AgentRegistry.KEY).create(rt.root(),
                 CreateAgentOptions.of(Session.newId("it21-hostile"), new AgentOptions("replay", "m")));
@@ -169,7 +171,8 @@ class HostileInstructionsTest {
             assertThat(rt.root().require(ToolRegistry.KEY).schemas(rt.root()))
                 .extracting(schema -> schema.name())
                 .containsExactlyInAnyOrder("ask_user", "shell", "exit_plan_mode", "fs_delete", "fs_edit",
-                    "fs_list", "fs_read", "fs_search", "fs_write", "todo_write", "skill");
+                    "fs_list", "fs_read", "fs_search", "fs_write", "todo_write", "skill",
+                    "web_fetch");
             assertThat(stdin.served()).isEqualTo(3);   // 人闸真被问过（不是绕过审批直接执行）
             disposeAndSave(rt, handle);
         } finally {

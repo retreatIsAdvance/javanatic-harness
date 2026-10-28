@@ -1,0 +1,53 @@
+# it28 收口：新鲜门禁（2026-10-28）
+
+基线：`3db2dd2`（停 2 提交）+ 工作树收口改动（`web/tool` + 消费面接线 + 裁决 2 措辞 + 文档）。
+命令均在仓库根 `/Users/abel_yang/study/deepseek/javanatic-harness` 执行；
+`JAVA_HOME=$(/usr/libexec/java_home -v 25)`，Maven `~/Documents/apache-maven-3.10.0/bin/mvn`。
+
+## 1. `mvn -B -q validate`
+
+EXIT=0。为留可核对输出，收口末尾复跑一次非静默版，尾部：
+
+```
+[INFO] harness-web-tool ................................... SUCCESS [  0.016 s]
+...
+[INFO] BUILD SUCCESS
+[INFO] Total time:  4.066 s
+[INFO] Finished at: 2026-10-28T09:28:31+08:00
+```
+
+（全 41 模块均 SUCCESS；checkstyle / spotless / 其它 validate 阶段门禁未弱化、未跳过。）
+
+## 2. `mvn -B -q package`
+
+EXIT=0（全反应堆）。
+
+Surefire 汇总（复跑聚合脚本读取 `**/target/surefire-reports/TEST-*.xml`）：
+
+```
+tests=976 failures=0 errors=0 skipped=31 modules=41 files=122
+web/web              tests=8   failures=0 errors=0 skipped=0 files=1
+web/fetch-http       tests=113 failures=0 errors=0 skipped=0 files=6
+web/search-deepseek  tests=45  failures=0 errors=0 skipped=1 files=5
+web/tool             tests=39  failures=0 errors=0 skipped=0 files=5
+```
+
+- 976 = 收口前 974 + 裁决 2 新增 2 例（`searchHeaderStatesZeroSnippetsWhenProviderSuppliesNone`、
+  `searchHeaderCountsOnlyFieldsActuallyPresent`）。
+- 计数口径：模块 summary 行 / 上述 XML 聚合，同一测量面；不与历史不同测量面的数字互比。
+- web/search-deepseek 的 1 skip = 探针无 key 跳过（keyless 纪律，默认态即 skip）。
+- 诚实披露：`package` 为增量反应堆，未变更模块未重跑测试，其报告 mtime 保留旧日期
+  （最旧 2026-10-13 skill/tool；最新 2026-10-28 examples/headless）；这些模块本次源码零改动，
+  报告仍代表当前树。变更面四模块（web/*）的报告为本轮新鲜产出。
+
+## 3. `git diff --check`
+
+EXIT=0（无空白错误 / 冲突标记）。
+
+## 4. 结论
+
+收口四条门禁（validate / package / 计数 / diff --check）全绿，与 `stop3-closeout-package.txt`、
+`stop3-closeout-consumer.txt`、`stop3-closeout-wording.txt` 互为补充：
+- package / consumer：全量与外部闭包；
+- wording：裁决 2 的修正与突变；
+- 本文件：收口时点的新鲜复跑与诚实口径。

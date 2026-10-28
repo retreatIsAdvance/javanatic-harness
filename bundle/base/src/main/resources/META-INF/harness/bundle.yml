@@ -83,6 +83,31 @@ rows:
   - plugin: mcp-tool
     config:
       maxResultBytes: 262144
+  # 网络资料获取（it28）：Definition 在 web 层，两个 Provider + 一个消费者。
+  # 行序 fetch → search → tool：消费者 require 抓取 provider（缺失装配期 fail loud）；
+  # 搜索 provider 可选，缺席（无 key/未装配）只少 web_search 一个工具。
+  # 挂载行即网络权限：web-fetch-http 行在场 = 允许公网抓取，策略在传输层结构性执法
+  # （仅 https、仅公网地址、一次解析钉地址、逐跳复验）；搜索只走固定 https 端点并
+  # 只发 key。网络 egress 不受沙箱治理——审批 + 审计 + 公网闸是它的治理（05/07，B17）。
+  # 网页内容是 untrusted 数据：两个工具成功结果首行恒为信任前缀，并有系统提示段。
+  - plugin: web-fetch-http
+    config:
+      timeoutSeconds: 30
+      maxBodyBytes: 2097152
+  - plugin: web-search-deepseek
+    config:
+      baseUrl: https://api.deepseek.com/anthropic/v1
+      model: deepseek-v4-flash
+      apiKeyEnv: DEEPSEEK_API_KEY
+      maxTokens: 4096
+      maxUses: 5
+      timeoutSeconds: 30
+    disabled: ${env:DEEPSEEK_API_KEY} == null
+  - plugin: web-tool
+    config:
+      maxSourceChars: 524288
+      maxOutputBytes: 262144
+      maxResults: 8
   # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
   - plugin: todo
     config:

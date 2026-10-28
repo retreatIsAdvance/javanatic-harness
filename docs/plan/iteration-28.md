@@ -142,16 +142,16 @@
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| 根 `pom.xml` + 新 `web/pom.xml` | 注册 `web` 聚合与四模块 | ☐ |
-| `web/web/*`（新） | 双服务契约 + 9 码 + sealed body + 测试 | ☐ |
-| `web/fetch-http/*`（新） | 钉地址客户端 + URL/地址/重定向/chunked/内容策略 + 夹具 + 测试 | ☐ |
-| `web/search-deepseek/*`（新） | 请求/映射/配置/错误/取消 + 夹具 + 真实探针 | ☐ |
-| `web/tool/*`（新） | 两工具 + HTML 提取 + 信任前缀/提示段 + 测试 | ☐ |
-| `bundle/base` `bundle.yml` | 三行（fetch/search/tool，行序） | ☐ |
-| `examples/headless` `HeadlessMain` / `HeadlessVerifyTest` / `HostileInstructionsTest` | `web:` 行、计数、工具面 | ☐ |
-| `dist/jh/pom.xml` / `examples/headless/pom.xml` / `integration/consumer-sample/pom.xml` / `docs/embedding.md` | jlink/依赖/闭包/计数 | ☐ |
-| `docs/design/02/03/05/07/12` + `AGENTS.md` + `current-state.md` + `boundary-register.md` | 目标态同步（同一提交） | ☐ |
-| `.agents/notes/0007/0008` + `README.md` 索引 | 决策史与索引 | ☐ |
+| 根 `pom.xml` + 新 `web/pom.xml` | 注册 `web` 聚合与四模块 | ☑ |
+| `web/web/*`（新） | 双服务契约 + 9 码 + sealed body + 测试 | ☑ |
+| `web/fetch-http/*`（新） | 钉地址客户端 + URL/地址/重定向/chunked/内容策略 + 夹具 + 测试 | ☑ |
+| `web/search-deepseek/*`（新） | 请求/映射/配置/错误/取消 + 夹具 + 真实探针 | ☑ |
+| `web/tool/*`（新） | 两工具 + HTML 提取 + 信任前缀/提示段 + 测试 | ☑ |
+| `bundle/base` `bundle.yml` | 三行（fetch/search/tool，行序） | ☑ |
+| `examples/headless` `HeadlessMain` / `HeadlessVerifyTest` / `HostileInstructionsTest` | `web:` 行、计数、工具面 | ☑ |
+| `dist/jh/pom.xml` / `examples/headless/pom.xml` / `integration/consumer-sample/pom.xml` / `docs/embedding.md` | jlink/依赖/闭包/计数 | ☑ |
+| `docs/design/02/03/05/07/12` + `AGENTS.md` + `current-state.md` + `boundary-register.md` | 目标态同步（同一提交） | ☑ |
+| `.agents/notes/0007/0008` + `README.md` 索引 | 决策史与索引 | ☑ |
 
 ## 审查停点（开工前填写：按锚点分组的必停点；到点 agent 停下出 packet 等放行）
 
@@ -159,30 +159,30 @@
 |---|---|---|
 | 停 1（承载契约 + 传输安全） | `web/web` 契约 + `web/fetch-http` 钉地址客户端/URL/地址闸/重定向逐跳/chunked/内容策略/上限/超时取消 + 夹具矩阵 + 突变；包 `stop1-review-packet.md` 与证据 | ☑（已提交，评审记录 `evidence/iteration-28/stop1-review-round1.txt`） |
 | 停 2（新外部协议面 + 探针闸） | `web/search-deepseek` 请求/映射/配置/错误/取消 + 夹具 + **真实端点探针**；探针失败即停请裁；包 `stop2-review-packet.md` | ☑（已提交，评审记录 `evidence/iteration-28/stop2-review-round1.txt`） |
-| 停 3（消费面 + 装配 + 验收取证） | `web/tool` 两工具/HTML 提取矩阵/信任前缀与提示段/截断；base 三行；四处同步面；`--verify`；jlink 真实抓取；R1；模型在环；文档；包 `stop3-review-packet.md` | ☐ |
+| 停 3（消费面 + 装配 + 验收取证） | `web/tool` 两工具/HTML 提取矩阵/信任前缀与提示段/截断；base 三行；四处同步面；`--verify`；jlink 真实抓取；R1；模型在环；文档；包 `stop3-review-packet.md` | ☑（已提交，评审记录 `evidence/iteration-28/stop3-review-round1.txt`） |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] URL 策略：https-only、拒 userinfo、2048、IDN punycode、fragment 处理、控制字符/畸形转义——`FetchUrlPolicyTest`
-- [ ] 地址闸：IPv4 私网/回环/链路本地/CGNAT/组播/文档/保留/广播/基准；IPv6 非全球单播/Teredo/6to4/文档/ULA/链路本地/组播/NAT64 标准前缀；IPv4-mapped 内嵌判定；**字面 IP 同闸**；多答案任一非公网即整组拒——`PublicAddressGateTest`
-- [ ] 钉地址与 TOCTOU：resolver 每跳恰一次、连接目标 == 返回地址、连接期间无二次解析；SNI/endpoint identification；JDK 默认信任面——回环 HTTPS 夹具 + 插桩 resolver
-- [ ] 重定向：跨源 ≤5、逐跳 URL/地址/钉地址复验、相对 Location、降级/坏 Location/超跳拒绝、不转发头——`RedirectTest`
-- [ ] HTTP/1.1：状态/头有界/obs-fold 拒/CL+TE 拒/不一致 CL 拒/204·304 无体；**chunked 解码**（扩展、trailer、截断、坏 size、超长 chunk 行）——`HttpWireTest` + original-socket 夹具
-- [ ] 内容：白名单、缺头、charset 缺省/不支持、非法字节替换；**`Content-Encoding` 非 identity（gzip）显式 `WEB_UNSUPPORTED_CONTENT_TYPE`**——`FetchContentTest`
-- [ ] 上限：CL 声明超 2 MiB → `WEB_TOO_LARGE`；流式超限截断 + `truncated=true`；输出 256 KiB/源码 512k 分层与标记——`FetchCapsTest` + `WebToolCapsTest`
-- [ ] 超时/取消：30s 截止、连接 10s、读超时；取消关闭 socket 且穿透 `AbortedException`（非错误结果）——`FetchTimeoutCancelTest`
-- [ ] 搜索请求：端点/路径/头/x-api-key+Bearer/版本/请求体形状/`Redirect.NEVER`/超时/响应上限；key 不出现在任何错误与日志——`DeepSeekSearchProviderTest`
-- [ ] 搜索映射：结果块 + citation snippet + 去重 + `maxResults` + 空结果；无结果块 → `WEB_PROVIDER_ERROR`；散文不刮取；401/429/5xx/坏 JSON——`DeepSeekSearchMappingTest`
-- [ ] **停 2 真实探针**：实际 provider 打真实端点，记录状态/块类型/来源数；失败即停请裁——`stop2-real-probe.txt`
-- [ ] 工具治理：两工具 `approvalExempt=false`、schema 单字段、`web-tool` requires tools、抓取 provider 缺失 fail loud、搜索缺席少一工具、行序约束——`WebToolPluginTest`
-- [ ] HTML 提取矩阵：嵌套/属性含 `>`/单双引号/未闭合标签/大小写/script/style/noscript/template/注释/DOCTYPE/CDATA/pre 空白/实体（命名+十进制+十六进制+未知）/空白折叠/深层嵌套/空正文/非 HTML 透传——`HtmlTextExtractorTest`
-- [ ] 信任：成功结果首行恒为精确常量（两工具）；`PromptSection.Static(70)` 在场且常量同源；删常量/改优先级/换结果首行 → 突变红——`WebTrustTest`
-- [ ] 装配：base 35 = 22+13、`--verify` keyless 29/35 与 keyed 31/35、`web:` 行、工具面 12/13、Jackson 7、模块 44/包 48——`HeadlessVerifyTest` + 证据
-- [ ] R1：零新事件；含 web 工具调用的会话可离线回放/重建（零网络），工具结果按原样入账——`WebReplayTest`
-- [ ] jlink `jh` keyless `--verify` + 真实抓取（公网 URL）+ 私网/明文/重定向负例 + 模型在环（真实模型调用 `web_fetch`/`web_search`，来源保留）——`stop3-jlink-network.txt`、`stop3-model-in-loop.txt`
-- [ ] 外部闭包：`verify-consumer.sh candidate` 11 坐标，双臂全绿——`stop3-closeout-consumer.txt`
-- [ ] 全量 `mvn -B -q package` + `mvn -B -q validate`——`stop3-closeout-package.txt`
-- [ ] 设计文档 02/03/05/07/12 + `AGENTS.md` + `current-state.md` + `boundary-register.md` B17 + `embedding.md` + ADR 同步
+- [x] URL 策略：https-only、拒 userinfo、2048、IDN punycode、fragment 处理、控制字符/畸形转义——`FetchUrlPolicyTest`
+- [x] 地址闸：IPv4 私网/回环/链路本地/CGNAT/组播/文档/保留/广播/基准；IPv6 非全球单播/Teredo/6to4/文档/ULA/链路本地/组播/NAT64 标准前缀；IPv4-mapped 内嵌判定；**字面 IP 同闸**；多答案任一非公网即整组拒——`PublicAddressGateTest`
+- [x] 钉地址与 TOCTOU：resolver 每跳恰一次、连接目标 == 返回地址、连接期间无二次解析；SNI/endpoint identification；JDK 默认信任面——回环 HTTPS 夹具 + 插桩 resolver
+- [x] 重定向：跨源 ≤5、逐跳 URL/地址/钉地址复验、相对 Location、降级/坏 Location/超跳拒绝、不转发头——`RedirectTest`
+- [x] HTTP/1.1：状态/头有界/obs-fold 拒/CL+TE 拒/不一致 CL 拒/204·304 无体；**chunked 解码**（扩展、trailer、截断、坏 size、超长 chunk 行）——`HttpWireTest` + original-socket 夹具
+- [x] 内容：白名单、缺头、charset 缺省/不支持、非法字节替换；**`Content-Encoding` 非 identity（gzip）显式 `WEB_UNSUPPORTED_CONTENT_TYPE`**——`FetchContentTest`
+- [x] 上限：CL 声明超 2 MiB → `WEB_TOO_LARGE`；流式超限截断 + `truncated=true`；输出 256 KiB/源码 512k 分层与标记——`FetchCapsTest` + `WebToolCapsTest`
+- [x] 超时/取消：30s 截止、连接 10s、读超时；取消关闭 socket 且穿透 `AbortedException`（非错误结果）——`FetchTimeoutCancelTest`
+- [x] 搜索请求：端点/路径/头/x-api-key+Bearer/版本/请求体形状/`Redirect.NEVER`/超时/响应上限；key 不出现在任何错误与日志——`DeepSeekSearchProviderTest`
+- [x] 搜索映射：结果块 + citation snippet + 去重 + `maxResults` + 空结果；无结果块 → `WEB_PROVIDER_ERROR`；散文不刮取；401/429/5xx/坏 JSON——`DeepSeekSearchMappingTest`
+- [x] **停 2 真实探针**：实际 provider 打真实端点，记录状态/块类型/来源数；失败即停请裁——`stop2-real-probe.txt`
+- [x] 工具治理：两工具 `approvalExempt=false`、schema 单字段、`web-tool` requires tools、抓取 provider 缺失 fail loud、搜索缺席少一工具、行序约束——`WebToolPluginTest`
+- [x] HTML 提取矩阵：嵌套/属性含 `>`/单双引号/未闭合标签/大小写/script/style/noscript/template/注释/DOCTYPE/CDATA/pre 空白/实体（命名+十进制+十六进制+未知）/空白折叠/深层嵌套/空正文/非 HTML 透传——`HtmlTextExtractorTest`
+- [x] 信任：成功结果首行恒为精确常量（两工具）；`PromptSection.Static(70)` 在场且常量同源；删常量/改优先级/换结果首行 → 突变红——`WebTrustTest`
+- [x] 装配：base 35 = 22+13、`--verify` keyless 29/35 与 keyed 31/35、`web:` 行、工具面 12/13、Jackson 7、模块 44/包 48——`HeadlessVerifyTest` + 证据
+- [x] R1：零新事件；含 web 工具调用的会话可离线回放/重建（零网络），工具结果按原样入账——`WebReplayTest`
+- [x] jlink `jh` keyless `--verify` + 真实抓取（公网 URL）+ 私网/明文/重定向负例 + 模型在环（真实模型调用 `web_fetch`/`web_search`，来源保留）——`stop3-jlink-network.txt`、`stop3-model-in-loop.txt`
+- [x] 外部闭包：`verify-consumer.sh candidate` 11 坐标，双臂全绿——`stop3-closeout-consumer.txt`
+- [x] 全量 `mvn -B -q package` + `mvn -B -q validate`——`stop3-closeout-package.txt`
+- [x] 设计文档 02/03/05/07/12 + `AGENTS.md` + `current-state.md` + `boundary-register.md` B17 + `embedding.md` + ADR 同步
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 `docs/plan/evidence/iteration-28/`）
 
@@ -196,11 +196,14 @@
 | `stop2-mutation-checks.txt` | 停 2：M1–M11 破坏必红 + 逐字节还原 + 终检零残留 |
 | `stop2-real-probe.txt` | 停 2：真实端点探针（状态、块类型、来源数；**无 key**）+ 闸结论 |
 | `stop2-review-round1.txt` | 停 2：用户评审原文与放行结论 |
-| `stop3-tools-html-trust.txt` | 停 3：工具注册/审批/HTML 矩阵/信任前缀与提示段/截断 + 两处突变 |
+| `stop3-tools-html-trust.txt` | 停 3：工具注册/审批/HTML 矩阵/信任前缀与提示段/截断 + M1–M5 突变（M6 被安全分类器拦截，替代覆盖在案） |
 | `stop3-assembly-and-verify.txt` | 停 3：base 35、verify 29/31、工具面 12/13、Jackson 7、`web:` 行 |
 | `stop3-jlink-network.txt` | 停 3：jlink keyless verify + 真实公网抓取 + 负例（私网/明文/重定向） |
 | `stop3-model-in-loop.txt` | 停 3：真实模型在环 `web_fetch`/`web_search`、来源保留、信任前缀 |
 | `stop3-replay.txt` | 停 3：R1 离线回放零网络；无新事件 |
+| `stop3-review-round1.txt` | 停 3：用户评审原文与放行结论 |
+| `stop3-closeout-wording.txt` | 收口裁决 2：`web_search` 结果头字段实况 + 描述条件化 + D2/D1b 突变（D1 被安全分类器拦截） |
+| `stop3-closeout-fresh-gates.txt` | 收口：新鲜 `package` / `validate` / `git diff --check` |
 | `stop3-closeout-package.txt` / `stop3-closeout-consumer.txt` | 收口：全量 package 计数 + consumer candidate（候选 + 负例）EXIT=0 |
 
 ## 修正记录（确认后订正）
@@ -209,6 +212,8 @@
 |---|---|---|---|
 | R1 | `--verify` keyed 计数 | 四确认稿写 **30/35**，订正为 **31/35** | keyed 同时启用 `llm-openai-compat` 与 `web-search-deepseek`；现状 keyed 实测 28（`DEEPSEEK_API_KEY=dummy jh --verify` → `28 rows`），35 − 4 个恒禁用行 = 31。keyless 29 不变；停 3 以实跑为准 |
 | R2 | NAT64 自定义前缀 | 只封标准/本地前缀；RFC 7050 发现**不做** | 四确认稿列「NAT64」；标准前缀封禁覆盖已知向量，自定义前缀残余登记 B17，停 1 可裁升级 |
+| R3 | 停 3 裁决 2：搜索头 snippet 暗示 | 结果头新增 `Sources: N (titles: x, snippets: y)`；工具描述声明 snippet 仅在 provider 提供时出现 | 真实运行模型声称「from snippets」而工具数据无 snippet；结果格式不得诱导模型声明数据不支持的来源 |
+| R4 | 停 1 契约增补 `contentType` | 停 3 评审批准，入修正表 | 结果头报告 Content-Type 是来源诚实性的一部分；影响面 = 构造器 + 两调用点 |
 
 ---
 

@@ -746,6 +746,7 @@ public final class HeadlessMain {
             "  approval: " + approval.mode() + " (" + mountedRow(manifest, "approval-").plugin()
                 + "; exempt=" + exemptText(root) + ")",
             "  mcp: " + mcpText(root),
+            "  web: " + webText(root),
             "  audit: " + audit.plugin().replaceFirst("^persistence-", "") + " "
                 + configText(audit, "root") + (persistence.durable() ? " (durable)" : " (non-durable)"),
             "  stop: max-turns=" + limits.maxTurns() + " max-steps=" + limits.maxStepsPerTurn()
@@ -768,6 +769,31 @@ public final class HeadlessMain {
             .map(registry -> registry.definitions(root).stream()
                 .map(ToolDefinition::name)
                 .filter(name -> name.startsWith("mcp__"))
+                .sorted()
+                .toList())
+            .orElseGet(List::of);
+        String mounted = rows.isEmpty() ? "-" : String.join(" + ", rows);
+        return tools.isEmpty()
+            ? mounted + "; tools=0"
+            : mounted + "; tools=" + String.join(",", tools) + " (approval-required)";
+    }
+
+    /**
+     * Web 声明面（it28）：base 三行在场 + 已注册工具（名称序）。抓取侧行缺失在装配期
+     * fail loud（消费者 require）；搜索侧行缺席（无 key 被 disabled，或 profile 移除）
+     * 只少 web_search 一个工具——摘要只说组合里的事实，不猜原因。两工具恒需审批
+     * （approvalExempt=false，与 approval 行的 exempt 名单互证）。
+     */
+    private static String webText(Scope root) {
+        List<String> rows = root.require(CompositionManifest.KEY).rows().stream()
+            .map(CompositionManifest.Row::plugin)
+            .filter(plugin -> plugin.equals("web-fetch-http")
+                || plugin.equals("web-search-deepseek") || plugin.equals("web-tool"))
+            .toList();
+        List<String> tools = root.resolve(ToolRegistry.KEY)
+            .map(registry -> registry.definitions(root).stream()
+                .map(ToolDefinition::name)
+                .filter(name -> name.equals("web_fetch") || name.equals("web_search"))
                 .sorted()
                 .toList())
             .orElseGet(List::of);

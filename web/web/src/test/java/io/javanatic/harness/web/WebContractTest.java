@@ -34,13 +34,15 @@ class WebContractTest {
     @Test
     void fetchResultValidatesStatusAndReferences() {
         assertThatIllegalArgumentException().isThrownBy(() -> new WebFetchResult(
-            "https://example.com", 99, new WebFetchBody.Text("x"), false));
+            "https://example.com", 99, "text/plain", new WebFetchBody.Text("x"), false));
         assertThatIllegalArgumentException().isThrownBy(() -> new WebFetchResult(
-            "https://example.com", 600, new WebFetchBody.Text("x"), false));
+            "https://example.com", 600, "text/plain", new WebFetchBody.Text("x"), false));
         assertThatNullPointerException().isThrownBy(() -> new WebFetchResult(
-            null, 200, new WebFetchBody.Text("x"), false));
+            null, 200, "text/plain", new WebFetchBody.Text("x"), false));
         assertThatNullPointerException().isThrownBy(() -> new WebFetchResult(
-            "https://example.com", 200, null, false));
+            "https://example.com", 200, "text/plain", null, false));
+        assertThatNullPointerException().isThrownBy(() -> new WebFetchResult(
+            "https://example.com", 200, null, new WebFetchBody.Text("x"), false));
     }
 
     @Test

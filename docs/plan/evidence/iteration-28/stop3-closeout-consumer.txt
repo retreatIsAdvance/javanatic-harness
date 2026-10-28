@@ -1,0 +1,76 @@
+停 3 收口 · 外部消费方 candidate 腿（11 坐标 + 四负例）
+时间：2026-10-27
+环境：JAVA_HOME=/usr/libexec/java_home -v 25，
+      MVN=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn（3.10.0）
+      JAVA=同 JDK 25 的 java；无 DEEPSEEK_API_KEY（候选腿不联网）
+
+------------------------------------------------------------------------
+一、运行（EXIT=0）
+------------------------------------------------------------------------
+命令：
+
+  rm -rf /tmp/it28-s3/consumer
+  env -u DEEPSEEK_API_KEY MVN="$HOME/Documents/apache-maven-3.10.0/bin/mvn" \
+    CONSUMER_WORK=/tmp/it28-s3/consumer \
+    integration/verify-consumer.sh candidate > /tmp/it28-s3/consumer-candidate.log 2>&1
+  EXIT=0
+
+关键输出（逐项勾）：
+
+  == 腿 candidate：harness.version=0.3.0-SNAPSHOT，隔离本地仓 /tmp/it28-s3/consumer/repo-candidate ==
+  ok   候选：工作树 install → 隔离仓（跳测试）
+  ok   candidate：示例编译
+  ok   candidate：运行类路径
+  ok   candidate：治理自证运行
+  ok   candidate：自证通过
+  ok   candidate：自有工具可见
+  ok   candidate：自有工具可执行
+  用时 55s
+  == 四负例 ==
+  ok   负例①坏版本（9.9.9）必须解析失败（已拒，文案含「9.9.9」）
+  ok   负例②去显式版本必须构建失败（已拒，文案含「dependencies.dependency.version」）
+  ok   负例③坏治理配置必须 boot 抛错（已拒，文案含「workspace drift」）
+  ok   负例④生产档撞 AUTO 审批必须 boot 抛错（已拒，文案含「policy=PRODUCTION 但审批为 AUTO」）
+  == 汇总：candidate ==
+  失败项：0
+
+------------------------------------------------------------------------
+二、闭包面（11 候选坐标真的在运行类路径）
+------------------------------------------------------------------------
+候选腿 = 基础 16 条显式依赖 + `candidate-closure` profile 11 坐标。
+本次运行类路径中 web 四坐标齐备（隔离仓 jar）：
+
+  harness-web-web-0.3.0-SNAPSHOT.jar
+  harness-web-fetch-http-0.3.0-SNAPSHOT.jar
+  harness-web-search-deepseek-0.3.0-SNAPSHOT.jar
+  harness-web-tool-0.3.0-SNAPSHOT.jar
+
+（同闭包内另有 skill 三件与 mcp 四件；11 = skill 3 + mcp 4 + web 4。）
+
+------------------------------------------------------------------------
+三、自证运行的关键行（run-candidate.log 逐字）
+------------------------------------------------------------------------
+  rows.composed=36 rows.enabled=30
+  -- effective rows --
+  …（base 35 行中 keyless 启用 29 行）…
+  web-fetch-http {maxBodyBytes=2097152, timeoutSeconds=30}
+  web-tool {maxSourceChars=524288, maxResults=8, maxOutputBytes=262144}
+  consumer-sample
+  -- end effective rows --
+  tool.schemas=13 word_count.visible=true
+  word_count.invoke.error=false content=words=3
+  SELF-CHECK OK
+
+计数口径说明（避免与 --verify 的 12/13 混淆）：
+- rows.composed=36 = base 35 + 示例自有 `consumer-sample` 一行；
+  rows.enabled=30 = base keyless 29 + 该行（无 key，web-search-deepseek 行禁用）。
+- tool.schemas=13 = base keyless 12 工具 + 示例自有 `word_count`；
+  keyless 的 web 工具只有 web_fetch（web_search 随搜索行一起缺席）。
+- `SELF-CHECK OK` + 自有工具可见/可执行 = 外部工程真装配、真调用。
+
+------------------------------------------------------------------------
+四、过程备注（操作面，非产品缺陷）
+------------------------------------------------------------------------
+首次调用把 `MVN=~/Documents/...` 作为环境变量传入：`~` 在赋值右侧不做展开，
+脚本按字面路径找不到 mvn（8 项红、四负例被跳过）。改用 `$HOME/...` 绝对路径
+重跑即全绿；本次证据为第二次运行。教训归 AGENTS「交付命令块先逐行演练」同族。

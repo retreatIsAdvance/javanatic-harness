@@ -25,6 +25,8 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.interaction.approval;
     requires io.javanatic.harness.interaction.commands;
     requires io.javanatic.harness.bundle.base;
+    // 测试：WebReplayTest 的 fake 抓取 provider 实现 WebFetchService（Definition 契约）
+    requires io.javanatic.harness.web;
     requires org.yaml.snakeyaml;
     // SIGINT 取消入口(sun.misc.Signal);非 static——jlink 镜像须含 jdk.unsupported(dist 实跑验证)
     requires jdk.unsupported;

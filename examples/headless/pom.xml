@@ -121,6 +121,24 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-mcp-tool</artifactId>
         </dependency>
+        <!-- it28 web 四模块（Definition + 两 Provider + 消费）：base bundle 三行引用，
+             运行时 ServiceLoader 需在模块路径 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-web-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-web-fetch-http</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-web-search-deepseek</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-web-tool</artifactId>
+        </dependency>
         <!-- 生产模拟场景(it15):boot 后注入 replay 驱动,keyless 确定性;模块无 provides,不污染双向校验 -->
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>

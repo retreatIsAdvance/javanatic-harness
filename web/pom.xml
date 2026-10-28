@@ -18,6 +18,6 @@
         <module>web</module>
         <module>fetch-http</module>
         <module>search-deepseek</module>
-        <!-- tool（停 3）随停点加入 -->
+        <module>tool</module>
     </modules>
 </project>

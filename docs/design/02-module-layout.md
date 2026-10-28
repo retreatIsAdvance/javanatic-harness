@@ -81,6 +81,17 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 依赖边（实况，登记口径）：`mcp/mcp` → `kernel` + `llm.llm`；`mcp/stdio` → `mcp/mcp` + `kernel` + `kernel.config` + `llm.llm` + Jackson；`mcp/http` → `mcp/mcp` + `kernel` + `kernel.config` + `llm.llm` + Jackson + `java.net.http`；`mcp/tool` → `mcp/mcp` + `core.tools` + `core.session` + `session.persistence` + `core.agent` + `core.agent-loop` + `kernel.config` + `llm.llm` + Jackson。工具侧运行期不 `requires` transport 模块（`mcp-tool` 只经 `McpClientService` 取连接面）；插件 `requires "mcp-registry"` 是**组合面**绑定，transport 形态对消费面不可见。
 
+#### Web（网络资料获取，it28）
+
+| 模块 | 角色 | 职责 |
+|---|---|---|
+| `harness-web-web` | Definition | `WebFetchService`（`id()`/`displayName()`/`available()`/`fetch`）+ `WebSearchService`（`search`）+ `WebFetchResult`（URL/状态/`Content-Type`/sealed body/`truncated`）/`WebSearchRequest`/`WebSearchResult`/来源 + `WebErrorCode`（9 码）+ `WebException`。插件无行（纯契约）。JPMS 名 `io.javanatic.harness.web`；零第三方依赖（取消词表复用 `llm.llm` 的 `AbortSignal`）|
+| `harness-web-fetch-http` | Provider | 钉地址公网抓取（插件 id `web-fetch-http`）：URL 策略（仅 https、拒 userinfo、≤2048）→ 一次解析 + 整组公网校验（字面 IP 同闸）→ `SSLSocket` 直连钉住地址（SNI + endpoint identification、ALPN http/1.1）→ 手写 HTTP/1.1/chunked 解码 → 逐跳重定向复验（跨源允许、≤5 跳、拒降级、不转发任何头）+ 内容白名单/identity 编码 + `maxBodyBytes` 有界读取。零第三方依赖；测试缝（resolver/gate/SSLContext 注入）不演化为生产回调面 |
+| `harness-web-search-deepseek` | Provider | DeepSeek 原生搜索（插件 id `web-search-deepseek`）：Anthropic 兼容 Messages + 原生 `web_search_20250305`；只把结构化 `web_search_tool_result` 块映射为来源（无块即 `WEB_PROVIDER_ERROR`，绝不散文刮取），citation `cited_text` 按 url 首次出现取 snippet，去重后 `maxResults` 截断；key 只进请求头（不入日志/错误/结果）；`available()` 以 key 在场为准。**Jackson 边界** |
+| `harness-web-tool` | Consumer | `web_fetch`（**恒注册**；抓取 provider 缺失装配期 fail loud）与 `web_search`（provider 在场且 `available()` 才注册）+ `HtmlTextExtractor` 线性提取（script/style 等剔除）+ 分层截断（源码 512K 字符 → 输出 256 KiB UTF-8 完整边界）+ 成功结果首行信任前缀 `EXTERNAL_WEB_CONTENT_NOTICE` + 同一常量注册 `Static(70)` 提示段。两工具恒需审批；**零新事件**：审计 = `tool/call` + `tool/result` |
+
+依赖边（实况，登记口径）：`web/web` → `kernel` + `llm.llm`；`web/fetch-http` → `web/web` + `kernel` + `kernel.config` + `llm.llm`；`web/search-deepseek` → `web/web` + `kernel` + `kernel.config` + `llm.llm` + Jackson + `java.net.http`；`web/tool` → `web/web` + `kernel` + `kernel.config` + `core.tools` + `core.system-prompt` + `core.session` + `llm.llm`。工具侧运行期不 `requires` 任一 Provider（只经双 `ServiceKey` 取能力面）；两个 Provider 互不依赖，可单挂——搜索缺 key 时该行 `disabled`，抓取面照常注册。
+
 #### Shell（命令执行）
 
 | 模块 | 角色 | 职责 |
@@ -181,6 +192,13 @@ flowchart TD
         mcpedge[harness-mcp-http]
     end
 
+    subgraph web[Web]
+        webdef[harness-web-web]
+        webfetch[harness-web-fetch-http]
+        websearch[harness-web-search-deepseek]
+        webtool[harness-web-tool]
+    end
+
     subgraph shell[Shell]
         shelldef[harness-shell-shell]
         local[harness-shell-local]
@@ -223,7 +241,9 @@ flowchart TD
     kcore --> shelldef
     kcore --> approval
     kcore --> mcpdef
+    kcore --> webdef
     llmdef --> mcpdef
+    llmdef --> webdef
     session --> persistdef
     kconfig --> tools
     tools --> todo
@@ -251,6 +271,15 @@ flowchart TD
     agent --> mcptool
     agentloop --> mcptool
     persistdef --> mcptool
+    webdef --> webfetch
+    webdef --> websearch
+    webdef --> webtool
+    kconfig --> webfetch
+    kconfig --> websearch
+    kconfig --> webtool
+    tools --> webtool
+    session --> webtool
+    sysprompt --> webtool
     shelldef --> local
     shelldef --> docker
     shelldef --> shelltool
@@ -266,6 +295,9 @@ flowchart TD
     mcpstdio --> base
     mcpedge --> base
     mcptool --> base
+    webfetch --> base
+    websearch --> base
+    webtool --> base
     local --> base
     docker --> base
     shelltool --> base
@@ -282,7 +314,7 @@ flowchart TD
     headlessex --> distjh
 ```
 
-Jackson 只出现在 `core-tools`、`llm/openai-compat`、`persistence-jsonl`、`mcp/stdio`、`mcp/http` 与 `mcp/tool` 六个边界模块（model/tool JSON、wire JSON、codec JSON、JSON-RPC 帧、HTTP/SSE JSON 帧、tool JSON Schema）；`core-session` 及全部 domain 模块零 Jackson。
+Jackson 只出现在 `core-tools`、`llm/openai-compat`、`persistence-jsonl`、`mcp/stdio`、`mcp/http`、`mcp/tool` 与 `web/search-deepseek` 七个边界模块（model/tool JSON、wire JSON、codec JSON、JSON-RPC 帧、HTTP/SSE JSON 帧、tool JSON Schema、搜索响应块 JSON）；`core-session` 及全部 domain 模块零 Jackson。
 
 ## 4. module-info.java 示例
 
@@ -421,6 +453,12 @@ harness/
 │   ├── stdio/pom.xml                ← stdio transport（JSON-RPC 2.0 + 子进程生命周期 + 通知刷新/重连对账）
 │   ├── http/pom.xml                 ← Streamable HTTP transport（POST/SSE、Mcp-Session-Id、通知通道、DELETE 收尾；it27.1）
 │   └── tool/pom.xml                 ← 工具注册 + 轮屏障换代 + mcp/catalog 扩展事件 + 结果截断
+├── web/
+│   ├── pom.xml                      ← 聚合
+│   ├── web/pom.xml                  ← WebFetchService/WebSearchService 契约 + 错误码（零第三方）
+│   ├── fetch-http/pom.xml           ← 钉地址公网 HTTPS 抓取（URL/地址闸/重定向/HTTP-1.1/chunked）
+│   ├── search-deepseek/pom.xml      ← DeepSeek 原生搜索（结构化来源映射；Jackson 边界）
+│   └── tool/pom.xml                 ← web_fetch/web_search + HTML 提取 + 分层截断 + 信任前缀/提示段
 ├── session/
 │   ├── pom.xml
 │   ├── persistence/pom.xml          ← SessionStore SPI + SessionEventCodec
@@ -845,7 +883,8 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `bundle/base` | `bundle.base` | ✅ |
 | `core/agent-default-model` | （合并进 agent-loop）| ✅ 简化 |
 | `e2b/*` | — | ❌ 不做 |
-| `web/*` | — | ❌ 不做 |
+| `web/web` + `web/fetch-http` + `web/search-deepseek` | `web.web` + `web.fetch.http` + `web.search.deepseek`（it28：契约 + 钉地址抓取 + 原生搜索双 Provider）| ✅（it28）|
+| `web/tool-web` | `web.tool`（`web_fetch`/`web_search` + HTML 文本提取 + 分层截断 + 信任前缀/提示段）| ✅（it28；dsh 的信任段与本实现同源常量，搜索只取结构化来源同口径）|
 | `lsp/*` | — | ❌ 不做 |
 | `subagent/*` | — | ❌ 留接口 |
 | `workflow/*` | — | ❌ 不做 |

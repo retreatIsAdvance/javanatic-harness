@@ -101,6 +101,23 @@
             <artifactId>harness-mcp-tool</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- it28 web 三行入 base bundle：测试模块路径需可见 ServiceLoader 插件;
+             抓取行在场不联网（仅装配 provider），搜索行无 key 时 disabled -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-web-fetch-http</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-web-search-deepseek</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-web-tool</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-fs-tool</artifactId>

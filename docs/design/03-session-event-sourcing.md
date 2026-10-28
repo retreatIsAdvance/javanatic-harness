@@ -455,6 +455,8 @@ public final class SessionEventCodecs {
 
 **（it27）第六个生产实例 `mcp/catalog`**（家 `mcp/tool`）：MCP 工具清单**每代全量快照**（条目 = serverId / raw name / publicName / description / inputSchema），`ignorable=false`——清单是工具注册与 R1 重建的唯一事实源（回放零网络零进程），静默丢弃会使历史请求不可重建（`skill/catalog` 同款理据）。it27.1 换代语义：采纳只在轮屏障（`TURN_STOPPING` 换面 / `PRE_STEP` 补换代），轮内清单变化一律推迟；落账在 `PRE_STEP` 且仅当走到 `PreStepDecision.Enter`——首非空快照、内容变化、空集退役才 append，与上一代相等则静默，被拒轮（如计划模式拒绝进入）既不采纳也不落账。快照**不带 generation 字段**：日志顺序即代际（T8），读取方按出现序覆盖当前清单；resume 以日志末代重建注册面，与装配期实况的差异由首个 `PRE_STEP` 对账补齐。publicName **直接入条目**而非 fold 时重算——命名算法版本变化不影响旧日志重建（纯函数是写入期的确定性，不是读取期的兼容承诺）。
 
+**（it28）Web 零新事件**：`web_fetch` / `web_search` 的外部内容只作为工具结果入账（`tool/result` 的 `content`），不做事件级拆分——审计事实 = executor 的 `tool/call` + `tool/result`；日志回放**零联网**（网页内容在账本里，不重取）。搜索的 provider / model 在结果首部外显，补足「辅助调用」的可审计性。工具注册面双态（keyless 缺 `web_search`）属**装配期**事实，随 header 的组合清单入账，不影响事件流。[R1 重建](10-testing.md) 只依赖日志 + 组合清单，故回放测试可在无网络环境验证哈希一致。
+
 ### JSONL 布局与行格式
 
 ```text

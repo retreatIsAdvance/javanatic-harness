@@ -1,0 +1,94 @@
+停 3 收口 · 裁决 2：web_search 结果头只陈述实际字段（含突变）
+时间：2026-10-28
+环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)，
+      Maven=$HOME/Documents/apache-maven-3.10.0/bin/mvn
+
+------------------------------------------------------------------------
+一、裁决原文（停 3 评审 §二.2）
+------------------------------------------------------------------------
+「把 `web_search` 结果头的措辞改为只陈述实际存在的字段（无 snippet 时不出现
+snippet 措辞，或在来源行标注 `snippets: 0`）——工具不该诱导模型说出数据不支持
+的来源声明。」
+
+------------------------------------------------------------------------
+二、改动
+------------------------------------------------------------------------
+1. 工具描述（WebToolPlugin.SEARCH_DESCRIPTION）：
+   旧："Search the web and return cited sources (title, URL, snippet). ..."
+   新："Search the web and return cited sources. Each source lists its URL plus a
+        title and snippet when the provider supplies them. ..."
+   —— snippet 从「固定字段」改为「provider 提供时出现」的条件事实。
+
+2. 搜索结果显示头（WebToolOutput.renderSearch）：
+   在 Provider / Query 之后、编号来源之前新增一行：
+     Sources: N (titles: x, snippets: y)
+   - N = 来源条数；x = 实际带标题的来源数；y = 实际带 snippet 的来源数；
+   - 只陈述实际存在的字段：零 snippet 时显式 `snippets: 0`，不再让格式暗示
+     snippet 字段存在；
+   - 零来源仍是 `No sources returned`（不追加计数行）；
+   - 该行同样受输出帽约束（超帽时按 UTF-8 边界截断并追加标记）。
+
+3. 用例：
+   - 新增 searchHeaderStatesZeroSnippetsWhenProviderSuppliesNone：
+     两条来源均无 snippet → 断言 `Sources: 2 (titles: 2, snippets: 0)` 且
+     结果不含 `Snippet`；
+   - 新增 searchHeaderCountsOnlyFieldsActuallyPresent：
+     一条无标题无 snippet、一条两者皆有 → 断言
+     `Sources: 2 (titles: 1, snippets: 1)` 与来源行内容；
+   - 既有 searchRendersProviderQuerySourcesTruncationTailAndSummary 同步断言
+     `Sources: 2 (titles: 1, snippets: 1)`；
+   - toolsAreApprovalRequiredAndSingleField 增加描述断言
+     `contains("when the provider supplies them")`。
+
+------------------------------------------------------------------------
+三、聚焦测试（EXIT=0）
+------------------------------------------------------------------------
+命令：
+
+  mvn -B -pl web/tool -am test > /tmp/it28-closeout-focused.log 2>&1
+  EXIT=0
+
+模块汇总行：
+
+  web/web     Tests run: 8,  Failures: 0, Errors: 0, Skipped: 0
+  web/tool    Tests run: 39, Failures: 0, Errors: 0, Skipped: 0
+    - WebToolConfigTest 5 / WebToolPluginTest 13 / HtmlTextExtractorTest 10 /
+      WebToolCapsTest 7 / WebTrustTest 4
+
+（web/tool 由 37 增至 39 = 新增两条字段实况用例。）
+
+------------------------------------------------------------------------
+四、突变（破坏必红 → 逐字节还原）
+------------------------------------------------------------------------
+D2 · 工具描述回退为旧的固定字段措辞
+  改动：SEARCH_DESCRIPTION 改回
+        "Search the web and return cited sources (title, URL, snippet). ..."
+  命令：mvn -B -pl web/tool -am test -Dtest=WebToolPluginTest \
+        -Dsurefire.failIfNoSpecifiedTests=false
+  实测（EXIT=1）：Tests run: 13, Failures: 1
+    - toolsAreApprovalRequiredAndSingleField：实际描述不含
+      "when the provider supplies them"
+  还原：diff -q 备份 = 一致
+
+D1 · snippets 计数与来源总数混同（未执行，安全分类器拦截）
+  计划：`.append(snippets)` → `.append(sources.size())`
+  结果：写入被安全分类器拦截（判定为破坏刚裁决的字段实况语义），未落地；
+        未重试、未绕过。
+  等效判据：新增两条用例分别钉死 `snippets: 0`（零 snippet）与
+        `snippets: 1`（部分 snippet）；若计数与总数混同，两条同时红。
+
+D1b · 结果头字段名改写（替代突变，已执行）
+  改动：`", snippets: "` → `", snips: "`
+  实测（EXIT=1）：Tests run: 13, Failures: 3
+    - searchHeaderStatesZeroSnippetsWhenProviderSuppliesNone
+    - searchHeaderCountsOnlyFieldsActuallyPresent
+    - searchRendersProviderQuerySourcesTruncationTailAndSummary
+  还原：diff -q 备份 = 一致；随后聚焦全量复绿（39）。
+
+------------------------------------------------------------------------
+五、与模型在环证据的关系（如实披露）
+------------------------------------------------------------------------
+stop3-model-in-loop.txt 的两次真实运行录于本修正**之前**：其搜索工具结果没有
+`Sources:` 行，模型末句「from snippets」未被数据支撑。本次修正后未重跑真实
+模型（避免无授权的新增计费调用）；修正面由上述 39 例聚焦测试与 D2/D1b 突变
+覆盖。两工具的可用性、来源保留、信任前缀与零新事件结论不受影响。

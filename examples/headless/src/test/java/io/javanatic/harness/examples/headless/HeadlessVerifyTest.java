@@ -36,9 +36,10 @@ class HeadlessVerifyTest {
         assertThat(result.exit()).isZero();
         assertThat(result.stdout())
             .contains("Profile: headless   policy: STANDARD")
-            .contains("  composition: 27 rows, 32 discovered, 0 unreferenced")
+            .contains("  composition: 29 rows, 35 discovered, 0 unreferenced")
             .contains("  approval: AUTO (approval-auto; exempt=ask_user)")
             .contains("  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool; tools=0")
+            .contains("  web: web-fetch-http + web-tool; tools=web_fetch (approval-required)")
             .contains("  audit: jsonl " + sessions + " (durable)")
             .contains("  stop: max-turns=50 max-steps=40 budget=unlimited");
     }

@@ -182,6 +182,14 @@ public final class AppBoot {
 
 **mcp-tool 配置面（it27.1）**：仅 `maxResultBytes`（正整数，缺省 262144 = 256 KiB）——单条工具结果上限，UTF-8 完整字符边界截断并追加 `" (output truncated)"` 标记（不计入上限）；success 与工具级错误同口径。`mcp-registry` 无 config。
 
+**web-fetch-http 配置面（it28）**：`timeoutSeconds`（正数，缺省 30；连接 10s、读用剩余时间）与 `maxBodyBytes`（正整数，缺省 2097152 = 2 MiB）——读侧上限：`Content-Length` 声明超限 → `WEB_TOO_LARGE`（不读体），流式/缺 CL 读到上限即停收并置 `truncated=true`（内容事实，不报错）。无代理/凭据/Cookie 配置面：请求头固定、不跨源转发；URL 只来自工具入参且逐次过公网闸（05 §7.2）。
+
+**web-search-deepseek 配置面（it28）**：`baseUrl`（缺省 `https://api.deepseek.com/anthropic/v1`）/ `model`（缺省 `deepseek-v4-flash`）/ `apiKeyEnv`（缺省 `DEEPSEEK_API_KEY`；**只写环境变量名，不写值**）/ `maxTokens`（缺省 4096）/ `maxUses`（缺省 5）/ `timeoutSeconds`（缺省 30）；键白名单、坏值 fail loud。base 行以 `disabled: ${env:DEEPSEEK_API_KEY} == null` 表达 keyless 双态——缺 key 时该行不加载，`--verify` 的 `web:` 行只剩抓取面。非 2xx 诊断体上限 16 KiB（保留状态码；与 1 MiB 成功响应上限分层），错误消息遮断凭据后截到 512 字符。
+
+**web-tool 配置面（it28）**：`maxSourceChars`（正整数，缺省 524288 = 512K 字符；HTML 提取或文本归一前的源码上限）/ `maxOutputBytes`（正整数，缺省 262144 = 256 KiB；结果输出上限，UTF-8 完整字符边界，标记不计入）/ `maxResults`（正整数，缺省 8；搜索来源上限）。键白名单；三者均有硬上限，配置不能把内存/上下文面放开到无限。
+
+**网络权限与 egress（it28）**：网络权限由**组合显式给**——`web-fetch-http` 行挂载即授权公网 HTTPS 抓取；未挂载时 `web_fetch` 装配期 fail loud（不静默降级）。出口**不经沙箱**（沙箱约束本机进程，不管网络）；Web 的安全边界是公网地址闸 + 钉地址连接 + 逐跳重定向复验 + 无凭据转发 + 审批与审计（B17 残余登记）。**T9 token 缺口（显式接受）**：搜索辅助调用的 token 不进 agent 预算账（预算只记主对话模型请求），不是遗漏。
+
 **CompositionManifest**（R1，03 §8）：boot 从行序 + 插件版本（module descriptor）+ 影响模型可见输出的 config 值生成清单，注册为服务；`session-store` 创建 SessionHeader 时消费它。清单 + 日志 = 可重建性的全部持久化事实。
 
 ## 6. `--verify` 与 policy 档位（R4）
@@ -194,14 +202,15 @@ jh --verify --policy=PRODUCTION --approval=ask --budget=2000000
 
 ```text
 Profile: headless   policy: PRODUCTION
-  composition: 27 rows, 32 discovered, 0 unreferenced
+  composition: 29 rows, 35 discovered, 0 unreferenced
   approval: HUMAN_GATE (approval-ask; exempt=ask_user)
   mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool; tools=0
+  web: web-fetch-http + web-tool; tools=web_fetch (approval-required)
   audit: jsonl ~/.harness/sessions (durable)
   stop: max-turns=50 max-steps=40 budget=2000000
 ```
 
-（it20 起实况：摘要六行打 stdout、exit 0；`policy` 沿用 CLI 词表大写；rows = 加载行数、discovered = ServiceLoader 发现总数、unreferenced 校验通过后恒 0（非零即 boot 失败——计数与校验同一口径）；预算 0 显示 `unlimited`；违规路径逐项打 stderr 且 stdout 为空。当前计数 **27/32**（base 32 行；headless 默认 profile 27 行）。`approval:` 行尾点名**免审批工具**（`exempt=`；读 `ToolRegistry.definitions(Scope)` 的 `approvalExempt` 声明面，名称序逗号分隔、无声明印 `-`）——审批面与它的例外在同一行自述；`skill` 装载工具需审批（T2）、`ask_user` 免审批。`skill-local.cwd` 已入 workspace 单源键集（五处同值）。`mcp:` 行点名**四个 mcp 行**在场（`mcp-registry + mcp-stdio + mcp-http + mcp-tool`）与已注册工具（`mcp__*` 名称序；无工具印 `tools=0`，有工具注记 `approval-required`）——MCP 工具恒需审批（插件无豁免出口），与 `exempt` 名单互证；相关行被 profile 移除时印 `-`。）
+（it20 起实况：摘要七行打 stdout、exit 0；`policy` 沿用 CLI 词表大写；rows = 加载行数、discovered = ServiceLoader 发现总数、unreferenced 校验通过后恒 0（非零即 boot 失败——计数与校验同一口径）；预算 0 显示 `unlimited`；违规路径逐项打 stderr 且 stdout 为空。当前计数 **29/35**（keyless；keyed 时 `llm-openai-compat` 与 `web-search-deepseek` 两行随 key 启用 = **31/35**）——base 35 行 = 22 可配 + 13 无配；headless 默认 profile keyless 启用 29 行。`approval:` 行尾点名**免审批工具**（`exempt=`；读 `ToolRegistry.definitions(Scope)` 的 `approvalExempt` 声明面，名称序逗号分隔、无声明印 `-`）——审批面与它的例外在同一行自述；`skill` 装载工具需审批（T2）、`ask_user` 免审批。`skill-local.cwd` 已入 workspace 单源键集（五处同值）。`mcp:` 行点名**四个 mcp 行**在场（`mcp-registry + mcp-stdio + mcp-http + mcp-tool`）与已注册工具（`mcp__*` 名称序；无工具印 `tools=0`，有工具注记 `approval-required`）——MCP 工具恒需审批（插件无豁免出口），与 `exempt` 名单互证；相关行被 profile 移除时印 `-`。`web:` 行点名**三个 web 行**在场（keyless = `web-fetch-http + web-tool`；keyed 含 `web-search-deepseek`）与已注册工具（`web_fetch`/`web_search` 名称序，恒注记 `approval-required`）；抓取行缺失即 boot fail loud，搜索行缺失只少一个工具——相关行被 profile 移除时印 `-`。）
 
 | 档位 | 校验内容 |
 |---|---|

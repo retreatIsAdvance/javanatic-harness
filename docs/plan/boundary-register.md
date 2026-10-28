@@ -1,6 +1,6 @@
 # 边界登记表
 
-> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-21（it28 停 1）。
+> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-27（it28 停 3）。
 
 | # | 边界 | 规则 | 落地位置 | 状态 / 证据 |
 |---|---|---|---|---|
@@ -21,6 +21,11 @@
 | B15 | 零噪声 | MCP `servers: []` → 零进程、零网络、零工具、零事件、零注册 | 两个 transport + registry | 已实施 |
 | B16 | 消息/事件形状 | `mcp/catalog` 每代全量快照、**无 generation 字段**（日志序即代，fold 末值胜） | `mcp/tool`（T8） | 已实施；`stop3-swap-and-ledger.txt` |
 | B17 | Web 抓取网络信任与解析残余 | 抓取只经公网地址闸（DNS 整组 + 字面 IP 同闸）；egress 不受沙箱治理（治理 = 审批 + 审计 + 公网闸）。**解析期 `getAllByName` 不受 deadline/cancel 约束**：deadline 自解析返回后生效，取消不能唤醒系统解析调用（`AddressResolver` 为可替换缝，升级路径 = 独立解析线程 + 限时 join）。**不做** RFC 7050 自定义 NAT64 前缀发现：只封 `64:ff9b::/96` 与 `64:ff9b:1::/48`，自定义前缀在地址形态上仍是 `2000::/3` 全球单播 | `web/fetch-http` `PinnedHttpClient` / `PublicAddressGate`；05/07 | 已实施（it28 停 1）；残余范围见 `stop1-fetch-policy.txt` §6、`stop1-pinning-and-redirect.txt` §4 |
+| B18 | Web 搜索端点信任 | `web-search-deepseek.baseUrl` 是**组合者显式配置的信任面**（与抓取的 URL 不同：后者来自模型输入、逐次过公网闸），不经地址闸；TLS 用 JDK 默认信任面；`Redirect.NEVER`；凭据只进请求头（不入日志/错误/结果）；响应体字节上限 + 体读看门狗 | `web/search-deepseek`；05 §7.2 | 已实施（it28 停 2） |
+| B19 | 搜索结果形状 | 只认结构化 `web_search_tool_result` 块（无块 = `WEB_PROVIDER_ERROR`，**绝不散文刮取**）；来源 `url` 缺失/空白即丢弃；snippet 取 citation `cited_text`（按 url 首次出现）；按 url 去重；`maxResults` 截断置 `truncated`；块在但零结果 = 合法空结果 | `web/search-deepseek` `DeepSeekSearchProvider` | 已实施（it28 停 2）；`stop2-mapping-and-errors.txt` |
+| B20 | 外部内容信任面 | 成功结果首行恒 `EXTERNAL_WEB_CONTENT_NOTICE`；同源常量注册 `Static(70)` 提示段。**软防线**：不保证注入失败；硬边界 = 公网地址闸 + 无凭据转发 + 审批 + 审计。HTML 提取（script/style 等剔除）是**可读性**处理，不是安全边界 | `web/tool` `WebContentTrust` / `HtmlTextExtractor` | 已实施（it28 停 3）；`stop3-tools-html-trust.txt` |
+| B21 | Web 消费预算 | 分层截断：源码 512K 字符（`maxSourceChars`）→ HTML 提取/文本归一 → 输出 256 KiB（`maxOutputBytes`，UTF-8 完整字符边界、标记不计入）；搜索来源 `maxResults` 缺省 8；三者正整数且硬上限；传输 `maxBodyBytes` 2 MiB 是读侧上限，与本帽分层 | `web/tool`（T7）；`web/fetch-http` | 已实施（it28 停 3）；`stop3-tools-html-trust.txt` |
+| B22 | Web 测试缝 | `PinnedHttpClient` 的 resolver / gate / `SSLContext` 只经构造器注入（生产装配固定 `PublicAddressGate.INSTANCE` + 默认上下文）；`ResponseObserver` 包内接口、生产 no-op、只观测 status/bytes。**不得演化为生产回调面**（不设静态 setter / SPI / 系统属性开关），否则地址闸可被组合面绕开 | `web/fetch-http`、`web/search-deepseek` | 已实施（it28 停 1/2，评审确认） |
 
 ## 维护规则
 

@@ -52,6 +52,7 @@ class PinnedHttpClientTest {
 
             assertThat(result.url()).isEqualTo(url(server, "pinned.test", "/hello"));
             assertThat(result.statusCode()).isEqualTo(200);
+            assertThat(result.contentType()).isEqualTo("text/html; charset=utf-8");
             assertThat(result.body()).isEqualTo(new WebFetchBody.Html("<p>hi</p>"));
             assertThat(result.truncated()).isFalse();
 
@@ -137,6 +138,7 @@ class PinnedHttpClientTest {
             WebFetchResult result = client(resolver("pinned.test"), new TlsFixture.RecordingGate(), 10, 1024)
                 .fetch(new WebFetchRequest(url(server, "pinned.test", "/start")), AbortSignal.never());
             assertThat(result.statusCode()).isEqualTo(200);
+            assertThat(result.contentType()).isEqualTo("text/plain; charset=utf-8");
             assertThat(result.body()).isEqualTo(new WebFetchBody.Text("ok"));
             assertThat(server.requests()).hasSize(2);
             assertThat(server.requests().get(1).rawHead()).startsWith("GET /next HTTP/1.1");
