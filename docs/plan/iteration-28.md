@@ -205,6 +205,7 @@
 | `stop3-closeout-wording.txt` | 收口裁决 2：`web_search` 结果头字段实况 + 描述条件化 + D2/D1b 突变（D1 被安全分类器拦截） |
 | `stop3-closeout-fresh-gates.txt` | 收口：新鲜 `package` / `validate` / `git diff --check` |
 | `stop3-closeout-package.txt` / `stop3-closeout-consumer.txt` | 收口：全量 package 计数 + consumer candidate（候选 + 负例）EXIT=0 |
+| `stop3-closeout-review.txt` | 收口批评审：用户关账原文 + 引用核验（含 AGENTS 行数与未推送范围订正）+ 处置 |
 
 ## 修正记录（确认后订正）
 
