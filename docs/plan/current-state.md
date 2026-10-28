@@ -42,6 +42,6 @@
 ## 当前进行中
 
 - **it28（网络资料获取）已关账**：停 1（契约 + 钉地址抓取）、停 2（原生搜索）、停 3（消费面 + 装配 + 验收）全部提交；停 3 裁决 2 的结果头字段实况修正随收口批落地；最终评审见 `evidence/iteration-28/stop3-closeout-review.txt`。
-- 未推送：仅 it28 四提交 `4245700`（pre-work）/ `b8f9631`（停 1）/ `3db2dd2`（停 2）/ `1a76d0a`（停 3 + 收口）；it26 尾至 it27.1 的提交均已在 `origin/master`。推送待用户点名（归档时 `ls-remote` 连 github 超时，连通性需先确认）。
+- 未推送：无。it28 五提交已于 2026-10-28 推送（`master` = `e9e68cf`，CI run `40639432659`）；推送时 github.com 主边缘不可达，经 `http.curloptResolve=github.com:443:140.82.112.3` 固定可达边缘完成（TLS 仍按主机名校验，未关 `sslVerify`），详见 `evidence/iteration-28/stop3-closeout-review.txt` §推送结果。
 - 下一项：0.3 顺序 4 **LSP**（优先 Java 诊断/定义/引用）；建议先开一次「0.3 阶段小结 + it29 议程」规划对话。
 - 挂账（转下一迭代议程）：push（it28 四提交）；B4 capability graph 最小生成器；MCP `_hash8` 撞名退路（hash12/前缀转义）属命名算法变更，须重裁；Resources / Prompts / Sampling / Roots / Elicitation 首版不做；Web 搜索辅助 token 不进预算账（T9 显式口径）；**AGENTS.md 超拆分阈值**（实测 210 行 > 200；「已知坑」节 :175–:204）——0.3 小结时拆子文件、根文件留索引。
