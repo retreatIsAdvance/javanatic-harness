@@ -869,7 +869,7 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `fs/fs` + `fs/fs-local` | `fs.fs` + `fs.local` | ✅ |
 | `fs/tool-fs` | `fs.tool` | ✅ |
 | `skill/skill` | `skill.skill`（契约 + 注册表 + `SkillPlugin` 提供面）| ✅（it26 停 2）|
-| `skill/skill-filesystem` | `skill.local`（停 3；四根 = 项目/用户 × `.harness`/`.agents`，近者胜——dsh 五根的 custom 根不采）| 🚧 it26 |
+| `skill/skill-filesystem` | `skill.local`（四根 = 项目/用户 × `.harness`/`.agents`，近者胜——dsh 五根的 custom 根不采）| 已完成（it26）|
 | `skill/tool-skill` | `skill.tool`（装载工具 + 轮首目录装载 + `skill/catalog` 事件 + Dynamic 段）| ✅（it26 停 2）|
 | `shell/shell` + `shell/bash-local` | `shell.shell` + `shell.local` | ✅ |
 | `shell/tool-bash` | `shell.tool` | ✅ |
@@ -885,8 +885,8 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `e2b/*` | — | ❌ 不做 |
 | `web/web` + `web/fetch-http` + `web/search-deepseek` | `web.web` + `web.fetch.http` + `web.search.deepseek`（it28：契约 + 钉地址抓取 + 原生搜索双 Provider）| ✅（it28）|
 | `web/tool-web` | `web.tool`（`web_fetch`/`web_search` + HTML 文本提取 + 分层截断 + 信任前缀/提示段）| ✅（it28；dsh 的信任段与本实现同源常量，搜索只取结构化来源同口径）|
-| `lsp/*` | — | ❌ 不做 |
-| `subagent/*` | — | ❌ 留接口 |
+| `lsp/*` | 尚无模块或完整 Definition | 0.3 顺序 4；it29 Java 三能力范围已批准，停 0 探针与技术清单待裁（[四确认](../plan/iteration-29.md)）|
+| `subagent/*` | — | 规划预留，未建独立 Definition；按 0.4 路线另行确认 |
 | `workflow/*` | — | ❌ 不做 |
 | `hooks/*` | — | ❌ 不做 |
 | `acp` | — | ❌ 不做 |

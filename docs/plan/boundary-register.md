@@ -1,13 +1,15 @@
 # 边界登记表
 
-> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-27（it28 停 3）。
+> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-28（文档整理，规则不变）。
+>
+> 编号消歧：本表原 B4「MCP 消费结果预算」现为 `B-MCP-RESULT`；冻结历史中的旧编号仍按本映射解读。图生成器挂账保留 [it26 提案 B4](evidence/iteration-26/roadmap-diff-proposal.md#b4-capability-graph-机械化建议挂账)，与本表预算项无关。
 
 | # | 边界 | 规则 | 落地位置 | 状态 / 证据 |
 |---|---|---|---|---|
 | B1 | MCP stdio 进程信任 | server 以用户全权运行、**不入沙箱**；env = 最小环境（PATH/HOME/TMPDIR）+ 行配置白名单；装配期启动，失败 fail loud 并回滚 | `mcp/stdio`；05 §7.1、07 §5 | 已实施（it27） |
 | B2 | MCP HTTP 网络信任 | 远端端点不受沙箱治理（治理边界 = 工具调用面）；TLS 用 JDK 默认信任面；**不做**自定义 trust store / 代理配置 | `mcp/http`；05 §7.1 | 已实施（it27.1） |
 | B3 | 传输帧预算 | 单帧 **8 MiB**：stdio 一行 / HTTP 响应体 / 单条 SSE 事件；超限 = 协议错误（stdio 断裂重连、HTTP 请求失败），**不静默截断** | `mcp/stdio`、`mcp/http`（T7） | 已实施；`stop2-http-focused.txt` |
-| B4 | 消费结果预算 | 单条工具结果 **256 KiB**（`mcp-tool.maxResultBytes`，正整数）；UTF-8 完整边界截断 + `" (output truncated)"`（标记不计入上限）；success / 工具级错误同口径 | `mcp/tool`（T7） | 已实施；`stop3-cap-and-masking.txt` |
+| B-MCP-RESULT | MCP 消费结果预算 | 单条工具结果 **256 KiB**（`mcp-tool.maxResultBytes`，正整数）；UTF-8 完整边界截断 + `" (output truncated)"`（标记不计入上限）；success / 工具级错误同口径 | `mcp/tool`（T7） | 已实施；`stop3-cap-and-masking.txt` |
 | B5 | 凭据词表 | `apikey\|token\|secret\|password\|key\|auth\|cookie`（不区分大小写）**单源** `ConfigValues.SENSITIVE_MARKERS`；公开谓词 `isSensitiveKey`；`masked` 与 URL 校验共用 | `kernel/config`（T6） | 已实施；`stop3-cap-and-masking.txt` |
 | B6 | 写入期脱敏 | header/dump 任意深度、敏感值 → `****`、**键与键序保留**；非字符串键 fail loud；内存 manifest 保留原值（R1 只需结构） | `JsonlPersistence`、`AppBoot`；03 §8、07 §5 | 已实施（it27，it27.1 扩词表） |
 | B7 | URL 外部输入 | 仅 http/https；拒 userinfo / fragment / 敏感 query 参数名（percent-decode 后过 B5 词表）；凭据应放 headers | `mcp/http` `McpHttpServerConfig` | 已实施（it27.1） |
@@ -26,6 +28,7 @@
 | B20 | 外部内容信任面 | 成功结果首行恒 `EXTERNAL_WEB_CONTENT_NOTICE`；同源常量注册 `Static(70)` 提示段。**软防线**：不保证注入失败；硬边界 = 公网地址闸 + 无凭据转发 + 审批 + 审计。HTML 提取（script/style 等剔除）是**可读性**处理，不是安全边界 | `web/tool` `WebContentTrust` / `HtmlTextExtractor` | 已实施（it28 停 3）；`stop3-tools-html-trust.txt` |
 | B21 | Web 消费预算 | 分层截断：源码 512K 字符（`maxSourceChars`）→ HTML 提取/文本归一 → 输出 256 KiB（`maxOutputBytes`，UTF-8 完整字符边界、标记不计入）；搜索来源 `maxResults` 缺省 8；三者正整数且硬上限；传输 `maxBodyBytes` 2 MiB 是读侧上限，与本帽分层 | `web/tool`（T7）；`web/fetch-http` | 已实施（it28 停 3）；`stop3-tools-html-trust.txt` |
 | B22 | Web 测试缝 | `PinnedHttpClient` 的 resolver / gate / `SSLContext` 只经构造器注入（生产装配固定 `PublicAddressGate.INSTANCE` + 默认上下文）；`ResponseObserver` 包内接口、生产 no-op、只观测 status/bytes。**不得演化为生产回调面**（不设静态 setter / SPI / 系统属性开关），否则地址闸可被组合面绕开 | `web/fetch-http`、`web/search-deepseek` | 已实施（it28 停 1/2，评审确认） |
+| B-WEB-SEARCH-BUDGET | Web 搜索辅助预算 | 搜索辅助调用的 token **不进 agent 预算账**；预算只记主对话模型请求，不能据此宣称覆盖搜索总费用。重访条件：明确要求统一辅助调用计费，先另裁预算语义 | `web/search-deepseek`；[裁决 0008](../../.agents/notes/0008-web-search-provider-and-token-gap.md) | 已接受边界（it28 T9），非待修缺陷；本次仅补登记 |
 
 ## 维护规则
 

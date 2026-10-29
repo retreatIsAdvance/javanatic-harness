@@ -1,0 +1,4 @@
+COMMAND=git rev-parse --verify --end-of-options 'HEAD^{tree}'
+b'df9b9c8c62cdd04a8a78d450eebc7b1a0c83cf44\n'
+
+EXIT=0

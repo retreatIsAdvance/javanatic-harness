@@ -1,0 +1,25 @@
+verify-stop 用户验收与预置提交授权
+记录日期：2026-10-29（旧取证文件时间保留，不重写冻结 packet）
+
+用户裁定摘录：
+“总判：通过”
+“脚本交付放行。”
+“提交文档批 + 本脚本（一个提交即可——脚本本来就在「停 1 前硬前置」清单里，与文档批同属预置交付）”
+后续顺序：提交后 docs 真跑 → 停 0 JDT LS 裸进程探针 → 基于探针的 T1–T3 终裁。
+push 仍须另行点名；本授权不是 LSP T 项或 JH 实现放行。
+
+低优备注处置：
+1. 实际核对 integration/verify-stop.sh 存在，原为 8 行 exec 包装；保留 bash integration/verify-stop.sh 为统一入口，不创建重复包装，不改名。原取证 full-01/full-02 已通过此入口执行。
+2. shell 头注释和 Python 模块 docstring 均补充：docs 拒绝范围内非 .md/.txt 文件（含暂存和未跟踪文件），不为源码改动背书。--help 会显示该说明。
+3. 三项既有修复位置以行为为准：changed_files 按目录项排除证据、不 resolve 掉源码符号链接；verify 中 which 后 abspath 固定调用者的相对 MVN；F_OK 预检区分不可执行 126 与缺失 127。ROOT 校验与文档链接 realpath 是另外的边界，不是相对 MVN 修复本身。
+
+当前树核对：
+- HEAD=cd39e36b816b82c293ff2f1d77c984179ba1bed6；未发现新增用户测试证据目录。
+- README.md diff 仅为已批准路线状态订正，git diff --check=0，未见用户提及的故意脏行残留。
+- README.en.md 当前逐字等于 HEAD，仍为旧的 0.3 planned / future stages not started；与上轮双语同步记录不一致。来源未明，保留当前文件，不擅自恢复或夹带提交。英文现状同步为待确认缺口；不改写原始文档批证据。
+- 冻结的 verify-stop-review-packet.md 保留出包时“待人工审阅”状态；现状入口已更新为已放行。
+
+验证：
+见 verify-stop-acceptance-check.txt：22 个行为测试、bash -n、入口 --help、git diff --check 均返回 0；记录注释更新后四文件 SHA-256。
+本次无行为逻辑修改，不重跑已取证的 11 项突变或 Java 全量；既有证据分别为 verify-stop-mutations-round2.txt、verify-stop-full-02/summary.txt。
+用户自测结果是用户报告，未伪造为本代理运行；提交后 docs 结果须实际执行再记录。

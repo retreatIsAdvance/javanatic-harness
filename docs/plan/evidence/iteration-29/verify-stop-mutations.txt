@@ -1,0 +1,264 @@
+COMMAND=/opt/homebrew/opt/python@3.12/bin/python3.12 integration/test_verify_stop_mutations.py
+
+M1-ignore-child-failure COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-t2pj0yq8/test_verify_stop.py', 'VerifyStopTest.test_validate_failure_preserves_37_and_prevents_package']
+test_validate_failure_preserves_37_and_prevents_package (__main__.VerifyStopTest.test_validate_failure_preserves_37_and_prevents_package) ... FAIL
+
+======================================================================
+FAIL: test_validate_failure_preserves_37_and_prevents_package (__main__.VerifyStopTest.test_validate_failure_preserves_37_and_prevents_package)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-t2pj0yq8/test_verify_stop.py", line 143, in test_validate_failure_preserves_37_and_prevents_package
+    self.assert_exit(self.run_stop("full"), 37)
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-t2pj0yq8/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 37 != 0 : RUN git-root: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/01-git-root.txt
+RUN git-base: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/02-git-base.txt
+RUN git-head: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/03-git-head.txt
+RUN diff-check-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/04-diff-check-worktree.txt
+RUN paths-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/05-paths-worktree.txt
+RUN diff-check-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/06-diff-check-index.txt
+RUN paths-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/07-paths-index.txt
+RUN paths-untracked: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/08-paths-untracked.txt
+RUN maven-version: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/09-maven-version.txt
+RUN validate: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/10-validate.txt
+RUN package: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence/11-package.txt
+EXIT=0 EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7d23zt9n/new evidence
+所选层机械验证完成；不等于人工放行。测试统计未读取旧 XML。
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.412s
+
+FAILED (failures=1)
+EXIT=1
+MUTANT_KILLED=True
+
+M2-omit-reactor COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-f42w5zb_/test_verify_stop.py', 'VerifyStopTest.test_focused_runs_reactor_with_module_as_one_argument']
+test_focused_runs_reactor_with_module_as_one_argument (__main__.VerifyStopTest.test_focused_runs_reactor_with_module_as_one_argument) ... FAIL
+
+======================================================================
+FAIL: test_focused_runs_reactor_with_module_as_one_argument (__main__.VerifyStopTest.test_focused_runs_reactor_with_module_as_one_argument)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-f42w5zb_/test_verify_stop.py", line 130, in test_focused_runs_reactor_with_module_as_one_argument
+    self.assertEqual([
+AssertionError: Lists differ: [{'ar[172 chars]e', '-am', 'test'], 'cwd': '/private/var/folde[80 chars]es'}] != [{'ar[172 chars]e', 'test'], 'cwd': '/private/var/folders/0f/_[73 chars]es'}]
+
+First differing element 1:
+{'arg[42 chars]e', '-am', 'test'], 'cwd': '/private/var/folde[79 chars]ces'}
+{'arg[42 chars]e', 'test'], 'cwd': '/private/var/folders/0f/_[72 chars]ces'}
+
+  [{'argv': ['-v'],
+    'cwd': '/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop '
+           'tests jhh5t38_/repo with spaces'},
+-  {'argv': ['-B', '-q', '-pl', 'core/sample module', '-am', 'test'],
+?                                                     -------
+
++  {'argv': ['-B', '-q', '-pl', 'core/sample module', 'test'],
+    'cwd': '/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop '
+           'tests jhh5t38_/repo with spaces'}]
+
+----------------------------------------------------------------------
+Ran 1 test in 0.398s
+
+FAILED (failures=1)
+EXIT=1
+MUTANT_KILLED=True
+
+M3-never-package COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-8y2c8iu2/test_verify_stop.py', 'VerifyStopTest.test_full_runs_validate_then_package_without_test_skip']
+test_full_runs_validate_then_package_without_test_skip (__main__.VerifyStopTest.test_full_runs_validate_then_package_without_test_skip) ... FAIL
+
+======================================================================
+FAIL: test_full_runs_validate_then_package_without_test_skip (__main__.VerifyStopTest.test_full_runs_validate_then_package_without_test_skip)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-8y2c8iu2/test_verify_stop.py", line 138, in test_full_runs_validate_then_package_without_test_skip
+    self.assertEqual([["-v"], ["-B", "-q", "validate"], ["-B", "-q", "package"]],
+AssertionError: Lists differ: [['-v'], ['-B', '-q', 'validate'], ['-B', '-q', 'package']] != [['-v'], ['-B', '-q', 'validate'], ['-B', '-q', 'validate']]
+
+First differing element 2:
+['-B', '-q', 'package']
+['-B', '-q', 'validate']
+
+- [['-v'], ['-B', '-q', 'validate'], ['-B', '-q', 'package']]
+?                                                  ^ ^^ ^
+
++ [['-v'], ['-B', '-q', 'validate'], ['-B', '-q', 'validate']]
+?                                                  ^ ^^^ ^
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.427s
+
+FAILED (failures=1)
+EXIT=1
+MUTANT_KILLED=True
+
+M4-wrong-consumer-leg COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-qrvpexib/test_verify_stop.py', 'VerifyStopTest.test_consumer_uses_candidate_and_isolates_work_without_running_full']
+test_consumer_uses_candidate_and_isolates_work_without_running_full (__main__.VerifyStopTest.test_consumer_uses_candidate_and_isolates_work_without_running_full) ... FAIL
+
+======================================================================
+FAIL: test_consumer_uses_candidate_and_isolates_work_without_running_full (__main__.VerifyStopTest.test_consumer_uses_candidate_and_isolates_work_without_running_full)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-qrvpexib/test_verify_stop.py", line 160, in test_consumer_uses_candidate_and_isolates_work_without_running_full
+    self.assertEqual([
+AssertionError: Lists differ: [{'ar[135 chars]': ['candidate'], 'work': '/private/var/folder[186 chars]en'}] != [{'ar[135 chars]': ['release'], 'work': '/private/var/folders/[184 chars]en'}]
+
+First differing element 1:
+{'consumer': ['candidate'], 'work': '/private/var/folder[185 chars]ven'}
+{'consumer': ['release'], 'work': '/private/var/folders/[183 chars]ven'}
+
+  [{'argv': ['-v'],
+    'cwd': '/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop '
+           'tests 0s2gnqyr/repo with spaces'},
+-  {'consumer': ['candidate'],
+?                 ^ ^^^^^^
+
++  {'consumer': ['release'],
+?                 ^^^^ ^
+
+    'mvn': '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests '
+           '0s2gnqyr/fake maven',
+    'work': '/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify '
+            'stop tests 0s2gnqyr/new evidence/consumer-work'}]
+
+----------------------------------------------------------------------
+Ran 1 test in 0.390s
+
+FAILED (failures=1)
+EXIT=1
+MUTANT_KILLED=True
+
+M5-docs-accepts-code COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-jx7xxm_3/test_verify_stop.py', 'VerifyStopTest.test_docs_rejects_code_changes_instead_of_claiming_source_verified']
+test_docs_rejects_code_changes_instead_of_claiming_source_verified (__main__.VerifyStopTest.test_docs_rejects_code_changes_instead_of_claiming_source_verified) ... FAIL
+
+======================================================================
+FAIL: test_docs_rejects_code_changes_instead_of_claiming_source_verified (__main__.VerifyStopTest.test_docs_rejects_code_changes_instead_of_claiming_source_verified)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-jx7xxm_3/test_verify_stop.py", line 102, in test_docs_rejects_code_changes_instead_of_claiming_source_verified
+    self.assert_exit(self.run_stop("docs"), 1)
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-jx7xxm_3/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 1 != 0 : RUN git-root: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence/01-git-root.txt
+RUN git-base: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence/02-git-base.txt
+RUN git-head: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence/03-git-head.txt
+RUN diff-check-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence/04-diff-check-worktree.txt
+RUN paths-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence/05-paths-worktree.txt
+RUN diff-check-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence/06-diff-check-index.txt
+RUN paths-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence/07-paths-index.txt
+RUN paths-untracked: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence/08-paths-untracked.txt
+EXIT=0 EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 58cdrxch/new evidence
+所选层机械验证完成；不等于人工放行。测试统计未读取旧 XML。
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.167s
+
+FAILED (failures=1)
+EXIT=1
+MUTANT_KILLED=True
+
+M6-overwrite-evidence COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-mmnj2i5v/test_verify_stop.py', 'VerifyStopTest.test_existing_log_directory_is_never_overwritten']
+test_existing_log_directory_is_never_overwritten (__main__.VerifyStopTest.test_existing_log_directory_is_never_overwritten) ... FAIL
+
+======================================================================
+FAIL: test_existing_log_directory_is_never_overwritten (__main__.VerifyStopTest.test_existing_log_directory_is_never_overwritten)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-mmnj2i5v/test_verify_stop.py", line 206, in test_existing_log_directory_is_never_overwritten
+    self.assert_exit(self.run_stop("full"), 2)
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-mmnj2i5v/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 0 : RUN git-root: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/01-git-root.txt
+RUN git-base: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/02-git-base.txt
+RUN git-head: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/03-git-head.txt
+RUN diff-check-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/04-diff-check-worktree.txt
+RUN paths-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/05-paths-worktree.txt
+RUN diff-check-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/06-diff-check-index.txt
+RUN paths-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/07-paths-index.txt
+RUN paths-untracked: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/08-paths-untracked.txt
+RUN maven-version: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/09-maven-version.txt
+RUN validate: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/10-validate.txt
+RUN package: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence/11-package.txt
+EXIT=0 EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6hd0_gn0/new evidence
+所选层机械验证完成；不等于人工放行。测试统计未读取旧 XML。
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.431s
+
+FAILED (failures=1)
+EXIT=1
+MUTANT_KILLED=True
+
+M7-log-hides-child-failure COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-pppsgvf6/test_verify_stop.py', 'VerifyStopTest.test_log_write_failure_stops_before_next_command_and_keeps_child_failure']
+test_log_write_failure_stops_before_next_command_and_keeps_child_failure (__main__.VerifyStopTest.test_log_write_failure_stops_before_next_command_and_keeps_child_failure) ...
+  test_log_write_failure_stops_before_next_command_and_keeps_child_failure (__main__.VerifyStopTest.test_log_write_failure_stops_before_next_command_and_keeps_child_failure) (child_code=37) ... FAIL
+
+======================================================================
+FAIL: test_log_write_failure_stops_before_next_command_and_keeps_child_failure (__main__.VerifyStopTest.test_log_write_failure_stops_before_next_command_and_keeps_child_failure) (child_code=37)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-pppsgvf6/test_verify_stop.py", line 233, in test_log_write_failure_stops_before_next_command_and_keeps_child_failure
+    self.assert_exit(result, expected)
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-pppsgvf6/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 37 != 2 : RUN git-root: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/01-git-root.txt
+RUN git-base: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/02-git-base.txt
+RUN git-head: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/03-git-head.txt
+RUN diff-check-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/04-diff-check-worktree.txt
+RUN paths-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/05-paths-worktree.txt
+RUN diff-check-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/06-diff-check-index.txt
+RUN paths-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/07-paths-index.txt
+RUN paths-untracked: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/08-paths-untracked.txt
+RUN maven-version: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/09-maven-version.txt
+汇总写入失败：[Errno 21] Is a directory: '/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 18hu3va_/new evidence/summary.txt'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.529s
+
+FAILED (failures=1)
+EXIT=1
+MUTANT_KILLED=True
+
+M8-missing-link-passes COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-v0j63pp2/test_verify_stop.py', 'VerifyStopTest.test_broken_relative_link_fails_before_maven']
+test_broken_relative_link_fails_before_maven (__main__.VerifyStopTest.test_broken_relative_link_fails_before_maven) ... FAIL
+
+======================================================================
+FAIL: test_broken_relative_link_fails_before_maven (__main__.VerifyStopTest.test_broken_relative_link_fails_before_maven)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-v0j63pp2/test_verify_stop.py", line 108, in test_broken_relative_link_fails_before_maven
+    self.assert_exit(self.run_stop("full"), 1)
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify-stop-mutant-v0j63pp2/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 1 != 0 : RUN git-root: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/01-git-root.txt
+RUN git-base: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/02-git-base.txt
+RUN git-head: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/03-git-head.txt
+RUN diff-check-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/04-diff-check-worktree.txt
+RUN paths-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/05-paths-worktree.txt
+RUN diff-check-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/06-diff-check-index.txt
+RUN paths-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/07-paths-index.txt
+RUN paths-untracked: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/08-paths-untracked.txt
+RUN maven-version: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/09-maven-version.txt
+RUN validate: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/10-validate.txt
+RUN package: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence/11-package.txt
+EXIT=0 EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests vot8rik2/new evidence
+所选层机械验证完成；不等于人工放行。测试统计未读取旧 XML。
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.401s
+
+FAILED (failures=1)
+EXIT=1
+MUTANT_KILLED=True
+SOURCE_UNCHANGED=True SHA256=853a161b70591df11297342dc7378c2fd325e744539c6e51f57106904472756b FILE=verify-stop.sh
+SOURCE_UNCHANGED=True SHA256=f0a4d4b158b376294dd565eef3ae59c940e159a9d07c77ca66c73b41cf732d47 FILE=verify_stop.py
+SOURCE_UNCHANGED=True SHA256=50cb0c7439a5b6a56985bfdad049b76dcfedfa1af27da0aaa1833e41711ea527 FILE=test_verify_stop.py
+MUTATIONS=8 SURVIVED_OR_INVALID=0
+
+EXIT=0

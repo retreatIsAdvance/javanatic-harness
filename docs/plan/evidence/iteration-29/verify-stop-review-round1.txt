@@ -1,0 +1,32 @@
+verify-stop 独立只读审查：原始发现与处置（2026-10-28）
+
+审查对象：integration/verify-stop.sh、verify_stop.py、test_verify_stop.py，以及 iteration-29.md 的 Verification Prerequisite。基线/HEAD=cd39e36b816b82c293ff2f1d77c984179ba1bed6。脚本均未跟踪，不用空 git diff 冒充没有改动。其他已完成文档整理不在本次独立审查范围。
+审查方式：general-purpose 独立完整读取指定文件；未修改文件/索引，未执行 Maven/LS，未启动子代理。下面行号为审查时行号，不是修复后行号。
+
+独立审查发现
+Critical：未发现有依据的问题。
+Important-1：verify_stop.py:121-122，证据排除按 resolve() 后路径判断，会漏掉目录外的源码改动。干净夹具中，把 Example.java 改为指向 evidence/run/summary.txt 的符号链接，再运行 docs、指定新日志目录 evidence/run；源码路径被过滤，docs 可错误返回成功。
+Important-2：verify_stop.py:187-191，shutil.which() 可返回相对路径，但第79行执行时切换至 ROOT。调用者在仓库外设置 MVN=./tools/mvn，执行会在仓库内寻找它，导致127，甚至执行仓库中的同名程序。须在切换工作目录前固定绝对路径。
+Minor-1：verify_stop.py:188-190，显式 MVN 文件存在但无执行权限时，which() 返回空，最终报127；契约规定不可执行应为126。
+审查限制：未复跑原19测、Maven、LS或故障注入；不构成合并批准。
+
+主代理核验（不是盲目采纳）
+COMMAND=python3 integration/test_verify_stop.py VerifyStopTest.test_source_symlink_into_evidence_is_still_a_source_change VerifyStopTest.test_relative_maven_uses_callers_file_not_repository_shadow VerifyStopTest.test_non_executable_maven_has_126_not_missing_tool_127
+修复前：3 tests / 3 failures，分别为 1!=0、0!=91（实际执行了仓库中的同名影子程序）、126!=127。
+EXIT=1
+完整命令与原始输出：verify-stop-review-red.txt。
+
+逐项修复
+F1：日志排除改为目录项路径包含判断，不解引用候选源码符号链接；文档读取的仓库边界仍做 realpath 校验，二者不混用。单用例复绿。
+F2：which 成功结果先 os.path.abspath，按调用者 cwd 固定位置，再交给 cwd=ROOT 的 subprocess。单用例复绿。
+F3：which 可执行定位失败时，再以 F_OK 判断文件可发现但不可执行，明确返回126；真正缺失仍127。单用例复绿。
+在 iteration-29.md 接口/工具契约同步写明日志目录项语义和相对 MVN 定位语义。
+
+修复后验证
+COMMAND=python3 integration/test_verify_stop_mutations.py
+EXIT=0
+11/11 变异均由行为断言打红，测试文件不变；M9 复回 resolve 排除、M10 撤销 abspath、M11 撤销126分类，三者均被新增回归用例杀死。完整输出/源码不变SHA256见 verify-stop-mutations-round2.txt。
+COMMAND=python3 integration/test_verify_stop.py
+EXIT=0
+22 tests / OK，见 verify-stop-final-tests-round2.txt。
+未另做第二轮独立代理审查；修复后由主代理用真实启动边界夹具、失败复现与突变复核，不把第一轮报告改写成“独立审查最终零问题”。

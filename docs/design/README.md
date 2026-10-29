@@ -32,7 +32,7 @@
 - **Java 25 LTS**：`sealed`/`record`/pattern matching（自 21 final）+ `ScopedValue`（JEP 506 final）+ `import module`（JEP 511 final）+ Flexible Constructor Bodies（JEP 513 final）；**无 preview 依赖**（505 不用，[11 §5](11-java25-upgrade.md)）
 - **Virtual Thread**：IO 密集 agent loop 的默认并发模型，"同步写法、异步调度"；工具并行 = submit + join，错误即数据（[09 §5](09-concurrency.md)）
 - **JPMS（`module-info.java`）**：`requires`/`exports`/`provides` 是 capability seam 边界的编译期表达
-- **Maven 多模块 + BOM**：kernel 三模块（core/brand/config），全仓 33 个叶模块（45 个 reactor 模块）
+- **Maven 多模块 + BOM**：kernel 三模块（core/brand/config）；模块布局见 [02](02-module-layout.md)，实际构建集合由根 POM 的 reactor 声明确定，不在此重复手写计数
 - **System.Logger**：JDK 内建日志，零依赖
 - **JUnit 5 + AssertJ + jqwik**：单测 + 属性测试
 - **不引入 Spring**：自研统一 Scope 内核（< 1200 行），保留对生命周期的控制权
@@ -67,26 +67,22 @@
 
 总表与机制链接见 [00 §0.5](00-overview.md)。
 
-## MVP 交付清单（可扩展框架级别）
+## Current Capability Status
 
-### ✅ 实现
-- Kernel（core：Scope/Events/Plugin；brand；config）
-- Core（session/system-prompt/tools/agent/agent-loop）
-- LLM seam（Definition 阻塞 Stream + DeepSeek Provider + Replay Provider）
-- FS seam（Definition + Local Provider + Tool Consumer）
-- Shell seam（Definition + Local Provider + Tool Consumer）
-- Sandbox seam（Definition + Local）
-- Session Persistence（SessionStore + SessionEventCodec SPI + JSONL backend）
-- Interaction（**Approval 三模式真实实现** + 命令面 registry/slash 解析，it14）
-- 治理（`--verify` + `policy: standard/production` 档位）
-- Bundle（base + headless）
-- Examples（agent-spine demo + headless runner）
+### Implemented
 
-### 🔌 留接口（Definition 完整，无 Provider）
-- Subagent / Web / LSP / Terminal / Compaction / Jobs
+- Kernel（core：Scope/Events/Plugin；brand；config）与 Core（session/system-prompt/tools/agent/agent-loop）；compaction 已在 `core/agent-loop` 提供契约与 Provider，不是待实现的独立模块。
+- LLM、FS、Shell、Sandbox 与 JSONL 持久化；人工协作包含 Approval 三模式、命令 registry 与 `ask_user`；治理包含 `--verify` 与 policy 档位；base/headless 组合与 jlink 交付已实现。
+- Skills（it26）、MCP stdio + Streamable HTTP（it27 / it27.1）、Web 抓取 + 搜索（it28）已完成。详细能力、配置与验证现状只在[当前状态卡](../plan/current-state.md)维护。
 
-### ❌ 不做
-- Web UI / ACP / Codex/Claude Code subagent 桥 / E2B / SQLite / OTel / Workflow(Ralph) / 运行时热重载
+### Planned, Not Implemented
+
+- LSP：仓库尚无模块或完整 Definition；it29 Java 诊断 / 定义 / 引用范围已批准，先过 JDT LS 裸进程探针失败闸，再裁技术清单，见 [it29 四确认](../plan/iteration-29.md)。
+- Subagent / Terminal / Jobs：规划预留，不代表已创建接口或 Provider；按下文阶段路线另行确认，不能凭预留项宣称可挂载。
+
+### Out of Scope
+
+- Web UI / ACP / Codex/Claude Code subagent 桥 / E2B / SQLite / OTel / Workflow(Ralph) / 运行时热重载。
 
 ## 与 dsh 的关键差异
 
@@ -112,7 +108,7 @@
 
 ### Phased Evolution Plan
 
-**规划基准：2026-10-08，0.2.0 已发布；0.3 及以后阶段为计划、尚未开工。** 本节是总体迭代路线的事实源；具体迭代仍须按 [plan/README.md](../plan/README.md) 完成四确认、设计增量、锚点与审查停点，路线落盘不等于实现授权，也不代表验收通过。
+**状态基准：2026-10-28，0.2.0 已发布；0.3 系列已完成 Skills / MCP / Web，LSP 进入 it29 四确认与技术待裁阶段；0.4 仍为计划。** 本节是总体迭代路线的事实源；具体迭代仍须按 [plan/README.md](../plan/README.md) 完成四确认、设计增量、锚点与审查停点，路线落盘不等于实现授权，也不代表验收通过。能力实现不等于 0.3.0 已发布或发布范围已获批准。
 
 规划原则：**维护者场景驱动、真实任务验收、社区反馈校准**。发布初期不等待社区反馈才推进；优先级以生产可用、易用、易扩展为目标，而非模块数量。参考本地 dsh 截至 2026-08-13 的源码与演进记录（不代表远端最新状态；路径口径见 [dsh-reference.md](../dsh-reference.md)），吸收取消收敛、语义检查点、外部插件接入和任务所有权的经验，不照搬其包规模、HMR 或 Web 平台。
 

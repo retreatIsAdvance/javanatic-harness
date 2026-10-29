@@ -1,0 +1,163 @@
+{
+  "root": "/Users/abel_yang/study/deepseek/javanatic-harness",
+  "layer": "docs",
+  "base": "HEAD",
+  "module": null,
+  "started": "2026-10-28T08:48:09.655828+00:00",
+  "exit": 1,
+  "steps": [
+    {
+      "label": "git-root",
+      "command": [
+        "git",
+        "rev-parse",
+        "--show-toplevel"
+      ],
+      "exit": 0,
+      "log": "01-git-root.txt"
+    },
+    {
+      "label": "git-base",
+      "command": [
+        "git",
+        "rev-parse",
+        "--verify",
+        "--end-of-options",
+        "HEAD^{tree}"
+      ],
+      "exit": 0,
+      "log": "02-git-base.txt"
+    },
+    {
+      "label": "git-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "--revs-only",
+        "HEAD"
+      ],
+      "exit": 0,
+      "log": "03-git-head.txt"
+    },
+    {
+      "label": "diff-check-worktree",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "df9b9c8c62cdd04a8a78d450eebc7b1a0c83cf44",
+        "--"
+      ],
+      "exit": 0,
+      "log": "04-diff-check-worktree.txt"
+    },
+    {
+      "label": "paths-worktree",
+      "command": [
+        "git",
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "-z",
+        "df9b9c8c62cdd04a8a78d450eebc7b1a0c83cf44",
+        "--"
+      ],
+      "exit": 0,
+      "log": "05-paths-worktree.txt"
+    },
+    {
+      "label": "diff-check-index",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check",
+        "df9b9c8c62cdd04a8a78d450eebc7b1a0c83cf44",
+        "--"
+      ],
+      "exit": 0,
+      "log": "06-diff-check-index.txt"
+    },
+    {
+      "label": "paths-index",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only",
+        "--no-renames",
+        "-z",
+        "df9b9c8c62cdd04a8a78d450eebc7b1a0c83cf44",
+        "--"
+      ],
+      "exit": 0,
+      "log": "07-paths-index.txt"
+    },
+    {
+      "label": "paths-untracked",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "exit": 0,
+      "log": "08-paths-untracked.txt"
+    }
+  ],
+  "base_tree": "df9b9c8c62cdd04a8a78d450eebc7b1a0c83cf44",
+  "head": "cd39e36b816b82c293ff2f1d77c984179ba1bed6",
+  "changed_files": [
+    ".agents/pits.md",
+    "AGENTS.md",
+    "README.en.md",
+    "README.md",
+    "docs/design/02-module-layout.md",
+    "docs/design/05-capability-seam.md",
+    "docs/design/06-scope.md",
+    "docs/design/README.md",
+    "docs/plan/README.md",
+    "docs/plan/boundary-register.md",
+    "docs/plan/current-state.md",
+    "docs/plan/evidence/iteration-29/preflight-docs-check.txt",
+    "docs/plan/evidence/iteration-29/preflight-docs-review.txt",
+    "docs/plan/evidence/iteration-29/preflight-validate.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-final-tests.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/01-git-root.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/02-git-base.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/03-git-head.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/04-diff-check-worktree.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/05-paths-worktree.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/06-diff-check-index.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/07-paths-index.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/08-paths-untracked.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/09-maven-version.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/10-focused.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/documents.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-focused-01/summary.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/01-git-root.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/02-git-base.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/03-git-head.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/04-diff-check-worktree.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/05-paths-worktree.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/06-diff-check-index.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/07-paths-index.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/08-paths-untracked.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/09-maven-version.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/10-validate.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/11-package.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/documents.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-full-01/summary.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-mutations.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-red.txt",
+    "docs/plan/evidence/iteration-29/verify-stop-tests.txt",
+    "docs/plan/iteration-29.md",
+    "integration/test_verify_stop.py",
+    "integration/test_verify_stop_mutations.py",
+    "integration/verify-stop.sh",
+    "integration/verify_stop.py"
+  ],
+  "error": "文档机械检查失败，见 documents.txt",
+  "finished": "2026-10-28T08:48:09.804415+00:00"
+}

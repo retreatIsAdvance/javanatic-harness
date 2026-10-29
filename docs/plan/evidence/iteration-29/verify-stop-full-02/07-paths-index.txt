@@ -1,0 +1,4 @@
+COMMAND=git diff --cached --name-only --no-renames -z df9b9c8c62cdd04a8a78d450eebc7b1a0c83cf44 --
+b''
+
+EXIT=0

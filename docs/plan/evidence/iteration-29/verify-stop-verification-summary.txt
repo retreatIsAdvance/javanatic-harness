@@ -1,0 +1,66 @@
+verify-stop 独立交付：验证记录（2026-10-28）
+
+最终口径：独立审查3项发现均已复现并修复；22个行为测试通过，11项突变全部打红后复绿。修复后 full-02 的 validate/package 均 EXIT=0（第7节）。下文保留首轮19测/8突变/full-01的真实历史，不将其覆盖为后续运行。
+
+测量面分离
+- wrapper 行为：integration/test_verify_stop.py，临时 Git 仓库，真实 bash/Python 入口；Maven / consumer 为可执行边界夹具。
+- 实际构建：本仓工作树，Maven 3.10.0 / JDK 25，full 与 focused 两次独立调用。
+- 不把夹具通过记成实际 Maven / consumer 成功，不汇总旧 surefire XML。
+
+1. TDD
+COMMAND=python3 integration/test_verify_stop.py VerifyStopTest.test_focused_runs_reactor_with_module_as_one_argument
+实现前：AssertionError: 0 != 127；verify-stop.sh 尚未创建。
+EXIT=1
+随后全 18 个初始用例均因缺失入口断言失败（非法参数子用例共计 26 个失败），完整输出见 verify-stop-red.txt。
+首次测试带证据写入的调用被分类器以“文件疑似截断”拦下，没有执行；单独 ast.parse 确认 224 行 / 18 用例 / unittest 入口完整，再运行上述命令，未把语法错误冒充 TDD 红灯。
+第 19 个用例先复现：子进程返回 37 后，汇总文件写入失败会将退出码覆盖成 2；改为已知子进程失败码优先。修复前逻辑的等价复现见 M7 的断言失败原文。
+
+2. 复绿与突变
+COMMAND=python3 integration/test_verify_stop.py
+EXIT=0
+19 tests / OK（首绿见 verify-stop-tests.txt；突变后复绿见 verify-stop-final-tests.txt）。
+COMMAND=python3 integration/test_verify_stop_mutations.py
+EXIT=0
+8/8 变异均由 AssertionError 打红，非语法 / 装配错误；测试常量未改。变异只在临时副本进行，原 shell / 编排器 / 用例逐字节一致，SHA256 留在 verify-stop-mutations.txt。
+M1 忽略子命令失败；M2 去 -am；M3 不跑 package；M4 错跑 release；M5 docs 放过代码；M6 复用旧日志目录；M7 日志错误覆盖 child=37；M8 忽略缺失本地链接。
+COMMAND=bash -n integration/verify-stop.sh
+EXIT=0
+COMMAND=git diff --check
+EXIT=0
+Python 三文件 ast.parse 通过，源文件 SHA256 见 verify-stop-final-tests.txt；shell / Python 四文件均末尾一个换行、无行尾空白。
+
+3. 真实 full
+COMMAND=JAVA_HOME=$(/usr/libexec/java_home -v 25) MVN="$HOME/Documents/apache-maven-3.10.0/bin/mvn" bash integration/verify-stop.sh full --log-dir docs/plan/evidence/iteration-29/verify-stop-full-01
+EXIT=0
+实际工具定位、命令与返回码：verify-stop-full-01/summary.txt。
+validate：verify-stop-full-01/10-validate.txt，EXIT=0。
+package：verify-stop-full-01/11-package.txt，EXIT=0。
+这是本次增量 package 的真实返回值，不声称 clean 重建；-q 下未从输出取得完整模块测试汇总，也未改读旧 XML 凑总数。
+
+4. 真实 focused
+COMMAND=JAVA_HOME=$(/usr/libexec/java_home -v 25) MVN="$HOME/Documents/apache-maven-3.10.0/bin/mvn" bash integration/verify-stop.sh focused --module kernel/brand --log-dir docs/plan/evidence/iteration-29/verify-stop-focused-01
+EXIT=0
+见 verify-stop-focused-01/10-focused.txt；实际 argv 含 -pl kernel/brand -am test。
+
+5. 真实 docs 负例
+COMMAND=bash integration/verify-stop.sh docs --log-dir docs/plan/evidence/iteration-29/verify-stop-docs-rejection-01
+EXIT=1
+当前工作树包含新 shell / Python 文件，docs 层在 documents.txt 列明非文档路径并拒绝，未启动 Maven；这是期望拒绝，不是待修的测试红灯。
+
+6. 范围与限制
+integration/verify-consumer.sh 已与 git show HEAD:integration/verify-consumer.sh 逐字节比较，一致；无 hooks / POM / JH Java / .java-version 变化，lsp/ 目录不存在。HEAD 仍为 cd39e36b816b82c293ff2f1d77c984179ba1bed6；全部新增或文档整理内容尚未提交，未推送。
+consumer 本轮仅验证包装契约（显式 candidate、独立目录、失败码），未跑真实消费者安装腿；组合面未改，不将既往消费者绿灯冒充本轮结果。未做 Linux / Windows 实跑，当前实跑平台为 macOS；未运行 LS、模型或发布探针。
+链接检查有意只覆盖简单行内相对链接目标；锚点、引用式链接、复杂 Markdown、源码路径引用、文档语义及未变文件的反向引用仍须人工核对。自动绿灯不是停点放行。
+
+7. 独立审查后最终复验
+独立审查原文、逐项复现/修复及范围：verify-stop-review-round1.txt；修复前3项断言全红：verify-stop-review-red.txt。
+COMMAND=python3 integration/test_verify_stop_mutations.py
+EXIT=0
+11/11 杀死，原始文件字节一致，SHA256 见 verify-stop-mutations-round2.txt；新增 M9 符号链接漏检、M10 相对 Maven 同名替换、M11 错误码误分类。
+COMMAND=python3 integration/test_verify_stop.py
+EXIT=0
+22 tests / OK，见 verify-stop-final-tests-round2.txt。
+COMMAND=JAVA_HOME=$(/usr/libexec/java_home -v 25) MVN="$HOME/Documents/apache-maven-3.10.0/bin/mvn" bash integration/verify-stop.sh full --log-dir docs/plan/evidence/iteration-29/verify-stop-full-02
+EXIT=0
+实际 Maven 3.10.0 / Java 25.0.4.1 / macOS aarch64，见 verify-stop-full-02/09-maven-version.txt；validate/package 各自 EXIT=0，详见 10-validate.txt / 11-package.txt。
+终检：4个 shell/Python 文件恰好一个末尾换行，无行尾空白；Python ast.parse 和 bash -n 通过。Grep 检索生产编排器 if False|mvn = mvn 为零命中；git diff --check EXIT=0。

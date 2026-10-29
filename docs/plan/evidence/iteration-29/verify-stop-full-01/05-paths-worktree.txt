@@ -1,0 +1,4 @@
+COMMAND=git diff --name-only --no-renames -z df9b9c8c62cdd04a8a78d450eebc7b1a0c83cf44 --
+b'AGENTS.md\x00README.en.md\x00README.md\x00docs/design/02-module-layout.md\x00docs/design/05-capability-seam.md\x00docs/design/06-scope.md\x00docs/design/README.md\x00docs/plan/README.md\x00docs/plan/boundary-register.md\x00docs/plan/current-state.md\x00'
+
+EXIT=0

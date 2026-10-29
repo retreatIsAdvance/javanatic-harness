@@ -188,9 +188,10 @@ description: A coding-focused agent
 rows:
   - plugin: fs-tool
   - plugin: shell-tool
-  - plugin: lsp-tool            # 留接口档，见 05 §9
   - plugin: fs-observation-policy
 ```
+
+LSP 尚无可挂载插件，不能把规划中的 `lsp-tool` 写入当前 preset；Java 三能力的契约与装配待 [it29](../plan/iteration-29.md) 停 0 / T 清单裁定（能力现状见 05 §9）。
 
 **档位不在 preset 里配**：沙箱模式是组合层 `sandbox-policy` 行的 `mode`（词表
 `read-only` / `workspace-write` / `danger-full-access`，写法见

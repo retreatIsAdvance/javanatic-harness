@@ -1,0 +1,72 @@
+COMMAND=/opt/homebrew/opt/python@3.12/bin/python3.12 integration/test_verify_stop.py VerifyStopTest.test_source_symlink_into_evidence_is_still_a_source_change VerifyStopTest.test_relative_maven_uses_callers_file_not_repository_shadow VerifyStopTest.test_non_executable_maven_has_126_not_missing_tool_127
+test_source_symlink_into_evidence_is_still_a_source_change (__main__.VerifyStopTest.test_source_symlink_into_evidence_is_still_a_source_change) ... FAIL
+test_relative_maven_uses_callers_file_not_repository_shadow (__main__.VerifyStopTest.test_relative_maven_uses_callers_file_not_repository_shadow) ... FAIL
+test_non_executable_maven_has_126_not_missing_tool_127 (__main__.VerifyStopTest.test_non_executable_maven_has_126_not_missing_tool_127) ... FAIL
+
+======================================================================
+FAIL: test_source_symlink_into_evidence_is_still_a_source_change (__main__.VerifyStopTest.test_source_symlink_into_evidence_is_still_a_source_change)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 206, in test_source_symlink_into_evidence_is_still_a_source_change
+    self.assert_exit(self.run_stop("docs"), 1)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 1 != 0 : RUN git-root: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run/01-git-root.txt
+RUN git-base: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run/02-git-base.txt
+RUN git-head: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run/03-git-head.txt
+RUN diff-check-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run/04-diff-check-worktree.txt
+RUN paths-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run/05-paths-worktree.txt
+RUN diff-check-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run/06-diff-check-index.txt
+RUN paths-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run/07-paths-index.txt
+RUN paths-untracked: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run/08-paths-untracked.txt
+EXIT=0 EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests q5zdx7ms/repo with spaces/evidence/new run
+所选层机械验证完成；不等于人工放行。测试统计未读取旧 XML。
+
+
+======================================================================
+FAIL: test_relative_maven_uses_callers_file_not_repository_shadow (__main__.VerifyStopTest.test_relative_maven_uses_callers_file_not_repository_shadow)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 215, in test_relative_maven_uses_callers_file_not_repository_shadow
+    self.assert_exit(self.run_stop("full"), 0)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 0 != 91 : RUN git-root: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/01-git-root.txt
+RUN git-base: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/02-git-base.txt
+RUN git-head: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/03-git-head.txt
+RUN diff-check-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/04-diff-check-worktree.txt
+RUN paths-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/05-paths-worktree.txt
+RUN diff-check-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/06-diff-check-index.txt
+RUN paths-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/07-paths-index.txt
+RUN paths-untracked: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/08-paths-untracked.txt
+RUN maven-version: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/09-maven-version.txt
+maven-version 失败，日志：/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence/09-maven-version.txt
+EXIT=91 EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests x4nk_3e7/new evidence
+
+
+======================================================================
+FAIL: test_non_executable_maven_has_126_not_missing_tool_127 (__main__.VerifyStopTest.test_non_executable_maven_has_126_not_missing_tool_127)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 221, in test_non_executable_maven_has_126_not_missing_tool_127
+    self.assert_exit(self.run_stop("full"), 126)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 126 != 127 : RUN git-root: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence/01-git-root.txt
+RUN git-base: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence/02-git-base.txt
+RUN git-head: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence/03-git-head.txt
+RUN diff-check-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence/04-diff-check-worktree.txt
+RUN paths-worktree: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence/05-paths-worktree.txt
+RUN diff-check-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence/06-diff-check-index.txt
+RUN paths-index: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence/07-paths-index.txt
+RUN paths-untracked: /private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence/08-paths-untracked.txt
+找不到 Maven：/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/fake maven；请设置 MVN=单个可执行路径
+EXIT=127 EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests r_5m6h1b/new evidence
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.023s
+
+FAILED (failures=3)
+
+EXIT=1

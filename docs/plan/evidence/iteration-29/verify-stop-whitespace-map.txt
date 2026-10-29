@@ -1,0 +1,71 @@
+{
+  "note": "归档仅移除以下九行的行尾空格；raw 为 JSON 转义的原始完整行，可逐行替换重建原始字节并校验 raw_sha256。未修改命令、时间、输出内容或 EXIT。git diff --cached --check 首次返回 2 后处理。",
+  "files": [
+    {
+      "path": "verify-stop-full-01/11-package.txt",
+      "raw_sha256": "9b8adfb104174102e20150c53f063a84fa49b7d50d52cfa1899c300977c14f5a",
+      "lines": [
+        {
+          "line": 6,
+          "raw": "timestamp = 2026-10-28T16:43:36.233702, ScopeTest:teardownIsAlwaysReverseOfRegistration = \n"
+        },
+        {
+          "line": 98,
+          "raw": "timestamp = 2026-10-28T16:43:37.223718, SessionPropertiesTest:concurrentAppendsProduceContiguousUniqueSeqs = \n"
+        },
+        {
+          "line": 747,
+          "raw": "timestamp = 2026-10-28T16:43:58.010214, SkillCatalogMergePropertyTest:mergeResultIndependentOfRegistrationOrder = \n"
+        }
+      ]
+    },
+    {
+      "path": "verify-stop-full-02/11-package.txt",
+      "raw_sha256": "0676c33c9cb866abb1f165b31da1816152c90ae7f2fb1100c118826dba5f40a4",
+      "lines": [
+        {
+          "line": 6,
+          "raw": "timestamp = 2026-10-28T16:52:33.091246, ScopeTest:teardownIsAlwaysReverseOfRegistration = \n"
+        },
+        {
+          "line": 98,
+          "raw": "timestamp = 2026-10-28T16:52:34.071073, SessionPropertiesTest:concurrentAppendsProduceContiguousUniqueSeqs = \n"
+        },
+        {
+          "line": 683,
+          "raw": "timestamp = 2026-10-28T16:52:55.392159, SkillCatalogMergePropertyTest:mergeResultIndependentOfRegistrationOrder = \n"
+        }
+      ]
+    },
+    {
+      "path": "verify-stop-mutations-round2.txt",
+      "raw_sha256": "2e8fb4270e7a93ba76625101833c4c2285b3708d66ba3e6f06e5c425022477d0",
+      "lines": [
+        {
+          "line": 197,
+          "raw": "test_log_write_failure_stops_before_next_command_and_keeps_child_failure (__main__.VerifyStopTest.test_log_write_failure_stops_before_next_command_and_keeps_child_failure) ... \n"
+        }
+      ]
+    },
+    {
+      "path": "verify-stop-mutations.txt",
+      "raw_sha256": "1830a51b1f6e0edf14e14cef3a549514e19b0300e896686c8e163498c502c300",
+      "lines": [
+        {
+          "line": 197,
+          "raw": "test_log_write_failure_stops_before_next_command_and_keeps_child_failure (__main__.VerifyStopTest.test_log_write_failure_stops_before_next_command_and_keeps_child_failure) ... \n"
+        }
+      ]
+    },
+    {
+      "path": "verify-stop-red.txt",
+      "raw_sha256": "217436ea90288c13fe2e44039908c57baff51b2aa85faf7dfb66190b292fa824",
+      "lines": [
+        {
+          "line": 11,
+          "raw": "test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) ... \n"
+        }
+      ]
+    }
+  ]
+}

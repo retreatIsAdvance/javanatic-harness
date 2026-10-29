@@ -1,0 +1,54 @@
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', 'integration/test_verify_stop.py']
+test_broken_relative_link_fails_before_maven (__main__.VerifyStopTest.test_broken_relative_link_fails_before_maven) ... ok
+test_consumer_failure_keeps_its_script_exit_code (__main__.VerifyStopTest.test_consumer_failure_keeps_its_script_exit_code) ... ok
+test_consumer_uses_candidate_and_isolates_work_without_running_full (__main__.VerifyStopTest.test_consumer_uses_candidate_and_isolates_work_without_running_full) ... ok
+test_docs_checks_staged_and_untracked_paths_without_maven (__main__.VerifyStopTest.test_docs_checks_staged_and_untracked_paths_without_maven) ... ok
+test_docs_rejects_code_changes_instead_of_claiming_source_verified (__main__.VerifyStopTest.test_docs_rejects_code_changes_instead_of_claiming_source_verified) ... ok
+test_existing_log_directory_is_never_overwritten (__main__.VerifyStopTest.test_existing_log_directory_is_never_overwritten) ... ok
+test_external_and_code_example_links_do_not_trigger_network_or_false_errors (__main__.VerifyStopTest.test_external_and_code_example_links_do_not_trigger_network_or_false_errors) ... ok
+test_focused_runs_reactor_with_module_as_one_argument (__main__.VerifyStopTest.test_focused_runs_reactor_with_module_as_one_argument) ... ok
+test_full_runs_validate_then_package_without_test_skip (__main__.VerifyStopTest.test_full_runs_validate_then_package_without_test_skip) ... ok
+test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) ... ok
+test_log_write_failure_stops_before_next_command_and_keeps_child_failure (__main__.VerifyStopTest.test_log_write_failure_stops_before_next_command_and_keeps_child_failure) ... ok
+test_missing_explicit_maven_does_not_fallback (__main__.VerifyStopTest.test_missing_explicit_maven_does_not_fallback) ... ok
+test_missing_git_fails_loudly (__main__.VerifyStopTest.test_missing_git_fails_loudly) ... ok
+test_missing_log_directory_argument_is_not_defaulted (__main__.VerifyStopTest.test_missing_log_directory_argument_is_not_defaulted) ... ok
+test_non_executable_maven_has_126_not_missing_tool_127 (__main__.VerifyStopTest.test_non_executable_maven_has_126_not_missing_tool_127) ... ok
+test_package_failure_preserves_19 (__main__.VerifyStopTest.test_package_failure_preserves_19) ... ok
+test_relative_maven_uses_callers_file_not_repository_shadow (__main__.VerifyStopTest.test_relative_maven_uses_callers_file_not_repository_shadow) ... ok
+test_source_symlink_into_evidence_is_still_a_source_change (__main__.VerifyStopTest.test_source_symlink_into_evidence_is_still_a_source_change) ... ok
+test_summary_does_not_collect_unrelated_environment (__main__.VerifyStopTest.test_summary_does_not_collect_unrelated_environment) ... ok
+test_uncreatable_log_directory_fails_before_running_commands (__main__.VerifyStopTest.test_uncreatable_log_directory_fails_before_running_commands) ... ok
+test_validate_failure_preserves_37_and_prevents_package (__main__.VerifyStopTest.test_validate_failure_preserves_37_and_prevents_package) ... ok
+test_whitespace_failure_in_index_is_not_hidden_by_clean_worktree (__main__.VerifyStopTest.test_whitespace_failure_in_index_is_not_hidden_by_clean_worktree) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 6.908s
+
+OK
+EXIT=0
+COMMAND=['bash', '-n', 'integration/verify-stop.sh']
+EXIT=0
+COMMAND=['bash', 'integration/verify-stop.sh', '--help']
+usage: verify_stop.py [-h] --log-dir LOG_DIR [--base BASE] [--module MODULE]
+                      {docs,focused,full,consumer}
+
+有限命令编排，不代替人工审查；不解析旧 surefire XML、不接 hooks、不跑发布腿。 docs 拒绝变化范围内非 .md/.txt
+文件（含暂存与未跟踪文件），不为源码改动背书。
+
+positional arguments:
+  {docs,focused,full,consumer}
+
+options:
+  -h, --help            show this help message and exit
+  --log-dir LOG_DIR     全新目录，父目录必须已存在
+  --base BASE           变化范围的 Git tree-ish，缺省 HEAD
+  --module MODULE       focused 专用，单个仓库内模块目录
+EXIT=0
+COMMAND=['git', 'diff', '--check']
+EXIT=0
+SHA256 verify-stop.sh c709e8a271c55aea6cc111772ac339d99960f5ad331caab126b9cd0d5ba16a25
+SHA256 verify_stop.py 2dcef786821dfa7136c645f11139727f9298783ebda60c7778a41dd1f6b4902a
+SHA256 test_verify_stop.py 1acde54c61251da1b546900442df1a48521dfc2de3c9c90f602f756838a915c0
+SHA256 test_verify_stop_mutations.py 19191ce45a54da759d48deba88adc00e46d944a7e970b51970f1a4b16e054130
+CHECK=只增加 shell 头注释与 Python docstring；执行逻辑未改。

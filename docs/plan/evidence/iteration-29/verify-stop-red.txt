@@ -1,0 +1,315 @@
+COMMAND=/opt/homebrew/opt/python@3.12/bin/python3.12 integration/test_verify_stop.py
+test_broken_relative_link_fails_before_maven (__main__.VerifyStopTest.test_broken_relative_link_fails_before_maven) ... FAIL
+test_consumer_failure_keeps_its_script_exit_code (__main__.VerifyStopTest.test_consumer_failure_keeps_its_script_exit_code) ... FAIL
+test_consumer_uses_candidate_and_isolates_work_without_running_full (__main__.VerifyStopTest.test_consumer_uses_candidate_and_isolates_work_without_running_full) ... FAIL
+test_docs_checks_staged_and_untracked_paths_without_maven (__main__.VerifyStopTest.test_docs_checks_staged_and_untracked_paths_without_maven) ... FAIL
+test_docs_rejects_code_changes_instead_of_claiming_source_verified (__main__.VerifyStopTest.test_docs_rejects_code_changes_instead_of_claiming_source_verified) ... FAIL
+test_existing_log_directory_is_never_overwritten (__main__.VerifyStopTest.test_existing_log_directory_is_never_overwritten) ... FAIL
+test_external_and_code_example_links_do_not_trigger_network_or_false_errors (__main__.VerifyStopTest.test_external_and_code_example_links_do_not_trigger_network_or_false_errors) ... FAIL
+test_focused_runs_reactor_with_module_as_one_argument (__main__.VerifyStopTest.test_focused_runs_reactor_with_module_as_one_argument) ... FAIL
+test_full_runs_validate_then_package_without_test_skip (__main__.VerifyStopTest.test_full_runs_validate_then_package_without_test_skip) ... FAIL
+test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) ...
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=()) ... FAIL
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('unknown',)) ... FAIL
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('full', '--skipTests')) ... FAIL
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused',)) ... FAIL
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('docs', '--module', 'core/sample module')) ... FAIL
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused', '--module', '../outside')) ... FAIL
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused', '--module=-DskipTests')) ... FAIL
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused', '--module', 'core/sample module,other')) ... FAIL
+  test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused', '--module', 'no-such-module')) ... FAIL
+test_missing_explicit_maven_does_not_fallback (__main__.VerifyStopTest.test_missing_explicit_maven_does_not_fallback) ... FAIL
+test_missing_git_fails_loudly (__main__.VerifyStopTest.test_missing_git_fails_loudly) ... FAIL
+test_missing_log_directory_argument_is_not_defaulted (__main__.VerifyStopTest.test_missing_log_directory_argument_is_not_defaulted) ... FAIL
+test_package_failure_preserves_19 (__main__.VerifyStopTest.test_package_failure_preserves_19) ... FAIL
+test_summary_does_not_collect_unrelated_environment (__main__.VerifyStopTest.test_summary_does_not_collect_unrelated_environment) ... FAIL
+test_uncreatable_log_directory_fails_before_running_commands (__main__.VerifyStopTest.test_uncreatable_log_directory_fails_before_running_commands) ... FAIL
+test_validate_failure_preserves_37_and_prevents_package (__main__.VerifyStopTest.test_validate_failure_preserves_37_and_prevents_package) ... FAIL
+test_whitespace_failure_in_index_is_not_hidden_by_clean_worktree (__main__.VerifyStopTest.test_whitespace_failure_in_index_is_not_hidden_by_clean_worktree) ... FAIL
+
+======================================================================
+FAIL: test_broken_relative_link_fails_before_maven (__main__.VerifyStopTest.test_broken_relative_link_fails_before_maven)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 108, in test_broken_relative_link_fails_before_maven
+    self.assert_exit(self.run_stop("full"), 1)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 1 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests azihfha_/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_consumer_failure_keeps_its_script_exit_code (__main__.VerifyStopTest.test_consumer_failure_keeps_its_script_exit_code)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 170, in test_consumer_failure_keeps_its_script_exit_code
+    self.assert_exit(self.run_stop("consumer"), 23)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 23 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests ecdr6cj0/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_consumer_uses_candidate_and_isolates_work_without_running_full (__main__.VerifyStopTest.test_consumer_uses_candidate_and_isolates_work_without_running_full)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 159, in test_consumer_uses_candidate_and_isolates_work_without_running_full
+    self.assert_exit(self.run_stop("consumer"), 0)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 0 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests tbkd_45i/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_docs_checks_staged_and_untracked_paths_without_maven (__main__.VerifyStopTest.test_docs_checks_staged_and_untracked_paths_without_maven)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 92, in test_docs_checks_staged_and_untracked_paths_without_maven
+    self.assert_exit(self.run_stop("docs"), 0)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 0 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests lkcnbgp8/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_docs_rejects_code_changes_instead_of_claiming_source_verified (__main__.VerifyStopTest.test_docs_rejects_code_changes_instead_of_claiming_source_verified)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 102, in test_docs_rejects_code_changes_instead_of_claiming_source_verified
+    self.assert_exit(self.run_stop("docs"), 1)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 1 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests a1323lmq/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_existing_log_directory_is_never_overwritten (__main__.VerifyStopTest.test_existing_log_directory_is_never_overwritten)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 206, in test_existing_log_directory_is_never_overwritten
+    self.assert_exit(self.run_stop("full"), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 0t61kltm/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_external_and_code_example_links_do_not_trigger_network_or_false_errors (__main__.VerifyStopTest.test_external_and_code_example_links_do_not_trigger_network_or_false_errors)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 117, in test_external_and_code_example_links_do_not_trigger_network_or_false_errors
+    self.assert_exit(self.run_stop("docs"), 0)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 0 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 19olb5ak/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_focused_runs_reactor_with_module_as_one_argument (__main__.VerifyStopTest.test_focused_runs_reactor_with_module_as_one_argument)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 129, in test_focused_runs_reactor_with_module_as_one_argument
+    self.assert_exit(self.run_stop("focused", "--module", "core/sample module"), 0)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 0 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests kof8ebw4/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_full_runs_validate_then_package_without_test_skip (__main__.VerifyStopTest.test_full_runs_validate_then_package_without_test_skip)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 137, in test_full_runs_validate_then_package_without_test_skip
+    self.assert_exit(self.run_stop("full"), 0)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 0 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 1rglznec/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=())
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('unknown',))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('full', '--skipTests'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused',))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('docs', '--module', 'core/sample module'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused', '--module', '../outside'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused', '--module=-DskipTests'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused', '--module', 'core/sample module,other'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_arguments_and_module_escape_fail_without_running_commands (__main__.VerifyStopTest.test_invalid_arguments_and_module_escape_fail_without_running_commands) (args=('focused', '--module', 'no-such-module'))
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 181, in test_invalid_arguments_and_module_escape_fail_without_running_commands
+    self.assert_exit(self.run_stop(*args), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 8vktjvey/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_missing_explicit_maven_does_not_fallback (__main__.VerifyStopTest.test_missing_explicit_maven_does_not_fallback)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 192, in test_missing_explicit_maven_does_not_fallback
+    self.assertIn("missing executable", self.evidence())
+AssertionError: 'missing executable' not found in ''
+
+======================================================================
+FAIL: test_missing_git_fails_loudly (__main__.VerifyStopTest.test_missing_git_fails_loudly)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 200, in test_missing_git_fails_loudly
+    self.assertIn("git", self.evidence())
+AssertionError: 'git' not found in ''
+
+======================================================================
+FAIL: test_missing_log_directory_argument_is_not_defaulted (__main__.VerifyStopTest.test_missing_log_directory_argument_is_not_defaulted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 186, in test_missing_log_directory_argument_is_not_defaulted
+    self.assert_exit(self.run_stop("docs", logs=False), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests lkq6uwx7/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_package_failure_preserves_19 (__main__.VerifyStopTest.test_package_failure_preserves_19)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 154, in test_package_failure_preserves_19
+    self.assert_exit(self.run_stop("full"), 19)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 19 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests tkxjxorq/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_summary_does_not_collect_unrelated_environment (__main__.VerifyStopTest.test_summary_does_not_collect_unrelated_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 219, in test_summary_does_not_collect_unrelated_environment
+    self.assert_exit(self.run_stop("full"), 0)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 0 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 6kf85ei0/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_uncreatable_log_directory_fails_before_running_commands (__main__.VerifyStopTest.test_uncreatable_log_directory_fails_before_running_commands)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 214, in test_uncreatable_log_directory_fails_before_running_commands
+    self.assert_exit(self.run_stop("full"), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 7i_a03er/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_validate_failure_preserves_37_and_prevents_package (__main__.VerifyStopTest.test_validate_failure_preserves_37_and_prevents_package)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 143, in test_validate_failure_preserves_37_and_prevents_package
+    self.assert_exit(self.run_stop("full"), 37)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 37 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests 34uyw2_k/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+======================================================================
+FAIL: test_whitespace_failure_in_index_is_not_hidden_by_clean_worktree (__main__.VerifyStopTest.test_whitespace_failure_in_index_is_not_hidden_by_clean_worktree)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 124, in test_whitespace_failure_in_index_is_not_hidden_by_clean_worktree
+    self.assert_exit(self.run_stop("full"), 2)
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/integration/test_verify_stop.py", line 86, in assert_exit
+    self.assertEqual(code, result.returncode, result.stdout)
+AssertionError: 2 != 127 : /bin/bash: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/verify stop tests wci57fc0/repo with spaces/integration/verify-stop.sh: No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.757s
+
+FAILED (failures=26)
+
+EXIT=1

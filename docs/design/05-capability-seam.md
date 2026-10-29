@@ -867,23 +867,25 @@ public record ToolDefinition(
 
 ---
 
-## 9. 完整 Seam 清单（MVP + 留接口）
+## 9. Capability Status and Planned Seams
 
-| Seam | Definition 模块 | MVP Provider(s) | Consumer | 状态 |
+| Seam | Definition 模块 | Provider(s) | Consumer | 状态 |
 |---|---|---|---|---|
 | LLM | `llm.llm` | `deepseek`, `replay` | agent-loop | ✅ |
 | Tools | `core.tools` | （registry+executor 内建） | 各 tool 模块 | ✅ |
 | FS | `fs.fs` | `local` | `fs.tool` | ✅ |
-| Shell | `shell.shell` | `local` | `shell.tool` | ✅ |
-| Sandbox | `sandbox.sandbox` | `local`（OFF 透传）| shell/terminal/fs | ✅ stub |
+| Shell | `shell.shell` | `local` / `docker`（组合互斥） | `shell.tool` | 已实现 |
+| Sandbox | `sandbox.sandbox` | `local`（平台链；OFF 透传）| shell/fs | 已实现；win32 PARTIAL 边界见 §6 |
 | Session Persistence | `session.persistence` | `jsonl` | persistence 插件 | ✅ |
 | Approval | `interaction.approval` | `auto` / `ask` / `deny` | ToolExecutor 固定 stage | ✅ **真实** |
 | Commands | `interaction.commands` | （registry 内建） | headless REPL | ✅ |
 | MCP | `mcp.mcp` | `mcp-stdio`（stdio）+ `mcp-http`（Streamable HTTP，it27.1）；两者经 `mcp-registry` 聚合 | `mcp.tool` | ✅（it27.1；轮屏障换代 + `mcp/catalog` + 双 transport）|
 | Web | `web.web` | `web-fetch-http`（钉地址公网抓取）+ `web-search-deepseek`（原生搜索，keyless 行 disabled）| `web.tool` | ✅（it28；双 Provider + 信任前缀 + 分层截断）|
-| Subagent / LSP / Terminal / Compaction | 各 Definition | —（留接口）| — | 🔌 接口 |
+| Compaction | `core.agent-loop`（`CompactionService`） | 同模块 `CompactionPlugin` | agent-loop | 已实现；非独立三模块布局 |
+| LSP | 尚无模块或完整 Definition | — | — | it29 范围已批准；停 0 探针与技术清单待裁，尚未实现 |
+| Subagent / Terminal / Jobs | 规划预留，未建独立 Definition | — | — | 按路线另行确认 |
 
-留接口的 seam：Definition 模块完整定义接口和 `ServiceKey`，但不提供 Provider；组合时不挂载即可，未来加 Provider 不改任何 Consumer。
+规划预留不等于接口已实现，更不等于可挂载能力。LSP 的契约、Provider 与 Consumer 形状须经过 [it29](../plan/iteration-29.md) 的停 0 / 技术裁决；本表不预先承诺其模块名或 `ServiceKey`。后续若拆出完整 Definition 而暂不挂 Provider，须以实际源码与验收更新状态。
 
 ## 10. 三角色纪律的编译期保障
 

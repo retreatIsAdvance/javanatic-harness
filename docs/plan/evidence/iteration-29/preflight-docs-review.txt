@@ -1,0 +1,44 @@
+2026-10-28 — 独立文档批与 it29 四确认复核
+
+本记录不是停 0 packet，不表示 JDT LS 探针、T 项或产品实现已通过。
+
+一、复核范围
+- 已批准：独立文档整理、it29 Java 诊断/定义/引用最小闭环的四确认落盘。
+- AGENTS 已知坑迁移27条；根保留强制读取索引，适用范围不变；根184行。
+- 当前状态卡维护说明、待推残留、0.3阶段/发布边界、LSP预留与实现的混称。
+- 全局语义检索补入06 Preset中不存在的lsp-tool行与中英文首页的0.3“尚未开工”表述。
+- B-MCP-RESULT接替边界表旧B4；图生成器维持B4，冻结历史按映射解读。
+- Web T9为已接受预算边界，补B-WEB-SEARCH-BUDGET登记，不改产品行为。
+
+二、独立只读复核结论与处置
+复核对象：完整iteration-29.md及指定文档差异；未编辑、未构建、未启动LS。
+结论：未发现实质阻断，发现一处证据前置措辞歧义。
+原措辞：“出packet前必须全部核验存在”，下方全表包含后续停1/停2/收口证据。
+处置：限定为“各停点出包前只核验该packet引用的证据，收口时核验全表；停0不依赖尚未执行的停1/停2证据”。
+终检：preflight-docs-check.txt对该限定有断言，EXIT=0。
+
+三、机械核验
+证据：preflight-docs-check.txt（完整内联Python命令与输出）
+- 27条规则仅逆归一唯一Markdown相对链接后逐字核对一致；AGENTS其余正文未改，除layout索引。
+- 12份新增/改动Markdown的内容hash、结尾换行与行尾空白；26个新增/变更本地链接与锚点核验。
+- 改动仅Markdown与文本证据；没有JH源码、POM、配置或hook改动。
+- git diff --check：DIFF_CHECK_EXIT=0；整体EXIT=0。
+证据：preflight-validate.txt
+- JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+- /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+- EXIT=0；仅Spotless依赖调用sun.misc.Unsafe的弃用告警。
+
+四、基线与CI只读核验
+实际命令：git rev-parse --short HEAD；git rev-parse --short origin/master；git rev-list --count origin/master..HEAD
+结果：cd39e36；cd39e36；0。
+实际命令：gh run view 40639843523 --repo retreatisadvance/javanatic-harness --json headSha,status,conclusion,jobs
+结果字段摘录：headSha=cd39e36b816b82c293ff2f1d77c984179ba1bed6；status=completed；conclusion=success。
+jobs：build/macOS（实际job名macos）/windows/windows-arm均success；release-attach=skipped。
+这只证明既有已提交基线的CI，不证明本批未提交文档已跑远端CI。
+
+五、未完成项与授权边界
+- 停0未执行；未选择或验证JDT LS具体build；未创建JH LSP模块。
+- T0–T7待逐项裁定；未将建议、四确认或本复核当作停点放行。
+- verify-stop.sh尚未实现，独立交付且停1前必须落地；本批内联机械检查不冒充该脚本。
+- 本批没有运行package、产品单测或真实模型任务；没有新增测试/门禁行为，未做产品突变。
+- 未提交、未推送；本批文档在工作树中供审阅。

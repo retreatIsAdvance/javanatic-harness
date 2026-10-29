@@ -1,0 +1,93 @@
+2026-10-28 independent documentation batch verification
+CWD=/Users/abel_yang/study/deepseek/javanatic-harness
+COMMAND=python3 - (inline program below)
+
+from pathlib import Path
+import hashlib, re, subprocess, unicodedata
+from urllib.parse import unquote, urlsplit
+root = Path.cwd()
+old = subprocess.check_output(['git', 'show', 'HEAD:AGENTS.md']).decode()
+current = (root / 'AGENTS.md').read_text()
+pits = (root / '.agents/pits.md').read_text()
+start = '## 已知坑（本项目环境实测）\n\n'
+end = '\n## 修改本文件'
+old_body = old.split(start, 1)[1].split(end, 1)[0]
+new_body = pits[pits.index('- macOS BSD'):].replace('](../kernel/', '](kernel/')
+assert old_body.strip() == new_body.strip(), 'pit rules changed'
+assert sum(line.startswith('- ') for line in old_body.splitlines()) == 27
+assert len(current.splitlines()) <= 200
+old_layout = next(line for line in old.splitlines() if line.startswith('.agents/'))
+new_layout = next(line for line in current.splitlines() if line.startswith('.agents/'))
+normalized = current.replace(new_layout, old_layout)
+current_body = normalized.split(start, 1)[1].split(end, 1)[0]
+assert normalized.replace(start + current_body + end, start + old_body + end) == old, 'other AGENTS content changed'
+assert '适用于全仓库' in current and '适用于全仓库' in pits
+print('PIT_RULES=27; NORMALIZED_BYTES_IDENTICAL=true; OTHER_ROOT_RULES_UNCHANGED=true')
+print('AGENTS_LINES=' + str(len(current.splitlines())))
+print('PITS_LINES=' + str(len(pits.splitlines())))
+print('RULE_BODY_SHA256=' + hashlib.sha256(old_body.strip().encode()).hexdigest())
+changed = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD'], text=True).splitlines()
+untracked = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard'], text=True).splitlines()
+files = sorted(set(changed + untracked))
+assert all(p.endswith(('.md', '.txt')) for p in files), files
+checked = 0
+for name in files:
+    path = root / name
+    if not name.endswith('.md'):
+        continue
+    text = path.read_text()
+    assert text.endswith('\n') and not text.endswith('\n\n'), name
+    assert all(line == line.rstrip() for line in text.splitlines()), name
+    if name in untracked:
+        additions = text
+    else:
+        diff = subprocess.check_output(['git', 'diff', '--unified=0', 'HEAD', '--', name], text=True)
+        additions = '\n'.join(line[1:] for line in diff.splitlines() if line.startswith('+') and not line.startswith('+++'))
+    for label, href in re.findall(r'\[([^\]]+)\]\(([^)]+)\)', additions):
+        if urlsplit(href).scheme:
+            continue
+        target, sep, anchor = unquote(href).partition('#')
+        dest = (path.parent / target).resolve() if target else path
+        assert dest.exists(), (name, label, href)
+        if anchor and dest.suffix == '.md':
+            headings = re.findall(r'^#{1,6}\s+(.+?)\s*$', dest.read_text(), re.M)
+            slugs = [''.join(c for c in heading.lower().replace('`', '') if c.isalnum() or c in (' ', '-', '_') or unicodedata.category(c).startswith('M')).replace(' ', '-') for heading in headings]
+            assert anchor in slugs, (name, href, 'anchor not found')
+        checked += 1
+    print('DOC=' + name + '; SHA256=' + hashlib.sha256(path.read_bytes()).hexdigest())
+assert not (root / 'lsp').exists()
+assert not (root / 'integration/verify-stop.sh').exists()
+assert '各停点出包前只核验该 packet 引用的证据' in (root / 'docs/plan/iteration-29.md').read_text()
+print('CHANGED_SCOPE=markdown/text only')
+print('NEW_OR_CHANGED_LOCAL_LINKS=' + str(checked))
+print('LSP_PROBE=not run; VERIFY_STOP=not implemented; PACKAGE=not run')
+result = subprocess.run(['git', 'diff', '--check'], capture_output=True, text=True)
+print('COMMAND=git diff --check')
+print(result.stdout + result.stderr, end='')
+print('DIFF_CHECK_EXIT=' + str(result.returncode))
+assert result.returncode == 0
+
+OUTPUT
+PIT_RULES=27; NORMALIZED_BYTES_IDENTICAL=true; OTHER_ROOT_RULES_UNCHANGED=true
+AGENTS_LINES=184
+PITS_LINES=31
+RULE_BODY_SHA256=a252bc3da8fa469e6fc95b91df3ad5234319792d50202ef76cbd9d93eb12b051
+DOC=.agents/pits.md; SHA256=bd24eea52880699ad15be7b688e120d97d23875db939132296841bc681283a17
+DOC=AGENTS.md; SHA256=ed143626de7e9268b32cab14150ff5daa190c7d412121abfd12cea4fe5a9fef1
+DOC=README.en.md; SHA256=39cf87cf17544de6a8bd97d91ae6ab4a73daf7385f1d3c5536b1ded868d70a7a
+DOC=README.md; SHA256=e2d8b398723af066c52528d18ea39038068ff3466310d6e4071f529e48aac67d
+DOC=docs/design/02-module-layout.md; SHA256=3edb662d9c0aeeb4194971a24205855e5ea5d72fed14ba8c30e3b6b81426d965
+DOC=docs/design/05-capability-seam.md; SHA256=3bf1a1b12f557237f683830914673f73bbe5485573cc0950834ee19c669b2643
+DOC=docs/design/06-scope.md; SHA256=f341da9dfa8f9fe29bed9cbc95d4b8e721958e490fc9c7442e4576b1df1252e1
+DOC=docs/design/README.md; SHA256=579fad36226374a6f248c379daa5a4c6db88bb91cf209e76777ddf2aa57658d6
+DOC=docs/plan/README.md; SHA256=9c89b74f2dc7b80170cfefc67dcbe1171ec49c53a1e7065d2195acd0d31981d1
+DOC=docs/plan/boundary-register.md; SHA256=419524601210f9d3a0281b563355dd73d7ca71b96a86758336e567389ef5d9af
+DOC=docs/plan/current-state.md; SHA256=4a4c1f07fc7e76c4234567dd4e97473c7a5fba8c7f1691f655912eda62c65257
+DOC=docs/plan/iteration-29.md; SHA256=445cc68cb21a565903e9fadf34ff34bd3bb1ed3d59decb37b2e7e0219728a71e
+CHANGED_SCOPE=markdown/text only
+NEW_OR_CHANGED_LOCAL_LINKS=26
+LSP_PROBE=not run; VERIFY_STOP=not implemented; PACKAGE=not run
+COMMAND=git diff --check
+DIFF_CHECK_EXIT=0
+
+EXIT=0

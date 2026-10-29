@@ -1,0 +1,32 @@
+PACKET_LOCAL_LINKS=21; targets exist and nonempty; sole heading-anchor type verified
+PACKET_CONTRACT_EXCERPTS=3; exact current-source substrings
+FULL02=all recorded steps EXIT=0; validate and package logs inspected
+SHA256=853a161b70591df11297342dc7378c2fd325e744539c6e51f57106904472756b FILE=integration/verify-stop.sh
+SHA256=a49d14ed07ede440d270f35fc3cad1fab2f9626f7d3bf8f941110e15b18bd7c8 FILE=integration/verify_stop.py
+SHA256=1acde54c61251da1b546900442df1a48521dfc2de3c9c90f602f756838a915c0 FILE=integration/test_verify_stop.py
+SHA256=19191ce45a54da759d48deba88adc00e46d944a7e970b51970f1a4b16e054130 FILE=integration/test_verify_stop_mutations.py
+Existing consumer and Java-version files unchanged; LSP directory absent
+COMMAND=git diff --check
+EXIT=0
+COMMAND=git status --short
+ M AGENTS.md
+ M README.en.md
+ M README.md
+ M docs/design/02-module-layout.md
+ M docs/design/05-capability-seam.md
+ M docs/design/06-scope.md
+ M docs/design/README.md
+ M docs/plan/README.md
+ M docs/plan/boundary-register.md
+ M docs/plan/current-state.md
+?? .agents/pits.md
+?? docs/plan/evidence/iteration-29/
+?? docs/plan/iteration-29.md
+?? integration/test_verify_stop.py
+?? integration/test_verify_stop_mutations.py
+?? integration/verify-stop.sh
+?? integration/verify_stop.py
+EXIT=0
+COMMAND=git rev-parse HEAD
+cd39e36b816b82c293ff2f1d77c984179ba1bed6
+EXIT=0

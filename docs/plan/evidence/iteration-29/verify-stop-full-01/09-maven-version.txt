@@ -1,0 +1,8 @@
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -v
+Apache Maven 3.10.0 (c43a36b8d67be7e0805a411bc0898af1a51f5472)
+Maven home: /Users/abel_yang/Documents/apache-maven-3.10.0
+Java version: 25.0.4.1, vendor: Eclipse Adoptium, runtime: /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+Default locale: zh_CN_#Hans, platform encoding: UTF-8, time zone: Asia/Shanghai
+OS name: "mac os x", version: "26.2", arch: "aarch64", family: "mac"
+
+EXIT=0
