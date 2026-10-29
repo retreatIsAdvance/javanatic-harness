@@ -1,0 +1,35 @@
+IT29 STOP1 ACCEPTANCE — 2026-10-29
+来源：用户本轮新鲜文本评审；下列原文节选保留裁决含义，事实与主代理解释另列。
+
+用户总判原文
+“总判：通过放行。独立复跑双门禁全绿（lsp/lsp -am EXIT=0、validate EXIT=0），四态契约、观察锚语义、两轮复审处置全部在代码与证据中落实——且本停点的计数口径处理是一个亮点。”
+
+用户建议原文
+“建议把「JUnit/jqwik 同名类 surefire XML 互相覆盖」回填进 AGENTS 测试计数口径条。”
+
+用户备注原文
+“【流程】工作树 83 个文件未提交（70 未跟踪 + 13 修改）……放行后应尽快提交。”
+“【低】范围外的旧措辞（02 树漏 skill、05 §9 旧「停 0 待裁」、根 README 构建计数）已如实列出且未越界改——收口批统一收。”
+“【低】stop1-mutations.py 把突变逻辑脚本化入仓——比临时 sed 更可审计，好实践，建议后续停点沿用。”
+
+用户结论原文
+“放行停 1：提交（Definition + 契约 + 证据 + 文档同步 + 本评审记录）→ 进停 2（Provider 真实生命周期：≥3 启停 / KILL 升级 / 退出应答 / JDT LS 偏离清单对照）。停 2 的评审重点我会放在：诊断四态在真实 JDT LS 下的区分（用停 0 夹具复现）、以及「拉取成功 + 代稳定 + 等待窗」三条件的账面表述是否严守「拉取时点无诊断」的措辞纪律。”
+
+主代理落实口径（不是新增用户原话）
+1. 停 1 通过并关闭。冻结的 stop1 packet（stop1-review-packet.md）不改写；本评审记录随批提交入仓。
+2. 提交范围 = lsp/lsp Definition + seam 契约 + 停 0/停 1 证据 + 文档同步 + 本评审记录；提交已点名放行，push 仍无授权、不入本批。
+3. AGENTS.md 测试计数口径条同批回填 JUnit/jqwik 同名类 surefire XML 互相覆盖变体（it29 停 1 实撞：XML 残留 7 ≠ 模块汇总 17）。
+4. 范围外旧措辞（02 树漏 skill、05 §9 旧「停 0 待裁」、根 README 构建计数）本批不动，留收口批统一收。
+5. stop1-mutations.py 脚本化突变记为后续停点沿用实践；停 2 起突变证据继续脚本化。
+6. 进停 2 = Provider 真实生命周期（≥3 启停 / TERM 忽略时 KILL 升级 + 进程组复验 / 退出应答 / JDT LS 偏离清单对照）。评审重点按用户点名执行：诊断四态在真实 JDT LS 下的区分（用停 0 夹具复现）、「拉取成功 + 代稳定 + 等待窗」账面表述严守「拉取时点无诊断」措辞纪律。Provider 开工前协议依赖（T5）与 URI/输入清单（T6）仍须规划，新第三方依赖须另行点名批准。
+7. 永不提交凭据；未包含任何 push / amend / 发布授权。
+
+证据入口
+stop1-review-packet.md
+stop1-verification-summary.txt
+stop1-final-focused-02.txt
+stop1-full-01/（summary.txt + 编号日志，validate/package 各 EXIT=0）
+stop1-mutations-01/、stop1-mutations-02/（summary.txt + M1–M10 全 KILLED）
+stop1-review-round1.txt / stop1-review-round2.txt
+stop1-packet-check-01/
+stop0-acceptance.txt（T1–T3 终裁依据）

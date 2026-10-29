@@ -1,0 +1,12 @@
+Stop 0 前置证据独立只读复核 — 2026-10-29
+
+审查方式：general-purpose 代理，完整静态读取 stop0-preflight-blocker.txt、stop0-probe.py、stop0-client-selfcheck.py、stop0-client-contract-red.txt、stop0-client-zombie-red.txt、stop0-process-zombie-observation.txt。未执行测试/实验/LS、未下载、未写文件、未提交、未派子代理；不通过代理绕过自检复跑权限拦截。
+
+代理结论（当时归档续传通知尚未到达）：
+已核验：阻塞记录10–28行与红灯、EPERM观察及脚本一致；未将历史绿灯当当前绿灯，未将权限拒绝当真实LS失败，已列客户端及夹具待对齐项。
+问题：自检127–128行的直接入口仅调用main，不执行四项单测；单跑成功不能代表全套复绿。
+限制：只读静态检查，修后未复验，真实LS未起；不判断当时尚未返回的下载结果。
+
+主代理处置：核对 __main__ 直接调用 main，采纳意见，阻塞记录明确 unittest 四项与集成入口须分别验证。未执行任何被拦自检。
+审查后到达的下载成功与静态manifest证据由主代理另行核验，见 stop0-download-ranges-01/summary.txt、stop0-artifact-verification.txt；不是本次代理提前核验的内容。
+该审查不等于最终客户端零问题评审，也不批准停0通过或进入JH实现。

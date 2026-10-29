@@ -1,0 +1,8 @@
+STARTED=2026-10-29T07:05:01.541728+00:00
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-probe.py', '--scratch', '/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029', '--server', '/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/server-1.63.0', '--java-home', '/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home', '--configuration', '/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/config_mac_arm', '--evidence', '/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-run-01']
+PROBE_SHA256=6c1213de4b50bb04128173cd484775686a537ec8426b8fde6052213ba5509fe6
+EVIDENCE=/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-run-01
+PHASE=finished
+EXIT=0
+FINISHED=2026-10-29T07:08:15.919116+00:00
+EXIT=0

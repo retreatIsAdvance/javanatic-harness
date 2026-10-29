@@ -1,0 +1,17 @@
+{
+  "pid": 21556,
+  "pgid": 21556,
+  "checks": [
+    {
+      "phase": "terminated-before-wait",
+      "errno": 1,
+      "message": "[Errno 1] Operation not permitted"
+    },
+    {
+      "phase": "reaped",
+      "errno": 3,
+      "message": "[Errno 3] No such process"
+    }
+  ],
+  "exit": -15
+}

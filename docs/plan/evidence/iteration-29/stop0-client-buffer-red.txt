@@ -1,0 +1,10 @@
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py']
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py", line 122, in <module>
+    main()
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py", line 90, in main
+    assert result.returncode==0,(result.stdout,result.stderr)
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('Traceback (most recent call last):\n  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-probe.py", line 342, in main\n    return run_probe(args)\n           ^^^^^^^^^^^^^^^\n  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-probe.py", line 290, in run_probe\n    while group_alive(process.pid) and time.monotonic() < deadline:\n          ^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-probe.py", line 22, in group_alive\n    os.killpg(pgid, 0)\nPermissionError: [Errno 1] Operation not permitted\n\n', '')
+
+EXIT=1

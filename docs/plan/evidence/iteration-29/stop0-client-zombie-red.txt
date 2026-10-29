@@ -1,0 +1,31 @@
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '-m', 'unittest', 'stop0-client-selfcheck.ProtocolBoundaryTest', '-v']
+test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result) ... ok
+test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone) ... ERROR
+test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params) ... ok
+test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged) ... ok
+
+======================================================================
+ERROR: test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py", line 47, in test_permission_error_is_not_group_gone
+    self.assertTrue(alive(123456))
+                    ^^^^^^^^^^^^^
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-probe.py", line 22, in group_alive
+    os.killpg(pgid, 0)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.6/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/mock.py", line 1137, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.6/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/mock.py", line 1141, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.6/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/mock.py", line 1196, in _execute_mock_call
+    raise effect
+PermissionError: [Errno 1] Operation not permitted
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.015s
+
+FAILED (errors=1)
+
+EXIT=1

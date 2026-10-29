@@ -1,0 +1,4 @@
+COMMAND=git rev-parse --revs-only HEAD
+b'7c8d6a708f42367caa36dbf076d2c7d6398e1728\n'
+
+EXIT=0

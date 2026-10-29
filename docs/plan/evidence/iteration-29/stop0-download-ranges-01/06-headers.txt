@@ -1,0 +1,17 @@
+HTTP/2 206 
+server: nginx
+date: Thu, 29 Oct 2026 03:36:30 GMT
+content-type: application/x-gzip
+content-length: 5469300
+last-modified: Mon, 19 Oct 2026 13:36:40 GMT
+etag: "30c638d-65e319a9cc623"
+content-security-policy: frame-ancestors 'self'
+x-frame-options: SAMEORIGIN
+x-content-type-options: nosniff
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+cache-control: private, max-age=8m, no-transform
+x-content-type-options: nosniff
+x-xss-protection: 1; mode=block
+x-proxy-cache: HIT
+content-range: bytes 40204966-45674265/51143565
+

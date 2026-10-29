@@ -1,0 +1,83 @@
+{
+  "url": "https://download.eclipse.org/jdtls/milestones/1.63.0/jdt-language-server-1.63.0-202610191322.tar.gz",
+  "started": "2026-10-29T03:36:09.632880+00:00",
+  "previous_attempt": {
+    "curl_exit": 28,
+    "deadline_seconds": 300,
+    "received_bytes": 7389166,
+    "total_bytes": 51143565,
+    "note": "prior tool output; not rerun"
+  },
+  "segments": [
+    {
+      "i": 0,
+      "start": 7389166,
+      "end": 12858465,
+      "exit": 0,
+      "bytes": 5469300,
+      "valid": true
+    },
+    {
+      "i": 1,
+      "start": 12858466,
+      "end": 18327765,
+      "exit": 0,
+      "bytes": 5469300,
+      "valid": true
+    },
+    {
+      "i": 2,
+      "start": 18327766,
+      "end": 23797065,
+      "exit": 0,
+      "bytes": 5469300,
+      "valid": true
+    },
+    {
+      "i": 3,
+      "start": 23797066,
+      "end": 29266365,
+      "exit": 0,
+      "bytes": 5469300,
+      "valid": true
+    },
+    {
+      "i": 4,
+      "start": 29266366,
+      "end": 34735665,
+      "exit": 0,
+      "bytes": 5469300,
+      "valid": true
+    },
+    {
+      "i": 5,
+      "start": 34735666,
+      "end": 40204965,
+      "exit": 0,
+      "bytes": 5469300,
+      "valid": true
+    },
+    {
+      "i": 6,
+      "start": 40204966,
+      "end": 45674265,
+      "exit": 0,
+      "bytes": 5469300,
+      "valid": true
+    },
+    {
+      "i": 7,
+      "start": 45674266,
+      "end": 51143564,
+      "exit": 0,
+      "bytes": 5469299,
+      "valid": true
+    }
+  ],
+  "complete": true,
+  "archive": "/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/download/jdt-language-server-1.63.0-202610191322-complete.tar.gz",
+  "bytes": 51143565,
+  "actual_sha256": "b1f2abe0b3cccb462cf64fb4a5587c7d09df60cf8be7748b152cbd89d018bdc4",
+  "expected_sha256": "b1f2abe0b3cccb462cf64fb4a5587c7d09df60cf8be7748b152cbd89d018bdc4",
+  "finished": "2026-10-29T03:40:52.019551+00:00"
+}

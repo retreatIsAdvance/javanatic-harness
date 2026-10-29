@@ -1,0 +1,192 @@
+TIME=2026-10-29T08:27:25.557427+00:00
+COMMAND=python3.12 -B (recursive direct Maven modules census; module-info exports census; compare recorded source/frozen SHA256; git commands below)
+Surface: working-tree source/POM declarations, not installed runtime or platform acceptance. No LS, network or credential configuration read.
+COUNTS={"projects": 62, "aggregators_including_root": 16, "leaves": 46, "code_modules": 45, "exports": 49}
+REACTOR_POM=pom.xml
+REACTOR_POM=kernel/pom.xml
+REACTOR_POM=kernel/brand/pom.xml
+REACTOR_POM=kernel/core/pom.xml
+REACTOR_POM=kernel/config/pom.xml
+REACTOR_POM=core/pom.xml
+REACTOR_POM=core/session/pom.xml
+REACTOR_POM=core/system-prompt/pom.xml
+REACTOR_POM=core/tools/pom.xml
+REACTOR_POM=core/todo/pom.xml
+REACTOR_POM=core/plan/pom.xml
+REACTOR_POM=core/agent/pom.xml
+REACTOR_POM=core/agent-loop/pom.xml
+REACTOR_POM=core/preset/pom.xml
+REACTOR_POM=llm/pom.xml
+REACTOR_POM=llm/llm/pom.xml
+REACTOR_POM=llm/deepseek/pom.xml
+REACTOR_POM=llm/openai-compat/pom.xml
+REACTOR_POM=llm/replay/pom.xml
+REACTOR_POM=fs/pom.xml
+REACTOR_POM=fs/fs/pom.xml
+REACTOR_POM=fs/local/pom.xml
+REACTOR_POM=fs/tool/pom.xml
+REACTOR_POM=skill/pom.xml
+REACTOR_POM=skill/skill/pom.xml
+REACTOR_POM=skill/tool/pom.xml
+REACTOR_POM=skill/local/pom.xml
+REACTOR_POM=mcp/pom.xml
+REACTOR_POM=mcp/mcp/pom.xml
+REACTOR_POM=mcp/stdio/pom.xml
+REACTOR_POM=mcp/http/pom.xml
+REACTOR_POM=mcp/tool/pom.xml
+REACTOR_POM=web/pom.xml
+REACTOR_POM=web/web/pom.xml
+REACTOR_POM=web/fetch-http/pom.xml
+REACTOR_POM=web/search-deepseek/pom.xml
+REACTOR_POM=web/tool/pom.xml
+REACTOR_POM=lsp/pom.xml
+REACTOR_POM=lsp/lsp/pom.xml
+REACTOR_POM=shell/pom.xml
+REACTOR_POM=shell/shell/pom.xml
+REACTOR_POM=shell/local/pom.xml
+REACTOR_POM=shell/tool/pom.xml
+REACTOR_POM=shell/docker/pom.xml
+REACTOR_POM=session/pom.xml
+REACTOR_POM=session/persistence/pom.xml
+REACTOR_POM=session/persistence-jsonl/pom.xml
+REACTOR_POM=sandbox/pom.xml
+REACTOR_POM=sandbox/sandbox/pom.xml
+REACTOR_POM=sandbox/local/pom.xml
+REACTOR_POM=sandbox/policy/pom.xml
+REACTOR_POM=interaction/pom.xml
+REACTOR_POM=interaction/approval/pom.xml
+REACTOR_POM=interaction/ask/pom.xml
+REACTOR_POM=interaction/commands/pom.xml
+REACTOR_POM=bundle/pom.xml
+REACTOR_POM=bundle/base/pom.xml
+REACTOR_POM=examples/pom.xml
+REACTOR_POM=examples/agent-spine/pom.xml
+REACTOR_POM=examples/headless/pom.xml
+REACTOR_POM=dist/pom.xml
+REACTOR_POM=dist/jh/pom.xml
+EXPORT=kernel/brand/src/main/java/module-info.java io.javanatic.harness.kernel.brand
+EXPORT=kernel/core/src/main/java/module-info.java io.javanatic.harness.kernel.scope
+EXPORT=kernel/core/src/main/java/module-info.java io.javanatic.harness.kernel.events
+EXPORT=kernel/core/src/main/java/module-info.java io.javanatic.harness.kernel.plugin
+EXPORT=kernel/config/src/main/java/module-info.java io.javanatic.harness.kernel.config
+EXPORT=core/session/src/main/java/module-info.java io.javanatic.harness.session
+EXPORT=core/session/src/main/java/module-info.java io.javanatic.harness.session.event
+EXPORT=core/session/src/main/java/module-info.java io.javanatic.harness.session.message
+EXPORT=core/system-prompt/src/main/java/module-info.java io.javanatic.harness.systemprompt
+EXPORT=core/tools/src/main/java/module-info.java io.javanatic.harness.tools
+EXPORT=core/todo/src/main/java/module-info.java io.javanatic.harness.todo
+EXPORT=core/plan/src/main/java/module-info.java io.javanatic.harness.plan
+EXPORT=core/agent/src/main/java/module-info.java io.javanatic.harness.agent
+EXPORT=core/agent-loop/src/main/java/module-info.java io.javanatic.harness.agentloop
+EXPORT=core/preset/src/main/java/module-info.java io.javanatic.harness.preset
+EXPORT=llm/llm/src/main/java/module-info.java io.javanatic.harness.llm
+EXPORT=llm/deepseek/src/main/java/module-info.java io.javanatic.harness.llm.deepseek
+EXPORT=llm/openai-compat/src/main/java/module-info.java io.javanatic.harness.llm.openai.compat
+EXPORT=llm/replay/src/main/java/module-info.java io.javanatic.harness.llm.replay
+EXPORT=fs/fs/src/main/java/module-info.java io.javanatic.harness.fs
+EXPORT=fs/local/src/main/java/module-info.java io.javanatic.harness.fs.local
+EXPORT=fs/tool/src/main/java/module-info.java io.javanatic.harness.fs.tool
+EXPORT=skill/skill/src/main/java/module-info.java io.javanatic.harness.skill
+EXPORT=skill/tool/src/main/java/module-info.java io.javanatic.harness.skill.tool
+EXPORT=skill/local/src/main/java/module-info.java io.javanatic.harness.skill.local
+EXPORT=mcp/mcp/src/main/java/module-info.java io.javanatic.harness.mcp
+EXPORT=mcp/stdio/src/main/java/module-info.java io.javanatic.harness.mcp.stdio
+EXPORT=mcp/http/src/main/java/module-info.java io.javanatic.harness.mcp.http
+EXPORT=mcp/tool/src/main/java/module-info.java io.javanatic.harness.mcp.tool
+EXPORT=web/web/src/main/java/module-info.java io.javanatic.harness.web
+EXPORT=web/fetch-http/src/main/java/module-info.java io.javanatic.harness.web.fetch.http
+EXPORT=web/search-deepseek/src/main/java/module-info.java io.javanatic.harness.web.search.deepseek
+EXPORT=web/tool/src/main/java/module-info.java io.javanatic.harness.web.tool
+EXPORT=lsp/lsp/src/main/java/module-info.java io.javanatic.harness.lsp
+EXPORT=shell/shell/src/main/java/module-info.java io.javanatic.harness.shell.shell
+EXPORT=shell/local/src/main/java/module-info.java io.javanatic.harness.shell.local
+EXPORT=shell/tool/src/main/java/module-info.java io.javanatic.harness.shell.tool
+EXPORT=shell/docker/src/main/java/module-info.java io.javanatic.harness.shell.docker
+EXPORT=session/persistence/src/main/java/module-info.java io.javanatic.harness.session.persistence
+EXPORT=session/persistence-jsonl/src/main/java/module-info.java io.javanatic.harness.session.persistence.jsonl
+EXPORT=sandbox/sandbox/src/main/java/module-info.java io.javanatic.harness.sandbox.sandbox
+EXPORT=sandbox/local/src/main/java/module-info.java io.javanatic.harness.sandbox.local
+EXPORT=sandbox/policy/src/main/java/module-info.java io.javanatic.harness.sandbox.policy
+EXPORT=interaction/approval/src/main/java/module-info.java io.javanatic.harness.interaction.approval
+EXPORT=interaction/ask/src/main/java/module-info.java io.javanatic.harness.interaction.ask
+EXPORT=interaction/commands/src/main/java/module-info.java io.javanatic.harness.interaction.commands
+EXPORT=bundle/base/src/main/java/module-info.java io.javanatic.harness.boot
+EXPORT=examples/agent-spine/src/main/java/module-info.java io.javanatic.harness.examples.agent.spine
+EXPORT=examples/headless/src/main/java/module-info.java io.javanatic.harness.examples.headless
+FULL_SNAPSHOT_PRODUCTION_AND_LSP_POMS_MATCH=True
+FROZEN_SHA256 stop0-probe.py 6c1213de4b50bb04128173cd484775686a537ec8426b8fde6052213ba5509fe6 MATCH=True
+FROZEN_SHA256 stop0-client-selfcheck.py 6d3dc1e9c5af5b548cec5c838a51b67dd6aa0b7377e0ad5428a4c7dfe3f24a8f MATCH=True
+FROZEN_SHA256 stop0-review-packet.md ba884c928db364e1db45a1e938a1eda2d27c242739e4645f60f18273153478a4 MATCH=True
+FROZEN_SHA256 stop0-run-01/protocol.txt 9935fc8bbc5aa27a56ff154e79d177f4cfc256b5c21ba8ec5d4bb9374710a97a MATCH=True
+FROZEN_SHA256 stop0-run-01/result.txt d0b5907437c9abb9b065d8623d09a9eab3038d4aab5c8c59350a2ae4d44d43ef MATCH=True
+FROZEN_SHA256 stop0-run-01/stdout-after-shutdown.txt 07bcd0c3e704aa8f54f4e4861c0ee802be0749723a24995b5ab5ab6284de627d MATCH=True
+FROZEN_SHA256 stop0-run-01/effective-settings.txt e87a76fa97f9addf868a30ce21adb75b2a6c146e92b78dfdf12a5d450131ff6f MATCH=True
+MUTATIONS stop1-mutations-01 KILLED_COUNT=8
+MUTATIONS stop1-mutations-02 KILLED_COUNT=2
+Grep tool check: lsp/lsp/src/main pattern MUTANT|ProcessBuilder|HttpClient|Socket|Files\.|implements LspService|implements Plugin|provides : no matches. This is a scoped source check, not a runtime proof.
+LSP_SERVICELOADER_FILES=[]
+COMMAND=git diff --check
+EXIT=0
+COMMAND=git diff --cached --check
+EXIT=0
+COMMAND=git diff --cached --name-only
+EXIT=0
+COMMAND=git rev-parse HEAD
+7c8d6a708f42367caa36dbf076d2c7d6398e1728
+EXIT=0
+COMMAND=git rev-list --left-right --count origin/master...HEAD
+0	1
+EXIT=0
+COMMAND=git diff --name-only
+.agents/notes/README.md
+.agents/pits.md
+README.md
+docs/design/02-module-layout.md
+docs/design/05-capability-seam.md
+docs/design/06-scope.md
+docs/design/12-api-stability.md
+docs/design/README.md
+docs/plan/README.md
+docs/plan/boundary-register.md
+docs/plan/current-state.md
+docs/plan/iteration-29.md
+pom.xml
+EXIT=0
+COMMAND=git diff -- pom.xml
+diff --git a/pom.xml b/pom.xml
+index a3850b5..fef502f 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -55,6 +55,7 @@
+         <module>skill</module>
+         <module>mcp</module>
+         <module>web</module>
++        <module>lsp</module>
+         <module>shell</module>
+         <module>session</module>
+         <module>sandbox</module>
+@@ -249,6 +250,11 @@
+                 <artifactId>harness-web-tool</artifactId>
+                 <version>${project.version}</version>
+             </dependency>
++            <dependency>
++                <groupId>io.github.retreatisadvance</groupId>
++                <artifactId>harness-lsp-lsp</artifactId>
++                <version>${project.version}</version>
++            </dependency>
+             <dependency>
+                 <groupId>io.github.retreatisadvance</groupId>
+                 <artifactId>harness-shell-shell</artifactId>
+EXIT=0
+Remote count uses existing origin/master; no fetch or push performed.
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-headers.txt lines=[1] UNCHANGED=True
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-ranges-01/00-headers.txt lines=[1] UNCHANGED=True
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-ranges-01/01-headers.txt lines=[1] UNCHANGED=True
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-ranges-01/02-headers.txt lines=[1] UNCHANGED=True
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-ranges-01/03-headers.txt lines=[1] UNCHANGED=True
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-ranges-01/04-headers.txt lines=[1] UNCHANGED=True
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-ranges-01/05-headers.txt lines=[1] UNCHANGED=True
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-ranges-01/06-headers.txt lines=[1] UNCHANGED=True
+FROZEN_HEADER_TRAILING_WHITESPACE stop0-download-ranges-01/07-headers.txt lines=[1] UNCHANGED=True
+Frozen HTTP header trailing whitespace is preserved; tracked/index diff checks do not certify these untracked originals as commit-ready. No hooks/config/bytes changed to bypass it.
+EXIT=0

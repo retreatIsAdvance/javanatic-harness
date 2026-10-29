@@ -15,6 +15,8 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 ## 2. 完整模块清单
 
+当前根 reactor 含根共 **62 个项目 = 16 个聚合（含根）+ 46 个叶子**；叶子中 **45 个代码模块**有 `module-info.java`，另一个为无代码的 `dist/jh`。it29 停 1 增量仅 `lsp` 聚合 + `lsp/lsp` Definition 叶子；不增加 Provider / Consumer / 装配行。计数由 Python 递归根 POM `<modules>` 并核对源码 `module-info.java` 实测，排除 `target`（2026-10-29）；导出包计数见 [12 §2](12-api-stability.md#2-包级-apijpms-导出面)。
+
 ### Kernel 层（框架内核，零业务依赖）
 
 | 模块 | JPMS 名 | 依赖 | 职责 |
@@ -43,7 +45,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 ### Capability 层（可替换 seam）
 
-每个 seam 是 **Definition + Provider(s) + Consumer** 三个模块（[05](05-capability-seam.md)）：
+完整能力按 **Definition + Provider(s) + Consumer** 三角色划分（[05](05-capability-seam.md)）；LSP 当前仅 Definition 已写、停 1 已通过并关闭，不表示三角色均已实现：
 
 #### LLM（模型适配器）
 
@@ -91,6 +93,14 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-web-tool` | Consumer | `web_fetch`（**恒注册**；抓取 provider 缺失装配期 fail loud）与 `web_search`（provider 在场且 `available()` 才注册）+ `HtmlTextExtractor` 线性提取（script/style 等剔除）+ 分层截断（源码 512K 字符 → 输出 256 KiB UTF-8 完整边界）+ 成功结果首行信任前缀 `EXTERNAL_WEB_CONTENT_NOTICE` + 同一常量注册 `Static(70)` 提示段。两工具恒需审批；**零新事件**：审计 = `tool/call` + `tool/result` |
 
 依赖边（实况，登记口径）：`web/web` → `kernel` + `llm.llm`；`web/fetch-http` → `web/web` + `kernel` + `kernel.config` + `llm.llm`；`web/search-deepseek` → `web/web` + `kernel` + `kernel.config` + `llm.llm` + Jackson + `java.net.http`；`web/tool` → `web/web` + `kernel` + `kernel.config` + `core.tools` + `core.system-prompt` + `core.session` + `llm.llm`。工具侧运行期不 `requires` 任一 Provider（只经双 `ServiceKey` 取能力面）；两个 Provider 互不依赖，可单挂——搜索缺 key 时该行 `disabled`，抓取面照常注册。
+
+#### LSP（Java 观察契约，it29 停 1 已通过）
+
+| 模块 | 角色 | 职责 |
+|---|---|---|
+| `harness-lsp-lsp`（`lsp/lsp`） | Definition | `LspService`（`diagnostics` / `definition` / `references` / `close`，`KEY` = `lsp`）+ 查询 / UTF-16 位置 / 诊断 / 定位值类型、`LspAnchor` / `LspObservation` / `LspEvidence` 观察模型、`LspResult` 四态与 typed 错误。Definition 已写、停 1 已通过并关闭，不是可挂载能力 |
+
+依赖边（实况）：`lsp/lsp` → `kernel/core` + `llm/llm`，分别提供 `ServiceKey` 与取消词表；JPMS `io.javanatic.harness.lsp` requires `io.javanatic.harness.kernel` + `io.javanatic.harness.llm.llm`，exports / opens `io.javanatic.harness.lsp`（opens 为同包测试反射）。零第三方依赖，无 Plugin / ServiceLoader 注册、配置键、事件或装配行新增。停 0 限定通过、T1–T3 方向已裁；无 Provider / Consumer，T4–T7 未整体批准、产品验收未执行。契约与待验矩阵见 [05 §8.1](05-capability-seam.md#81-lsp-observation-and-process-contractit29)及[停 1 提案](../plan/evidence/iteration-29/stop1-seam-design.md)。
 
 #### Shell（命令执行）
 
@@ -199,6 +209,10 @@ flowchart TD
         webtool[harness-web-tool]
     end
 
+    subgraph lsp[LSP - Definition 已写 / 停1待审]
+        lspdef[harness-lsp-lsp]
+    end
+
     subgraph shell[Shell]
         shelldef[harness-shell-shell]
         local[harness-shell-local]
@@ -242,8 +256,10 @@ flowchart TD
     kcore --> approval
     kcore --> mcpdef
     kcore --> webdef
+    kcore --> lspdef
     llmdef --> mcpdef
     llmdef --> webdef
+    llmdef --> lspdef
     session --> persistdef
     kconfig --> tools
     tools --> todo
@@ -459,6 +475,9 @@ harness/
 │   ├── fetch-http/pom.xml           ← 钉地址公网 HTTPS 抓取（URL/地址闸/重定向/HTTP-1.1/chunked）
 │   ├── search-deepseek/pom.xml      ← DeepSeek 原生搜索（结构化来源映射；Jackson 边界）
 │   └── tool/pom.xml                 ← web_fetch/web_search + HTML 提取 + 分层截断 + 信任前缀/提示段
+├── lsp/
+│   ├── pom.xml                      ← 聚合（harness-lsp-aggregator）
+│   └── lsp/pom.xml                  ← LspService + 观察值类型；Definition 已写、停 1 已通过，无 Provider/Consumer
 ├── session/
 │   ├── pom.xml
 │   ├── persistence/pom.xml          ← SessionStore SPI + SessionEventCodec
@@ -517,6 +536,7 @@ harness/
         <module>core</module>
         <module>llm</module>
         <module>fs</module>
+        <module>lsp</module>
         <module>shell</module>
         <module>sandbox</module>
         <module>session</module>
@@ -885,7 +905,7 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `e2b/*` | — | ❌ 不做 |
 | `web/web` + `web/fetch-http` + `web/search-deepseek` | `web.web` + `web.fetch.http` + `web.search.deepseek`（it28：契约 + 钉地址抓取 + 原生搜索双 Provider）| ✅（it28）|
 | `web/tool-web` | `web.tool`（`web_fetch`/`web_search` + HTML 文本提取 + 分层截断 + 信任前缀/提示段）| ✅（it28；dsh 的信任段与本实现同源常量，搜索只取结构化来源同口径）|
-| `lsp/*` | 尚无模块或完整 Definition | 0.3 顺序 4；it29 Java 三能力范围已批准，停 0 探针与技术清单待裁（[四确认](../plan/iteration-29.md)）|
+| `lsp/*` | `lsp/lsp`（JPMS `io.javanatic.harness.lsp`，Definition） | Definition 已写、停 1 已通过并关闭；停 0 限定通过、T1–T3 方向已裁；停 2 Provider 进行中；无可挂载 Provider 或 `lsp-tool`，T4–T7 未整体批准、产品验收未执行（[it29](../plan/iteration-29.md)）|
 | `subagent/*` | — | 规划预留，未建独立 Definition；按 0.4 路线另行确认 |
 | `workflow/*` | — | ❌ 不做 |
 | `hooks/*` | — | ❌ 不做 |

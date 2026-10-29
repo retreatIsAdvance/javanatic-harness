@@ -1,0 +1,35 @@
+Stop 0 前置阻塞记录 — 2026-10-29
+
+结论：真实 JDT LS 未启动；没有 initialize / 真实诊断 / LS 正常退出证据。停 0 未通过，不能进入 JH 实现，也不据此判候选失败或切 compiler API。
+
+1. 下载
+唯一候选为官方 milestones 1.63.0 / 202610191322；官方 SHA 文件已取得。第一次 curl max-time=300 返回 28，7389166 / 51143565 bytes；HTTP 200、accept-ranges: bytes，原头见 stop0-download-headers.txt。
+同 URL 的有界分段续传已完成（8 段，各 max-time=360；不换版本、不猜镜像），见 stop0-download-ranges-01/summary.txt：各段 curl EXIT=0、长度与 Content-Range 匹配，重组完整 51143565 bytes，完整 SHA 与官方 b1f2abe0b3cccb462cf64fb4a5587c7d09df60cf8be7748b152cbd89d018bdc4 匹配。
+后续独立静态核验再次计算整包 SHA，并在内存读取 tar / 内嵌 ZIP：137 个 tar 条目、无绝对路径/父路径越界/链接等特殊条目；实际 launcher=1.8.0.v20260804-1928、server bundle=1.63.0.202610191322、JDT core=3.48.0.v20261007-1246；config_mac_arm/config.ini 存在；server git.properties commit=d98abba8f04cf041542d9ebb6df0d472a1395606。证据见 stop0-artifact-verification.txt 与 stop0-archive-list.txt，EXIT=0。没有解压、启动 LS。
+官方 milestones 工件的 git.properties 同时保留 git.build.version=1.63.0-SNAPSHOT，原样记录；它与 bundle 完整发布 build 并存，不能抹掉该字段，也不因这一内部字符串擅自声称下载来自 snapshots 通道。
+
+2. 新测试与未完成修复
+stop0-client-contract-red.txt：真实 Peer 边界的三个新增测试均按预期 FAIL：未实现动态注册被回复成功、缺 diagnostics 数组被当空集合、shutdown 带 params:null。对应代码已修改，但本记录不声称最终套件复绿。
+stop0-client-zombie-red.txt：前三项变为 ok；新 EPERM 用例 ERROR（PermissionError），整体 EXIT=1。该次不是全绿。
+stop0-client-buffer-red.txt 与 stop0-client-buffer-red-02.txt：更新的集成自检要求磁盘保持合法、错误仅来自 LSP 内存版本；旧客户端尚不支持。实际失败被清场 PermissionError 遮盖，因此这两份不能冒称完成该功能的预期红灯验证；外层记录脚本的断言也失败。
+
+3. macOS 根因最小观察
+stop0-process-observation.txt：自有子进程运行时 kill(pid,0) / killpg(pgid,0) 成功；正常 wait 后两者均 ESRCH(3)。
+stop0-process-zombie-observation.txt：仅本次创建的子进程经 terminate、stdout EOF 后、wait 前，killpg(pgid,0) 返回 EPERM(1)；wait 返回 -15 后为 ESRCH(3)。
+因此 EPERM 不等于组已消失。group_alive 已改为对 EPERM 保守返回 True，让原有 poll/wait 继续；没有提权，也没有把 EPERM 包装成正常回收成功。此最终修改尚未通过复跑验证。
+
+4. 执行权限拦截
+下一次计划运行 stop0-client-selfcheck.py、写入 stop0-client-buffer-red-03.txt 时，Bash 工具未执行命令，返回：
+"Auto mode: action blocked by classifier — The action is a retry of a previously failed test (stop0-client-selfcheck.py) which returned an error status in the transcript. The user has not provided new instructions or changed permissions to retry this failing test. According to the rules, actions with 'error' status should not be retried without explicit user instruction or permission changes."
+
+这是工具执行权限拦截，不是 Python EXIT，不是一次实际运行；不记为 EXIT=1/0。未换工具、入口、目录或代理绕过复跑限制。需要用户新鲜明确授权后才重试该自检。停止真实 LS 启动；已获授权且此前已启动的独立下载只继续传输和校验。
+
+5. 仍未做的客户端对齐
+官方研究已给出要求，但当前 stop0-probe.py 尚未完整纳入：移除 log.protocol、Java>=24 的两项 XML property、私有 config_mac_arm 副本、明确 Maven user/global settings、initializationOptions.workspaceFolders URI 字符串数组、完整静态能力声明与 extendedClientCapabilities。
+当前测试已改用合法磁盘 / 错误内存目标，客户端及真实 scratch 夹具尚未对齐；不得直接执行真实探针。当前夹具是单 Maven 模块、JPMS；尚无跨 Maven 模块及 Java25 final 新语法的 LS 实测。
+历史 stop0-client-selfcheck.txt / mutations.txt / review.txt 对应较早脚本，不能用于当前文件的通过声明。后续须按变更重新验证，保留真实与替身证据区分。
+独立只读复核指出复验入口须分开：直接执行 stop0-client-selfcheck.py 只调用 main 集成自检，四个 ProtocolBoundaryTest 必须经 unittest 入口执行；单跑一条不等于全套复绿。该意见经主代理核对现有 __main__ 与测试定义采纳。后续还需新变更的突变检查，旧 2 项突变不可覆盖当前版本。
+
+6. 工作边界
+未增加 JH 产品代码、未启动真实 LS、未采用 compiler API 替代、未提交本批、未 push。7c8d6a7 是已获批准的预置提交；其提交后 docs 正例仅检查当时相对 HEAD 的空变化范围。
+下一步：新鲜授权自检复跑 → 补齐并验证客户端与夹具 → 完整工件及 manifest 核验 → 唯一候选裸进程真跑 → 按事实出停 0 实跑结论 → T1–T3 人工裁定。此记录不批准任何一步越过现有失败闸。

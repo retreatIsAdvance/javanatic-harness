@@ -1,0 +1,34 @@
+{
+  "scope": "static document links, tracked diff whitespace, current evidence hashes; no client selfcheck or LS execution",
+  "documents": [
+    {
+      "path": "docs/plan/iteration-29.md",
+      "local_link_count": 16,
+      "missing": []
+    },
+    {
+      "path": "docs/plan/current-state.md",
+      "local_link_count": 14,
+      "missing": []
+    }
+  ],
+  "diff_check": {
+    "command": [
+      "git",
+      "-C",
+      "/Users/abel_yang/study/deepseek/javanatic-harness",
+      "diff",
+      "--check"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  "hashes": {
+    "stop0-probe.py": "aa5ab32995d114eb106f6e3dc60db3af38335b91f8da0f2e33c02b5cc88d5214",
+    "stop0-client-selfcheck.py": "92e44348cc5a5182111459f77646fe0e975bed24fcb17751c6fae3468e6833d1",
+    "stop0-preflight-blocker.txt": "d2f762605a79bd585f159f4491879c95237c1d129d1498c7b1cea0ffe8db7150",
+    "stop0-preflight-static-review.txt": "51fcaf9f32aba2b170a75951d076cf26754cb72927564cc94479113864e9f2aa",
+    "stop0-artifact-verification.txt": "b960d8283f239b90f7afbe9af60657dde198d80dc6d58a60aeb83a56311b9b8e"
+  },
+  "exit": 0
+}

@@ -1,0 +1,3 @@
+COMMAND=['/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/javac', '-J-Duser.home=/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/home', '-J-Djava.io.tmpdir=/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/tmp', '--release', '25', '-d', '/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/javac-legal-25', '/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/module-info.java', '/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/probe/App.java', '/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/probe/Calc.java']
+
+EXIT=0

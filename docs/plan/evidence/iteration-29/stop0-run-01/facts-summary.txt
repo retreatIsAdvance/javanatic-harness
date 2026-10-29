@@ -1,0 +1,128 @@
+{
+  "core_error": {
+    "uri": "file:///Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/probe/App.java",
+    "diagnostics": [
+      {
+        "range": {
+          "start": {
+            "line": 4,
+            "character": 23
+          },
+          "end": {
+            "line": 4,
+            "character": 25
+          }
+        },
+        "severity": 1,
+        "code": "16777233",
+        "source": "Java",
+        "message": "Type mismatch: cannot convert from int to String"
+      }
+    ]
+  },
+  "all_diagnostics": [
+    {
+      "seq": 379,
+      "seconds": 103.475328,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/probe/App.java",
+          "diagnostics": [
+            {
+              "range": {
+                "start": {
+                  "line": 4,
+                  "character": 23
+                },
+                "end": {
+                  "line": 4,
+                  "character": 25
+                }
+              },
+              "severity": 1,
+              "code": "16777233",
+              "source": "Java",
+              "message": "Type mismatch: cannot convert from int to String"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 400,
+      "seconds": 103.898771,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/probe/App.java",
+          "diagnostics": [
+            {
+              "range": {
+                "start": {
+                  "line": 1,
+                  "character": 14
+                },
+                "end": {
+                  "line": 1,
+                  "character": 23
+                }
+              },
+              "severity": 2,
+              "code": "268435844",
+              "source": "Java",
+              "message": "The import java.base is never used"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "server_request_counts": {
+    "window/workDoneProgress/create": 18
+  },
+  "directory_delta_counts": {
+    "created": {
+      "config_mac_arm": 63,
+      "home": 243,
+      "index": 41,
+      "project": 9
+    },
+    "modified": {},
+    "removed": {}
+  },
+  "post_exit": {
+    "pid": {
+      "gone": true,
+      "errno": 3
+    },
+    "pgid": {
+      "gone": true,
+      "errno": 3
+    },
+    "ps_numeric_only": {
+      "command": [
+        "/bin/ps",
+        "-axo",
+        "pid=,ppid=,pgid="
+      ],
+      "exit": 0,
+      "matching_pid_ppid_pgid_rows": [],
+      "scope": "post-exit snapshot only, not lifetime process tracing"
+    },
+    "server_tree_unchanged": true,
+    "disk_source_unchanged": true,
+    "checked_at": "2026-10-29T07:09:21.185907+00:00"
+  },
+  "source_hashes": {
+    "disk_source": "d8efc20eb5f73ada640e00a3c8499bc674ecc62cdef194cb3e614fe4af06e130",
+    "source_v1": "625220486314589bb34900e1bd21808afb7508f52fea734f17f85e6bb0529f84",
+    "source_v2": "d8efc20eb5f73ada640e00a3c8499bc674ecc62cdef194cb3e614fe4af06e130"
+  },
+  "normal_shutdown_seconds": 0.631263,
+  "error_to_next_diagnostic_seconds": 0.423443
+}

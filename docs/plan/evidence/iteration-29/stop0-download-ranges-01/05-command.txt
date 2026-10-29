@@ -1,0 +1,3 @@
+COMMAND=['/usr/bin/curl', '-q', '--silent', '--show-error', '--fail', '--location', '--connect-timeout', '15', '--max-time', '360', '--max-filesize', '5469300', '--range', '34735666-40204965', '--header', 'If-Range: "30c638d-65e319a9cc623"', '--output', '/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/download/ranges-01/05.part', '--dump-header', '/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-download-ranges-01/05-headers.txt', 'https://download.eclipse.org/jdtls/milestones/1.63.0/jdt-language-server-1.63.0-202610191322.tar.gz']
+
+EXIT=0

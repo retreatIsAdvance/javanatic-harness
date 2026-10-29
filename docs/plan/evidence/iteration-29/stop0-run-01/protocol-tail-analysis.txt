@@ -1,0 +1,478 @@
+{
+  "tail_bytes": 1209,
+  "tail_messages": [
+    {
+      "jsonrpc": "2.0",
+      "method": "window/logMessage",
+      "params": {
+        "type": 3,
+        "message": "2026年10月29日 15:08:15 >> exit"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "window/logMessage",
+      "params": {
+        "type": 3,
+        "message": "2026年10月29日 15:08:15 Shutdown received... waking up main thread"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "window/logMessage",
+      "params": {
+        "type": 3,
+        "message": "2026年10月29日 15:08:15 class org.eclipse.jdt.ls.core.internal.JavaLanguageServerPlugin is stopping:"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "id": "19",
+      "method": "window/workDoneProgress/create",
+      "params": {
+        "token": "e137bfe3-d527-4179-aa1f-79c07d7acde8"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "$/progress",
+      "params": {
+        "token": "e137bfe3-d527-4179-aa1f-79c07d7acde8",
+        "value": {
+          "kind": "begin",
+          "title": "Building",
+          "message": "Building"
+        }
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "$/progress",
+      "params": {
+        "token": "e137bfe3-d527-4179-aa1f-79c07d7acde8",
+        "value": {
+          "kind": "report",
+          "message": "Building - 0% ",
+          "percentage": 0
+        }
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "$/progress",
+      "params": {
+        "token": "e137bfe3-d527-4179-aa1f-79c07d7acde8",
+        "value": {
+          "kind": "end",
+          "message": "Building"
+        }
+      }
+    }
+  ],
+  "ordering_limit": "tail combines peer.buffer at shutdown response and subsequent reads; no per-message arrival timestamps; cannot claim every tail message was emitted after exit",
+  "before_initialize_response_nonstandard_notifications_or_requests": [
+    {
+      "seq": 9,
+      "seconds": 2.376963,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "window/workDoneProgress/create",
+        "params": {
+          "token": "9064dbad-e32d-48fe-bff6-955cfbc6cba9"
+        }
+      }
+    },
+    {
+      "seq": 11,
+      "seconds": 2.378329,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "9064dbad-e32d-48fe-bff6-955cfbc6cba9",
+          "value": {
+            "kind": "begin",
+            "title": "Repository registry initialization",
+            "message": "Repository registry initialization"
+          }
+        }
+      }
+    },
+    {
+      "seq": 12,
+      "seconds": 2.378495,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "9064dbad-e32d-48fe-bff6-955cfbc6cba9",
+          "value": {
+            "kind": "end",
+            "message": "Repository registry initialization"
+          }
+        }
+      }
+    },
+    {
+      "seq": 13,
+      "seconds": 2.634563,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "2",
+        "method": "window/workDoneProgress/create",
+        "params": {
+          "token": "2699f13b-3ed4-4ab1-a2dc-467733e0d471"
+        }
+      }
+    },
+    {
+      "seq": 15,
+      "seconds": 2.634692,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "2699f13b-3ed4-4ab1-a2dc-467733e0d471",
+          "value": {
+            "kind": "begin",
+            "title": "Building",
+            "message": "Building"
+          }
+        }
+      }
+    },
+    {
+      "seq": 16,
+      "seconds": 2.635576,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "2699f13b-3ed4-4ab1-a2dc-467733e0d471",
+          "value": {
+            "kind": "report",
+            "message": "Building - 0% ",
+            "percentage": 0
+          }
+        }
+      }
+    },
+    {
+      "seq": 17,
+      "seconds": 2.635776,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "2699f13b-3ed4-4ab1-a2dc-467733e0d471",
+          "value": {
+            "kind": "end",
+            "message": "Building"
+          }
+        }
+      }
+    },
+    {
+      "seq": 19,
+      "seconds": 3.808291,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "3",
+        "method": "window/workDoneProgress/create",
+        "params": {
+          "token": "86c02f3a-d77d-472a-8392-5195f1154a60"
+        }
+      }
+    },
+    {
+      "seq": 21,
+      "seconds": 3.808397,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "86c02f3a-d77d-472a-8392-5195f1154a60",
+          "value": {
+            "kind": "begin",
+            "title": "Synchronizing projects",
+            "message": "Synchronizing projects"
+          }
+        }
+      }
+    },
+    {
+      "seq": 22,
+      "seconds": 3.808417,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "86c02f3a-d77d-472a-8392-5195f1154a60",
+          "value": {
+            "kind": "report",
+            "message": "Synchronizing projects - 0% ",
+            "percentage": 0
+          }
+        }
+      }
+    },
+    {
+      "seq": 23,
+      "seconds": 3.808476,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "86c02f3a-d77d-472a-8392-5195f1154a60",
+          "value": {
+            "kind": "end",
+            "message": "Synchronizing projects"
+          }
+        }
+      }
+    },
+    {
+      "seq": 24,
+      "seconds": 3.812397,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "4",
+        "method": "window/workDoneProgress/create",
+        "params": {
+          "token": "a540c9b1-3833-49bb-b60b-9c62378fd25a"
+        }
+      }
+    },
+    {
+      "seq": 26,
+      "seconds": 3.81256,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "a540c9b1-3833-49bb-b60b-9c62378fd25a",
+          "value": {
+            "kind": "begin",
+            "title": "Detect installed JVMs",
+            "message": "Detect installed JVMs"
+          }
+        }
+      }
+    },
+    {
+      "seq": 27,
+      "seconds": 3.812594,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "a540c9b1-3833-49bb-b60b-9c62378fd25a",
+          "value": {
+            "kind": "report",
+            "message": "Detect installed JVMs - 0% ",
+            "percentage": 0
+          }
+        }
+      }
+    },
+    {
+      "seq": 32,
+      "seconds": 3.842935,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "5",
+        "method": "window/workDoneProgress/create",
+        "params": {
+          "token": "c11a75c4-8158-411b-9525-d422a6b5a57b"
+        }
+      }
+    },
+    {
+      "seq": 34,
+      "seconds": 3.843019,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "c11a75c4-8158-411b-9525-d422a6b5a57b",
+          "value": {
+            "kind": "begin",
+            "title": "Building",
+            "message": "Building"
+          }
+        }
+      }
+    },
+    {
+      "seq": 35,
+      "seconds": 3.84304,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "c11a75c4-8158-411b-9525-d422a6b5a57b",
+          "value": {
+            "kind": "report",
+            "message": "Building - 0% ",
+            "percentage": 0
+          }
+        }
+      }
+    },
+    {
+      "seq": 36,
+      "seconds": 3.843198,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "c11a75c4-8158-411b-9525-d422a6b5a57b",
+          "value": {
+            "kind": "end",
+            "message": "Building"
+          }
+        }
+      }
+    },
+    {
+      "seq": 37,
+      "seconds": 3.844977,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "language/status",
+        "params": {
+          "type": "Starting",
+          "message": "Init..."
+        }
+      }
+    },
+    {
+      "seq": 38,
+      "seconds": 3.845104,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "language/status",
+        "params": {
+          "type": "Starting",
+          "message": "0% Starting Java Language Server"
+        }
+      }
+    },
+    {
+      "seq": 39,
+      "seconds": 3.845155,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "6",
+        "method": "window/workDoneProgress/create",
+        "params": {
+          "token": "c76c31dc-347c-4cbe-a158-6042e715750b"
+        }
+      }
+    },
+    {
+      "seq": 41,
+      "seconds": 3.845284,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "c76c31dc-347c-4cbe-a158-6042e715750b",
+          "value": {
+            "kind": "begin",
+            "title": "Initialize Workspace",
+            "message": "Initialize Workspace"
+          }
+        }
+      }
+    },
+    {
+      "seq": 42,
+      "seconds": 3.845308,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "c76c31dc-347c-4cbe-a158-6042e715750b",
+          "value": {
+            "kind": "report",
+            "message": "Initialize Workspace - 0% ",
+            "percentage": 0
+          }
+        }
+      }
+    },
+    {
+      "seq": 43,
+      "seconds": 3.849778,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "id": "7",
+        "method": "window/workDoneProgress/create",
+        "params": {
+          "token": "b167dc87-eead-47ac-9df2-a3c0810dab72"
+        }
+      }
+    },
+    {
+      "seq": 45,
+      "seconds": 3.849888,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "b167dc87-eead-47ac-9df2-a3c0810dab72",
+          "value": {
+            "kind": "begin",
+            "title": "Repository registry initialization",
+            "message": "Repository registry initialization"
+          }
+        }
+      }
+    },
+    {
+      "seq": 46,
+      "seconds": 3.849928,
+      "direction": "server",
+      "message": {
+        "jsonrpc": "2.0",
+        "method": "$/progress",
+        "params": {
+          "token": "b167dc87-eead-47ac-9df2-a3c0810dab72",
+          "value": {
+            "kind": "end",
+            "message": "Repository registry initialization"
+          }
+        }
+      }
+    }
+  ],
+  "journal_messages": 412,
+  "tail_message_count": 7
+}

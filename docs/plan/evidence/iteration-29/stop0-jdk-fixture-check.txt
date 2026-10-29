@@ -1,0 +1,11 @@
+COMMAND=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/java -version
+openjdk version "25.0.4.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS)
+OpenJDK 64-Bit Server VM Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS, mixed mode, sharing)
+EXIT=0
+COMMAND=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/javac --release 25 -d /Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/javac-out /Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/module-info.java /Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/probe/App.java /Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/probe/Calc.java
+/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project/src/main/java/probe/App.java:5: 错误: 不兼容的类型: int无法转换为String
+        String label = 42;
+                       ^
+1 个错误
+EXIT=1

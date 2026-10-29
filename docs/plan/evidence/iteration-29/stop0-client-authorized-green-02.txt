@@ -1,0 +1,19 @@
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '-m', 'unittest', 'stop0-client-selfcheck.ProtocolBoundaryTest', '-v']
+test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result) ... ok
+test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone) ... ok
+test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params) ... ok
+test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.026s
+
+OK
+
+EXIT=0
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py']
+CONTRACT-AND-DISK-BUFFER=PASS
+EXIT-DRAIN=PASS (1 MiB tail, normal exit, EOF, group gone)
+SETUP-FAILURE-EVIDENCE=PASS
+EXIT=0; synthetic client checks only, not LS evidence
+
+EXIT=0

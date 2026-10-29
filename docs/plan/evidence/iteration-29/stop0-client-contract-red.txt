@@ -1,0 +1,36 @@
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '-m', 'unittest', 'stop0-client-selfcheck.ProtocolBoundaryTest', '-v']
+test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result) ... FAIL
+test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params) ... FAIL
+test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged) ... FAIL
+
+======================================================================
+FAIL: test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py", line 35, in test_missing_diagnostics_array_is_not_empty_result
+    with self.assertRaises(TimeoutError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: TimeoutError not raised
+
+======================================================================
+FAIL: test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py", line 41, in test_shutdown_omits_params
+    self.assertNotIn('params', self.sent[0])
+AssertionError: 'params' unexpectedly found in {'jsonrpc': '2.0', 'id': 1, 'method': 'shutdown', 'params': None}
+
+======================================================================
+FAIL: test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py", line 26, in test_unimplemented_registration_is_not_acknowledged
+    self.assertIn('error', self.sent[0])
+AssertionError: 'error' not found in {'jsonrpc': '2.0', 'id': 'server-register-1', 'result': None}
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.013s
+
+FAILED (failures=3)
+
+EXIT=1

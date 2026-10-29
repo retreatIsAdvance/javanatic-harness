@@ -22,6 +22,7 @@
 | [0006](0006-mcp-result-budget-layering.md) | 结果预算分层：transport 8 MiB 帧帽 / 消费面 256 KiB | 已实施 | it27.1 | [stop3-cap-and-masking](../../docs/plan/evidence/iteration-27.1/stop3-cap-and-masking.txt) |
 | [0007](0007-web-egress-pinned-public-only.md) | Web 出口：钉地址公网抓取，egress 不受沙箱治理 | 已实施 | it28 | [stop1-pinning-and-redirect](../../docs/plan/evidence/iteration-28/stop1-pinning-and-redirect.txt) |
 | [0008](0008-web-search-provider-and-token-gap.md) | 搜索 Provider：原生结构化来源，keyless 双态与 token 缺口 | 已实施 | it28 | [stop2-real-probe](../../docs/plan/evidence/iteration-28/stop2-real-probe.txt) |
+| [0009](0009-lsp-observation-anchor.md) | LSP 诊断锚定 JH 观察时点，不证明 LS 分析来源或完成 | 已裁决（实施中） | it29 | [stop0-acceptance.txt](../../docs/plan/evidence/iteration-29/stop0-acceptance.txt)、[stop1-acceptance.txt](../../docs/plan/evidence/iteration-29/stop1-acceptance.txt) |
 
 ## 与停点评审的关系
 

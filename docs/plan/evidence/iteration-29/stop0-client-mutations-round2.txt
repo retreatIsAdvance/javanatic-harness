@@ -1,0 +1,155 @@
+MUTANT=registration-false-success
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '-m', 'unittest', 'stop0-client-selfcheck.ProtocolBoundaryTest', '-v']
+test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result) ... ok
+test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone) ... ok
+test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params) ... ok
+test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged) ... FAIL
+
+======================================================================
+FAIL: test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-kzsalv_f/stop0-client-selfcheck.py", line 27, in test_unimplemented_registration_is_not_acknowledged
+    self.assertIn('error', self.sent[0])
+AssertionError: 'error' not found in {'jsonrpc': '2.0', 'id': 'server-register-1', 'result': None}
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.015s
+
+FAILED (failures=1)
+
+EXIT=1
+MUTANT=missing-array-as-empty
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '-m', 'unittest', 'stop0-client-selfcheck.ProtocolBoundaryTest', '-v']
+test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result) ... FAIL
+test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone) ... ok
+test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params) ... ok
+test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged) ... ok
+
+======================================================================
+FAIL: test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-5ucbxvkz/stop0-client-selfcheck.py", line 36, in test_missing_diagnostics_array_is_not_empty_result
+    with self.assertRaises(TimeoutError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: TimeoutError not raised
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.016s
+
+FAILED (failures=1)
+
+EXIT=1
+MUTANT=shutdown-null-params
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '-m', 'unittest', 'stop0-client-selfcheck.ProtocolBoundaryTest', '-v']
+test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result) ... ok
+test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone) ... ok
+test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params) ... FAIL
+test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged) ... ok
+
+======================================================================
+FAIL: test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-okr03a_k/stop0-client-selfcheck.py", line 42, in test_shutdown_omits_params
+    self.assertNotIn('params', self.sent[0])
+AssertionError: 'params' unexpectedly found in {'jsonrpc': '2.0', 'id': 1, 'method': 'shutdown', 'params': None}
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.016s
+
+FAILED (failures=1)
+
+EXIT=1
+MUTANT=permission-false-gone
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '-m', 'unittest', 'stop0-client-selfcheck.ProtocolBoundaryTest', '-v']
+test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result) ... ok
+test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone) ... FAIL
+test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params) ... ok
+test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged) ... ok
+
+======================================================================
+FAIL: test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-rxfg0jq1/stop0-client-selfcheck.py", line 47, in test_permission_error_is_not_group_gone
+    self.assertTrue(alive(123456))
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.016s
+
+FAILED (failures=1)
+
+EXIT=1
+MUTANT=disk-mutation
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-32jfup9n/stop0-client-selfcheck.py']
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-32jfup9n/stop0-client-selfcheck.py", line 128, in <module>
+    main()
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-32jfup9n/stop0-client-selfcheck.py", line 101, in main
+    assert app.read_text()==original, 'buffer experiment must not mutate disk'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: buffer experiment must not mutate disk
+
+EXIT=1
+MUTANT=omit-jdt-roots
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-o_g7tnm8/stop0-client-selfcheck.py']
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-o_g7tnm8/stop0-client-selfcheck.py", line 128, in <module>
+    main()
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-o_g7tnm8/stop0-client-selfcheck.py", line 105, in main
+    assert init['initializationOptions']['workspaceFolders']==[(root/'project').as_uri()]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+EXIT=1
+MUTANT=wait-before-drain
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-vwmqw2ab/stop0-client-selfcheck.py']
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-vwmqw2ab/stop0-client-selfcheck.py", line 128, in <module>
+    main()
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-vwmqw2ab/stop0-client-selfcheck.py", line 96, in main
+    assert result.returncode==0,(result.stdout,result.stderr)
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-rh_wxk6m/run\nPHASE=shutdown\nEXIT=1\nTraceback (most recent call last):\n  File "/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-vwmqw2ab/stop0-probe.py", line 278, in run_probe\n    process.wait(timeout=2)\n  File "/opt/homebrew/Cellar/python@3.12/3.12.6/Frameworks/Python.framework/Versions/3.12/lib/python3.12/subprocess.py", line 1264, in wait\n    return self._wait(timeout=timeout)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/opt/homebrew/Cellar/python@3.12/3.12.6/Frameworks/Python.framework/Versions/3.12/lib/python3.12/subprocess.py", line 2045, in _wait\n    raise TimeoutExpired(self.args, timeout)\nsubprocess.TimeoutExpired: Command \'[\'/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-rh_wxk6m/jdk/bin/java\', \'-Declipse.application=org.eclipse.jdt.ls.core.id1\', \'-Dosgi.bundles.defaultStartLevel=4\', \'-Declipse.product=org.eclipse.jdt.ls.core.product\', \'-Dlog.level=ALL\', \'-Xmx1G\', \'-Djdk.xml.maxGeneralEntitySizeLimit=0\', \'-Djdk.xml.totalEntitySizeLimit=0\', \'-Duser.home=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-rh_wxk6m/home\', \'-Djava.io.tmpdir=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-rh_wxk6m/tmp\', \'-Dmaven.repo.local=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-rh_wxk6m/home/.m2/repository\', \'--add-modules=ALL-SYSTEM\', \'--add-opens\', \'java.base/java.util=ALL-UNNAMED\', \'--add-opens\', \'java.base/java.lang=ALL-UNNAMED\', \'-jar\', \'/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-rh_wxk6m/server/plugins/org.eclipse.equinox.launcher_1.8.0.v20260804-1928.jar\', \'-configuration\', \'/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-rh_wxk6m/config_mac_arm\', \'-data\', \'/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-rh_wxk6m/index\']\' timed out after 2 seconds\n\n', '')
+
+EXIT=1
+MUTANT=setup-error-green
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-zvpdi39d/stop0-client-selfcheck.py']
+CONTRACT-AND-DISK-BUFFER=PASS
+EXIT-DRAIN=PASS (1 MiB tail, normal exit, EOF, group gone)
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-zvpdi39d/stop0-client-selfcheck.py", line 128, in <module>
+    main()
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-mutant-zvpdi39d/stop0-client-selfcheck.py", line 120, in main
+    assert result.returncode==2
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+EXIT=1
+FINAL_COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '-m', 'unittest', 'stop0-client-selfcheck.ProtocolBoundaryTest', '-v']
+test_missing_diagnostics_array_is_not_empty_result (stop0-client-selfcheck.ProtocolBoundaryTest.test_missing_diagnostics_array_is_not_empty_result) ... ok
+test_permission_error_is_not_group_gone (stop0-client-selfcheck.ProtocolBoundaryTest.test_permission_error_is_not_group_gone) ... ok
+test_shutdown_omits_params (stop0-client-selfcheck.ProtocolBoundaryTest.test_shutdown_omits_params) ... ok
+test_unimplemented_registration_is_not_acknowledged (stop0-client-selfcheck.ProtocolBoundaryTest.test_unimplemented_registration_is_not_acknowledged) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.015s
+
+OK
+
+EXIT=0
+FINAL_COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py']
+CONTRACT-AND-DISK-BUFFER=PASS
+EXIT-DRAIN=PASS (1 MiB tail, normal exit, EOF, group gone)
+SETUP-FAILURE-EVIDENCE=PASS
+EXIT=0; synthetic client checks only, not LS evidence
+
+EXIT=0
+MUTANTS_KILLED=8/8
+ORIGINAL_BYTES_UNCHANGED=true
+PROBE_SHA256=6c1213de4b50bb04128173cd484775686a537ec8426b8fde6052213ba5509fe6
+TEST_SHA256=6d3dc1e9c5af5b548cec5c838a51b67dd6aa0b7377e0ad5428a4c7dfe3f24a8f
+FINAL_EXIT=0

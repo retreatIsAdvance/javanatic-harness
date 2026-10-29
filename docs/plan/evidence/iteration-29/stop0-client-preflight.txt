@@ -1,0 +1,6 @@
+CHECK=Python AST / Content-Length UTF-8 帧 / 服务端 configuration 请求响应 / id 匹配；仅替身客户端自检，不是 LS 成功证据。
+{"seq": 1, "seconds": 0.000113, "direction": "client", "message": {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}}
+{"seq": 2, "seconds": 0.021837, "direction": "server", "message": {"jsonrpc": "2.0", "id": 100, "method": "workspace/configuration", "params": {"items": [{"section": "java"}]}}}
+{"seq": 3, "seconds": 0.021886, "direction": "client", "message": {"jsonrpc": "2.0", "id": 100, "result": [{"check": "中文"}]}}
+{"seq": 4, "seconds": 0.021999, "direction": "server", "message": {"jsonrpc": "2.0", "id": 1, "result": {"unicode": "诊断"}}}
+EXIT=0

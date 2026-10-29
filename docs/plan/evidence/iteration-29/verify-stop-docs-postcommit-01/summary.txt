@@ -1,0 +1,113 @@
+{
+  "root": "/Users/abel_yang/study/deepseek/javanatic-harness",
+  "layer": "docs",
+  "base": "HEAD",
+  "module": null,
+  "started": "2026-10-29T03:10:00.322367+00:00",
+  "exit": 0,
+  "steps": [
+    {
+      "label": "git-root",
+      "command": [
+        "git",
+        "rev-parse",
+        "--show-toplevel"
+      ],
+      "exit": 0,
+      "log": "01-git-root.txt"
+    },
+    {
+      "label": "git-base",
+      "command": [
+        "git",
+        "rev-parse",
+        "--verify",
+        "--end-of-options",
+        "HEAD^{tree}"
+      ],
+      "exit": 0,
+      "log": "02-git-base.txt"
+    },
+    {
+      "label": "git-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "--revs-only",
+        "HEAD"
+      ],
+      "exit": 0,
+      "log": "03-git-head.txt"
+    },
+    {
+      "label": "diff-check-worktree",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "98c20947d2982d4431f92005551189d2410c1cee",
+        "--"
+      ],
+      "exit": 0,
+      "log": "04-diff-check-worktree.txt"
+    },
+    {
+      "label": "paths-worktree",
+      "command": [
+        "git",
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "-z",
+        "98c20947d2982d4431f92005551189d2410c1cee",
+        "--"
+      ],
+      "exit": 0,
+      "log": "05-paths-worktree.txt"
+    },
+    {
+      "label": "diff-check-index",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check",
+        "98c20947d2982d4431f92005551189d2410c1cee",
+        "--"
+      ],
+      "exit": 0,
+      "log": "06-diff-check-index.txt"
+    },
+    {
+      "label": "paths-index",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only",
+        "--no-renames",
+        "-z",
+        "98c20947d2982d4431f92005551189d2410c1cee",
+        "--"
+      ],
+      "exit": 0,
+      "log": "07-paths-index.txt"
+    },
+    {
+      "label": "paths-untracked",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "exit": 0,
+      "log": "08-paths-untracked.txt"
+    }
+  ],
+  "base_tree": "98c20947d2982d4431f92005551189d2410c1cee",
+  "head": "7c8d6a708f42367caa36dbf076d2c7d6398e1728",
+  "changed_files": [],
+  "finished": "2026-10-29T03:10:00.437460+00:00"
+}

@@ -55,6 +55,7 @@
         <module>skill</module>
         <module>mcp</module>
         <module>web</module>
+        <module>lsp</module>
         <module>shell</module>
         <module>session</module>
         <module>sandbox</module>
@@ -247,6 +248,11 @@
             <dependency>
                 <groupId>io.github.retreatisadvance</groupId>
                 <artifactId>harness-web-tool</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.retreatisadvance</groupId>
+                <artifactId>harness-lsp-lsp</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

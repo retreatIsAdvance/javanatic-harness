@@ -1,6 +1,6 @@
 # 边界登记表
 
-> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-28（文档整理，规则不变）。
+> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-29（新增 LSP 边界，已裁决、实施中；产品验收未执行）。
 >
 > 编号消歧：本表原 B4「MCP 消费结果预算」现为 `B-MCP-RESULT`；冻结历史中的旧编号仍按本映射解读。图生成器挂账保留 [it26 提案 B4](evidence/iteration-26/roadmap-diff-proposal.md#b4-capability-graph-机械化建议挂账)，与本表预算项无关。
 
@@ -29,6 +29,14 @@
 | B21 | Web 消费预算 | 分层截断：源码 512K 字符（`maxSourceChars`）→ HTML 提取/文本归一 → 输出 256 KiB（`maxOutputBytes`，UTF-8 完整字符边界、标记不计入）；搜索来源 `maxResults` 缺省 8；三者正整数且硬上限；传输 `maxBodyBytes` 2 MiB 是读侧上限，与本帽分层 | `web/tool`（T7）；`web/fetch-http` | 已实施（it28 停 3）；`stop3-tools-html-trust.txt` |
 | B22 | Web 测试缝 | `PinnedHttpClient` 的 resolver / gate / `SSLContext` 只经构造器注入（生产装配固定 `PublicAddressGate.INSTANCE` + 默认上下文）；`ResponseObserver` 包内接口、生产 no-op、只观测 status/bytes。**不得演化为生产回调面**（不设静态 setter / SPI / 系统属性开关），否则地址闸可被组合面绕开 | `web/fetch-http`、`web/search-deepseek` | 已实施（it28 停 1/2，评审确认） |
 | B-WEB-SEARCH-BUDGET | Web 搜索辅助预算 | 搜索辅助调用的 token **不进 agent 预算账**；预算只记主对话模型请求，不能据此宣称覆盖搜索总费用。重访条件：明确要求统一辅助调用计费，先另裁预算语义 | `web/search-deepseek`；[裁决 0008](../../.agents/notes/0008-web-search-provider-and-token-gap.md) | 已接受边界（it28 T9），非待修缺陷；本次仅补登记 |
+
+## LSP Boundaries（it29，已裁决 / 实施中）
+
+| # | 边界 | 规则 | 落地与证据 |
+|---|---|---|---|
+| B23 | LSP 外部进程与主动宿主探测 | 可信 LS 以用户全权运行、不入沙箱；治理在工具调用面。私有 HOME、`user.home` 与 env 白名单不是访问隔离；LS 会主动发现宿主 JDK，可写项目配置 / 编译产物、缓存 / 索引并下载依赖。工具只读 / 拒批不等于进程只读 / 无副作用；停止不回滚文件；快照非全机审计 | [停 0 终裁](evidence/iteration-29/stop0-acceptance.txt)、[有效设置](evidence/iteration-29/stop0-run-01/effective-settings.txt)；产品 Provider 尚未实现 |
+| B24 | LSP 观察锚与空诊断 | JH 在屏障拉取时计算并落账文件 / 项目 hash；LS version 仅参考。拉取成功、项目代稳定且完整等待窗后无诊断，只称“拉取时点无诊断”，不证明 LS 分析完成 / 来源，也不称“项目无错误”；后台缓存不得未经落账改模型上下文 | [停 0 终裁](evidence/iteration-29/stop0-acceptance.txt)；seam 契约随[停 1 终裁](evidence/iteration-29/stop1-acceptance.txt)落定；回放零联网零进程 |
+| B25 | LSP 产品退出与协议应答 | 有界 shutdown / exit，失败 TERM→KILL 后复验专属组，及时 wait；EPERM 不是组消失。产品验收包含 ≥3 次重复启停、忽略 TERM 路径、全部 server 请求应答（含退出阶段）。只回收自有进程，不按 Java 名称全机杀；不宣称数字 PID/PGID 快照覆盖任意脱组后代 | [终裁](evidence/iteration-29/stop0-acceptance.txt)、[探针尾流缺口](evidence/iteration-29/stop0-run-01/protocol-tail-analysis.txt)；产品验收未执行，不用停 0 单次成功替代 |
 
 ## 维护规则
 

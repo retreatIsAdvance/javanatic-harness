@@ -1,0 +1,14 @@
+it29 stop1 Definition mutations
+START=2026-10-29T08:18:28.587087+00:00
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/lsp -am test
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+All Maven logs normalized for ANSI/trailing whitespace; original stop0 bytes untouched.
+M9-stale-root: EXIT=1; assertionFailures=['staleRequiresChangeWithinSameQueryTarget']; errors=[]; expected=staleRequiresChangeWithinSameQueryTarget; KILLED=True
+M9-stale-root: restoredBytes=True; SHA256=a15b885f2ae068b201aff037dc5a16036ae8c27c3b11df8a82339fbc4e7037e1
+M10-response-version: EXIT=1; assertionFailures=['publicationMetadataCannotInventVersionOrNegativeSequence']; errors=[]; expected=publicationMetadataCannotInventVersionOrNegativeSequence; KILLED=True
+M10-response-version: restoredBytes=True; SHA256=2979854905790d9e0c520db6ee2d109f73fa5b64f2233b8f37c7b5b03d999daa
+ALL_SOURCE_BYTES_RESTORED=True
+ALL_TEST_BYTES_UNCHANGED=True
+RESIDUAL_MUTANT_MARKERS=[]
+END=2026-10-29T08:18:45.634559+00:00
+EXIT=0

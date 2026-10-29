@@ -1,0 +1,18 @@
+Stop 0 前置恢复 — 2026-10-29
+
+用户新鲜点名：“授权重跑停0客户端自检”。此前 stop0-preflight-blocker.txt、stop0-preflight-static-review.txt 是当时阻塞快照，保留、不改成从未发生。
+
+已执行与结果：
+1. stop0-client-authorized-unit-01.txt：四项 ProtocolBoundaryTest，EXIT=0。
+2. stop0-client-authorized-integration-01.txt：集成自检 EXIT=1，原始 String label = 42 断言暴露；清场 EPERM 不再遮盖原始错误。确认旧流程不支持合法磁盘/错误内存。
+3. stop0-probe.py 对齐固定源码提案：精确 launcher/core 文件名；私有 config_mac_arm/config.ini 与 Maven settings 前置存在检查；移除 log.protocol；加入 Java>=24 XML system properties；静态 capabilities；initOptions 的 URI 字符串 roots 与两项 extended capabilities；java.home/runtime/user/global Maven settings、offline=false、Gradle=false、downloadSources=false、telemetry=false。不是新增产品依赖。
+4. didOpen v1 仅内存造 String label = 42，磁盘保持合法 String label = "ok"；didChange v2 修回磁盘文本，不写文件、不发 didSave。disk、v1、v2 的 hash 独立保存；不为无版本 server 通知补盖锚。
+5. stop0-client-authorized-green-01.txt：单测0，集成在 URI 对比失败1。原因是 macOS temp /var 路径在客户端 resolve 后为 /private/var；测试输入未统一，非协议归一问题。仅把测试 fixture 根先 resolve，未修改断言值或探针归一逻辑。
+6. stop0-client-authorized-green-02.txt：四项单测及集成 EXIT=0；集成涵盖真实一次性客户端 argv/initialize、disk-buffer分离、1MiB退出排水、EOF/exit0/专属进程组消失、缺launcher的失败证据。是 Python 替身，不是 JDT LS 证据。
+7. stop0-client-mutations-round2.txt：8个独立临时副本突变全部被 AssertionError 杀死（EXIT=1）；测试字节保持不变，原探针和测试字节未改；最后原始单测与集成重新 EXIT=0。覆盖伪注册成功、缺数组当空、shutdown null参数、EPERM假消失、误写磁盘、遗漏JDT roots、wait先于排水、setup错误假绿。
+
+真实夹具准备：
+stop0-fixture-ready.txt 记录当前四项目文件、私有settings/config文本与hash，工件仅由匹配官方SHA的归档解压，config_mac_arm复制到独立可写目录。home/tmp/index仍探针私有。两个Maven settings无servers/credentials/mirrors，仅设置私有localRepository、interactiveMode=false、offline=false。没有读取用户Maven配置或仓库。
+stop0-fixture-legal-check.txt：同一JDK javac --release25 编译合法磁盘夹具 EXIT=0，使用 import module java.base（Java25 final，无preview）。当前仍是单Maven模块+JPMS、Calc/App跨文件；不外推跨Maven模块、全JH或非BMP坐标。原 stop0-fixture-before.txt 和 stop0-jdk-fixture-check.txt 是较早错误磁盘夹具历史，不是当前运行输入。
+
+仍待：真实 LS 首次运行、原始诊断/能力/正常退出证据、目录写入对账与停0裁定。无version诊断、Ready不是分析屏障、shutdown可能非null均须保留为观察，不因客户端自检通过而声称T1已成立。不提交、不push、不进入JH实现。

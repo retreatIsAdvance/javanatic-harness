@@ -1,6 +1,6 @@
 # 当前状态卡
 
-> 一页纸事实源，2026-10-28（it28 已关账；it29 四确认已落盘，技术待裁）。详细设计见 [docs/design/](../design/README.md)，逐迭代验收见 [plan/](README.md)，边界规则见[边界登记表](boundary-register.md)。本卡只写"现在是什么"，不写历史。
+> 一页纸事实源，2026-10-29（it28 已关账；it29 停 0 限定通过、T1–T3 方向已裁，`lsp/lsp` Definition 已写、停 1 已通过并关闭，当前停 2 Provider 真实生命周期进行中；T4–T7 未整体批准、产品验收未执行）。详细设计见 [docs/design/](../design/README.md)，逐迭代验收见 [plan/](README.md)，边界规则见[边界登记表](boundary-register.md)。本卡只写"现在是什么"，不写历史。
 >
 > **维护说明：每收口必更新**。核对验收、已提交/待提交、已推送/待推送和挂账状态；当前结论反转时检索旧措辞并同步所有现状入口，冻结评审原文不改写。
 
@@ -37,14 +37,14 @@
 | 面 | 命令 | 最近证据 |
 |---|---|---|
 | 门禁 | `mvn -B -q validate` | 各停点 `*-validate` / 收尾证据 |
-| 全量 | `mvn -B -q package` | [分层脚本实跑 full-02](evidence/iteration-29/verify-stop-full-02/11-package.txt)（不汇总旧 XML） |
+| 全量 | `mvn -B -q package` | [停 1 full-01](evidence/iteration-29/stop1-full-01/11-package.txt)（不汇总旧 XML；其后仅测试增补另有最终聚焦） |
 | 消费方闭包 | `integration/verify-consumer.sh candidate` | `docs/plan/evidence/iteration-28/stop3-closeout-consumer.txt` |
 | 镜像真跑 | `dist/jh/target/jlink-image/bin/jh --verify` | `docs/plan/evidence/iteration-28/stop3-jlink-network.txt` |
 
 ## 当前进行中
 
-- **it28（网络资料获取）已关账**：停 1–3 与收口批全部提交；最终评审见 [收口记录](evidence/iteration-28/stop3-closeout-review.txt)。基线 `cd39e36` 已推送，该基线 CI run `40639843523` 四腿通过。本次文档整理、分层验证脚本与 it29 草稿已获单提交授权；本批不 push，实际提交与待推范围以 Git 为准。
-- **it29：Java 诊断 / 定义 / 引用最小闭环**。范围已批准；[四确认与 T 清单](iteration-29.md)已落盘，技术项待逐项裁定。停 0 JDT LS 裸进程探针尚未执行、具体 build 尚未钉定；未开始 JH 实现，失败须停止并重裁候选。
+- **it28（网络资料获取）已关账**：停 1–3 与收口批全部提交；最终评审见 [收口记录](evidence/iteration-28/stop3-closeout-review.txt)。基线 `cd39e36` 已推送，该基线 CI run `40639843523` 四腿通过。文档整理、分层验证脚本与 it29 草稿已提交为 `7c8d6a7`；停 0 证据、停 1 Definition 与状态回填随停 1 裁决批提交；本地相对 `origin/master` 待推 2 个提交，未 push。
+- **it29：Java 诊断 / 定义 / 引用最小闭环**。[停 0 已通过并关闭](evidence/iteration-29/stop0-acceptance.txt)：固定官方 JDT LS `1.63.0 / 202610191322` 裸进程闭环成立，compiler API 备选不触发。[停 1 已通过并关闭](evidence/iteration-29/stop1-acceptance.txt)：三能力 seam 契约与观察时点模型落定（[审查包](evidence/iteration-29/stop1-review-packet.md)，[验证汇总](evidence/iteration-29/stop1-verification-summary.txt)：17 项纯值测试、10 项突变、full EXIT=0）。`LspService` 依赖 `kernel/core` + `llm/llm`，JPMS `io.javanatic.harness.lsp` exports / opens 同名包；根 reactor 仅多一个聚合与一个叶子，无 Plugin / ServiceLoader 注册、配置键、事件或装配行新增。hash 锚定 JH 拉取时点，不证明 LS 分析来源；空结果仅称“拉取时点无诊断”。无 version、未见空数组、协议 / 尾流偏离、写盘 / 下载 / 主动宿主 JDK 发现原样留存。当前进停 2：Provider 真实生命周期（≥3 次启停、忽略 TERM 后 KILL / 专属组复验、退出阶段 server 请求应答、JDT LS 偏离清单对照）获准开工，未实现、未真实验证。无可挂载 Provider 或 `lsp-tool`；T4–T7 未整体批准、产品验收未执行。
 - 方法论前置：[verify-stop.sh](../../integration/verify-stop.sh) 已实现并完成取证：22 个行为测试、11 项突变通过，修复后真实 full 层 validate + package 返回 0；独立审查三项发现均已复现修复。[脚本停点 packet](evidence/iteration-29/verify-stop-review-packet.md)已获用户点名放行，见[验收记录](evidence/iteration-29/verify-stop-acceptance.txt)，不等于 it29 技术项获批；接口与验证边界见 [it29](iteration-29.md#verification-prerequisite)。AGENTS 已知坑迁至 [.agents/pits.md](../../.agents/pits.md)，根索引与全仓适用范围保留。
 - **另批挂账，不混入 it29**：B4 capability graph 最小生成器（[出处](evidence/iteration-26/roadmap-diff-proposal.md#b4-capability-graph-机械化建议挂账)）；MCP `_hash8` 退路属命名算法变更，须重裁（边界 B13）。MCP 消费结果预算使用编号 `B-MCP-RESULT`，不再与图生成器 B4 混称。
 - **已接受边界，不是待修缺陷**：Web 搜索辅助 token 不进预算账（it28 T9，边界 `B-WEB-SEARCH-BUDGET`）；MCP 首版不做 Resources / Prompts / Sampling / Roots / Elicitation（边界 B12）。

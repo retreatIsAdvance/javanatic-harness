@@ -1,0 +1,173 @@
+STARTED=2026-10-29T07:25:16.814236+00:00
+COMMAND=/opt/homebrew/opt/python@3.12/bin/python3.12 -B -c '
+import ast, collections, hashlib, json, re, subprocess
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
+repo=Path('"'"'/Users/abel_yang/study/deepseek/javanatic-harness'"'"')
+ev=repo/'"'"'docs/plan/evidence/iteration-29'"'"'
+run=ev/'"'"'stop0-run-01'"'"'
+scratch=Path('"'"'/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029'"'"')
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+def load(p): return json.loads(p.read_text())
+def git(*args):
+    cmd=['"'"'git'"'"','"'"'-C'"'"',str(repo),*args]
+    result=subprocess.run(cmd,text=True,capture_output=True)
+    print('"'"'GIT_COMMAND='"'"'+repr(cmd)+'"'"' EXIT='"'"'+str(result.returncode))
+    assert result.returncode == 0, result.stderr+result.stdout
+    return result.stdout
+r=load(run/'"'"'result.txt'"'"')
+j=[json.loads(line) for line in (run/'"'"'protocol.txt'"'"').read_text().splitlines()]
+before=load(run/'"'"'directories-before.txt'"'"'); after=load(run/'"'"'directories-after.txt'"'"')
+prefs=load(run/'"'"'effective-settings.txt'"'"'); post=load(run/'"'"'post-exit-check.txt'"'"')
+facts=load(run/'"'"'facts-summary.txt'"'"'); tail_analysis=load(run/'"'"'protocol-tail-analysis.txt'"'"')
+assert r['"'"'probe_exit'"'"']==0 and r['"'"'core_gate'"'"'] is True and r['"'"'failure'"'"'] is None
+assert r['"'"'exit_code'"'"']==r['"'"'reaped_exit_code'"'"']==0
+assert r['"'"'stdout_eof'"'"'] is True and r['"'"'process_group_gone'"'"'] is True and not r.get('"'"'forced_cleanup'"'"')
+assert post['"'"'pid'"'"']['"'"'gone'"'"'] and post['"'"'pgid'"'"']['"'"'gone'"'"']
+assert post['"'"'ps_numeric_only'"'"']['"'"'exit'"'"']==0 and post['"'"'ps_numeric_only'"'"']['"'"'matching_pid_ppid_pgid_rows'"'"']==[]
+assert post['"'"'server_tree_unchanged'"'"'] and post['"'"'disk_source_unchanged'"'"']
+assert len(j)==412 and [x['"'"'seq'"'"'] for x in j]==list(range(1,413))
+assert '"'"'EXIT=0'"'"' in (ev/'"'"'stop0-real-command-01.txt'"'"').read_text()
+for name in ('"'"'disk_source'"'"','"'"'source_v1'"'"','"'"'source_v2'"'"'):
+    assert hashlib.sha256(r[name]['"'"'text'"'"'].encode()).hexdigest()==r[name]['"'"'sha256'"'"']
+assert r['"'"'disk_source'"'"']['"'"'sha256'"'"']==r['"'"'source_v2'"'"']['"'"'sha256'"'"']!=r['"'"'source_v1'"'"']['"'"'sha256'"'"']
+assert sha(scratch/'"'"'project/src/main/java/probe/App.java'"'"')==r['"'"'disk_source'"'"']['"'"'sha256'"'"']
+diags=[x for x in j if x['"'"'message'"'"'].get('"'"'method'"'"')=='"'"'textDocument/publishDiagnostics'"'"']
+assert [x['"'"'seq'"'"'] for x in diags]==[379,400]
+assert all('"'"'version'"'"' not in x['"'"'message'"'"']['"'"'params'"'"'] for x in diags)
+assert all(x['"'"'message'"'"']['"'"'params'"'"']['"'"'diagnostics'"'"'] for x in diags)
+d1=diags[0]['"'"'message'"'"']['"'"'params'"'"']['"'"'diagnostics'"'"']; d2=diags[1]['"'"'message'"'"']['"'"'params'"'"']['"'"'diagnostics'"'"']
+assert len(d1)==len(d2)==1
+assert d1[0]['"'"'code'"'"']=='"'"'16777233'"'"' and d1[0]['"'"'severity'"'"']==1
+assert d1[0]['"'"'message'"'"']=='"'"'Type mismatch: cannot convert from int to String'"'"'
+assert d1[0]['"'"'range'"'"']=={'"'"'start'"'"':{'"'"'line'"'"':4,'"'"'character'"'"':23},'"'"'end'"'"':{'"'"'line'"'"':4,'"'"'character'"'"':25}}
+assert d2[0]['"'"'code'"'"']=='"'"'268435844'"'"' and d2[0]['"'"'severity'"'"']==2
+assert d2[0]['"'"'message'"'"']=='"'"'The import java.base is never used'"'"'
+assert r['"'"'observations'"'"']['"'"'clear_diagnostics_gap'"'"']=='"'"'bounded LSP wait expired'"'"'
+assert not any(x['"'"'message'"'"'].get('"'"'method'"'"')=='"'"'textDocument/didSave'"'"' for x in j)
+assert r['"'"'shutdown_response'"'"']==j[410] and j[410]['"'"'message'"'"']['"'"'result'"'"']=={}
+assert j[408]['"'"'message'"'"']['"'"'method'"'"']=='"'"'shutdown'"'"' and '"'"'params'"'"' not in j[408]['"'"'message'"'"']
+assert j[411]['"'"'message'"'"']['"'"'method'"'"']=='"'"'exit'"'"'
+assert j[46]['"'"'message'"'"']['"'"'result'"'"']['"'"'serverInfo'"'"']['"'"'version'"'"']=='"'"'1.63.0-SNAPSHOT'"'"'
+caps=j[46]['"'"'message'"'"']['"'"'result'"'"']['"'"'capabilities'"'"']
+assert caps['"'"'definitionProvider'"'"'] and caps['"'"'referencesProvider'"'"'] and '"'"'diagnosticProvider'"'"' not in caps
+expected_decl={'"'"'start'"'"':{'"'"'line'"'"':3,'"'"'character'"'"':22},'"'"'end'"'"':{'"'"'line'"'"':3,'"'"'character'"'"':27}}
+definition=j[405]['"'"'message'"'"']['"'"'result'"'"']; references=j[407]['"'"'message'"'"']['"'"'result'"'"']
+assert len(definition)==1 and definition[0]['"'"'uri'"'"'].endswith('"'"'/probe/Calc.java'"'"') and definition[0]['"'"'range'"'"']==expected_decl
+assert len(references)==2
+assert any(x['"'"'uri'"'"'].endswith('"'"'/probe/Calc.java'"'"') and x['"'"'range'"'"']==expected_decl for x in references)
+assert any(x['"'"'uri'"'"'].endswith('"'"'/probe/App.java'"'"') and x['"'"'range'"'"']=={'"'"'start'"'"':{'"'"'line'"'"':5,'"'"'character'"'"':20},'"'"'end'"'"':{'"'"'line'"'"':5,'"'"'character'"'"':41}} for x in references)
+server_requests=[x['"'"'message'"'"'] for x in j if x['"'"'direction'"'"']=='"'"'server'"'"' and '"'"'method'"'"' in x['"'"'message'"'"'] and '"'"'id'"'"' in x['"'"'message'"'"']]
+assert len(server_requests)==18
+for request in server_requests:
+    assert any(x['"'"'direction'"'"']=='"'"'client'"'"' and x['"'"'message'"'"'].get('"'"'id'"'"')==request['"'"'id'"'"'] and '"'"'result'"'"' in x['"'"'message'"'"'] for x in j)
+raw=bytes.fromhex(load(run/'"'"'stdout-after-shutdown.txt'"'"')['"'"'raw_hex'"'"']); remain=raw; decoded=[]
+while remain:
+    header,body=remain.split(b'"'"'\r\n\r\n'"'"',1)
+    length=int(next(line.split(b'"'"':'"'"',1)[1] for line in header.split(b'"'"'\r\n'"'"') if line.lower().startswith(b'"'"'content-length:'"'"')))
+    assert len(body)>=length
+    decoded.append(json.loads(body[:length])); remain=body[length:]
+assert len(raw)==1209 and len(decoded)==7 and decoded==tail_analysis['"'"'tail_messages'"'"']
+tail_requests=[x for x in decoded if '"'"'id'"'"' in x and '"'"'method'"'"' in x]
+assert len(tail_requests)==1 and tail_requests[0]['"'"'id'"'"']=='"'"'19'"'"'
+assert not any(x['"'"'direction'"'"']=='"'"'client'"'"' and x['"'"'message'"'"'].get('"'"'id'"'"')=='"'"'19'"'"' for x in j)
+delta={'"'"'created'"'"':sorted(set(after)-set(before)), '"'"'modified'"'"':sorted(k for k in set(before)&set(after) if before[k]!=after[k]), '"'"'removed'"'"':sorted(set(before)-set(after))}
+assert delta==r['"'"'directory_delta'"'"']
+assert len(delta['"'"'created'"'"'])==356 and delta['"'"'modified'"'"']==delta['"'"'removed'"'"']==[]
+counts=dict(collections.Counter(x.split('"'"'/'"'"')[0] for x in delta['"'"'created'"'"']))
+assert counts=={'"'"'config_mac_arm'"'"':63,'"'"'home'"'"':243,'"'"'index'"'"':41,'"'"'project'"'"':9}
+m2e=prefs['"'"'index/.metadata/.plugins/org.eclipse.core.runtime/.settings/org.eclipse.m2e.core.prefs'"'"']
+assert '"'"'eclipse.m2.userSettingsFile='"'"'+str(scratch/'"'"'home/maven-user-settings.xml'"'"') in m2e
+assert '"'"'eclipse.m2.globalSettingsFile='"'"'+str(scratch/'"'"'home/maven-global-settings.xml'"'"') in m2e
+projectprefs=prefs['"'"'project/.settings/org.eclipse.jdt.core.prefs'"'"']
+for key in ('"'"'source'"'"','"'"'compliance'"'"','"'"'codegen.targetPlatform'"'"'): assert '"'"'org.eclipse.jdt.core.compiler.'"'"'+key+'"'"'=25'"'"' in projectprefs
+assert '"'"'enablePreviewFeatures=disabled'"'"' in projectprefs
+launching=prefs['"'"'index/.metadata/.plugins/org.eclipse.core.runtime/.settings/org.eclipse.jdt.launching.prefs'"'"']
+assert '"'"'JavaSE-25'"'"' in launching and '"'"'/Library/Java/JavaVirtualMachines/jdk1.8.0_271.jdk/Contents/Home'"'"' in launching and '"'"'/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home'"'"' in launching
+archive=scratch/'"'"'download/jdt-language-server-1.63.0-202610191322-complete.tar.gz'"'"'
+assert archive.stat().st_size==51143565
+assert sha(archive)=='"'"'b1f2abe0b3cccb462cf64fb4a5587c7d09df60cf8be7748b152cbd89d018bdc4'"'"'
+for filename,key in ((r['"'"'launcher'"'"'],'"'"'launcher_sha256'"'"'),(r['"'"'server_bundle'"'"'],'"'"'server_bundle_sha256'"'"')):
+    assert sha(scratch/'"'"'server-1.63.0/plugins'"'"'/filename)==r[key]
+log=(run/'"'"'jdt-ls-workspace-log.txt'"'"').read_text()
+assert '"'"'1.63.0-SNAPSHOT (OSGi 1.63.0.202610191322)'"'"' in log and '"'"'Git Commit: d98abba'"'"' in log
+expected={'"'"'stop0-probe.py'"'"':'"'"'6c1213de4b50bb04128173cd484775686a537ec8426b8fde6052213ba5509fe6'"'"','"'"'stop0-client-selfcheck.py'"'"':'"'"'6d3dc1e9c5af5b548cec5c838a51b67dd6aa0b7377e0ad5428a4c7dfe3f24a8f'"'"'}
+for name,h in expected.items():
+    assert sha(ev/name)==h
+    ast.parse((ev/name).read_text(), filename=name)
+    print('"'"'SCRIPT_SHA256='"'"'+name+'"'"' '"'"'+h)
+mutants=(ev/'"'"'stop0-client-mutations-round2.txt'"'"').read_text()
+assert '"'"'MUTANTS_KILLED=8/8'"'"' in mutants and '"'"'ORIGINAL_BYTES_UNCHANGED=true'"'"' in mutants and '"'"'FINAL_EXIT=0'"'"' in mutants
+assert mutants.count('"'"'MUTANT='"'"')==8
+assert not (ev/'"'"'__pycache__'"'"').exists()
+print('"'"'REAL_RUN_ARCHIVE_FACTS=PASS; journal=412; tail=1209 bytes/7 messages; requests=18 replied+1 unreplied; created='"'"'+str(counts))
+print('"'"'TEST_EVIDENCE=existing dual-entry green and 8 mutations bound to current bytes; NOT rerun'"'"')
+docs=[repo/'"'"'.agents/pits.md'"'"',repo/'"'"'docs/plan/iteration-29.md'"'"',repo/'"'"'docs/plan/current-state.md'"'"',ev/'"'"'stop0-review-packet.md'"'"']
+for p in docs:
+    text=p.read_text(); prose=re.sub(r'"'"'```[^\n]*\n.*?```'"'"','"'"''"'"',text,flags=re.S); links=[]
+    for dest in re.findall(r'"'"'!?\[[^\]\n]*\]\(([^)\n]+)\)'"'"',prose):
+        url=dest.split()[0].strip('"'"'<>'"'"'); parts=urlsplit(url)
+        if parts.scheme or url.startswith('"'"'#'"'"'): continue
+        target=p.parent/unquote(parts.path)
+        assert target.exists(), (str(p),url)
+        links.append(url)
+    print('"'"'RELATIVE_LINK_TARGETS='"'"'+str(p.relative_to(repo))+'"'"' '"'"'+str(len(links)))
+    assert text.endswith('"'"'\n'"'"') and not text.endswith('"'"'\n\n'"'"')
+    assert not any(line.rstrip()!=line for line in text.splitlines()), str(p)
+for p in (ev/'"'"'stop0-review-round1.txt'"'"',ev/'"'"'stop0-jdt-ls-probe.txt'"'"'):
+    assert p.is_file() and p.read_text().endswith('"'"'\n'"'"')
+head=git('"'"'rev-parse'"'"','"'"'HEAD'"'"').strip(); assert head=='"'"'7c8d6a708f42367caa36dbf076d2c7d6398e1728'"'"'
+assert git('"'"'rev-list'"'"','"'"'--left-right'"'"','"'"'--count'"'"','"'"'origin/master...HEAD'"'"').split()==['"'"'0'"'"','"'"'1'"'"']
+assert not git('"'"'diff'"'"','"'"'--cached'"'"','"'"'--name-only'"'"').strip()
+git('"'"'diff'"'"','"'"'--check'"'"'); git('"'"'diff'"'"','"'"'--cached'"'"','"'"'--check'"'"')
+changed=git('"'"'diff'"'"','"'"'--name-only'"'"','"'"'HEAD'"'"').splitlines(); untracked=git('"'"'ls-files'"'"','"'"'--others'"'"','"'"'--exclude-standard'"'"').splitlines()
+allowed={'"'"'.agents/pits.md'"'"','"'"'docs/plan/iteration-29.md'"'"','"'"'docs/plan/current-state.md'"'"'}
+assert set(changed)==allowed
+assert all(p.startswith('"'"'docs/plan/evidence/iteration-29/'"'"') for p in untracked)
+assert not any(p.endswith('"'"'.java'"'"') for p in changed+untracked)
+print('"'"'TRACKED_CHANGED='"'"'+repr(changed))
+print('"'"'UNTRACKED_COUNT='"'"'+str(len(untracked)))
+print('"'"'JH_PRODUCT_CHANGE=none in tracked/untracked nonignored Git surface; index empty; no new commit/push'"'"')
+for p in docs+[ev/'"'"'stop0-review-round1.txt'"'"',ev/'"'"'stop0-jdt-ls-probe.txt'"'"']:
+    print('"'"'DELIVERABLE_SHA256='"'"'+str(p.relative_to(repo))+'"'"' '"'"'+sha(p))
+whitespace={}
+for rel in untracked:
+    p=repo/rel
+    if p.suffix not in ('"'"'.txt'"'"','"'"'.py'"'"','"'"'.md'"'"'): continue
+    lines=p.read_text().splitlines()
+    locations=[i for i,line in enumerate(lines,1) if line.rstrip('"'"' \t'"'"')!=line]
+    if locations: whitespace[rel]={'"'"'count'"'"':len(locations),'"'"'first_lines'"'"':locations[:10]}
+print('"'"'UNTRACKED_TRAILING_WHITESPACE_IN_RETAINED_EVIDENCE='"'"'+json.dumps(whitespace,ensure_ascii=False))
+print('"'"'LIMITS=No LS/tests/Maven rerun; no network; links target existence only (not remote URLs/anchor rendering); raw historical logs not rewritten; not a full secret scan or OS audit.'"'"')
+print('"'"'STATIC_PACKET_CHECK=PASS'"'"')
+'
+SCRIPT_SHA256=stop0-probe.py 6c1213de4b50bb04128173cd484775686a537ec8426b8fde6052213ba5509fe6
+SCRIPT_SHA256=stop0-client-selfcheck.py 6d3dc1e9c5af5b548cec5c838a51b67dd6aa0b7377e0ad5428a4c7dfe3f24a8f
+REAL_RUN_ARCHIVE_FACTS=PASS; journal=412; tail=1209 bytes/7 messages; requests=18 replied+1 unreplied; created={'config_mac_arm': 63, 'home': 243, 'index': 41, 'project': 9}
+TEST_EVIDENCE=existing dual-entry green and 8 mutations bound to current bytes; NOT rerun
+RELATIVE_LINK_TARGETS=.agents/pits.md 2
+RELATIVE_LINK_TARGETS=docs/plan/iteration-29.md 22
+RELATIVE_LINK_TARGETS=docs/plan/current-state.md 14
+RELATIVE_LINK_TARGETS=docs/plan/evidence/iteration-29/stop0-review-packet.md 33
+GIT_COMMAND=['git', '-C', '/Users/abel_yang/study/deepseek/javanatic-harness', 'rev-parse', 'HEAD'] EXIT=0
+GIT_COMMAND=['git', '-C', '/Users/abel_yang/study/deepseek/javanatic-harness', 'rev-list', '--left-right', '--count', 'origin/master...HEAD'] EXIT=0
+GIT_COMMAND=['git', '-C', '/Users/abel_yang/study/deepseek/javanatic-harness', 'diff', '--cached', '--name-only'] EXIT=0
+GIT_COMMAND=['git', '-C', '/Users/abel_yang/study/deepseek/javanatic-harness', 'diff', '--check'] EXIT=0
+GIT_COMMAND=['git', '-C', '/Users/abel_yang/study/deepseek/javanatic-harness', 'diff', '--cached', '--check'] EXIT=0
+GIT_COMMAND=['git', '-C', '/Users/abel_yang/study/deepseek/javanatic-harness', 'diff', '--name-only', 'HEAD'] EXIT=0
+GIT_COMMAND=['git', '-C', '/Users/abel_yang/study/deepseek/javanatic-harness', 'ls-files', '--others', '--exclude-standard'] EXIT=0
+TRACKED_CHANGED=['.agents/pits.md', 'docs/plan/current-state.md', 'docs/plan/iteration-29.md']
+UNTRACKED_COUNT=76
+JH_PRODUCT_CHANGE=none in tracked/untracked nonignored Git surface; index empty; no new commit/push
+DELIVERABLE_SHA256=.agents/pits.md e799ef0a2f3fb5c57e82c690e8edce2f0993f6493f767e938f7c5a3e7a29ae37
+DELIVERABLE_SHA256=docs/plan/iteration-29.md afa01a93b7b7609696306f95463c35b79607a45e8218d4625a062736ed6af323
+DELIVERABLE_SHA256=docs/plan/current-state.md 9d37e7c016cc322bcd3ae5f104534b2f881c3dc70a3d9315d28c2d3ca86ba423
+DELIVERABLE_SHA256=docs/plan/evidence/iteration-29/stop0-review-packet.md 4c99ffcf1db579d3cabe7bdcd2e02ff131f895c49b803e1bac62a58fe8be2545
+DELIVERABLE_SHA256=docs/plan/evidence/iteration-29/stop0-review-round1.txt c160c8bcdc573d7349cecc07c7483d6e4190aab2790a4b8a100614cb673e45fb
+DELIVERABLE_SHA256=docs/plan/evidence/iteration-29/stop0-jdt-ls-probe.txt ddb2965e967e6f58638f253d2f5b5e3ee1b12ec7d0272280074a75cf6ccc2d48
+UNTRACKED_TRAILING_WHITESPACE_IN_RETAINED_EVIDENCE={"docs/plan/evidence/iteration-29/stop0-download-headers.txt": {"count": 1, "first_lines": [1]}, "docs/plan/evidence/iteration-29/stop0-download-ranges-01/00-headers.txt": {"count": 1, "first_lines": [1]}, "docs/plan/evidence/iteration-29/stop0-download-ranges-01/01-headers.txt": {"count": 1, "first_lines": [1]}, "docs/plan/evidence/iteration-29/stop0-download-ranges-01/02-headers.txt": {"count": 1, "first_lines": [1]}, "docs/plan/evidence/iteration-29/stop0-download-ranges-01/03-headers.txt": {"count": 1, "first_lines": [1]}, "docs/plan/evidence/iteration-29/stop0-download-ranges-01/04-headers.txt": {"count": 1, "first_lines": [1]}, "docs/plan/evidence/iteration-29/stop0-download-ranges-01/05-headers.txt": {"count": 1, "first_lines": [1]}, "docs/plan/evidence/iteration-29/stop0-download-ranges-01/06-headers.txt": {"count": 1, "first_lines": [1]}, "docs/plan/evidence/iteration-29/stop0-download-ranges-01/07-headers.txt": {"count": 1, "first_lines": [1]}}
+LIMITS=No LS/tests/Maven rerun; no network; links target existence only (not remote URLs/anchor rendering); raw historical logs not rewritten; not a full secret scan or OS audit.
+STATIC_PACKET_CHECK=PASS
+
+EXIT=0
+FINISHED=2026-10-29T07:25:17.077334+00:00

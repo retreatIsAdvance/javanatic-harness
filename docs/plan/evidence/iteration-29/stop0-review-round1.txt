@@ -1,0 +1,28 @@
+STOP0 REAL-EVIDENCE REVIEW — 2026-10-29
+类型：已完成的独立只读审查要点归档；由主代理整理，不是逐字转录，也不是新的执行日志。
+审查任务：核验停零真实证据。审查员为 general-purpose 子代理；未改文件、未启动 LS、未重跑测试、未联网。
+
+支持的有限结论
+1. 官方 milestones 完整工件的 SHA-256、launcher/core manifest、完整 commit 与实际运行日志相符；1.63.0-SNAPSHOT 字段应原样保留。
+2. 单 Maven 模块、单 JPMS 模块的 Java25 无 preview 夹具已导入；项目 prefs 和 m2e prefs 支持目标级别及私有双 settings 生效，实际存在公共依赖下载，不能称零网络。
+3. journal seq379 是已知位置的真实 int→String 类型错误；合法磁盘与错误 didOpen buffer 分离，不能只用磁盘错误解释这次诊断。
+4. definition / references 命中已知跨文件位置；references 的调用项范围覆盖完整表达式，不必强行等于标识符宽度。
+5. shutdown 收到响应、exit 后进程 exit0、stdout EOF、专属组消失，独立 post-exit 快照也支持本次正常清场。
+
+必须披露
+1. seq400 仍有未用 module import 警告，不是 []；90 秒等空集合超时不能抹掉实际已收到更新的事实。
+2. 两次 publishDiagnostics 均没有 version；到达序和当前 hash 不能代替来源版本证明。
+3. initialize 响应之前出现 progress/create、$/progress、language/status；客户端未提供 initialize workDoneToken，不能称严格 LSP 初始化顺序合规。
+4. shutdown result={}，不是规范 null。
+5. journal 的 18 个服务端请求均有回复，但退出 raw tail 另含 request id="19"、window/workDoneProgress/create，未回复。尾流遗漏须列风险，不能说全程所有请求均处理。
+6. 项目新建 9 个文件，私有缓存/索引/配置均有写入；前后文件快照不等于全机、全生命周期或网络审计。
+
+审查结论（归纳）
+未发现阻止按以上限定结论出包的 Important。尾流未回复不推翻本次正常退出事实，但不得被绿灯摘要覆盖。Stop0 工程闭环不等于 T 项通过、JH 全仓兼容或实现放行。
+
+主代理复核
+尾流已独立按 Content-Length 解码，1209 bytes、7 条完整消息；结果见 stop0-run-01/protocol-tail-analysis.txt。
+尾流混合 shutdown 响应时已缓冲字节与后续读取，无逐帧时间戳，不声称七条均在 exit 发出后才由 server 发送。
+后续主代理另见 effective-settings.txt 中宿主 JDK 自动发现记录（Java8 / AppletPlugin）；该发现不冒称来自本轮审查员，纳入停0 packet 的 T2 限制。
+
+执行边界：这是审查意见，不伪造 EXIT=0 测试结果；实际命令及 EXIT 见 stop0-real-command-01.txt 和客户端自检证据。

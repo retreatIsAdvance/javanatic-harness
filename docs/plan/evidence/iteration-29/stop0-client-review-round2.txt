@@ -1,0 +1,13 @@
+Stop 0 首次真实启动前独立审查 — 2026-10-29
+
+范围：general-purpose代理只读审查当前stop0-probe.py / stop0-client-selfcheck.py，固定版本stop0-source-research.txt、工件核验与iteration-29 Stop0契约。未执行客户端/LS/网络/测试，未修改仓库，未派子代理。四项单测及集成双入口EXIT=0的执行者是主代理，另见stop0-client-authorized-green-02.txt与stop0-client-mutations-round2.txt。
+
+结论：未发现需阻止首次真实启动的Important问题；不等于停0通过。
+
+代理证据点（审查时stop0-probe.py行号）：
+- 177–198、217–237：私有config、Maven双settings、HOME/user.home、环境白名单及静态能力契约对齐。
+- 242–273：磁盘v2与内存v1分离，未给原诊断补盖version。清空、定义/引用缺口允许交T裁，不能外推跨Maven模块。
+- 274–320：核心异常转清场，不换候选；正常退出须exit0、EOF、组消失，强退不算绿。
+
+必须在实跑后人工核验：149–168行仅按URI/行4筛选错误，packet须确认真实消息确为预置类型错误，核对Maven设置生效和实际回收；不能仅凭core_gate放行。
+主代理采纳上述证据核验要求；不新增产品接口、不将静态审查代替真实LS运行。

@@ -1,0 +1,29 @@
+{
+  "pid": 21248,
+  "pgid": 21248,
+  "checks": [
+    {
+      "phase": "running",
+      "check": "pid-zero",
+      "result": "exists"
+    },
+    {
+      "phase": "running",
+      "check": "group-zero",
+      "result": "exists"
+    },
+    {
+      "phase": "reaped",
+      "check": "pid-zero",
+      "errno": 3,
+      "message": "[Errno 3] No such process"
+    },
+    {
+      "phase": "reaped",
+      "check": "group-zero",
+      "errno": 3,
+      "message": "[Errno 3] No such process"
+    }
+  ],
+  "exit": 0
+}

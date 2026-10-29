@@ -1,0 +1,30 @@
+it29 stop1 — Definition implementation review and disposition
+Date: 2026-10-29
+Surface: independent read-only general-purpose reviewer inspected the specified complete Definition source, tests, stop1 spec and stop0 decision. No Maven/LS execution by reviewer; no target/ inspection. This is a coordinator archive of the returned findings, not a verbatim transcript or user approval.
+
+Critical: none reported.
+Important: none reported.
+Minor 1 — Stale project-root rejection lacked an independent test.
+  LspResult.java already rejected a different projectRoot OR document URI.
+  Previous test changed the document URI only, leaving the projectRoot arm unprotected.
+  Added LspObservationTest.staleRequiresChangeWithinSameQueryTarget: same document URI, different projectRoot, expect IllegalArgumentException.
+  M9-stale-root removed only the projectRoot arm: Maven EXIT=1, expected assertion failure, errors=[], KILLED=True.
+  Evidence: stop1-mutations-02/M9-stale-root.txt and summary.txt.
+Minor 2 — REQUEST_RESPONSE with a version lacked an independent test.
+  LspEvidence.java already allowed serverVersion only on PUBLISHED_DIAGNOSTICS.
+  Previous REQUEST_RESPONSE negative-sequence test could pass solely on sequence rejection.
+  Added publicationMetadataCannotInventVersionOrNegativeSequence: REQUEST_RESPONSE, sequence 1, version 1, expect IllegalArgumentException.
+  M10-response-version narrowed the version guard to QUIET_WINDOW only: Maven EXIT=1, expected assertion failure, errors=[], KILLED=True.
+  Evidence: stop1-mutations-02/M10-response-version.txt and summary.txt.
+Both production guards were already correct; these are regression-test omissions, not newly repaired production behavior. Each mutation restored original source bytes, left tests unchanged during mutation, and had no residual markers.
+
+Coordinator follow-up (not a reviewer finding):
+- The test-only describe switch now includes IllegalStateException default as required by AGENTS.md type discipline. All four valid variants remain explicitly covered. This unreachable-for-current-variants fallback is a standards alignment, not a new product branch.
+- Latest verification after all test edits: stop1-final-focused-02.txt, COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -pl lsp/lsp -am test, EXIT=0.
+- LSP module total: Tests run: 17, Failures: 0, Errors: 0, Skipped: 0; 16 JUnit methods + 1 jqwik property (100 tries, not 100 additional tests).
+- Same-name JUnit/jqwik XML reports overwrite one another: the earlier XML sum of 7 is retained as a residual-file measurement, not claimed as executed test count. The non-quiet Maven module summary is the counting surface.
+- Production Definition source is unchanged from stop1-full-01 validate/package. Full preceded the two new assertions and test-helper default; latest focused followed them. No claim that those additions ran in full.
+
+The coordinator verified the changes and mutation results; the reviewer did not re-review the follow-up edits. No Critical/Important was reported in the reviewed scope; this is not Provider acceptance, T4–T7 approval, or user stop1 approval.
+REVIEW_EXIT=N/A (read-only review)
+VERIFICATION_EXIT=0 (latest focused; see actual execution log)

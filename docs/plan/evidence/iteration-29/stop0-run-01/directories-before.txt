@@ -1,0 +1,30 @@
+{
+  "project/pom.xml": {
+    "bytes": 739,
+    "sha256": "8cbc5c8bb421071c5d8488008a4d383fbeb2975ccb827453a0e07d1508f98ef9"
+  },
+  "project/src/main/java/module-info.java": {
+    "bytes": 44,
+    "sha256": "210c2d1ead8d19a803c8ff9495e1ff75482810d839c172f8a355d3f4152f4515"
+  },
+  "project/src/main/java/probe/App.java": {
+    "bytes": 175,
+    "sha256": "d8efc20eb5f73ada640e00a3c8499bc674ecc62cdef194cb3e614fe4af06e130"
+  },
+  "project/src/main/java/probe/Calc.java": {
+    "bytes": 117,
+    "sha256": "5322ac42647f38b7f1c75520f5436718cd4d6ec8e2d0ce30b10707d16c646ff6"
+  },
+  "home/maven-global-settings.xml": {
+    "bytes": 414,
+    "sha256": "20986e0e5ef0e6777f3236c23b72034f3609d13bbc7861b4486ad53d8a831950"
+  },
+  "home/maven-user-settings.xml": {
+    "bytes": 414,
+    "sha256": "20986e0e5ef0e6777f3236c23b72034f3609d13bbc7861b4486ad53d8a831950"
+  },
+  "config_mac_arm/config.ini": {
+    "bytes": 7717,
+    "sha256": "0d5587fcd30641a4ce5b59e706d3565a8a7b7b40cd75c1d78ece842722c0b3ee"
+  }
+}

@@ -1,41 +1,43 @@
-# 迭代 29 — Java LSP Minimal Loop（草稿）
+# 迭代 29 — Java LSP Minimal Loop（停 1 已通过，停 2 Provider 进行中）
 
-日期：2026-10-28。模块：LSP Definition / Provider / Tool Consumer（均未创建，目录与公开类型待 T 项裁定）；预期同步 `core/agent-loop`、`bundle/base`、`examples/headless`、`dist/jh`、外部消费闭包及设计文档。
+日期：2026-10-29。当前模块：`lsp/lsp` Definition 已写，根 reactor 新增 `lsp` 聚合 + 一个 Definition 叶子；无 Provider / Tool Consumer。后续 `core/agent-loop`、`bundle/base`、`examples/headless`、`dist/jh` 与外部消费闭包按 T4–T7 裁决推进，本批不改装配。
 
-**状态：范围四确认已批准；技术 T 清单待逐项评审；停 0 尚未执行；未开始 JH 实现。** 本批交付四确认与失败闸，不是已通过的停点 packet，也不批准发布 0.3.0。停 0 通过、相关 T 项裁定及实现锚点补齐之前，不写 JH 实现代码或新增模块骨架。
+**状态：停 0 已通过并关闭（裸进程工程闭环限定结论）；JDT LS 路线确认，compiler API 备选不触发；T1–T3 方向已裁并随停 1 落定，停 1（seam 契约）已通过并关闭，当前进停 2（Provider 真实生命周期）。** [停 0 裁决](evidence/iteration-29/stop0-acceptance.txt)与[停 1 裁决](evidence/iteration-29/stop1-acceptance.txt)是现行依据；[停 1 审查包](evidence/iteration-29/stop1-review-packet.md)冻结保留当时提案。停 2 评审重点（用户点名）：诊断四态在真实 JDT LS 下的区分（用停 0 夹具复现）、「拉取成功 + 代稳定 + 等待窗」三条件的账面表述严守「拉取时点无诊断」措辞纪律。T4–T7 未整体批准；无可挂载 `lsp-tool`、无装配行，真实生命周期验证与产品验收未执行，不等于发布 0.3.0 授权。
 
 ## 四确认
 
-- **内容**：Java 诊断 / 定义 / 引用三能力最小闭环；先用独立于 JH 的裸进程探针验证 JDT LS，再决定协议依赖、契约和装配形状。诊断必须与源码版本关联，消费面以轮屏障拉取式起步；语言服务器以可信外部进程运行、不入沙箱，索引目录可配置。详细技术形状不因范围批准而自动落定。
-- **目标**：用户在固定 Java 项目中可定位真实定义与引用、读到对应源码版本的诊断，修改后辨认诊断更新，而不是把未就绪当成“没有错误”。通过真实入口证明三能力相对纯文本搜索的收益；取消、超时、进程退出及 keyless 回放均可验证。源码版本正确性与 R1 请求可重建性分别验收。
+- **内容**：Java 诊断 / 定义 / 引用三能力最小闭环；独立裸进程停 0 已确认 JDT LS 路线，停 1 seam 契约已通过并关闭，当前进停 2 Provider 真实生命周期。诊断携 JH 屏障拉取时计算并落账的文件 / 项目 hash 观察锚；LS version 仅参考，不证明 LS 分析来源或完成。消费面以轮屏障逻辑拉取起步；语言服务器以可信全权外部进程运行、不入沙箱，主动宿主 JDK 探测须披露，索引目录可配置。协议依赖、Consumer 与装配细节不因范围批准而自动落定。
+- **目标**：用户在固定 Java 项目中可定位真实定义与引用、读到携 JH 观察时点 hash 的诊断，修改后辨认观察结果变化，而不是把未就绪当成“没有错误”。拉取成功、项目代稳定且完整等待窗后无诊断，仅称“拉取时点无诊断”，不证明 LS 已完成目标版本分析或“项目无错误”。通过真实入口证明三能力相对纯文本搜索的收益；取消、超时、进程退出及 keyless 回放均可验证。JH 观察稳定性与 R1 请求可重建性分别验收，产品验收尚未完成。
 - **为什么**：逐字对齐 0.3 路线“优先 Java 的诊断、定义和引用”；先用真实 LS 闭环证伪，避免先建抽象后发现候选不可用。逻辑拉取把模型可见结果限制在受控调用及落账路径内，避免引入另一条异步上下文入口；不扩为多语言平台，控制单人维护成本。
-- **不做**：多语言通用平台、完整编辑器功能、补全 / 重命名 / code action / 自动修改源码、后台诊断直接推入模型上下文、自动安装或自动升级 LS、通用进程框架重构、MCP 命名算法改造、capability graph 生成器、Web 预算语义变更、版本发布。compiler API 直出诊断是正式备选，不是隐式降级，更不能冒充已完成 LSP 三能力。
+- **不做**：多语言通用平台、完整编辑器功能、补全 / 重命名 / code action / 自动修改源码、后台诊断直接推入模型上下文、自动安装或自动升级 LS、通用进程框架重构、MCP 命名算法改造、capability graph 生成器、Web 预算语义变更、版本发布。compiler API 直出诊断是正式备选，本次不触发；它不是隐式降级，更不能冒充已完成 LSP 三能力。
 
-裁定来源：用户本轮批准“独立文档整理批 + it29 = Java 诊断/定义/引用最小闭环”，附停 0、版本锚与四态、拉取起步、权限目录四条硬约束；T 清单仍须逐项过审。
+裁定来源：范围四确认与 [2026-10-29 停 0 终裁](evidence/iteration-29/stop0-acceptance.txt)、[2026-10-29 停 1 终裁](evidence/iteration-29/stop1-acceptance.txt)。停 0、停 1 均已通过并关闭；停 1 最终 seam 形状已定，停 2 Provider 真实生命周期获准开工。T4–T7 未整体批准，不提前实现 Consumer / 装配。
 
 ## Scope and Evidence Baseline
 
 - 前序 it28 已关账；工作基线 `cd39e36`。Skills / MCP / Web 已实现，但路线完成不等于版本发布获批；阶段路线事实源见 [设计导航](../design/README.md#phased-evolution-plan)。
-- LSP 当前没有模块或完整 Definition。不能把设计表中的“预留”当成现成接口；本批仅修正文档现状。
-- MCP 已有长驻子进程、异步清单通知和轮屏障换代。LSP 的新增难点是文档 / 项目模型 / 索引的状态，以及诊断与源码版本的一致性，不是首次面对异步外部服务。
+- `lsp/lsp` Definition 已写并通过停 1 评审：[seam 提案](evidence/iteration-29/stop1-seam-design.md)、[审查包](evidence/iteration-29/stop1-review-packet.md)与[验证汇总](evidence/iteration-29/stop1-verification-summary.txt)（EXIT=0）已落盘并获[用户放行](evidence/iteration-29/stop1-acceptance.txt)。`LspService` 依赖 `kernel/core` + `llm/llm`；JPMS `io.javanatic.harness.lsp` exports / opens `io.javanatic.harness.lsp`。本批无 Plugin / ServiceLoader 注册、配置键、事件或装配行新增；Provider 未实现，真实生命周期验证与产品验收未执行。
+- MCP 已有长驻子进程、异步清单通知和轮屏障换代。LSP 的新增难点是文档 / 项目模型 / 索引的状态，以及 JH 诊断观察锚的稳定性，不是首次面对异步外部服务；观察 hash 不保证 LS 分析来源版本。
 - `ShellExecutor.execute` 是一次性命令入口，不是长驻双向协议通道。MCP stdio 的模块虽导出包，内部 `JsonRpcPeer` 等仍为 package-private，且现有按行帧不能直接当作 LSP transport。复用哪些生命周期经验与是否增加协议依赖，见 T5，不能先改成公共框架。
-- 当前 FS 没有现成的 typed 文档变更事件；workspace 同值约束由 `AppBoot.verifyWorkspaceAlignment` 检查五个配置入口。如何观测模型编辑、shell 编辑及外部编辑，须在 T1/T4 明确，不能假设轮屏障自然保证索引就绪。
+- 当前 FS 没有现成的 typed 文档变更事件；workspace 同值约束由 `AppBoot.verifyWorkspaceAlignment` 检查五个配置入口。如何观测模型编辑、shell 编辑及外部编辑，须落实 T1 的已裁方向并在 T4 明确消费衔接，不能假设轮屏障自然保证索引就绪。
 
 ## Stop 0 — JDT LS Reality Gate
 
-**硬前置：在任何 JH 实现代码（包括模块骨架）之前完成。** 探针仅操作独立夹具与显式指定的索引目录，不拿真实仓库试写；不加载用户私有配置、凭据或工作资料。探针脚本、夹具和取证不属于 JH Provider 实现，不得借探针夹带产品代码。
+**硬前置：在任何 JH 实现代码（包括模块骨架）之前完成。** 输入限定独立夹具，私有工作目录包括 project / index / home / tmp / config_mac_arm，不拿真实仓库试写；不主动读取或配置加载用户私有配置、凭据或工作资料。这不构成 OS 访问隔离，也不证明可信外部 LS 从未访问监测目录之外的资源；实际宿主 JDK 自动发现见取证。探针脚本、夹具和取证不属于 JH Provider 实现，不得借探针夹带产品代码。
 
 ### Version Pin
 
-下表当前全部待取证；空缺即不具备通过条件。不能用 `latest`、IDE 内置插件名或“本机可用”代替版本锁定。
+下表区分工件静态取证与首次真实运行；运行成功不代替人工停点和 T 项裁定。不能用 `latest`、IDE 内置插件名或“本机可用”代替版本锁定。
 
 | 必记项 | 当前状态 |
 |---|---|
-| JDT LS 版本、完整 build 号、官方工件来源与工件 SHA-256 | 未选择、未下载、未验证 |
-| 实际 launcher / server bundle 版本与完整启动 argv | 未取证 |
-| JDK 版本、OS / 架构、夹具项目形状 | 未取证 |
-| 所依据的 LSP 规范版本与 initialize 实际 capabilities | 未取证；不假设支持协议级 pull diagnostics |
-| 工作目录、索引目录、项目写入清单、启动及退出耗时 | 未取证 |
+| JDT LS 版本、完整 build 号、官方工件来源与工件 SHA-256 | 官方 milestones 1.63.0 / 202610191322；完整 51143565 bytes，SHA-256 `b1f2abe0b3cccb462cf64fb4a5587c7d09df60cf8be7748b152cbd89d018bdc4` 与官方匹配；见[续传记录](evidence/iteration-29/stop0-download-ranges-01/summary.txt) |
+| 实际 launcher / server bundle 版本与完整启动 argv | launcher `1.8.0.v20260804-1928`、server `1.63.0.202610191322`、commit `d98abba8f04cf041542d9ebb6df0d472a1395606`；[工件核验](evidence/iteration-29/stop0-artifact-verification.txt)与[真实 argv / 结果](evidence/iteration-29/stop0-run-01/result.txt)分别留存 |
+| JDK 版本、OS / 架构、夹具项目形状 | Java25.0.4.1 / macOS26.2 arm64；单 Maven 模块 + 单 JPMS 模块，含 Java25 final `import module`，无 preview；[合法磁盘编译 EXIT0](evidence/iteration-29/stop0-fixture-legal-check.txt)，LS 收到错误 buffer 后给真实类型错误。未覆盖跨 Maven 模块或 JH 全仓 |
+| 所依据的 LSP 规范版本与 initialize 实际 capabilities | [一手研究](evidence/iteration-29/stop0-source-research.txt)依据 LSP3.17；实际 definition/references provider=true、未宣告 diagnosticProvider。普通诊断无 version；初始化顺序、shutdown `{}` 与尾流请求未答见[审查包](evidence/iteration-29/stop0-review-packet.md) |
+| 工作目录、索引目录、项目写入清单、启动及退出耗时 | JH 仓外 scratch `jh-it29-stop0-20261029/`；initialize约3.855秒、首条类型错误约103.478秒；exit0/EOF/专属组消失。五目录常规文件快照新增356（项目9）、修改0、删除0；实际下载及宿主 JDK 发现均披露，详见[事实汇总](evidence/iteration-29/stop0-jdt-ls-probe.txt) |
+
+官方归档内 `git.build.version` 与运行 `serverInfo` 均为 `1.63.0-SNAPSHOT`，与 OSGi 完整 build 并存；运行日志 `eclipse.buildId=unknown` 也原样保留。下载来源仍是官方 milestones，不抹掉内部字段或改称另一个通道。客户端经用户点名授权完成[双入口自检](evidence/iteration-29/stop0-client-authorized-green-02.txt)与[8 项突变 / 复绿](evidence/iteration-29/stop0-client-mutations-round2.txt)；它们是替身测试，不代替真实 JDT 证据。
 
 ### Probe Sequence and Pass Criteria
 
@@ -50,16 +52,16 @@
 
 **失败出口**：启动、握手、诊断或退出任一环失败即停止、保存证据并重裁候选；只允许安全清场与失败取证，不自动更换 LS build、引入依赖或切 compiler API。正式备选为 JDK compiler API 直接诊断：它不走 LSP，不能交付本轮定义 / 引用承诺；若采用，须用户明确重裁范围、改四确认与路线验收口径后再开工。
 
-## Technical Decisions — T List（全部待裁）
+## Technical Decisions — T List
 
-下表“已定方向”只指用户本轮硬约束；“待裁内容”不得先实现后补批。具体超时、帧帽、默认目录与对外类型在取证后钉定，不在本稿猜数值。
+T0 与 T1–T3 方向以[停 0 终裁](evidence/iteration-29/stop0-acceptance.txt)为准；seam 形状已随[停 1 终裁](evidence/iteration-29/stop1-acceptance.txt)落定。T4–T7 未自动全部通过。Provider 依赖、默认目录、传输帽和装配参数不在 seam 批偷定。
 
-| # | 待裁项 | 已定方向 / 候选形状 | 待裁内容与拒绝判据 |
+| # | 裁决项 | 已定方向 / 候选形状 | 尚需落实与拒绝判据 |
 |---|---|---|---|
-| T0 | 候选与版本锁定 | JDT LS 裸进程停 0；compiler API 为正式备选 | 具体 build、实际能力、Java 25 / JPMS / Maven 支持面；失败须重新裁定，禁止自动降级 |
-| T1 | **诊断语义** | 源码版本锚；未就绪 / 过期 / 超时 / 真零诊断必须可区分；另有正常非空诊断结果 | 文件 hash、协议文档版本、项目模型 / 依赖版本怎样关联；无版本通知如何归属；项目索引何时算完成；迟到结果怎样隔离；未收到通知不能等于真零 |
-| T2 | **LS 权限** | server 不入沙箱；治理在工具调用面；索引目录可配置 | 启动信任、环境继承、项目 `.project` / `.settings` 等写入、索引和缓存位置、导入 / 构建可能联网的披露；工具只读不等于进程只读，拒批不等于既已启动的 server 没有副作用 |
-| T3 | **进程生命周期** | 所有权显式、有界等待、取消 / 关闭可收敛 | project / session scope 归属、同目录多实例冲突、冷启动成本、请求取消与服务退出的区别、崩溃后结果失效、是否重启及次数；父 scope 关闭不遗留执行，不能将 R3 清理等同回滚项目文件 |
+| T0 | 候选与版本锁定 | **已裁**：JDT LS 1.63.0 / 202610191322；compiler API 不触发 | 保留工件 hash / 内部 SNAPSHOT；实测限单 Maven + JPMS，不外推全仓 |
+| T1 | **诊断语义** | **已裁**：JH 观察时点文件 / 项目 hash；LS version 只参考；四态 + 非空结果 | 类型与观察算法已随停 1 落定；稳定项目代 + 完整等待窗 + 拉取成功才可称“拉取时点无诊断”；不证明分析来源 / 完成，产品验证待 Provider/Consumer |
+| T2 | **LS 权限** | **已裁**：可信全权外部进程、不入沙箱；治理在工具面；主动宿主 JDK 探测须披露 | 项目写入、缓存、下载、宿主发现均保留；私有 HOME/env 非 OS 隔离，工具拒批不撤销进程副作用；Provider 配置落实仍待交付 |
+| T3 | **进程生命周期** | **方向已裁**：所有权显式、有界等待、取消 / 关闭收敛；产品请求必须应答（含退出） | 契约要求随停 1 落定：≥3 次启停、忽略 TERM 后 KILL + 专属组复验；EPERM 未证消失。产品测试尚未执行；Provider 实现与生命周期矩阵在停 2，不将 R3 当回滚项目文件 |
 | T4 | 轮屏障采纳与 R1 / R2 | 逻辑拉取起步；后台推送模型面挂账；禁止后台通知未经落账直接改模型上下文 | 按需工具调用怎样与文档同步 / 轮屏障衔接；候选缓存何时采纳、结果先落账再可见；优先复用 `tool/call` / `tool/result`，是否需要额外日志事实须举证；不盲抄 MCP 两个 hook |
 | T5 | 协议与三角色边界 | Definition / Provider / Consumer；不先抽通用框架 | LSP4J 或自有边界实现的成本比较、新依赖单独批准；请求并发、服务端请求、帧读写与错误分类；不得因 MCP 有 JSON-RPC 就直接复用按行 transport |
 | T6 | 定义 / 引用与结果边界 | 固定 Java 任务验证，不以字符串搜索冒充语义结果 | URI / 路径权限、位置编码、Location / LocationLink 等实际返回形状、跨文件和依赖源码、无结果 / 未就绪区分、帧帽 / 输出帽 / deadline；版本漂移时不得包装为当前定位 |
@@ -67,46 +69,49 @@
 
 ### Diagnostic Freshness Contract
 
-- **未就绪**：尚未得到能覆盖目标源码 / 项目状态的结果，不作“没有错误”结论。
-- **过期**：已知结果对应旧源码或旧项目模型；保留来源锚并显式标旧，不伪装成当前结果。
-- **超时**：本次等待期限届满，不能归入空结果或成功；与 server 死亡 / 协议错误的错误类型另裁。
-- **真零诊断**：有足够证据证明对应目标版本的分析已完成且结果为空。只有 hash 相同或请求发出后等待了一段时间不够。
-- 正常非空诊断同样必须有可解释的版本关联。R1 能逐字回放一个旧诊断，不代表诊断新鲜；两个性质须各有拒绝用例。
+- **观察锚**：屏障拉取时由 JH 计算并落账文件 / 项目 hash，描述 JH 当时看到的状态；LS `version` 若出现只作参考标注，不作锚。禁止将观察 hash 冒充 LS 分析来源证明。
+- **未就绪**：JH 尚未完成初始化、项目输入同步或建立本次观察窗，不作空结果。
+- **过期**：本次观察前后项目代或源码 / 项目 hash 变化；不得将旧缓存包装成本次观察结果。无法检测两次采样间完全恢复的外部改动，不宣称全时段文件系统审计。
+- **超时**：本次 deadline 到期且未形成合格快照；与进程死亡 / 协议错误分开，不能归为空结果。
+- **拉取时点无诊断**：拉取成功 + 项目代稳定 + 明确等待窗之后仍无诊断。只是 JH 观察事实，不证明 LS 完成目标版本分析，更不能表述“项目无错误”。旧称“真零诊断”不再承载来源 / 完成证明。停 2 产品面（Provider/Consumer 账本）必须严守此措辞纪律，评审重点由用户点名。
+- 正常非空诊断携同一观察锚，亦不承诺 LS 来源版本。无 version 的迟到通知仍可能混入本次观察，依赖 / 索引变化也不总可观测，不以 hash 隐去这些限制。R1 回放重建已落账结果，不重查源码 / 不启动 LS。类型、等待窗与稳定判据已随停 1 评审落定。
 
 ### Logical Pull Is Not Protocol Pull
 
-“拉取式”描述的是 **JH 对模型的消费方式**，不是预先断言 JDT LS 实现 `textDocument/diagnostic`。协议层若只提供 `publishDiagnostics`，可以接收并暂存候选结果，但后台接收不直接改模型上下文。选用哪一帧、怎样证明对应版本、何时落账和返回，须由 T1/T4 根据实测裁定。`TURN_STOPPING` / `PRE_STEP` 是既有参考点，不是诊断完成信号。
+“拉取式”描述的是 **JH 对模型的消费方式**，不是预先断言 JDT LS 实现 `textDocument/diagnostic`。协议层若只提供 `publishDiagnostics`，可以接收并暂存候选结果，但后台接收不直接改模型上下文。T1 已裁定用 JH 拉取时点文件 / 项目 hash 作观察锚，不证明 LS 分析来源版本或完成；观察类型与稳定判据已随停 1 评审落定。选用哪一帧、何时采纳、落账和返回等消费 / 协议细节仍待 T4/T5 裁定。`TURN_STOPPING` / `PRE_STEP` 是既有参考点，不是诊断完成信号。
 
-推送式模型面（例如新增 `lsp/diagnostics` 事件主动注入）本轮不做；重访条件是固定任务证明拉取形态不足，且有完整的版本关联、落账 / 回放、资源及生命周期方案，经另行裁定后再实施。
+推送式模型面（例如新增 `lsp/diagnostics` 事件主动注入）本轮不做；重访条件是固定任务证明拉取形态不足，且有明确的观察锚语义、落账 / 回放、资源及生命周期方案，经另行裁定后再实施。
 
 ## 设计增量（ADDED / MODIFIED / REMOVED）
 
-以下是待 T 裁定的设计同步议程，不是当前已存在的 API：
+T1–T3 方向已裁并随停 1 落定，以下区分已写并通过的 Definition 与后续待实现的 Provider / Consumer；停 2 Provider 获准开工，Consumer / 装配不因停 1 通过而自动开工：
 
-- **ADDED / D1**：Java 三能力 seam 与真实 JDT LS Provider；对应 02 模块布局、05 能力面、12 稳定面分类。
-- **ADDED / D2**：源码 / 项目版本锚与诊断新鲜度契约；对应 03 日志事实、04 消费时机与 05 工具结果。是否增事件由 T4 裁定，不预设新 schema。
-- **ADDED / D3**：LS 全权进程信任与索引目录、所有权、取消 / 回收边界；对应 05、06、07、09 及边界登记表，先登记后实现。
+- **ADDED / D1**：`lsp/lsp` Java 三能力 Definition（已写并通过停 1 评审），仅 `LspService`、纯值类型与校验；真实 JDT LS Provider 由停 2 实现。对应 02 模块布局、05 能力面、12 导出 / seam / 0.3 增量；根 reactor 增一个聚合 + 一个叶子，不增装配行。
+- **ADDED / D2**：`LspAnchor` / `LspObservation` / `LspEvidence` 与 `LspResult` 四态已写，不证明 LS 分析来源 / 完成；纯值测试不证明真实时钟、文件扫描、通知缓存或落账行为。03 日志事实、04 消费时机与 05 工具结果的消费衔接仍待 T4；本批不增事件。
+- **ADDED / D3**：LS 全权进程信任与主动宿主探测披露，以及索引目录、所有权、取消 / 回收边界；对应 05、06、07、09 及边界登记表。T2/T3 方向已裁，契约要求与验收矩阵已随[停 1 评审](evidence/iteration-29/stop1-acceptance.txt)落定；Provider 真实生命周期验收在停 2 执行。
 - **MODIFIED / D4**：组合行与消费闭包（02/07/12、base/headless/dist/consumer/embedding），仅在 T7 确认实际新增行后同步，数量不得预填。
-- **REMOVED**：无既有运行行为删除。本独立文档批订正“LSP 接口已完整”等过期现状，不构成删除已实现能力。
+- **REMOVED**：无既有运行行为删除；移除诊断须证明 LS 来源版本 / 分析完成的产品承诺，改为 JH 观察锚（[ADR 0009](../../.agents/notes/0009-lsp-observation-anchor.md)）。订正“LSP 接口已完整”等过期现状不构成删除已实现能力。
 
-## 锚点（候选；JH 开工前补齐最终类型与符号）
+## 锚点（候选；最终类型与符号在对应停点评审前补齐）
 
 | 锚点（文件:符号） | 预期改动 / 约束 | 完成 |
 |---|---|---|
-| `docs/plan/evidence/iteration-29/`：停 0 探针与夹具 | 独立裸进程闭环，不依赖 JH；证据出包后停 | 否 |
-| 拟新增 LSP Definition / Provider（目录与类待 T0–T5 裁定） | 三能力契约、版本状态、长驻进程与有界 IO | 否 |
+| `docs/plan/evidence/iteration-29/`：停 0 探针与夹具 | 独立裸进程闭环，不依赖 JH；证据与审查提案冻结 | 已通过并关闭（限定结论），见[用户裁决](evidence/iteration-29/stop0-acceptance.txt) |
+| `lsp/lsp/src/main/java/io/javanatic/harness/lsp/`：`LspService` / `LspResult` / `LspObservation` 等 | 三能力契约与纯值观察模型；停 1 仅 Definition，不实现 Provider | Definition 已写、聚焦 17 项 EXIT=0；停 1 已通过并关闭，非产品验收 |
+| LSP Provider（未创建，形状待停 2 设计） | 长驻进程、有界 IO、所有权与生命周期矩阵 | 停 2 获准开工；未实现、未真实验证 |
 | 拟新增 LSP Tool Consumer；`core/agent-loop` 的轮屏障消费点 | 受控拉取与落账；最终 hook / 注册位置待 T4 | 否 |
 | `bundle/base/.../boot/AppBoot.java:verifyWorkspaceAlignment` | 评估 workspace 对齐入口与 LS 索引目录的不同语义，不把缓存目录当源码根 | 否 |
 | base `bundle.yml`、headless/dist/consumer POM、`docs/embedding.md` | 新组合行同步面与 ServiceLoader 双通道 | 否 |
-| `docs/design/{02,03,04,05,06,07,09,12}-*.md`、边界登记表 | 按实际契约增量同步，未涉及的条目不机械改写 | 否 |
+| `docs/design/{02,03,04,05,06,07,09,12}-*.md`、边界登记表 | 按实际契约增量同步，未涉及的条目不机械改写 | 本批 02/05/06/12、导航与边界已同步；03/04/07/09 按后续实际消费 / 装配增量触发 |
 
 ## 审查停点
 
 | 停点 | 覆盖锚点 / 类 | 状态 |
 |---|---|---|
-| 停 0 | 钉版本 JDT LS 裸进程真实闭环、项目 / 索引写入与退出证据 | **未执行；第一道失败闸**。出 packet 后停，失败重裁候选 |
-| 停 1 | 最终三能力契约、诊断版本模型、Provider / 进程所有权与回收 | 待停 0、T 裁定及锚点补齐；`verify-stop.sh` 必须在此前落地并验收 |
-| 停 2 | Tool Consumer、轮屏障 / 落账 / R1、权限与装配闭包、三能力真实任务 | 待停 1 点名放行；收口前独立核对验收和发布边界 |
+| 停 0 | 钉版本 JDT LS 裸进程真实闭环、项目 / 索引写入与退出证据 | **通过并关闭（限定结论）**，见[用户裁决](evidence/iteration-29/stop0-acceptance.txt)；冻结提案不回写 |
+| 停 1 | 三能力 seam、观察时点模型、Provider 所有权 / 回收 / 协议应答的契约与验收矩阵 | **通过并关闭**，见[用户裁决](evidence/iteration-29/stop1-acceptance.txt)；[审查包](evidence/iteration-29/stop1-review-packet.md)冻结保留当时提案。Definition 聚焦 17 项、10 项突变及 full EXIT=0；本批不实现 Provider，≥3 次启停 / KILL / server 全应答均未真实验证，仍为停 2 Provider 硬验收，不能以契约单测代替 |
+| 停 2 | Provider 真实生命周期：≥3 启停 / TERM 忽略时 KILL 升级 + 进程组复验 / 退出应答 / JDT LS 偏离清单对照 | **进行中（获准开工）**。评审重点（用户点名）：诊断四态在真实 JDT LS 下的区分（用停 0 夹具复现）、「拉取成功 + 代稳定 + 等待窗」账面表述严守「拉取时点无诊断」措辞纪律；Consumer / 装配不随之开工 |
+| 停 3 | Tool Consumer、轮屏障 / 落账 / R1、权限与装配闭包、三能力真实任务 | 未开工；停 2 通过后另须点名授权，不能跳过后直接进入 Consumer；收口前独立核对验收和发布边界 |
 
 每个停点 packet 必须首部五行 TL;DR：不变量增量 / 裁决点 / 风险自报 / 证据入口 / 若只能改一处；正文包含契约承载段、设计增量 → 实现 → 测试映射、偏离及“为什么是这个形状 / 若错靠什么发现”。证据先落盘，到点不提交、不越点，等待用户新鲜点名放行。
 
@@ -140,22 +145,26 @@ consumer 沿用既有脚本，候选 install 自带 `-DskipTests`，因此**不�
 
 ## 取证
 
-当前无停 0 / 停 1 / 停 2 证据，不声称任何 LS build 或三能力已验证。下表为**计划文件名，不是已存在的证据链接**；各停点出包前只核验该 packet 引用的证据，收口时核验全表。停 0 不依赖尚未执行的停 1 / 停 2 证据。
+停 0 的[综合取证](evidence/iteration-29/stop0-jdt-ls-probe.txt)与[审查包](evidence/iteration-29/stop0-review-packet.md)已落盘，且已获[用户限定通过并关闭](evidence/iteration-29/stop0-acceptance.txt)：真实类型错误、warning-only 更新、定义 / 引用正例与正常退出有证据；诊断来源版本和真零仍无证明，不因 T1 改用观察锚而改写实测事实。停 1 Definition 已写、出包并获[用户通过放行](evidence/iteration-29/stop1-acceptance.txt)：最终聚焦 17 项、10 项突变、full 构建及两轮独立审查处置见下表；停 3 及三能力产品验收未执行。full 先于后续测试增补，生产源码未变；最终聚焦覆盖全部测试增补，不混同执行时间面。Provider 的 ≥3 次启停、忽略 TERM 后 KILL / 专属组复验及退出阶段 server 请求应答仍须停 2 真实取证，不以 seam 契约单测或停 0 单次正常退出替代。下表明确区分已存在的链接与计划文件名；各停点出包前只核验该 packet 引用的证据，收口时核验全表。
 
-| 计划文件（相对 `docs/plan/evidence/iteration-29/`） | 覆盖 |
+| 文件（相对 `docs/plan/evidence/iteration-29/`） | 覆盖 / 状态 |
 |---|---|
-| `stop0-jdt-ls-probe.txt`、`stop0-review-packet.md` | 工件来源 / hash / build、协议与诊断、目录写入、正常退出 / 失败取证 |
-| `stop1-focused.txt`、`stop1-mutations.txt`、`stop1-review-packet.md` | D1–D3 / T1–T3、生命周期和异步迟到 / 过期结果 |
-| `stop2-r1.txt`、`stop2-real-java-tasks.txt`、`stop2-review-packet.md` | D2/D4 / T4/T6/T7、零联网零进程回放与真实三能力任务 |
-| `closeout-gates.txt` | 新鲜门禁、全量、消费闭包、最终验收逐条对应 |
+| `stop0-jdt-ls-probe.txt`、`stop0-review-packet.md`、`stop0-acceptance.txt` | 已落盘并限定通过；工件 / 版本、真实协议 / 诊断 / 定位、写入 / 下载 / 宿主发现与退出；终裁与冻结提案分开 |
+| [stop1-seam-design.md](evidence/iteration-29/stop1-seam-design.md)、[stop1-verification-summary.txt](evidence/iteration-29/stop1-verification-summary.txt) | 已落盘；契约提案、构建 / hash 与计数面说明；不代表用户批准或 Provider 验收 |
+| [stop1-final-focused-02.txt](evidence/iteration-29/stop1-final-focused-02.txt)、[stop1-full-01/summary.txt](evidence/iteration-29/stop1-full-01/summary.txt) | 17 项纯值测试与 full validate/package 各 EXIT=0；统计以模块汇总计，不把被覆盖后的 XML 残留 7 项当总数 |
+| [stop1-mutations-01/summary.txt](evidence/iteration-29/stop1-mutations-01/summary.txt)、[stop1-mutations-02/summary.txt](evidence/iteration-29/stop1-mutations-02/summary.txt) | 共 10 项行为断言必红，源码逐字节还原、终检无残留 |
+| [stop1-review-round1.txt](evidence/iteration-29/stop1-review-round1.txt)、[stop1-review-round2.txt](evidence/iteration-29/stop1-review-round2.txt)、[stop1-review-packet.md](evidence/iteration-29/stop1-review-packet.md)、[stop1-acceptance.txt](evidence/iteration-29/stop1-acceptance.txt) | 设计初审及源码复审处置已归档；packet 已出并经用户通过放行，评审记录随批提交入仓 |
+| `stop2-*.txt`、`stop2-review-packet.md` | 停 2 Provider 真实生命周期已获准开工、尚未执行；零联网零进程回放与真实三能力任务仍在停 3 |
+| `closeout-gates.txt` | 未执行；新鲜门禁、全量、消费闭包、最终验收逐条对应 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
 - [x] 四确认按本轮裁定落盘，已定方向与待裁 T 项分开；compiler API 备选和失败停止规则明确。
-- [ ] 停 0：具体 build 钉死，启动 / initialize / didOpen / 真实诊断 / shutdown / exit 闭环；失败不得进入 JH 实现。
-- [ ] T0–T7 逐项裁定，最终承载类与锚点补齐，设计 / 边界先行。
+- [x] 停 0：具体 build 钉死，裸进程工程闭环获 [2026-10-29 用户限定通过并关闭](evidence/iteration-29/stop0-acceptance.txt)；JDT LS 路线确认、compiler API 备选不触发。协议偏离和诊断语义缺口保留；仅放行停 1 seam 契约，不等于产品验收通过。
+- [x] 停 1：三能力 seam 契约、观察时点模型与 Provider 生命周期验收矩阵获 [2026-10-29 用户通过放行](evidence/iteration-29/stop1-acceptance.txt)；Definition 聚焦 17 项、10 项突变、full EXIT=0。不实现 Provider，不等于产品验收通过。
+- [ ] T0–T7 逐项裁定，最终承载类与锚点补齐，设计 / 边界先行；T0 与 T1–T3 方向已裁并随停 1 落定，T4–T7 未整体批准。
 - [x] `verify-stop.sh` 在停 1 前验收：实现、22 测、11 突变和真实 full 证据已齐，用户已点名放行；见[验收记录](evidence/iteration-29/verify-stop-acceptance.txt)。
-- [ ] 诊断有源码 / 项目版本锚；四态与非空诊断可区分，迟到 / 外部编辑 / 项目状态变化不能伪造当前结果。
+- [ ] 诊断携 JH 文件 / 项目 hash 观察锚；四态与非空诊断可区分，已知旧缓存与观测到的外部编辑 / 项目代变化不得包装为本次合格快照；不证明 LS 分析来源 / 完成，无 version 迟到通知等不可观测限制须披露。契约已随停 1 落定，产品验证待 Provider/Consumer。
 - [ ] 定义 / 引用均以真实 Java 请求完成；错误符号、跨文件、空结果与不支持 / 未就绪的语义可验证。
 - [ ] 轮屏障消费与工具执行路径保持 R1/R2；后台通知不能绕过落账改上下文；回放零联网、零进程。
 - [ ] 进程权限、项目内写入、缓存 / 索引目录及默认启用规则有文档与真实观测；不把只读工具说成只读进程。
@@ -166,8 +175,12 @@ consumer 沿用既有脚本，候选 install 自带 `-DskipTests`，因此**不�
 
 ## 修正
 
-暂无 JH 代码修正。本独立文档整理批仅订正当前状态、预留与实现的混称、预算编号歧义，并迁移已知坑规则；冻结的历史评审原文不改写。
+停 1 设计初审的同步完成定义 / reader 截点与溢出、空数组批次 version、文件删除表示及位置请求形状已落实；源码复审未报 Critical / Important，两处 Minor 测试漏检（跨项目根 Stale、REQUEST_RESPONSE 携 version）已补并以 M9/M10 检出。测试辅助 switch 另按规范补 fail-loud default；最终聚焦 17 项复绿。计数改用 Maven 模块汇总，原 XML 残留测量保留并澄清，JUnit/jqwik 同名类 surefire XML 互相覆盖已回填 AGENTS 测试计数口径条。上述是本批交付和协调者核验，用户停 1 批准见[验收记录](evidence/iteration-29/stop1-acceptance.txt)。一次性探针客户端已修正未实现注册假成功、缺诊断数组假空、shutdown 参数、合法磁盘 / 错误 buffer 分离和退出排水；macOS 未回收进程组 EPERM 的保守判定已补测试并回填 `.agents/pits.md`。最终客户端字节与真实运行 hash 相同；早期失败 / 拦截和冻结评审原文不改写。
 
 ## 设计偏离
 
-暂无已实施偏离。协议级 pull 支持、无版本通知如何证明新鲜度、项目写入范围均待真实取证；不能以“实现细节”跳过裁决。compiler API 若被选中是范围重裁，不作为偏离栏里的静默降级。
+当前 JH 增量仅 `lsp/lsp` Definition 与纯值校验，无 Provider / Consumer / 装配。T1–T3 方向已获[用户终裁](evidence/iteration-29/stop0-acceptance.txt)并随停 1 落定，Definition 已写并经[停 1 评审](evidence/iteration-29/stop1-acceptance.txt)通过，不改变 T4–T7 未整体批准及产品验收未执行的状态。T1 改用 JH 观察时点 hash，不再承诺证明 LS 分析来源 / 完成；裁决史见 [ADR 0009](../../.agents/notes/0009-lsp-observation-anchor.md)。
+
+首次探针观察到：初始化顺序偏离、shutdown `{}`、退出尾流请求未答；两次诊断无 version，修复后仍含 warning 而非真零。实际仅单 Maven 模块 + JPMS，不能覆盖一手研究提案的双 Maven 模块；项目 / 缓存写入、公共下载和宿主 JDK 自动发现均有证据。详见[冻结的停 0 偏离提案](evidence/iteration-29/stop0-review-packet.md#deviations-and-decisions)，不回写实验事实。
+
+现行产品方向为“宽进严出”：接受已观察兼容形状并记录偏离，不将未知请求假回复为成功；观测偏离与尾流对照验收矩阵已随停 1 契约落定，停 2 Provider 按此清单对照验收。探针尾流未答可作为实验残余保留，但产品客户端须应答全部 server 请求（含退出阶段）；无 version / 未见空数组是观察能力缺口，不一概称违反 LSP。T2 主动宿主探测披露与 T3 生命周期硬验收已纳入方向，Provider 真实验收在停 2 执行，T4–T7 不因上述批准而整体通过。JDT LS 路线确认，compiler API 备选本次不触发；将来若采用仍须范围重裁，不是静默降级。

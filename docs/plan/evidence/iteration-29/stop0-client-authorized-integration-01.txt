@@ -1,0 +1,11 @@
+AUTHORIZATION=用户明确授权重跑停0客户端自检
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', '-B', '/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py']
+Traceback (most recent call last):
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py", line 128, in <module>
+    main()
+  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-client-selfcheck.py", line 96, in main
+    assert result.returncode==0,(result.stdout,result.stderr)
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('EVIDENCE=/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-stop0-client-fqcxpoe8/run\nPHASE=initialize\nEXIT=1\nTraceback (most recent call last):\n  File "/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-29/stop0-probe.py", line 225, in run_probe\n    assert \'String label = 42;\' in text\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n\n', '')
+
+EXIT=1

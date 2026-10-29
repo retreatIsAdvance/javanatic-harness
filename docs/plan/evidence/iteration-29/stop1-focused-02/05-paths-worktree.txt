@@ -1,0 +1,4 @@
+COMMAND=git diff --name-only --no-renames -z 98c20947d2982d4431f92005551189d2410c1cee --
+b'.agents/notes/README.md\x00.agents/pits.md\x00README.md\x00docs/design/02-module-layout.md\x00docs/design/05-capability-seam.md\x00docs/design/06-scope.md\x00docs/design/12-api-stability.md\x00docs/design/README.md\x00docs/plan/README.md\x00docs/plan/boundary-register.md\x00docs/plan/current-state.md\x00docs/plan/iteration-29.md\x00pom.xml\x00'
+
+EXIT=0

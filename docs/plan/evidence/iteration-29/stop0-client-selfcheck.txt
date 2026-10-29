@@ -1,0 +1,5 @@
+COMMAND=['/opt/homebrew/opt/python@3.12/bin/python3.12', 'docs/plan/evidence/iteration-29/stop0-client-selfcheck.py']
+EXIT-DRAIN=PASS (1 MiB tail, normal exit, EOF, group gone)
+SETUP-FAILURE-EVIDENCE=PASS
+EXIT=0; synthetic client checks only, not LS evidence
+EXIT=0

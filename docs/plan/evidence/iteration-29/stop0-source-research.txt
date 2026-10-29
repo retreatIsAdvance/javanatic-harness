@@ -1,0 +1,401 @@
+# Stop 0 — Official Source Research
+
+研究时间：2026-10-29（UTC 取时：2026-10-29T03:18:42Z）。性质：一手文档 / 固定版本源码研究，不是运行证据，不是 stop0 review packet，也不批准任何 JH 实现。
+
+本次只创建本记录；没有下载 LS 归档 / JAR，没有启动 Java、Maven 或 LS，没有创建夹具 / 脚本，没有提交或派子代理；没有读取用户凭据、用户 Maven 配置或 IDE 私有目录。已按仓库 AGENTS、.agents/pits.md、iteration-29.md 的失败闸与版本锚要求研究。此前工作树已有 current-state.md 改动及 verify-stop-docs-postcommit-01/，不属于本研究、不作改动。
+
+## 1. Candidate Lock
+
+只选择下列一个候选交给主代理；启动 / 握手 / 诊断 / 退出失败即保存证据并停止，不自动换 build、改用 snapshot、IDE 自带 LS 或 compiler API。
+
+| 项目 | 官方检索结果 | 依据 |
+|---|---|---|
+| 发布通道 | Eclipse 官方 milestones；目录最高编号 1.63.0，非 snapshots | [D1] |
+| 版本 / build | 1.63.0 / 202610191322 | [D2][D3] |
+| 完整文件名 | `jdt-language-server-1.63.0-202610191322.tar.gz` | [D2][D3] |
+| 唯一选定下载 URL | https://download.eclipse.org/jdtls/milestones/1.63.0/jdt-language-server-1.63.0-202610191322.tar.gz | [D2] 的目录条目 |
+| 官方 SHA-256 | `b1f2abe0b3cccb462cf64fb4a5587c7d09df60cf8be7748b152cbd89d018bdc4` | [D4] |
+| SHA 文件 URL | https://download.eclipse.org/jdtls/milestones/1.63.0/jdt-language-server-1.63.0-202610191322.tar.gz.sha256 | [D4]，正文为 64 位 hex |
+| 目录显示体积 | 48.8M（目录展示值，不冒称精确字节数） | [D2] |
+| 官方源码 tag | v1.63.0 | [D5] |
+| tag 指向 commit | `d98abba8f04cf041542d9ebb6df0d472a1395606` | [D5]，object.type=commit |
+| 同版本 p2 launcher | `org.eclipse.equinox.launcher_1.8.0.v20260804-1928.jar` | [D6] |
+| 同版本 p2 server bundle | `org.eclipse.jdt.ls.core_1.63.0.202610191322.jar` | [D6] |
+| 同版本 p2 JDT core | `org.eclipse.jdt.core_3.48.0.v20261007-1246.jar` | [D6] |
+
+“最新稳定”的精确口径：截至此次读取，官方 milestones 最高的编号发布，官方 README 将其与 snapshot 区分；不是额外声称 Eclipse 授予了 LTS / 无缺陷认证。GitHub `releases/latest` 返回 HTTP 404，不能据此说没有 Eclipse 发布，亦未用第三方包管理器替代官方目录。目录同时列出 1.61.0、1.62.0、1.63.0；不按本机日期猜版本。
+
+本次没有下载归档，因此 **SHA 是官方发布值，不是本机计算验证结果**；p2 JAR 名也不是已经从 tar 解出的 manifest 证据。主代理须对唯一归档计算 SHA-256 并匹配，核对 tar 清单、实际 launcher / core MANIFEST.MF、serverInfo / 启动日志中的 build 和 commit。任何不一致都停止，不采用“找到的第一个 launcher”或替换版本。
+
+### Java 25 Evidence
+
+- 固定 commit 的 README 明确写 `Supports compiling projects from Java 1.8 through 25`、支持 Maven POM；启动运行时最低 Java 21。[S1]
+- 官方 Java25 Maven 夹具的 POM 是 `<release>25</release>`，`.classpath` 为 `.../JavaSE-25`，JDT prefs 的 source / compliance / targetPlatform 都为 25。[S17]
+- 但该官方夹具开启 preview，且有 commons-lang3 外部依赖，**不能直接复制为 JH 的无 preview 夹具，也不证明 Java25 + JPMS + 多模块 Maven 的组合已经实测通过**。[S17]
+- 建议探针使用已有的、明确绝对路径的 arm64 JDK25；既记录启动 JDK，也通过 `java.configuration.runtimes` 配置项目 JDK25。Java25 永久语法可用 `import module java.base;`：JEP 511 已在 JDK25 final，不需 `--enable-preview`。[J1] 此语法可避免“release 写 25，实际只测了旧语法”的弱证据。
+
+## 2. macOS arm64 Launch Contract
+
+### 2.1 Architecture and Configuration
+
+固定源码的 product POM 将 `macosx/cocoa/aarch64/.../configuration` 复制到 `config_mac_arm`；publish-assembly.xml 明确将 `config_mac_arm/**` 装入 tar。[S2][S3]
+
+注意官方材料不完全一致：README 的通用示例只列 `config_mac`；该 tag 的 Python wrapper `get_shared_config_path()` 也只按 Darwin 选 `config_mac`，没有按 CPU 选 arm 目录。[S1][S4] 因此本候选用裸 Java argv、按打包源码选择 **config_mac_arm**，不调用 wrapper。不使用 `config_ss_mac_arm`（syntax server），否则可能只做语法检查，无法证明目标三能力。
+
+同版本在线 `repository/` 是 p2 仓库，只列 binary/features/plugins 等；没有 config 目录不等于 tar 缺失 config。tar 内的实际配置仍须下载后检查。
+
+### 2.2 Complete Proposed argv (Not Executed)
+
+变量都是主代理必须先解析为已批准绝对路径的占位符，不能将此模板称为“实际 argv”：
+
+- `JDK25_HOME`：用户明确允许的已有 JDK25 arm64 Home，不搜索 IDE 内置 JDK。
+- `LS_HOME`：唯一已校验归档的解压根。
+- `PROBE_ROOT`：新建独立探针工作根，不是 JH 仓库、用户真实项目或 IDE 数据根。
+- `PROBE_ROOT/home`、`PROBE_ROOT/tmp`、`PROBE_ROOT/index`：仅本探针所有。
+- `PROBE_ROOT/config_mac_arm`：从所选归档的 `LS_HOME/config_mac_arm` 复制的完整私有配置目录，非空目录猜建。复制避免直接 Java 启动污染原始解压配置。
+- cwd：`PROBE_ROOT/fixture`；源码项目根与 `-data` 索引根严格分开。
+
+```sh
+"$JDK25_HOME/bin/java" \
+  "-Duser.home=$PROBE_ROOT/home" \
+  "-Djava.io.tmpdir=$PROBE_ROOT/tmp" \
+  -Declipse.application=org.eclipse.jdt.ls.core.id1 \
+  -Dosgi.bundles.defaultStartLevel=4 \
+  -Declipse.product=org.eclipse.jdt.ls.core.product \
+  -Dlog.level=ALL \
+  -Djdk.xml.maxGeneralEntitySizeLimit=0 \
+  -Djdk.xml.totalEntitySizeLimit=0 \
+  -Xmx1G \
+  --add-modules=ALL-SYSTEM \
+  --add-opens java.base/java.util=ALL-UNNAMED \
+  --add-opens java.base/java.lang=ALL-UNNAMED \
+  -jar "$LS_HOME/plugins/org.eclipse.equinox.launcher_1.8.0.v20260804-1928.jar" \
+  -configuration "$PROBE_ROOT/config_mac_arm" \
+  -data "$PROBE_ROOT/index"
+```
+
+依据与非默认声明：
+
+1. application / product / startLevel / module opens / Xmx 来自官方直接 Java 示例；launcher 换为本版本 p2 目录中的确切文件，启动前仍须在 tar 核实。[S1][D6]
+2. 两项 XML system property 来自该 tag wrapper 对 `java_major_version >= 24` 的明确分支；这里因选 JDK25而纳入。它们不是 LSP 字段，也不把项目 preview 打开。[S4]
+3. user.home / tmp 和私有配置副本是探针隔离措施，不冒称 README 原样命令。仓库 pits 已证实 macOS 仅改 HOME 不改变 Java user.home；不能只改 HOME。
+4. 不加调试端口、不加 `-Dlog.protocol=true` 或 console logger，stdout 专作 LSP；stderr 独立收集，不 `2>&1` 合流。[S1] 不从 `.product` 的原生 GUI launcher 参数推导裸 Java 必须 `-XstartOnFirstThread`；直接运行示例和 wrapper 均没有这个参数。[S1][S4]
+5. 子进程用显式环境白名单，HOME 指探针 home，JAVA_HOME 指同一 JDK；不继承 `CLIENT_PORT` / `CLIENT_HOST`、代理认证、JAVA_TOOL_OPTIONS / JDK_JAVA_OPTIONS、Maven 用户选项或模型 key，不转储整份环境。也不传 `--pipe=...`。README 与 ConnectionStreamFactory 表明 socket 端口优先、再查 pipe、最后才是 stdin/stdout。[S1][S16]
+6. 不在本记录宣称存在一个“一键零副作用”启动开关。JDT LS 是可信外部进程；工程、m2e、索引、配置均可能写盘，需实际前后清单。完整原生组件是否完全不接触宿主私有资源不能由 user.home 单项推断。
+
+## 3. initialize and Settings
+
+基准 LSP 3.17，规范仓库本次观察到 gh-pages commit `112d978951f2223a962bf19516637862f587bf55`。[L0] 下列为探针输入提案，不是 LS 实际接收记录。
+
+### 3.1 Concrete initialize Shape
+
+下列 JSON 可作为模板；`12345` 必须替换为实际启动 LS 的探针父进程 pid，`/ABS/...` 必须替换为本探针的绝对路径 / 编码后的 file URI。不能把占位符发给 LS。
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "processId": 12345,
+    "clientInfo": {"name": "jh-stop0-probe", "version": "research-contract-1"},
+    "rootUri": "file:///ABS/probe/fixture",
+    "workspaceFolders": [{"uri": "file:///ABS/probe/fixture", "name": "stop0-fixture"}],
+    "capabilities": {
+      "general": {"positionEncodings": ["utf-16"]},
+      "workspace": {
+        "configuration": true,
+        "workspaceFolders": true,
+        "applyEdit": false,
+        "didChangeWatchedFiles": {"dynamicRegistration": false}
+      },
+      "window": {"workDoneProgress": true},
+      "textDocument": {
+        "synchronization": {"dynamicRegistration": false, "didSave": false},
+        "publishDiagnostics": {"versionSupport": true},
+        "definition": {"dynamicRegistration": false, "linkSupport": false},
+        "references": {"dynamicRegistration": false}
+      }
+    },
+    "initializationOptions": {
+      "bundles": [],
+      "workspaceFolders": ["file:///ABS/probe/fixture"],
+      "extendedClientCapabilities": {
+        "progressReportProvider": false,
+        "shouldLanguageServerExitOnShutdown": false
+      },
+      "settings": {
+        "java": {
+          "home": "/ABS/jdk25/Contents/Home",
+          "configuration": {
+            "runtimes": [{"name": "JavaSE-25", "path": "/ABS/jdk25/Contents/Home", "default": true}],
+            "updateBuildConfiguration": "automatic",
+            "maven": {
+              "userSettings": "/ABS/probe/home/maven-user-settings.xml",
+              "globalSettings": "/ABS/probe/home/maven-global-settings.xml"
+            }
+          },
+          "import": {
+            "maven": {"enabled": true, "offline": {"enabled": false}},
+            "gradle": {"enabled": false}
+          },
+          "maven": {"downloadSources": false},
+          "autobuild": {"enabled": true},
+          "telemetry": {"enabled": false}
+        }
+      }
+    }
+  }
+}
+```
+
+为什么是这些字段，不按惯例猜：
+
+- LSP 标准定义 processId、rootUri、workspaceFolders 对象数组、capabilities、initializationOptions；`settings` 并不是标准 initialize 顶层字段。[L1]
+- JDT `BaseInitHandler.handleInitializationOptions()` 读取 `initializationOptions.settings`，交给 `Preferences.createFrom`；它读取的 `initializationOptions.workspaceFolders` 是 **URI 字符串集合**，不是 LSP 顶层的 `{uri,name}` 集合；为空则回退 rootUri / rootPath。该函数没有从标准顶层 workspaceFolders 获取 roots，因此同时传两种结构和一致的 rootUri，避免项目导入根错位。[S5]
+- `InitHandler` 读取 `bundles`；空数组表示不加载额外扩展 bundle。[S6]
+- Preferences 的准确键：`java.home`、`java.configuration.runtimes`、`java.configuration.updateBuildConfiguration`、`java.configuration.maven.userSettings`、`java.configuration.maven.globalSettings`、`java.import.maven.enabled`、`java.import.maven.offline.enabled`、`java.import.gradle.enabled`、`java.maven.downloadSources`、`java.autobuild.enabled`、`java.telemetry.enabled`。其中 FeatureStatus 含 `disabled, interactive, automatic`；runtimes 解析 `name/path/default`。MapFlattener 同时支持点分键和嵌套 Map。[S7][S8]
+- `JavaSE-25` 不靠命名猜测，官方 Java25 .classpath 有该 execution environment 名称。[S17] settings 中选项目 runtime，不等于已验证启动 JDK 或项目实际 compliance。
+- `progressReportProvider`、`shouldLanguageServerExitOnShutdown` 来自 ClientPreferences，默认为 false。此提案采用标准 workDoneProgress，不启 JDT 特有 progressReport；否则 ProgressReporterManager 优先走特有通知，而不是同时保证两路。[S9][S14]
+- definition / references 动态注册为 false 时，固定 InitHandler 会给静态 provider=true；textDocumentSync 为 openClose=true、change=Incremental(2)，save.includeText=true。实际 initialize 响应仍须原样保存并据之判定，不拿源码替代实测。[S6]
+- 未宣告 pull diagnostic capability；该 InitHandler 没有设置 diagnosticProvider，观察到的源码路径是 publishDiagnostics。不能因为使用 LSP 3.17 或“JH 逻辑拉取”就发 `textDocument/diagnostic`。[S6][S10]
+
+### 3.2 Maven and Privacy Boundary
+
+两个 settings 文件应由主代理在独立探针根创建为无 server / credential / mirror 的有效 Maven settings，并显式指定探针私有 localRepository；不可读取或复制用户 ~/.m2/settings.xml、用户本地仓库配置或 IDE 配置。本研究没有创建这些文件。
+
+StandardPreferenceManager 确实调用 m2e 的 setUserSettingsFile / setGlobalSettingsFile，设置 m2e offline preference；但更新失败时会记录日志且可能保留旧值，IMaven 冷启动未 ready 时还会跳过部分更新。[S18] 因此必须从 JVM 启动开始隔离 home，而非等 initialize 才隔离；检查相关失败日志，不能把“发送了 settings”当“已生效”。
+
+模板 `offline.enabled=false` 是显式选择：即使夹具没有外部业务依赖，Maven 插件 / POM 模型仍可能需要从公共仓库下载，不能承诺零网络或用空私有 repo + offline=true 假设一定成功。主代理须在已获授权的联网范围内运行；若不允许所需下载，报告前置缺口并停，不回退用户缓存、私有 mirror 或静默改设置。源码只证明使用内嵌 m2e；不能将本机 Maven 3.10.0 的版本当作 LS 内嵌 Maven 版本。[S1][S18][S19]
+
+## 4. Bidirectional Protocol and Server Requests
+
+### Framing and Ordering
+
+每帧：ASCII `Content-Length: N\r\n\r\n` + UTF-8 JSON 字节，N 是 body 的字节长度，不是字符数；这不是一行一个 JSON。流读必须处理分片和粘帧；写入串行化。所有等待客户端请求响应的阶段仍持续处理服务端 request / notification，不能等 initialize 返回时停止读管道。[L0]
+
+先发唯一 initialize，收到匹配 id 的响应后立刻发：
+
+```json
+{"jsonrpc":"2.0","method":"initialized","params":{}}
+```
+
+此后再进入导入观察和文档同步。initialize 期间规范只允许有限 server 消息（showMessage、logMessage、telemetry/event、showMessageRequest，及客户端提供 initialize workDoneToken 时的相应 progress）；本模板没有提供该 token。若 JDT 提前发出别的消息，保存顺序偏离，不伪造为规范保证。[L1][L2]
+
+### Response Matrix
+
+所有响应原样回显 **服务端请求的 id（包括字符串 id）**；notification 不回复。表中处理是裸探针的有限职责，不是新增 JH 产品功能。[L0][S13]
+
+| 服务端请求 | 准确输入 / 响应及探针策略 | 依据 |
+|---|---|---|
+| `workspace/configuration` | params.items 为 `{scopeUri?,section?}[]`；按同顺序逐项返回 section 对应配置，未知 / 无法供给值返回 null；不是对所有请求都返回整份 settings。section=java 返回 java 对象，section=java.configuration.runtimes 返回数组，无 section 时按本探针完整配置模型供给。每次请求与返回都记录。 | [L8][S13] |
+| `workspace/workspaceFolders` | 返回 `[{"uri":"file:///ABS/probe/fixture","name":"stop0-fixture"}]`，不是 URI 字符串数组。 | [L9] |
+| `window/workDoneProgress/create` | params.token 为 string 或 integer；登记 token，回复 result:null，处理后续 `$/progress` begin/report/end。不把任一 end 当全部项目 ready。 | [L10][S14] |
+| `window/showMessageRequest` | params 有 type/message/actions?；无人选择就 result:null，不自动点击“信任 / 下载 / 更新”等按钮。该调用在 JDT JavaClientConnection 内 join，漏响应可能挂死。 | [L11][S13] |
+| `client/registerCapability` | params.registrations 为 `{id,method,registerOptions?}[]`；只有确实实现且已宣告的注册才记录并 result:null。此模板关闭动态注册；若收到要求文件监听等未实现的注册，不假装成功，返回错误并记录能力错配。 | [L12][S6] |
+| `client/unregisterCapability` | LSP 3.17 的历史字段拼写是 **unregisterations**，元素 `{id,method}`；注销实际记录后 result:null，不擅自改拼写。 | [L13] |
+| `workspace/applyEdit` | 禁止应用，返回 `{"applied":false,"failureReason":"stop0 probe does not apply server edits"}`，不是 null/true。 | [L14] |
+| `workspace/executeClientCommand` | JDT 扩展，不是 workspace/executeCommand；探针不执行，按未实现方法返回 -32601，并记录具体请求，必要时停止。 | [S20][L0] |
+| 其它未知 request | `{"jsonrpc":"2.0","id":原id,"error":{"code":-32601,"message":"Method not supported by stop0 probe"}}`，不可一律 result:null。已知方法但当前不接受的操作应单独记录原因，勿伪称“执行成功”。 | [L0] |
+
+必须记录的通知：textDocument/publishDiagnostics、window/logMessage、window/showMessage、$/progress，以及 JDT 的 language/status、language/eventNotification、language/actionableNotification；若出现 language/progressReport、workspace/notify 也保存。未知通知只记录，不误回 JSON-RPC 响应，不执行随附命令。JDT 接口给出的扩展通知名称见 [S13][S20]。
+
+## 5. Diagnostics Version: Important Negative Finding
+
+### What the Standard Promises
+
+LSP 3.17 中 `textDocument.publishDiagnostics.versionSupport?: boolean` 的含义是 **客户端会解释 version 属性**，不是要求 server 必须生成 version。`PublishDiagnosticsParams.version?: integer` 仍可缺省（since 3.15.0）。服务端新的 diagnostics 替换旧集合，计算为空时必须发送 diagnostics:[]，没有通知不等于空集合。[L3]
+
+### What This Candidate Actually Does in Source
+
+- `BaseDocumentLifeCycleHandler.didOpen/didChange` 确实维护 documentVersions；DocumentMonitor 用它判断请求期间文本有无改变。[S11]
+- 然而 `BaseDiagnosticsHandler.endReporting()` 用 **二参** `new PublishDiagnosticsParams(ResourceUtils.toClientUri(uri), diagnostics)`；clearDiagnostics 同样只给 URI + 空集合，没有 setVersion。[S10]
+- 工作区 marker / POM 诊断及清空的 `WorkspaceDiagnosticsHandler` 发布点也都是二参构造；JavaClientConnection.publishDiagnostics 直接转发，没有补写文档版本。[S12][S13]
+- 查阅的 ClientPreferences 对 publishDiagnostics 读取 tagSupport，没有 versionSupport 开关；这与上面的实际发布路径一致。[S9]
+
+**结论限于上述固定 commit 的普通文档 / workspace 发布路径：设置 versionSupport=true 不会让这些路径突然带文档版本。** 仍在探针中保留 true，记录线上 version 实际存在性，避免将源码推断冒充协议实测。不声称所有第三方扩展、所有未来版本都如此。
+
+若收到无 version 的非空或空诊断，记录 `version absent`；不能用“通知到达时的当前 hash / 当前文档版本”补盖对应关系。某次修复后看见 []，最多是观察到清空通知，不自动构成 T1 的“对应 v2 的真零诊断”。definition 响应不带文档版本，不能给所有 diagnostics 充当版本 fence；源码等待的只是文档生命周期 job family，不涵盖所有 workspace 发布源。[S11][S12][S15]
+
+因此主代理即使跑通 stop0 的进程闭环，也必须把诊断版本锚缺口交回 T1；不得以本记录预先认定完整诊断新鲜度成立。需在 packet 区分“真实错误和清空被观察到”与“可靠对应目标版本已证明”。
+
+## 6. Import / Index Readiness
+
+固定源码顺序比一条 Ready 日志复杂：
+
+1. BaseInitHandler.initialize() 准备 InitializeResult、处理 settings / capabilities，调度项目初始化 job；握手返回不等于导入完成。[S5]
+2. InitHandler 的 Initialize Workspace job 发送 language/status type=Starting；initializeProjects 和 configureFilters 后发送 type=Started、message=Ready。Maven importer 对部分导入失败可只记日志，故这个 Ready 不足以证明所有模块成功。[S6][S19]
+3. JDTLanguageServer.initialized() 等待初始化 jobs，另开 Initialize workspace job，注册 / 同步能力和 bundles，然后发 **type=ServiceReady**。但后面才 projectsImported、copyIndexes、waitForBuildJobs、registerWatchers、checkIndexes、projectsBuildFinished，再等 update/build jobs，最后创建 WorkspaceDiagnosticsHandler 并发布全工作区诊断。[S15，302–350 行]
+4. 因此 Started/Ready、ServiceReady、单个 progress end 都只能标记阶段，**不是“所有索引 + 此文档版本诊断完成”的规范屏障**。客户端也不能沿用源码里一小时等待值当自己的无限 deadline。[S14][S15]
+5. definition 的服务实现先 waitForLifecycleJobs；references 直接进入 ReferencesHandler。后者按 URI / position 解析符号，用 JDT SearchEngine 搜索，includeDeclaration 决定是否加入声明；找不到 typeRoot/element 或取消等情形也可返回空列表。[S15][S21] 不能从空结果推出无引用或已就绪。
+
+探针判据提案：有界等待并保留各状态 / progress / 导入失败日志；以夹具 **已知正例** 验证真实项目模型——跨 Maven 模块调用的 definition 指到 API 声明、references 含已知调用位置；再验证类型不匹配诊断。对目标 Java 文件、module-info.java、各 POM 和项目 URI 分别收集诊断，确保未落到“non-project file / only syntax errors”分支。[S10][S12]
+
+本研究没有证实一个标准 LSP 的全项目 import-ready 请求，也不新增未经查证的 `java.projectImportReady`、`java/ready` 或私有 wait 命令。若只拿到状态文本而已知语义正例不通，记录未就绪 / 失败，不继续用空结果冒充通过；超时后停，不自动换 build。
+
+## 7. Small Fixture and Standard Inputs
+
+### 7.1 Fixture Shape (Proposal Only)
+
+独立目录 fixture/，parent POM packaging=pom，两个 Maven 子模块 lib / app；app 在 POM 依赖 lib，并在 JPMS descriptor `requires probe.lib`。lib descriptor `module probe.lib { exports probe.api; }`；app descriptor `module probe.app { requires probe.lib; }`。不依赖第三方业务库、无 annotation processor、无 preview。
+
+根 POM 设置 `maven.compiler.release=25`、UTF-8，并显式钉 maven-compiler-plugin 3.14.1（与 JH 已知 Java25/JPMS 工具链基线一致，不随在线文档的最新版本漂移）。准确 release 属性来源 [M1]；官方 Java25 POM 也验证 `<release>25</release>` 的用法 [S17]。不要照抄官方夹具的 preview 参数或预生成 Eclipse .settings/.classpath 来绕过 Maven 实际导入。
+
+lib 的 `src/main/java/probe/api/Greeter.java` 提案文本：
+
+```java
+package probe.api;
+public final class Greeter {
+    public static String message() { return "ok"; }
+}
+```
+
+app 的 `src/main/java/probe/app/Use.java` **v1（错误版）**提案文本（LF、结尾 LF、ASCII，无 Tab）：
+
+```java
+package probe.app;
+import module java.base;
+import probe.api.Greeter;
+public final class Use {
+    public static String run() {
+        int value = Greeter.message();
+        return String.valueOf(value);
+    }
+}
+```
+
+v2 只将 `int value` 改为 `String value`。目标是真实的 String→int 类型不匹配，而不是仅语法错误；在 v2 使用 String.valueOf 保持变量确实被用到。`import module java.base;` 要求 Java25 final，JPMS/Maven 跨模块调用另外验证。若 compiler 发其它警告，保存，不全局屏蔽诊断来凑空数组；不能预先保证这份未运行夹具恰好只有一条诊断。
+
+建议磁盘先放 **合法 v2** 用于无错误项目导入；didOpen 发送内存 **v1**，使目标类型错误不能来自已有磁盘 marker。这样分别记录 disk SHA 与 LSP buffer SHA（可刻意不同），再 didChange 发 v2 清空；不得把它们混成一个源码版本锚。该设计减少旧 marker 干扰，但不解决无版本 diagnostics 的一般关联问题。是否采用由主代理明确记录；本次没有创建 / 编译 / 执行夹具。
+
+### 7.2 didOpen / didChange
+
+把下列 /ABS 路径统一替换为真实 URI，text 必须是完整实际内容；不可在真实帧中写省略号：
+
+```json
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///ABS/probe/fixture/app/src/main/java/probe/app/Use.java","languageId":"java","version":1,"text":"package probe.app;\nimport module java.base;\nimport probe.api.Greeter;\npublic final class Use {\n    public static String run() {\n        int value = Greeter.message();\n        return String.valueOf(value);\n    }\n}\n"}}}
+```
+
+先收到目标 URI、真实类型错误位置的 diagnostics，再发修复；不提前流水线发送导致错误被 debounce 合并掉。错误版中调用 message 在 zero-based line=5，character=28 起；应记录返回的真实诊断 range/code/message，不预填 ECJ 错误码或保证某个精确英文文案。
+
+```json
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///ABS/probe/fixture/app/src/main/java/probe/app/Use.java","version":2},"contentChanges":[{"text":"package probe.app;\nimport module java.base;\nimport probe.api.Greeter;\npublic final class Use {\n    public static String run() {\n        String value = Greeter.message();\n        return String.valueOf(value);\n    }\n}\n"}]}}
+```
+
+虽然该 server 宣告 Incremental，规范 TextDocumentContentChangeEvent 也允许仅 text 的全文变体；固定 BaseDocumentLifeCycleHandler 503–515 行明确 range=null 时替换整份内容。[L4][S11] 这不是猜服务器接受全文同步。didChange 的 version 指全部变更应用后的版本；不发送文档 hash 字段（LSP 无此标准字段）。
+
+### 7.3 Definition / References
+
+在已同步并观察 v2 之后，只发标准请求（没有 symbolName/path/lineNumber 自创字段）。本夹具 v2 的 `message` 起于 line=5、character=31，取 character=33 命中 token 内部；坐标按文本重算，不复用 v1 的列数。
+
+```json
+{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///ABS/probe/fixture/app/src/main/java/probe/app/Use.java"},"position":{"line":5,"character":33}}}
+```
+
+已知正例：目标 URI 应是 lib/src/main/java/probe/api/Greeter.java，range 覆盖 message 声明。规范结果类型为 Location | Location[] | LocationLink[] | null；本候选固定源码返回 Either.forLeft，即 Location 列表，模板 linkSupport=false。不将标准允许类型误说成已实际观察的返回。[L5][S15]
+
+Greeter.java 的 message 声明在 line=2，character=25 起，取 27：
+
+```json
+{"jsonrpc":"2.0","id":3,"method":"textDocument/references","params":{"textDocument":{"uri":"file:///ABS/probe/fixture/lib/src/main/java/probe/api/Greeter.java"},"position":{"line":2,"character":27},"context":{"includeDeclaration":false}}}
+```
+
+已知正例：包含 app/Use.java 的调用位置；`context.includeDeclaration` 是必填布尔。可再以新 id 和 true 观察是否多出 Greeter 声明，同 build、同项目、不改其它变量。规范结果为 Location[] | null。[L6][S21] 此请求允许查未打开的声明文件；如主代理选择先 didOpen Greeter，须记录对应独立版本，不把跨文件版本混用。
+
+所有 position 都为 0-based；UTF-16 是规范默认并必须支持，模板只宣告 utf-16，server 未给 positionEncoding 时也不能自行改用 UTF-8 字节列数。此 ASCII 夹具两者数值恰同，不能用它证明非 BMP 的列换算已测试。[L7]
+
+### 7.4 shutdown / exit
+
+```json
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+```
+
+等待同 id 响应，之后才：
+
+```json
+{"jsonrpc":"2.0","method":"exit"}
+```
+
+规范 shutdown 无 params、result=null；收到 shutdown 后不应再发普通请求 / notification；正常先 shutdown 后 exit 的进程退出码应为 0。[L15][L16]
+
+本候选存在必须记录的源码差异：JDTLanguageServer.shutdown() 在异步体中安排 shutdown job、设置 shutdownReceived，却 `return new Object()`，不是源码直接 return null；实际线上可能为 `{}`，本研究未启动，不能声称已经观察。探针应保存原帧，若非 null 标为规范偏离，再按已收到响应发送 exit 做正常清场，不能把 {} 改写为 null 后当严格协议通过。[S15，488–523 行]
+
+extendedClientCapabilities.shouldLanguageServerExitOnShutdown=false 使探针保有独立 exit 步骤；不能让 server 自退冒充已验证客户端 exit。退出源码等待 shutdownJob，另有一分钟强退保险，故收到 shutdown 响应还不等于进程已回收。[S9][S15] 主代理必须自己的有界等待、stdout EOF、stderr 完结、所拥有 PID / 子进程清单和退出码；只定向回收本次进程，强退算失败清场，不算正常成功。
+
+## 8. Remaining Unverified / Main-agent Handoff
+
+必须明确保留的未证实项：
+
+1. 官方 SHA 与实际归档字节是否匹配；tar 内 launcher / core 的实际 manifest、git.properties / serverInfo 是否与本记录一致；config_mac_arm 是否完整。研究中的 p2 清单不能代替归档核对。
+2. 该 build 在现有 macOS arm64 JDK25 上能否成功启动、Maven 无凭据独立导入、JPMS 跨模块绑定、Java25 无 preview 语法是否通过，以及冷启动耗时 / 内存 / 下载量 / 项目写入边界。
+3. 线上 diagnostics 是否真的无 version；v1 错误、v2 清空到达顺序和重复 / 迟到通知。静态源码已显示 versionSupport 不能作为解决方案，T1 可靠版本锚仍未解决。
+4. 全项目 ready 没有被证明为单条可用信号；Started / ServiceReady / progress 仅阶段参考。定义 / 引用必须得到夹具已知正例，不以空结果、capability=true 或日志 ready 验收。
+5. m2e settings 在冷启动时的实际应用、私有缓存与网络触达是否符合边界；失败日志不能被“默认继续”吞掉。
+6. shutdown 的实际 response 是 null 还是对象、exit 时间 / exit code / 无遗留进程；若发生源码所提示的非规范结果，应如实列偏离，不能静默归一化掩盖。
+
+主代理跑前钉住本记录唯一 build 与 SHA；运行中每阶段失败立刻转取证 / 清场，不自动切候选或改 LS 参数蒙混重试。另将实际 OS/JDK/argv/env 白名单、文件 byte SHA（disk 与各 buffer version 分开）、实际 initialize capabilities、双向完整关键帧与服务端请求处置、阶段时序、目录写入差异、退出结果落入 stop0 运行证据；本记录不代填任何运行项。
+
+## 9. Traceable Sources and Retrieval
+
+发布目录 / checksum 通过 WebFetch 读取；GitHub 文档及源码使用 gh api 官方内容接口（Accept: application/vnd.github.raw+json），按 tag 解析后的 commit 固定；LSP 使用官方 microsoft/language-server-protocol 仓库 3.17 文件而非二手教程。没有对归档 / JAR URL 发 GET。
+
+检索中的非实证事项：GitHub releases/latest 为 404；尝试的 LSP `/textDocument/publishDiagnostics/` 网页为 404，已改读规范仓库 `language/publishDiagnostics.md`；product 文件实际名 languageServer.product，未使用不存在的 jdt.product；这些失败都不被拿来证明功能缺失。无可复用大文件下载或运行产物。
+
+### Download / Tag
+
+- [D1] 官方 milestone 总目录：https://download.eclipse.org/jdtls/milestones/
+- [D2] 选定 release 目录：https://download.eclipse.org/jdtls/milestones/1.63.0/
+- [D3] 本版本确切归档名：https://download.eclipse.org/jdtls/milestones/1.63.0/latest.txt
+- [D4] 官方 SHA：https://download.eclipse.org/jdtls/milestones/1.63.0/jdt-language-server-1.63.0-202610191322.tar.gz.sha256
+- [D5] tag 解析：https://api.github.com/repos/eclipse-jdtls/eclipse.jdt.ls/git/ref/tags/v1.63.0
+- [D6] 本版本 p2 plugins 清单：https://download.eclipse.org/jdtls/milestones/1.63.0/repository/plugins/
+
+### Fixed JDT LS Source
+
+以下 URL 全部固定到 d98abba8f04cf041542d9ebb6df0d472a1395606；符号比网页行号更可靠。
+
+- [S1] README：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/README.md
+- [S2] arm64 config 拷贝：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.product/pom.xml#L86-L99
+- [S3] tar 内容约束：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.product/publish-assembly.xml
+- [S4] wrapper / Java24+ XML 参数：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.product/scripts/jdtls.py
+- [S5] settings 与 roots：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/BaseInitHandler.java
+- [S6] capabilities / 初始导入：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/InitHandler.java
+- [S7] 全部设置键与 runtimes / FeatureStatus：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/preferences/Preferences.java
+- [S8] nested / flat settings：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/MapFlattener.java
+- [S9] 客户端 capability 读取：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/preferences/ClientPreferences.java
+- [S10] 二参 diagnostics / clear：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/BaseDiagnosticsHandler.java
+- [S11] 文档版本 / 全文变更 / 验证 jobs：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/BaseDocumentLifeCycleHandler.java
+- [S12] workspace / marker diagnostics：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/WorkspaceDiagnosticsHandler.java
+- [S13] 服务端请求与通知接口：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/JavaClientConnection.java
+- [S14] 两种 progress 分支：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/ProgressReporterManager.java
+- [S15] initialized / definition / references / shutdown / exit：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/JDTLanguageServer.java
+- [S16] stdio / socket / pipe 选择：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/ConnectionStreamFactory.java
+- [S17] Java25 Maven 官方夹具：https://github.com/eclipse-jdtls/eclipse.jdt.ls/tree/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.tests/projects/maven/salut-java25 （本次读取 pom.xml、.classpath、.settings/org.eclipse.jdt.core.prefs）
+- [S18] m2e settings 生效 / 冷启动分支：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/preferences/StandardPreferenceManager.java
+- [S19] Maven 导入及部分失败处理：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/managers/MavenProjectImporter.java
+- [S20] executeClientCommand 扩展：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/lsp/ExecuteCommandProposedClient.java
+- [S21] 引用语义：https://github.com/eclipse-jdtls/eclipse.jdt.ls/blob/d98abba8f04cf041542d9ebb6df0d472a1395606/org.eclipse.jdt.ls.core/src/org/eclipse/jdt/ls/core/internal/handlers/ReferencesHandler.java
+
+### LSP 3.17 / JDK / Maven
+
+以下 LSP 网页锚点对应本次通过 gh api 读取的官方 `_specifications/lsp/3.17/` 或 `_includes/messages/3.17/` 源文件；规范版本固定为 3.17，不因产品带更新的 LSP4J 类型而声称使用 3.18。
+
+- [L0] framing / JSON-RPC / errors：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#baseProtocol ；固定规范源码：https://github.com/microsoft/language-server-protocol/blob/112d978951f2223a962bf19516637862f587bf55/_specifications/lsp/3.17/specification.md
+- [L1] initialize：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialize
+- [L2] initialized：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initialized
+- [L3] push diagnostics 与 version：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_publishDiagnostics
+- [L4] didChange 全文变体：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_didChange
+- [L5] definition：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_definition
+- [L6] references：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_references
+- [L7] position / UTF-16：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#position
+- [L8] configuration：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_configuration
+- [L9] workspaceFolders：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders
+- [L10] progress create：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_workDoneProgress_create
+- [L11] showMessageRequest：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#window_showMessageRequest
+- [L12] registerCapability：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#client_registerCapability
+- [L13] unregisterCapability：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#client_unregisterCapability
+- [L14] applyEdit：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_applyEdit
+- [L15] shutdown：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#shutdown
+- [L16] exit：https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#exit
+- [J1] Java25 final module imports：https://openjdk.org/jeps/511
+- [M1] Maven compiler release 配置：https://maven.apache.org/plugins/maven-compiler-plugin/examples/set-compiler-release.html

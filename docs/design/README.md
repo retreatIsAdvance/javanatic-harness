@@ -75,9 +75,12 @@
 - LLM、FS、Shell、Sandbox 与 JSONL 持久化；人工协作包含 Approval 三模式、命令 registry 与 `ask_user`；治理包含 `--verify` 与 policy 档位；base/headless 组合与 jlink 交付已实现。
 - Skills（it26）、MCP stdio + Streamable HTTP（it27 / it27.1）、Web 抓取 + 搜索（it28）已完成。详细能力、配置与验证现状只在[当前状态卡](../plan/current-state.md)维护。
 
+### In Review, Not Product-Ready
+
+- LSP：停 0 已通过并关闭（裸进程工程闭环限定结论），JDT LS 路线确认、compiler API 备选不触发；T1–T3 方向已裁并随停 1 落定，`lsp/lsp` Definition 已写、停 1 已通过并关闭。[停 1 审查包](../plan/evidence/iteration-29/stop1-review-packet.md)冻结保留当时提案；17 项纯值测试、10 项突变与 full 构建不代替真实生命周期验证。当前停 2 Provider 真实生命周期进行中；无可挂载 Provider 或 `lsp-tool`、无装配行，T4–T7 未整体批准、产品验收未执行。现行裁决与证据见 [it29](../plan/iteration-29.md)、[停 0 终裁](../plan/evidence/iteration-29/stop0-acceptance.txt)与[停 1 终裁](../plan/evidence/iteration-29/stop1-acceptance.txt)。
+
 ### Planned, Not Implemented
 
-- LSP：仓库尚无模块或完整 Definition；it29 Java 诊断 / 定义 / 引用范围已批准，先过 JDT LS 裸进程探针失败闸，再裁技术清单，见 [it29 四确认](../plan/iteration-29.md)。
 - Subagent / Terminal / Jobs：规划预留，不代表已创建接口或 Provider；按下文阶段路线另行确认，不能凭预留项宣称可挂载。
 
 ### Out of Scope
@@ -108,7 +111,7 @@
 
 ### Phased Evolution Plan
 
-**状态基准：2026-10-28，0.2.0 已发布；0.3 系列已完成 Skills / MCP / Web，LSP 进入 it29 四确认与技术待裁阶段；0.4 仍为计划。** 本节是总体迭代路线的事实源；具体迭代仍须按 [plan/README.md](../plan/README.md) 完成四确认、设计增量、锚点与审查停点，路线落盘不等于实现授权，也不代表验收通过。能力实现不等于 0.3.0 已发布或发布范围已获批准。
+**状态基准：2026-10-29，0.2.0 已发布；0.3 系列已完成 Skills / MCP / Web，LSP 的 it29 停 0 已限定通过、T1–T3 方向已裁并随停 1 落定，`lsp/lsp` Definition 已写、停 1 已通过并关闭，当前停 2 Provider 真实生命周期进行中；无可挂载 Provider 或 `lsp-tool`、无装配行，T4–T7 未整体批准、真实生命周期验证与产品验收未执行；0.4 仍为计划。** 本节是总体迭代路线的事实源；具体迭代仍须按 [plan/README.md](../plan/README.md) 完成四确认、设计增量、锚点与审查停点，路线落盘不等于实现授权，也不代表验收通过。能力实现不等于 0.3.0 已发布或发布范围已获批准。
 
 规划原则：**维护者场景驱动、真实任务验收、社区反馈校准**。发布初期不等待社区反馈才推进；优先级以生产可用、易用、易扩展为目标，而非模块数量。参考本地 dsh 截至 2026-08-13 的源码与演进记录（不代表远端最新状态；路径口径见 [dsh-reference.md](../dsh-reference.md)），吸收取消收敛、语义检查点、外部插件接入和任务所有权的经验，不照搬其包规模、HMR 或 Web 平台。
 

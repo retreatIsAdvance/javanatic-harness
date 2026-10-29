@@ -163,7 +163,7 @@ kernel 三模块**零第三方依赖**（`kernel/core` 仅 `requires java.base`�
 - **不变式配属性测试**（jqwik）：LIFO 回收序、envelope seq 单调等结构性质用 `@Property`，不是单个例子；`.jqwik-database`（模糊缓存）不入库，已在 .gitignore。
 - **R1–R4 测试随切片走**，不做收尾补；每个改动的接受路径都要有拒绝无效用例的证明。
 - **keyless**：单元测试无网络、无 API key、可重复；未来真实 provider 测试无 key 自跳过。
-- **测试计数口径**：只数模块汇总行（`Tests run:` 不含 `-- in ` 后缀）或直接读 surefire XML；**不求和全部 `Tests run:` 行**——类行 + 模块行会双计（it19 实撞：832 实为 416），锚定行首 grep 还会漏掉与测试输出粘连的汇总行。
+- **测试计数口径**：只数模块汇总行（`Tests run:` 不含 `-- in ` 后缀）或直接读 surefire XML；**不求和全部 `Tests run:` 行**——类行 + 模块行会双计（it19 实撞：832 实为 416），锚定行首 grep 还会漏掉与测试输出粘连的汇总行；JUnit 与 jqwik 同名测试类会**互相覆盖 surefire XML**，残留 XML 文件数不是执行总数（it29 停 1 实撞：残留 7 ≠ 模块汇总 17），跨运行比对须同测量面。
 - fixtures 在 macOS/Linux 可重放；修 fixture，不修 normalizer。
 
 ## Git 与安全

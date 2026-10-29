@@ -1,0 +1,123 @@
+STOP0 JDT LS — FIRST REAL RUN FACTS
+记录日期：2026-10-29。性质：对已落盘原始证据的人工核验摘要，不是第二次 LS 执行。
+结论：裸进程启动→initialize/initialized→didOpen→真实诊断→shutdown/exit 工程闭环有证据；不代表严格 LSP 合规、诊断版本正确性已解决、停点已获用户批准或可以进入停1。
+
+1. Artifact and runtime pin
+官方 URL=https://download.eclipse.org/jdtls/milestones/1.63.0/jdt-language-server-1.63.0-202610191322.tar.gz
+归档大小=51143565 bytes
+归档 SHA256=b1f2abe0b3cccb462cf64fb4a5587c7d09df60cf8be7748b152cbd89d018bdc4
+launcher=org.eclipse.equinox.launcher_1.8.0.v20260804-1928.jar
+server=org.eclipse.jdt.ls.core_1.63.0.202610191322.jar
+JDT core=org.eclipse.jdt.core_3.48.0.v20261007-1246.jar
+commit=d98abba8f04cf041542d9ebb6df0d472a1395606
+initialize.serverInfo=JDT Language Server (Standard) / 1.63.0-SNAPSHOT
+workspace log=Version: 1.63.0-SNAPSHOT (OSGi 1.63.0.202610191322), Git Commit: d98abba
+workspace log 的 eclipse.buildId=unknown 原样保留；不能用它覆盖 OSGi 完整 build。
+内部 SNAPSHOT 与官方 milestones 下载来源并存；未改名、未切到 snapshots 或其他候选。
+
+运行环境：Temurin Java25.0.4.1+1-LTS / macOS26.2 arm64。
+Python=/opt/homebrew/opt/python@3.12/bin/python3.12 (3.12.6)
+Java home=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+scratch=/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029
+cwd=scratch/project
+私有目录=project、index、home、tmp、config_mac_arm；工件解压根=server-1.63.0。
+本机 Maven3.10.0 未用于这次 LS 导入；解包配置缓存中 Maven core 等 JAR 为3.9.16，不混称宿主 Maven。
+来源：stop0-artifact-verification.txt、stop0-runtime-before.txt、stop0-run-01/result.txt、stop0-run-01/jdt-ls-workspace-log.txt。
+
+2. Executed command and inputs
+完整 Python 实际 argv / 起止 / EXIT：stop0-real-command-01.txt。
+完整 Java 实际 argv / 白名单环境 / launcher 与 server JAR hash：stop0-run-01/result.txt 的 command、environment 等字段。
+STARTED=2026-10-29T07:05:01.541728+00:00
+FINISHED=2026-10-29T07:08:15.919116+00:00
+PROBE_SHA256=6c1213de4b50bb04128173cd484775686a537ec8426b8fde6052213ba5509fe6
+PROBE_EXIT=0
+
+启动固定私有 -configuration 与 -data；HOME 和 -Duser.home 同时指定；环境仅 PATH/JAVA_HOME/HOME/TMPDIR/LANG；未继承整份环境。server 不入沙箱。
+保留官方模板的 --add-modules=ALL-SYSTEM、两项 --add-opens 和两项 jdk.xml entity size limit=0；不是可直接推广到任意不可信项目的最小权限启动配方。
+stdin/stdout 专作 Content-Length 帧，stderr 独立。外层 Python 命令输出合并不是 LS 协议流与 LS stderr 合并。
+初始化实际能力：definitionProvider=true、referencesProvider=true；textDocumentSync openClose=true/change=2/save.includeText=true；未宣告 diagnosticProvider，未发送协议级 pull diagnostics 请求。
+标准 workspaceFolders 为对象数组；JDT initializationOptions.workspaceFolders 为 URI 数组。
+
+夹具：local.jh.probe:java25-fixture:1.0.0；一个 Maven 模块、一个 JPMS 模块 probe.fixture，Calc/App 两文件；compiler plugin3.14.1，release25，无 preview、无业务依赖。
+Java25 final import module java.base 已包含在实际输入，合法磁盘经 javac --release25 验证 EXIT0；见 stop0-fixture-ready.txt、stop0-fixture-legal-check.txt。
+磁盘与 v2 的 String label = "ok" 保持不变；v1 只经 didOpen buffer 改为 String label = 42；v2 经 didChange 全文同步，不 didSave、不写磁盘。
+DISK_SHA256=d8efc20eb5f73ada640e00a3c8499bc674ecc62cdef194cb3e614fe4af06e130
+BUFFER_V1_SHA256=625220486314589bb34900e1bd21808afb7508f52fea734f17f85e6bb0529f84
+BUFFER_V2_SHA256=d8efc20eb5f73ada640e00a3c8499bc674ecc62cdef194cb3e614fe4af06e130
+这些是客户端输入锚，不是 server 给诊断的来源锚。
+
+3. Real protocol observations
+时序以 protocol.txt journal 的单调秒为主；initialize_seconds / total_seconds 从启动计时，二者起点略有差异，不当精确性能基准。
+seq47 initialize response：3.852635s；启动到 initialize_seconds=3.855。
+seq48 initialized；随后发送设置、didOpen v1。
+seq379 / 103.475328s：App.java 的真实 severity1，code16777233，source Java，message="Type mismatch: cannot convert from int to String"；range零基[4:23,4:25)，对应42。
+seq380：didChange version2。
+seq400 / 103.898771s：App.java 的 severity2，code268435844，message="The import java.base is never used"；range零基[1:14,1:23)。旧类型错误未在该全量通知中出现，但 diagnostics 非空。
+两次诊断均无 params.version。错误到下一诊断约0.423443s，不等于已证明 v2 freshness；等 [] 的90秒期限届满，observations.clear_diagnostics_gap="bounded LSP wait expired"。
+未观察到 []；不能叫“真零诊断通过”，也不能叫“未收到任何更新”。Ready/ServiceReady 不是项目版本分析完成屏障。
+seq406 definition：Calc.java [3:22,3:27)，准确声明 twice。
+seq408 references(includeDeclaration=true)：App.java [5:20,5:41) 与 Calc.java [3:22,3:27)。前者覆盖整个调用表达式，包含已知 twice token [5:20,5:25)，不是返回错误位置。
+已知坐标来源：stop0-fixture-expectations.txt。未覆盖跨 Maven 模块、依赖源码、非 BMP/复杂 UTF-16 坐标、错误符号或空结果语义。
+
+4. Protocol deviations and journal scope
+initialize 响应前：progress/create id1–7、对应 $/progress、language/status；本模板无 initialize workDoneToken。依据固定 LSP3.17 研究，属于需披露的初始化顺序偏离。探针继续回复早期服务端请求以观察候选，不自动批准未来兼容策略。
+seq409 shutdown：id4，无 params。
+seq411 shutdown response：result={}，非规范 null；原帧未归一化。
+seq412 exit；随后只排空字节，不再由 Peer 处理请求。
+protocol.txt 共412条带 seq/单调时间的 JSON 语义记录，不是全程 wire 字节存档。
+stdout-after-shutdown.txt 保存 raw_hex，共1209bytes；protocol-tail-analysis.txt 派生解码7条完整消息：3条日志 + progress/create id="19" + begin/report/end。
+journal 内18个 server request 均回复；尾流另1个 id="19" 未回复。总观察到19个，不得把 facts-summary.txt 的 server_request_counts=18 当全流计数。
+尾流混合 shutdown response 时已有 peer.buffer 与后续读取，缺逐帧时间；不能断言所有尾流都在 exit 后才发送。
+尾流无未消费字节不等于协议语义全部收敛；本次进程退出成功不豁免未来 Provider 的收尾策略。
+来源：stop0-run-01/protocol.txt、stdout-after-shutdown.txt、protocol-tail-analysis.txt；规范出处见 stop0-source-research.txt §4、§7.4。
+
+5. Permissions, settings and actual writes
+自建 Maven user/global settings 均指定 scratch/home/.m2/repository、interactiveMode=false、offline=false；没有 server/credential/mirror。
+发送设置之外，effective-settings.txt 内 m2e prefs 明确指向这两个私有 XML，downloadSources=false；项目有 JDT/m2e builders+natures、JavaSE25/MAVEN2 classpath，source/compliance/target25、release enabled、preview disabled、annotation processing disabled。
+运行前私有 Maven 仓不存在；运行后 home 新增243文件（插件/POM/依赖/仓库元数据等），发生公共依赖下载，不能称零联网。未做网络抓包，不声明完整远端列表/下载字节数。
+LS 自动发现宿主 JVM：launching prefs 除指定 Java25，还记录 /Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home 与 /Library/Java/JavaVirtualMachines/jdk1.8.0_271.jdk/Contents/Home。是本次 LS 输出，不是主代理主动扫描用户凭据/配置。默认与项目环境仍指指定 Java25；私有 HOME 不等于禁止宿主发现。
+
+目录前后快照计数面：只统计 project/index/home/tmp/config_mac_arm 内非 symlink 的常规文件，按相对路径与 bytes/SHA 比较；不包含运行中创建又删除的瞬时文件。
+created=356 (project9 + index41 + home243 + config_mac_arm63 + tmp0)
+modified=0
+removed=0
+项目9个新增文件：
+  .classpath
+  .project
+  .settings/org.eclipse.core.resources.prefs
+  .settings/org.eclipse.jdt.apt.core.prefs
+  .settings/org.eclipse.jdt.core.prefs
+  .settings/org.eclipse.m2e.core.prefs
+  target/classes/module-info.class
+  target/classes/probe/App.class
+  target/classes/probe/Calc.class
+磁盘源码 hash 与原 server 解压树 hash 前后不变。此为监测面内结论，不是全机无副作用证明。关闭进程不回滚这些文件。
+stderr 有 ALL-SYSTEM 引出的 incubator vector 提示和 Guice 使用 sun.misc.Unsafe 的弃用警告；不等于夹具开启 preview 或诊断失败。
+来源：directories-before.txt、directories-after.txt、result.txt、effective-settings.txt、post-exit-check.txt、server-stderr.txt。
+
+6. Exit and lifecycle evidence
+拥有的 PID=PGID=71295，start_new_session=true。
+正常 shutdown/exit 后先排 stdout 到 EOF，再 wait，未触发 forced_cleanup。
+exit_code=0 / reaped_exit_code=0 / stdout_eof=true / process_group_gone=true / failure=null / core_gate=true。
+启动至总结束约194.196s，包含90秒等空诊断；从 shutdown 发出到回收约0.63s（跨两时钟起点，仅近似）。
+2026-10-29T07:09:21.185907+00:00 独立 post-exit：kill(pid,0) 与 killpg(pgid,0) 均 ESRCH3；/bin/ps -axo pid=,ppid=,pgid= 返回0，匹配自有 pid/ppid/pgid 条目为空。
+该进程快照不是全生命周期追踪；没有证明任意脱离进程组的后代、其他平台或全机没有进程/文件副作用。
+请求取消、真实 LS 崩溃/强退、重启、scope 关闭、多实例同索引锁、拒绝访问分支均未在这次真实 LS 运行覆盖。
+
+7. Client checks (synthetic, not JDT evidence)
+两个入口分开：
+  /opt/homebrew/opt/python@3.12/bin/python3.12 -B -m unittest stop0-client-selfcheck.ProtocolBoundaryTest -v
+  /opt/homebrew/opt/python@3.12/bin/python3.12 -B stop0-client-selfcheck.py
+执行 cwd 为本 evidence/iteration-29 目录；原始实际命令与输出见 stop0-client-authorized-green-02.txt。
+四项 unittest：注册未实现不假成功、缺 diagnostics 不当[]、shutdown省略params、EPERM不当组消失。
+集成 fake LS：disk/buffer分离、初始化路径/设置、1MiB尾部排空、正常exit/EOF/group、setup缺launcher退出2并保失败证据；fake定义/引用为空不是语义能力证明。
+8项临时副本突变均被杀，原字节未变，最终双入口EXIT0：见 stop0-client-mutations-round2.txt。早期失败记录保留，不以当前绿重写过去；stop0-client-buffer-red* 的清场异常遮盖不冒称纯预期功能红。
+macOS TERM+EOF但wait前killpg可报EPERM，wait后ESRCH；见 stop0-process-zombie-observation.txt；对应规则回填 .agents/pits.md。
+
+8. Decision boundary
+建议仅将本次作为“停0裸进程工程闭环有条件通过”的事实输入，由用户裁定；T0–T7没有自动通过。
+T1仍无可证明的诊断来源版本与项目完成屏障，不能按当前hash/seq补盖。真实[]未覆盖，不削弱四态硬要求。
+T2需批准可信外部进程的启动、项目写入、缓存/网络/宿主发现边界；只读工具审批不等于 server 只读。
+T3需裁所有权、目录独占、取消/关闭/超时/重启及协议收尾；本次数值只描述探针，非产品默认预算。
+若后续无法满足版本锚，需用户重裁方案或范围；compiler API是正式备选，但不能暗中替换或冒充定义/引用能力。
+未进入停1，未改 JH 产品源码，未新增本轮 Git commit、push 或发布。

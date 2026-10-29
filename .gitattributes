@@ -2,3 +2,9 @@
 # spotless <lineEndings>UNIX</lineEndings>；本文件补检出层——Windows checkout 默认
 # core.autocrlf=true 会把工作树拉成 CRLF ⇒ spotless 全量红（it25 CI 首跑 36515333691 实证）。
 * text=auto eol=lf
+
+# it29 停 0 冻结下载头（curl -D 逐字节捕获）：CRLF 与尾随空白是真实响应字节。
+# 用户冻结纪律「逐条保留原文」优先于空白规范 ⇒ -text 不进文本规范化、
+# 不参与 diff --check（若错靠什么发现：stop0-freeze-check 的 SHA 对账）。
+docs/plan/evidence/iteration-29/stop0-download-headers.txt -text !eol whitespace=-trailing-space,-blank-at-eof
+docs/plan/evidence/iteration-29/stop0-download-ranges-01/*-headers.txt -text !eol whitespace=-trailing-space,-blank-at-eof

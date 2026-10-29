@@ -1,0 +1,31 @@
+EXIT-DRAIN=PASS (1 MiB tail, normal exit, EOF, group gone)
+SETUP-FAILURE-EVIDENCE=PASS
+EXIT=0; synthetic client checks only, not LS evidence
+MUTANT=wait-before-drain
+COMMAND=/opt/homebrew/opt/python@3.12/bin/python3.12 /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-d98mtmvz/stop0-client-selfcheck.py
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-d98mtmvz/stop0-client-selfcheck.py", line 69, in <module>
+    main()
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-d98mtmvz/stop0-client-selfcheck.py", line 51, in main
+    assert result.returncode==0,(result.stdout,result.stderr)
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('Traceback (most recent call last):\n  File "/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-d98mtmvz/stop0-probe.py", line 339, in main\n    return run_probe(args)\n           ^^^^^^^^^^^^^^^\n  File "/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-d98mtmvz/stop0-probe.py", line 287, in run_probe\n    while group_alive(process.pid) and time.monotonic() < deadline:\n          ^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/private/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-d98mtmvz/stop0-probe.py", line 22, in group_alive\n    os.killpg(pgid, 0)\nPermissionError: [Errno 1] Operation not permitted\n\n', '')
+
+EXIT=1
+ASSERTION_KILLED=True
+MUTANT=setup-error-green
+COMMAND=/opt/homebrew/opt/python@3.12/bin/python3.12 /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-dcm7_sos/stop0-client-selfcheck.py
+EXIT-DRAIN=PASS (1 MiB tail, normal exit, EOF, group gone)
+Traceback (most recent call last):
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-dcm7_sos/stop0-client-selfcheck.py", line 69, in <module>
+    main()
+  File "/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-probe-mutant-dcm7_sos/stop0-client-selfcheck.py", line 61, in main
+    assert result.returncode==2
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+EXIT=1
+ASSERTION_KILLED=True
+ORIGINAL_BYTES_UNCHANGED=true
+MUTATIONS=2 SURVIVED=0
+FINAL_GREEN_EXIT=0

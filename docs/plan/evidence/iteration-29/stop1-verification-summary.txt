@@ -1,0 +1,104 @@
+COMMAND=python3.12 -B (read completed verify-stop summaries; sum only fresh lsp/lsp surefire XML; inspect built JPMS jar)
+Surface: local macOS Java25 reactor validate/package + pure Definition tests; no new LSP Provider runtime, external consumer, CI or release run.
+stop1-focused-02: START=2026-10-29T08:14:32.368504+00:00 END=2026-10-29T08:14:43.088657+00:00 EXIT=0
+  git-root COMMAND=git rev-parse --show-toplevel EXIT=0
+  git-base COMMAND=git rev-parse --verify --end-of-options 'HEAD^{tree}' EXIT=0
+  git-head COMMAND=git rev-parse --revs-only HEAD EXIT=0
+  diff-check-worktree COMMAND=git diff --check 98c20947d2982d4431f92005551189d2410c1cee -- EXIT=0
+  paths-worktree COMMAND=git diff --name-only --no-renames -z 98c20947d2982d4431f92005551189d2410c1cee -- EXIT=0
+  diff-check-index COMMAND=git diff --cached --check 98c20947d2982d4431f92005551189d2410c1cee -- EXIT=0
+  paths-index COMMAND=git diff --cached --name-only --no-renames -z 98c20947d2982d4431f92005551189d2410c1cee -- EXIT=0
+  paths-untracked COMMAND=git ls-files --others --exclude-standard -z EXIT=0
+  maven-version COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -v EXIT=0
+  focused COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/lsp -am test EXIT=0
+stop1-full-01: START=2026-10-29T08:14:43.147918+00:00 END=2026-10-29T08:16:31.494597+00:00 EXIT=0
+  git-root COMMAND=git rev-parse --show-toplevel EXIT=0
+  git-base COMMAND=git rev-parse --verify --end-of-options 'HEAD^{tree}' EXIT=0
+  git-head COMMAND=git rev-parse --revs-only HEAD EXIT=0
+  diff-check-worktree COMMAND=git diff --check 98c20947d2982d4431f92005551189d2410c1cee -- EXIT=0
+  paths-worktree COMMAND=git diff --name-only --no-renames -z 98c20947d2982d4431f92005551189d2410c1cee -- EXIT=0
+  diff-check-index COMMAND=git diff --cached --check 98c20947d2982d4431f92005551189d2410c1cee -- EXIT=0
+  paths-index COMMAND=git diff --cached --name-only --no-renames -z 98c20947d2982d4431f92005551189d2410c1cee -- EXIT=0
+  paths-untracked COMMAND=git ls-files --others --exclude-standard -z EXIT=0
+  maven-version COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -v EXIT=0
+  validate COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q validate EXIT=0
+  package COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q package EXIT=0
+lsp/lsp/target/surefire-reports/TEST-io.javanatic.harness.lsp.LspObservationTest.xml {'tests': 1, 'failures': 0, 'errors': 0, 'skipped': 0}
+lsp/lsp/target/surefire-reports/TEST-io.javanatic.harness.lsp.LspQueryTest.xml {'tests': 6, 'failures': 0, 'errors': 0, 'skipped': 0}
+LSP_FRESH_XML_TOTALS={'tests': 7, 'failures': 0, 'errors': 0, 'skipped': 0}
+COMMAND=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/bin/jar --describe-module --file /Users/abel_yang/study/deepseek/javanatic-harness/lsp/lsp/target/harness-lsp-lsp-0.3.0-SNAPSHOT.jar
+io.javanatic.harness.lsp@0.3.0-SNAPSHOT jar:file:///Users/abel_yang/study/deepseek/javanatic-harness/lsp/lsp/target/harness-lsp-lsp-0.3.0-SNAPSHOT.jar!/module-info.class
+exports io.javanatic.harness.lsp
+requires io.javanatic.harness.kernel
+requires io.javanatic.harness.llm.llm
+requires java.base mandated
+opens io.javanatic.harness.lsp
+EXIT=0
+JAR_SHA256=439b3ae958fc1aa1859a8741d0411a9e3b7aba6d23d4bc9264fa6f54cb58a89b
+SOURCE_SHA256 lsp/lsp/pom.xml ec1759e37c532cd16e104fd0e41ffac9a9ae72d81074d3831c3117cdcbaa0117
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspAnchor.java 2de1477b38e83316a02ef76148cd9c9f1b06f92ec6192e22749fa1aa11ad740d
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspDiagnostic.java 7261f8886634e0320ab19e5167194770546398a019c40c38bb12b2391c833667
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspDocument.java d5af4741f6d988e13743bada1a7cceed75bf3a3779e3502affb3753d8248d627
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspErrorCode.java e7cb7ee09f8e168a336d1d2a9fefd0b09c3d92446c8df72f0614185ce7cec90c
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspEvidence.java 2979854905790d9e0c520db6ee2d109f73fa5b64f2233b8f37c7b5b03d999daa
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspException.java bff121eb17719d26f64c4de2f7f633a7d098be19652d3d4fdc7bb800ac6435ba
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspLocation.java 02b223929be2a26b65b29f91bd163252f56908fe3c3a5192bbf382b8d7a7a21c
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspObservation.java c3d39f0c4b0a1d8c845e69da697ab990ac1b3fcb98d3ef3e76192234df47197a
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspPosition.java bb82dd1faabe705202fba30fd84c7506a2fe56e9c698f16161b5e6f818d02ac6
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspPositionQuery.java 040a1a621b6a34773a9834acea5a41082714e62651ef3815c8784515c2c9d729
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspQuery.java d4da5945f237ab629842a9c307562a5ed5df20ac84c7ac7c1a98a8a5119907eb
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspRange.java 2969ba9731ca682bc7ef3562d54606846ecc4105bca2a6927299d21e8b370ecd
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspResult.java a15b885f2ae068b201aff037dc5a16036ae8c27c3b11df8a82339fbc4e7037e1
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspService.java dc71e2237f68448dfe0f1bd2dce04f1254d8b43dcc5ecb6803fd83dc2c63e872
+SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspValues.java d1c9b0e397c0c660ad361f3030bd254f53007b42edcfa48507a6a17e9e45bd30
+SOURCE_SHA256 lsp/lsp/src/main/java/module-info.java c834a8dee2fabce2351d70d59a45e2ae6f06af94cc2214ec7623c0e28b18ca48
+SOURCE_SHA256 lsp/lsp/src/test/java/io/javanatic/harness/lsp/LspObservationTest.java 9c21cac19aeaf7c6f29f0cea93f90a0be9f829703c7909f4766957f74f01060d
+SOURCE_SHA256 lsp/lsp/src/test/java/io/javanatic/harness/lsp/LspQueryTest.java e77b3179565afb16c6b63abae760151908e022a985c9025445e0ad04bb9fbff8
+SOURCE_SHA256 lsp/pom.xml a18821d617904ae19ef2e865598623e70216a9b39bb5507b801cb5fb6021407b
+No aggregate reactor test total claimed; property tries=100 is separate from test method count.
+Warnings in Maven logs retained (including existing Spotless Unsafe warning); EXIT=0 does not mean warning-free.
+EXIT=0
+
+FINAL_RECHECK_TIME=2026-10-29T08:24:38.942846+00:00
+COUNT_CORRECTION: LSP_FRESH_XML_TOTALS=7 above is only the count left on disk after JUnit/jqwik same-name report overwrite, not the module execution total. Historical measurement preserved; do not reuse it as test count.
+FINAL_COUNT_SOURCE=stop1-final-focused-02.txt; Tests run: 17, Failures: 0, Errors: 0, Skipped: 0. 16 JUnit methods + 1 jqwik property (100 tries). No reactor total inferred.
+FULL_TEMPORAL_BOUNDARY: full-01 preceded the two added rejection assertions and test-helper default. final-focused-02 follows all edits. Production hashes are rechecked below; test hashes are not claimed identical.
+FINAL_SOURCE_SHA256 lsp/lsp/pom.xml ec1759e37c532cd16e104fd0e41ffac9a9ae72d81074d3831c3117cdcbaa0117 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspAnchor.java 2de1477b38e83316a02ef76148cd9c9f1b06f92ec6192e22749fa1aa11ad740d SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspDiagnostic.java 7261f8886634e0320ab19e5167194770546398a019c40c38bb12b2391c833667 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspDocument.java d5af4741f6d988e13743bada1a7cceed75bf3a3779e3502affb3753d8248d627 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspErrorCode.java e7cb7ee09f8e168a336d1d2a9fefd0b09c3d92446c8df72f0614185ce7cec90c SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspEvidence.java 2979854905790d9e0c520db6ee2d109f73fa5b64f2233b8f37c7b5b03d999daa SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspException.java bff121eb17719d26f64c4de2f7f633a7d098be19652d3d4fdc7bb800ac6435ba SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspLocation.java 02b223929be2a26b65b29f91bd163252f56908fe3c3a5192bbf382b8d7a7a21c SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspObservation.java c3d39f0c4b0a1d8c845e69da697ab990ac1b3fcb98d3ef3e76192234df47197a SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspPosition.java bb82dd1faabe705202fba30fd84c7506a2fe56e9c698f16161b5e6f818d02ac6 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspPositionQuery.java 040a1a621b6a34773a9834acea5a41082714e62651ef3815c8784515c2c9d729 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspQuery.java d4da5945f237ab629842a9c307562a5ed5df20ac84c7ac7c1a98a8a5119907eb SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspRange.java 2969ba9731ca682bc7ef3562d54606846ecc4105bca2a6927299d21e8b370ecd SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspResult.java a15b885f2ae068b201aff037dc5a16036ae8c27c3b11df8a82339fbc4e7037e1 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspService.java dc71e2237f68448dfe0f1bd2dce04f1254d8b43dcc5ecb6803fd83dc2c63e872 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/io/javanatic/harness/lsp/LspValues.java d1c9b0e397c0c660ad361f3030bd254f53007b42edcfa48507a6a17e9e45bd30 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/main/java/module-info.java c834a8dee2fabce2351d70d59a45e2ae6f06af94cc2214ec7623c0e28b18ca48 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/lsp/src/test/java/io/javanatic/harness/lsp/LspObservationTest.java ebe5a076e4ed5993040966a87af36a4596c47198fbf425aa1cba7076d54f4597 SAME_AS_FULL_SNAPSHOT=False
+FINAL_SOURCE_SHA256 lsp/lsp/src/test/java/io/javanatic/harness/lsp/LspQueryTest.java e77b3179565afb16c6b63abae760151908e022a985c9025445e0ad04bb9fbff8 SAME_AS_FULL_SNAPSHOT=True
+FINAL_SOURCE_SHA256 lsp/pom.xml a18821d617904ae19ef2e865598623e70216a9b39bb5507b801cb5fb6021407b SAME_AS_FULL_SNAPSHOT=True
+PRODUCTION_AND_LSP_POMS_UNCHANGED=True
+FINAL_FOCUSED_EXIT=0
+EXIT=0
+
+FINAL DOCS-CHECK (acceptance batch, 2026-10-29)
+verify-stop.sh docs --log-dir docs/plan/evidence/iteration-29/stop1-acceptance-docscheck-01
+范围 = HEAD 到工作树全批（Definition Java + POM + py + 证据 + 文档同步 + 本评审记录）。
+结果 EXIT=1，仅因 docs 层按设计拒绝范围含非文档改动（24 项：lsp 源码/pom/py）；
+机械链接检查本身 0 缺失（简单本地目标检查数=343，缺少链接目标=0）。
+同批的完整门禁此前已由 stop1-full-01（validate+package EXIT=0）与最终聚焦覆盖，不重复跑。
+
+FROZEN HEADER GIT ATTRIBUTES (acceptance batch)
+9 个冻结下载头（stop0-download-headers.txt + stop0-download-ranges-01/00–07-headers.txt）
+是 curl 响应逐字节捕获：CRLF 行尾与尾随空白是真实响应字节，冻结纪律要求逐条保留。
+根 .gitattributes 通配 text=auto eol=lf 会在入仓时规范化 ⇒ 与冻结 SHA 冲突，且
+pre-commit 的 git diff --cached --check 会拦。解决：路径级 -text !eol + whitespace
+豁免（-trailing-space,-blank-at-eof），限定这 9 个文件；门禁仍对全仓其余文件生效。
+已验证：staged blob 与工作树字节逐一相同（cmp），diff --cached --check 返回 0。
+若错靠什么发现：stop0-freeze-check / stop1-static-check 的 SHA 对账 + 门禁复跑。

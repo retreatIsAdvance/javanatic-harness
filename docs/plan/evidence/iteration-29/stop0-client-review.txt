@@ -1,0 +1,15 @@
+停 0 客户端独立审查（真实 JDT LS 启动前）
+
+范围：stop0-probe.py 一次性实验客户端；不是 JH Provider；独立 general-purpose 代理完整读取并做 AST 检查。未派子代理，未启动 LS。
+原结论：先修重要项再真跑。
+
+重要发现与处置：
+1. stdin 阻塞写没有期限：改为 nonblocking fd + selector + 10s deadline。stop0-client-write-bound.txt 实测不读取 stdin 的 Python 子进程，1 MiB 写入在 10.003s 报超时，定向回收进程组。
+2. 先 wait 后排 stdout 可被管道堵死：exit 后边排 stdout 边有界等待 EOF，随后在同一 20s deadline 内 wait。stop0-client-selfcheck.py 的替身退出尾部写 1 MiB，验证完整排出、EOF、exit0、进程组消失，没有 forced_cleanup。
+3. 主进程先退出时 TERM 后可能残留子代：清场按本探针专属进程组存活状态等待，5s 后仍活则 KILL，回收主进程并再验进程组。此分支代码已修改；本次自检没有注入忽略 TERM 的后代，不声称该分支已真跑。
+4. 启动前异常或收尾异常可缺结果：证据目录创建后外围捕获 setup / snapshot / 日志收尾异常，尽可能留下 harness-failure.txt 和失败 result；stream close 异常留记录并置失败。替身自检缺 launcher 的启动前错误，EXIT2 且 result.core_gate=false。目录本身不可写只能 stderr，不能声称证据完整。
+
+低优注意：空诊断只按到达顺序不能证明 v2 新鲜。本客户端保存客户端 v1/v2、源码 hash、didChange 序号与服务端原始 version，之后人工核对；不把序号当源码版本证明。定义/引用和清空是观察项，核心闸仅启动、握手、真实非空诊断、正常退出与回收。
+
+验证性质：两份 selfcheck / write-bound 仅是替身客户端检查，不得与 JDT LS 的真实诊断混称。原 stop0-client-preflight.txt 为第一次客户端版本的 UTF-8 Content-Length 与服务端 configuration 请求检查。
+未执行第二轮独立审查；不将主代理修复改写为独立审查零发现。

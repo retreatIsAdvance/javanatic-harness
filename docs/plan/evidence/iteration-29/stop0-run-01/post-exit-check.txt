@@ -1,0 +1,23 @@
+{
+  "pid": {
+    "gone": true,
+    "errno": 3
+  },
+  "pgid": {
+    "gone": true,
+    "errno": 3
+  },
+  "ps_numeric_only": {
+    "command": [
+      "/bin/ps",
+      "-axo",
+      "pid=,ppid=,pgid="
+    ],
+    "exit": 0,
+    "matching_pid_ppid_pgid_rows": [],
+    "scope": "post-exit snapshot only, not lifetime process tracing"
+  },
+  "server_tree_unchanged": true,
+  "disk_source_unchanged": true,
+  "checked_at": "2026-10-29T07:09:21.185907+00:00"
+}

@@ -1,0 +1,4 @@
+CHECK=AST; subprocess Python Event.wait(30) 不读取 stdin; Peer.notify 发送 1 MiB; deadline=10s
+OBSERVED_TIMEOUT_SECONDS=10.003
+PROCESS_GROUP_GONE=true
+EXIT=0

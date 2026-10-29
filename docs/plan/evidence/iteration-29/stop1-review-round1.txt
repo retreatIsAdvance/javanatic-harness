@@ -1,0 +1,18 @@
+it29 stop1 — design review round 1 (2026-10-29)
+Scope: read-only review of stop1-seam-design.md against stop0-acceptance.txt and ADR 0009.
+Reviewer: independent general-purpose agent (ageneral-purpose-85612d9b11ccdd53).
+This file records the returned findings and coordinator dispositions, not a second reviewer approval.
+No runtime command was requested from reviewer; EXIT=N/A (document review).
+
+Critical: none reported.
+Important 1: 'synchronization complete' lacked observable criteria; notifications have no acknowledgement. Candidate inclusion lacked a cutoff and overflow rule.
+Disposition: spec now defines local full frame write + flush, not LS application; snapshot under reader publication lock, local complete-message receiveSequence cutoff; overflow is PROTOCOL failure. Provider implementation/runtime proof remains pending.
+Important 2: putting serverVersion on individual diagnostics loses empty-publication metadata and cannot distinguish explicit [] from no notification.
+Disposition: add LspEvidence(Origin,receiveSequence,OptionalInt serverVersion) to LspObservation; keep batch metadata for empty lists; distinguish QUIET_WINDOW/PUBLISHED_DIAGNOSTICS/REQUEST_RESPONSE. Tests cover explicit-empty version and quiet nonempty rejection.
+Important 3: mandatory after file hash cannot represent deletion within the observation window.
+Disposition: LspDocument uses Optional<String>; empty means confirmed absence only, not read error. Deletion can form Stale; Observed rejects absent document. Start-absent/read-failed is IO in Provider contract.
+Minor 4: LspPositionQuery shape was undeclared.
+Disposition: define (LspQuery query,LspPosition position); reuse total timeout/window.
+
+Review accepted the Definition-only scope and disclosure that lifecycle requirements have not been executed; no T4–T7 blanket approval was implied.
+Final implementation review and mutation evidence are separate; this record does not claim the reviewer rechecked these dispositions.

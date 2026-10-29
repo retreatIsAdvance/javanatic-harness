@@ -1,0 +1,4 @@
+COMMAND=git rev-parse --show-toplevel
+b'/Users/abel_yang/study/deepseek/javanatic-harness\n'
+
+EXIT=0

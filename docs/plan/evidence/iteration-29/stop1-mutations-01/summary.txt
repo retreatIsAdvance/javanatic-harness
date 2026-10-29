@@ -1,0 +1,26 @@
+it29 stop1 Definition mutations
+START=2026-10-29T08:12:21.679094+00:00
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/lsp -am test
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+All Maven logs normalized for ANSI/trailing whitespace; original stop0 bytes untouched.
+M1-anchor: EXIT=1; assertionFailures=['observedRequiresStableAnchorAndCompleteWindow', 'restartAndDocumentHashChangeCannotBeHiddenBySameProjectHash', 'everyDifferentGenerationRejectsObserved']; errors=[]; expected=observedRequiresStableAnchorAndCompleteWindow; KILLED=True
+M1-anchor: restoredBytes=True; SHA256=c3d39f0c4b0a1d8c845e69da697ab990ac1b3fcb98d3ef3e76192234df47197a
+M2-window: EXIT=1; assertionFailures=['observedRequiresStableAnchorAndCompleteWindow']; errors=[]; expected=observedRequiresStableAnchorAndCompleteWindow; KILLED=True
+M2-window: restoredBytes=True; SHA256=c3d39f0c4b0a1d8c845e69da697ab990ac1b3fcb98d3ef3e76192234df47197a
+M3-copy: EXIT=1; assertionFailures=['observedCopiesItemsAndRejectsNullEntries']; errors=[]; expected=observedCopiesItemsAndRejectsNullEntries; KILLED=True
+M3-copy: restoredBytes=True; SHA256=a15b885f2ae068b201aff037dc5a16036ae8c27c3b11df8a82339fbc4e7037e1
+M4-hash: EXIT=1; assertionFailures=['hashesAndGenerationAreValidated']; errors=[]; expected=hashesAndGenerationAreValidated; KILLED=True
+M4-hash: restoredBytes=True; SHA256=d1c9b0e397c0c660ad361f3030bd254f53007b42edcfa48507a6a17e9e45bd30
+M5-position: EXIT=1; assertionFailures=['positionRequiresNonnegativeUtf16Coordinates']; errors=[]; expected=positionRequiresNonnegativeUtf16Coordinates; KILLED=True
+M5-position: restoredBytes=True; SHA256=bb82dd1faabe705202fba30fd84c7506a2fe56e9c698f16161b5e6f818d02ac6
+M6-budget: EXIT=1; assertionFailures=['windowMustFitInsidePositiveTotalBudget']; errors=[]; expected=windowMustFitInsidePositiveTotalBudget; KILLED=True
+M6-budget: restoredBytes=True; SHA256=d4da5945f237ab629842a9c307562a5ed5df20ac84c7ac7c1a98a8a5119907eb
+M7-missing: EXIT=1; assertionFailures=['missingFileIsStaleButNeverSuccessfulObservation']; errors=[]; expected=missingFileIsStaleButNeverSuccessfulObservation; KILLED=True
+M7-missing: restoredBytes=True; SHA256=c3d39f0c4b0a1d8c845e69da697ab990ac1b3fcb98d3ef3e76192234df47197a
+M8-quiet: EXIT=1; assertionFailures=['emptyPublicationKeepsVersionAndDiffersFromQuietWindow']; errors=[]; expected=emptyPublicationKeepsVersionAndDiffersFromQuietWindow; KILLED=True
+M8-quiet: restoredBytes=True; SHA256=a15b885f2ae068b201aff037dc5a16036ae8c27c3b11df8a82339fbc4e7037e1
+ALL_SOURCE_BYTES_RESTORED=True
+ALL_TEST_BYTES_UNCHANGED=True
+RESIDUAL_MUTANT_MARKERS=[]
+END=2026-10-29T08:13:30.911439+00:00
+EXIT=0

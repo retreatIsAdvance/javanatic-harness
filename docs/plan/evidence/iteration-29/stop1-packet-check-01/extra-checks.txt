@@ -1,0 +1,10 @@
+COMMAND=python3.12 -B (reuse verify_stop.changed_files/document_checks with docs_only=False; static-only, no Maven claim; extra local evidence assertions)
+STOP1_TEXT_WHITESPACE_FILES=85
+TRAILING_WHITESPACE=[]
+MANUAL_ANCHOR_TARGET=docs/plan/boundary-register.md heading=LSP Boundaries（it29，已裁决 / 实施中） slug=lsp-boundariesit29已裁决--实施中
+PACKET_FIRST_FIVE_LABELS=True
+FOCUSED_AND_FULL_RECORDED_STEPS_ZERO=True
+FINAL_LSP_MODULE_COUNT=17 failures=0 errors=0 skipped=0
+Limitations: link targets only (no network); selected LSP heading checked, not every historical anchor/HTML/reference-style link. No runtime/lifecycle/security acceptance inferred.
+PACKET_SHA256=a017d4affc1cb47dc43a1641f4eddb6e892941285ede3d58b3047178cdcf7fa0
+EXIT=0

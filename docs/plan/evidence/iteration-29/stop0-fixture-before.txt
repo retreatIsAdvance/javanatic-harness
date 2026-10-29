@@ -1,0 +1,23 @@
+{
+  "project": "/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project",
+  "jdk_home": "/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home",
+  "os": "macOS-26.2-arm64-arm-64bit",
+  "files": {
+    "pom.xml": {
+      "sha256": "8cbc5c8bb421071c5d8488008a4d383fbeb2975ccb827453a0e07d1508f98ef9",
+      "text": "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>local.jh.probe</groupId>\n  <artifactId>java25-fixture</artifactId>\n  <version>1.0.0</version>\n  <properties>\n    <maven.compiler.release>25</maven.compiler.release>\n    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n  </properties>\n  <build>\n    <plugins>\n      <plugin>\n        <groupId>org.apache.maven.plugins</groupId>\n        <artifactId>maven-compiler-plugin</artifactId>\n        <version>3.14.1</version>\n      </plugin>\n    </plugins>\n  </build>\n</project>\n"
+    },
+    "src/main/java/module-info.java": {
+      "sha256": "210c2d1ead8d19a803c8ff9495e1ff75482810d839c172f8a355d3f4152f4515",
+      "text": "module probe.fixture {\n    exports probe;\n}\n"
+    },
+    "src/main/java/probe/App.java": {
+      "sha256": "a8e3a6c966c993baf7ddcae6be0df4be8a3862ccb9d39c18226a3119c1471dcc",
+      "text": "package probe;\n\npublic final class App {\n    public static int run() {\n        String label = 42;\n        return Calc.twice(label.length());\n    }\n}\n"
+    },
+    "src/main/java/probe/Calc.java": {
+      "sha256": "5322ac42647f38b7f1c75520f5436718cd4d6ec8e2d0ce30b10707d16c646ff6",
+      "text": "package probe;\n\npublic final class Calc {\n    public static int twice(int value) {\n        return value * 2;\n    }\n}\n"
+    }
+  }
+}
