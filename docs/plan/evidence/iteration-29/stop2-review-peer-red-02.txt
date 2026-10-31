@@ -1,0 +1,241 @@
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dtest=LspPeerTest,LspPeerBackpressureTest -Dsurefire.failIfNoSpecifiedTests=false
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 11:25:51 上午 io.javanatic.harness.lsp.jdtls.LspPeer dispatch
+警告: lsp server 'fixture' sent an unmatched response id 10001; dropped
+10月 30, 2026 11:25:54 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'fixture' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+10月 30, 2026 11:26:03 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'backpressure-90812' notification callback failed: missing diagnostics array
+10月 30, 2026 11:26:19 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'backpressure-90870' notification callback failed: bad callback
+[ERROR] Tests run: 14, Failures: 14, Errors: 0, Skipped: 0, Time elapsed: 32.10 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.closeKillsBeforeWaitingForOutputLockAndReapsIoThreads -- Time elapsed: 3.085 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[operation must finish within PT3S] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest$Running.resultWithin(LspPeerBackpressureTest.java:347)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.closeKillsBeforeWaitingForOutputLockAndReapsIoThreads(LspPeerBackpressureTest.java:97)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.beginCloseRejectsOrdinaryWorkButPermitsShutdownAndExit -- Time elapsed: 0.088 s <<< FAILURE!
+java.lang.AssertionError: missing production primitive: beginClose
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.invoke(LspPeerBackpressureTest.java:377)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.invoke(LspPeerBackpressureTest.java:370)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.beginCloseRejectsOrdinaryWorkButPermitsShutdownAndExit(LspPeerBackpressureTest.java:176)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+Caused by: java.lang.NoSuchMethodException: io.javanatic.harness.lsp.jdtls.LspPeer.beginClose()
+	at java.base/java.lang.Class.getDeclaredMethod(Class.java:2422)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.invoke(LspPeerBackpressureTest.java:375)
+	... 5 more
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.captureAndSequenceCannotObserveHalfPublishedNotification -- Time elapsed: 0.045 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[sequence must wait for callback publication] 
+Expecting value to be true but was false
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.captureAndSequenceCannotObserveHalfPublishedNotification(LspPeerBackpressureTest.java:218)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.callbackProtocolFailureIsNotSwallowedOrReclassified -- Time elapsed: 0.072 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting actual:
+  {"jsonrpc":"2.0","id":1,"result":null}
+and:
+  io.javanatic.harness.lsp.LspException: missing diagnostics array
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.callbackProtocolFailureIsNotSwallowedOrReclassified(LspPeerBackpressureTest.java:231)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	...(67 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+to refer to the same object
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.callbackProtocolFailureIsNotSwallowedOrReclassified(LspPeerBackpressureTest.java:238)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.notificationTimeoutAndCancellationWaitForFlushAndRemainLocal -- Time elapsed: 10.04 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: real stdin write started
+	at io.javanatic.harness.lsp.jdtls.Fixtures.awaitTrue(Fixtures.java:67)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest$Harness.awaitWrite(LspPeerBackpressureTest.java:309)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.notificationTimeoutAndCancellationWaitForFlushAndRemainLocal(LspPeerBackpressureTest.java:144)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.readerEnqueuesRepliesWithoutBlockingAndCountsOnlyFlushedReplies -- Time elapsed: 3.100 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[reader must pass blocked reply] 
+Expecting value to be true but was false
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.readerEnqueuesRepliesWithoutBlockingAndCountsOnlyFlushedReplies(LspPeerBackpressureTest.java:117)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.requestDeadlineIncludesBlockedPipeWrite -- Time elapsed: 3.088 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[operation must finish within PT3S] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest$Running.resultWithin(LspPeerBackpressureTest.java:347)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.requestDeadlineIncludesBlockedPipeWrite(LspPeerBackpressureTest.java:46)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.callbackRuntimeFailureBecomesProtocolAndReaderTerminationIsNotEof -- Time elapsed: 0.082 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting actual:
+  {"jsonrpc":"2.0","id":1,"result":null}
+to be an instance of:
+  io.javanatic.harness.lsp.LspException
+but was instance of:
+  com.fasterxml.jackson.databind.node.ObjectNode
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.assertProtocol(LspPeerBackpressureTest.java:353)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.callbackRuntimeFailureBecomesProtocolAndReaderTerminationIsNotEof(LspPeerBackpressureTest.java:258)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.malformedFrameFailureIsRetainedAndIsNotStdoutEof -- Time elapsed: 0.072 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[reader failure is not EOF] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.malformedFrameFailureIsRetainedAndIsNotStdoutEof(LspPeerBackpressureTest.java:270)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.partialFrameEofIsReadFailureNotCleanEof -- Time elapsed: 0.063 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.partialFrameEofIsReadFailureNotCleanEof(LspPeerBackpressureTest.java:282)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.listenerCancellationDoesNotBlockInCancelNotification -- Time elapsed: 3.078 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[operation must finish within PT3S] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest$Running.resultWithin(LspPeerBackpressureTest.java:347)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.listenerCancellationDoesNotBlockInCancelNotification(LspPeerBackpressureTest.java:83)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.replyQueueOverflowBreaksLoudlyInsteadOfDroppingMessages -- Time elapsed: 3.090 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[operation must finish within PT3S] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest$Running.resultWithin(LspPeerBackpressureTest.java:347)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.replyQueueOverflowBreaksLoudlyInsteadOfDroppingMessages(LspPeerBackpressureTest.java:131)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.queuedRequestUsesEntryBudgetRatherThanASecondWriteBudget -- Time elapsed: 3.077 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[operation must finish within PT3S] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest$Running.resultWithin(LspPeerBackpressureTest.java:347)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.queuedRequestUsesEntryBudgetRatherThanASecondWriteBudget(LspPeerBackpressureTest.java:164)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.pollingCancellationIncludesBlockedPipeWriteWithoutKillingProject -- Time elapsed: 3.098 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[operation must finish within PT3S] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest$Running.resultWithin(LspPeerBackpressureTest.java:347)
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.pollingCancellationIncludesBlockedPipeWriteWithoutKillingProject(LspPeerBackpressureTest.java:65)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Failures: 
+[ERROR]   LspPeerBackpressureTest.beginCloseRejectsOrdinaryWorkButPermitsShutdownAndExit:176->invoke:370->invoke:377 missing production primitive: beginClose
+[ERROR]   LspPeerBackpressureTest.callbackProtocolFailureIsNotSwallowedOrReclassified:238 
+Expecting actual:
+  {"jsonrpc":"2.0","id":1,"result":null}
+and:
+  io.javanatic.harness.lsp.LspException: missing diagnostics array
+	at io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest.callbackProtocolFailureIsNotSwallowedOrReclassified(LspPeerBackpressureTest.java:231)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	...(67 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+to refer to the same object
+[ERROR]   LspPeerBackpressureTest.callbackRuntimeFailureBecomesProtocolAndReaderTerminationIsNotEof:258->assertProtocol:353 
+Expecting actual:
+  {"jsonrpc":"2.0","id":1,"result":null}
+to be an instance of:
+  io.javanatic.harness.lsp.LspException
+but was instance of:
+  com.fasterxml.jackson.databind.node.ObjectNode
+[ERROR]   LspPeerBackpressureTest.captureAndSequenceCannotObserveHalfPublishedNotification:218 [sequence must wait for callback publication] 
+Expecting value to be true but was false
+[ERROR]   LspPeerBackpressureTest.closeKillsBeforeWaitingForOutputLockAndReapsIoThreads:97 [operation must finish within PT3S] 
+Expecting value to be false but was true
+[ERROR]   LspPeerBackpressureTest.listenerCancellationDoesNotBlockInCancelNotification:83 [operation must finish within PT3S] 
+Expecting value to be false but was true
+[ERROR]   LspPeerBackpressureTest.malformedFrameFailureIsRetainedAndIsNotStdoutEof:270 [reader failure is not EOF] 
+Expecting value to be false but was true
+[ERROR]   LspPeerBackpressureTest.notificationTimeoutAndCancellationWaitForFlushAndRemainLocal:144 timed out awaiting: real stdin write started
+[ERROR]   LspPeerBackpressureTest.partialFrameEofIsReadFailureNotCleanEof:282 
+Expecting value to be false but was true
+[ERROR]   LspPeerBackpressureTest.pollingCancellationIncludesBlockedPipeWriteWithoutKillingProject:65 [operation must finish within PT3S] 
+Expecting value to be false but was true
+[ERROR]   LspPeerBackpressureTest.queuedRequestUsesEntryBudgetRatherThanASecondWriteBudget:164 [operation must finish within PT3S] 
+Expecting value to be false but was true
+[ERROR]   LspPeerBackpressureTest.readerEnqueuesRepliesWithoutBlockingAndCountsOnlyFlushedReplies:117 [reader must pass blocked reply] 
+Expecting value to be true but was false
+[ERROR]   LspPeerBackpressureTest.replyQueueOverflowBreaksLoudlyInsteadOfDroppingMessages:131 [operation must finish within PT3S] 
+Expecting value to be false but was true
+[ERROR]   LspPeerBackpressureTest.requestDeadlineIncludesBlockedPipeWrite:46 [operation must finish within PT3S] 
+Expecting value to be false but was true
+[ERROR] Tests run: 30, Failures: 14, Errors: 0, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-lsp-jdtls: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-lsp-jdtls
+
+EXIT=1

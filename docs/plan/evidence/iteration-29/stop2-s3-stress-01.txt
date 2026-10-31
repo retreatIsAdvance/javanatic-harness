@@ -1,0 +1,58 @@
+COMMAND: /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dtest=JdtlsProviderTest#staleWhenDocumentChangesDuringWindow+tailRequestAfterDrainGraceFailsClose+publishedDiagnosticsWithoutVersionCarriesD3Shape+emptyDiagnosticsArrayIsDistinctFromQuiet,LspPeerTest#terminatePreservesTailReadUntilProcessExit+cancelSendsCancelRequestAndAborts -Dsurefire.failIfNoSpecifiedTests=false
+CPU_WORKERS=10; OWNED_PIDS=[88142, 88143, 88144, 88145, 88146, 88147, 88148, 88149, 88150, 88151]
+ROUND=1
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 11:14:25 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit9922460315658811593' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:14:27 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'jdtls-junit16378369343053464536' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+10月 30, 2026 11:14:28 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit16378369343053464536' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=1
+10月 30, 2026 11:14:30 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit6410981835770010186' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:14:31 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit365594999241280150' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:14:33 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'fixture' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+EXIT=0
+ROUND=2
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 11:14:44 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit17675358114938382578' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:14:46 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'jdtls-junit10595865758030851377' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+10月 30, 2026 11:14:47 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit10595865758030851377' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=1
+10月 30, 2026 11:14:49 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit17197314756372217985' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:14:50 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit871661571973584790' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:14:52 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'fixture' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+EXIT=0
+ROUND=3
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 11:15:03 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit9826823980859976803' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:15:05 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'jdtls-junit304282202975514029' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+10月 30, 2026 11:15:05 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit304282202975514029' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=1
+10月 30, 2026 11:15:07 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit18070868976178031464' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:15:08 上午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit16255322314028966796' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 11:15:10 上午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'fixture' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+EXIT=0
+OWNED_WORKERS_REAPED=True
+OVERALL_EXIT=0

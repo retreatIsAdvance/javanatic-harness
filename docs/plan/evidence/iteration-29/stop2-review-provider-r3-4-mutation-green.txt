@@ -1,0 +1,25 @@
+# stop2 R3-4 突变还原绿证据 — 快照字节级还原 + 复绿 + 全模块（takeover-review R3-4 P2）
+
+还原方式：修复版文件在注入突变 1 前快照至 /tmp/it29-JdtlsProvider-fix-snapshot.java
+（MD5 848b0dbd2fbf6047d402d2671b480c6a）；突变 2 用 Edit 逐字节还原；突变 1 用快照 cp 还原
+后 MD5 复验一致（848b0dbd...）——lsp/jdtls 模块整体尚未 git 跟踪（首次提交前），
+git diff 不可用作还原校核，改以快照哈希为准。
+
+命令（仓库根，聚焦）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderProtocolTest#initializeResultWithoutUsableSyncFailsProtocol+initializeResultWithObjectSyncAcceptsIncrementalShape' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/it29-r3-4-green-final.log 2>&1; echo "EXIT=$?"
+EXIT=0
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.102 s -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderProtocolTest
+
+夹具合规适配聚焦（PeerBackpressureServer 补 textDocumentSync:1 后的 4 个曾红测试）：
+EXIT=0
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.487 s -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+
+全模块回归：
+EXIT=0
+[INFO] Tests run: 177, Failures: 0, Errors: 0, Skipped: 0
+
+计数口径：177 = 169（R3-3 后基线）+ 8（R3-4 新增：7 坏形状 + 1 正例），只数模块汇总行。
+
+EXIT=0

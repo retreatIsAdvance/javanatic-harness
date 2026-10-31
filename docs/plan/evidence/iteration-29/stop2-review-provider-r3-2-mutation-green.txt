@@ -1,0 +1,14 @@
+# stop2 R3-2 突变还原复绿证据
+
+还原：overflowed 检查次序换回 PROTOCOL 先于 Stale（Edit 工具单次替换，与突变前逐字节一致）。
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderSamplingTest#overflowFrozenInSameRoundAsInputChangeReportsProtocolThenRecovers' ...
+> /tmp/it29-stop2-r3-2-mutation-green.log 2>&1; echo "EXIT=$?"
+EXIT=0
+
+关键输出：
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+
+EXIT=0

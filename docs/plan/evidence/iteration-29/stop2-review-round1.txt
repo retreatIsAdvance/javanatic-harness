@@ -1,0 +1,60 @@
+it29 stop2 — 首轮独立静态审查处置记录（协调者摘要，非评审原文）
+记录日期：2026-10-30
+状态：S3 审查修复中；不得据此称停2通过。S4完整突变/full与S5真实JDT LS验收未完成。
+
+审查基面
+- 首轮审查为只读静态审查，未跑构建。
+- 对照已裁 stop1-seam-design.md、stop1-acceptance.txt 及 T5 自有边界裁决。
+- 原始六项定位对应修复前源文件；以下行号是审查时点，不当最终源码行号。
+- stop2-s3-focused-01.txt 与 stop2-s3-stress-01.txt 为早期测量，只证明当时选定测试，不覆盖后来发现的缺陷。
+
+F1（阻断）轮间编辑未同步、旧缓存重锚
+原 JdtlsProvider.java:325/547。输入A→B发生在两次pull之间时，before/after均为B，原实现未递增generation、未didChange，可能将旧诊断配上新hash。
+要求：记住已观察输入，轮间和窗内变更都清代；全文didChange与版本递增；发送文本与hash来自同一字节采样；删除按停1缺失锚语义。
+处置：Provider实现代理异常结束，主线程接管遗留代码与证据，仍须须核验源码及红绿，不预填完成。
+
+F2（阻断）截点与候选发布不原子
+原 DiagnosticsCache.java:43–55。cutoff5之后seq6覆盖seq5，再按cutoff取最新可返回空，伪QUIET。
+另有设计偏离：停2草稿把截点放窗前，但停1已裁是完整等待窗后、与reader发布锁互斥复制sequence+candidate+overflow。此处服从停1，不重裁、不改冻结原文。
+Peer部分：新增capture并与dispatch共用publicationLock；receiveSequence同锁；五项发布/错误/EOF红测已完成红绿。Provider窗口后捕获、缓存清代与不可变快照接线仍待核验。
+
+F3（阻断）坏载荷跳过造成假空
+原 JdtlsProvider.java:429–440/495–508。缺diagnostics数组、坏诊断或坏位置条目曾被忽略。
+要求：非法载荷整体PROTOCOL；result:null是合法成功空；不伪造severity、位置、version；错误码不降级CONNECTION。
+Peer部分：callback抛LspException保留首次原实例；普通RuntimeException转PROTOCOL；checkHealthy/capture/后续request复抛；reader异常不再当真实stdout EOF。
+Provider严格解析与能力声明接线仍待核验。
+
+F4（阻断）方法总期限与取消遗漏
+原 JdtlsProvider.java:174/203/237/310。deadline在锁内创建，初始化等待不检查取消，收尾采样不再检查超时。
+要求：入口总deadline；锁排队、初始化、同步flush、等待窗、after采样及返回前均覆盖；REQUEST_RESPONSE使用query的真实window，不用Math.max伪elapsed。
+处置：Provider实现代理异常结束，主线程接管遗留代码与证据，仍须核验。
+
+F5（阻断）写背压阻塞取消及关闭
+原 LspPeer.java:428/486、Provider:336。同步管道写和观察锁把close拦在TERM/KILL之前。
+Peer部分已修：64项有界队列+单writer；管道写不持状态/发布锁；request/notify含flush等待与期限；reader应答只入队，成功flush才计answered；取消不杀项目；beginClose失败普通waiters但保留控制帧；close先KILL再join；finish如实返回线程收束结果。
+证据：
+- stop2-review-backpressure-red-03.txt：9项断言失败、0 errors，EXIT=1。
+- stop2-review-backpressure-final.txt：Peer既有16项+背压14项选择集，EXIT=0；自有PID复验无行。
+- stop2-review-backpressure-mutation-01.txt：入队即计已答，1项断言红。
+- stop2-review-backpressure-mutation-02.txt：finish恒true，1项断言红。
+- stop2-review-backpressure-mutation-03.txt：默认notify期限延至30s，3s行为界断言红。
+三项均记录逐字节还原SHA及RESTORE_EXIT=0；这些SHA属于当时背压基线，之后发布边界修复使源码改变，不当最终hash。
+Provider无观察锁关闭与finish结果检查仍待核验。
+
+F6（阻断）Linux包装argv多一个分隔符
+原 Session.java:45/88–94。setsid -- -- java被当成执行名为--的程序。
+已修为buildLinuxCommand只添加一次包装器--并保留原始argv各元素。
+证据：stop2-review-f6-red.txt（lsp SessionTest 1 failure/0 errors，EXIT=1）；stop2-review-f6-green.txt（lsp SessionTest 1 test/0 failures/0 errors，EXIT=0）。
+同名core/session SessionTest的15项不计入本修复测试数。Linux真机尚未验证，只验证最终argv形状；macOS包装器未改。
+
+Peer发布边界额外红绿
+- stop2-review-publication-red-01.txt：5项、5 failures、0 errors，EXIT=1。
+- stop2-review-publication-green-01.txt：LspPeerTest,LspPeerBackpressureTest,LspPeerPublicationTest选择集，EXIT=0；-q日志不含成功汇总，不从残留XML拼执行数。
+- 覆盖半发布互斥、原始PROTOCOL保留、callback Runtime→PROTOCOL、畸形帧与残帧EOF不冒充真实EOF。
+
+当前未关闭项
+- Provider F1–F4、F5接线及全模块回归待独立核验。
+- Session env!=null只putAll与JdtlsLaunch.env“不整体继承”注释不符；ps读取/等待无界，外层capture期限不能约束内层；需继续TDD处理。
+- 停1索引独占与初始化失败回滚仍是硬验收，不得遗漏。
+- 动态注册/配置能力不得未实现而宣告或假成功；另有只读Peer/Session边界复审进行中。
+- 不提交、不push；Consumer/装配与发布不在此授权。

@@ -1,0 +1,28 @@
+# stop2 R3-1 绿证据 — 同步帧入队即 wire 承诺修复 + 全模块回归
+
+修复（两处，最小面）：
+1. LspPeer.enqueueNotify(method, params, signal)：入队即 wire 承诺的文档同步专用原语——
+   返回 flush 未来，不接取消丢弃、不为等待者置取消钩子。同步帧一旦入队必然被 writer 写完（或会话断裂）。
+2. JdtlsProvider.syncDocuments：didOpen/didChange/didClose 均改为 enqueueNotify → 立即记账
+   （openedDocuments put/remove 在入队后、等待 flush 前）→ awaitSync 等待。
+   超时/取消只结束等待（帧仍承诺不撤销），本地文档状态与 wire 同进退；连接面失败原样上抛。
+   新增 awaitSync(CompletableFuture<Void>, Call)：call.check 轮询 + pauseUntil 切片，CompletionException 解包。
+
+聚焦复跑（修复后，两反例）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderBudgetTest#syncTimeoutStillCommitsThenRevertSendsDidChange+syncCancelledStillCommitsThenRevertSendsDidChange' ...
+> /tmp/it29-stop2-r3-1-green.log 2>&1; echo "EXIT=$?"
+EXIT=0
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.378 s -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+
+全模块回归（同命令去掉 -Dtest，/tmp/it29-stop2-r3-1-full.log）：
+EXIT=0
+[INFO] Tests run: 167, Failures: 0, Errors: 0, Skipped: 0（此前 165，+2 新反例）
+FAILURE 行计数：0
+
+语义钉死：
+- 超时路径：第二观察 TimedOut；磁盘回退 A 后第三观察 Observed，sync-log 出现 didChange(A/v3)（version 3 + REVERTED 同行）。
+- 取消路径：第二观察 AbortedException（原样上抛）；同样回退后发 didChange(A/v3)。
+- 旧缺陷（hash 相等跳过）被两路径各自钉死；版本单调（v1→v2→v3），无重复 didOpen。
+
+EXIT=0

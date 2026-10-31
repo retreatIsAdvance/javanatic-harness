@@ -1,0 +1,32 @@
+it29 stop2 — TERM 与管道生命周期诊断（2026-10-30）
+
+现象
+- tailRequestAfterDrainGraceFailsClose 未抛 CLOSE_FAILED；exit=137，但 unanswered=0。
+- Python 对端用 SIGTERM 发信号，夹具在 shutdown 应答后约 1.2s 能发出 create；包含 perl setsid 包装器时仍成立。
+- Java Provider 中 stdout 先结束，ps 同时仍见目标 PID 存活。因此「无日志 = 夹具睡眠未结束」的早期推断不成立。
+
+根因证据
+本机 /Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home/lib/src.zip：
+java.base/java/lang/ProcessImpl.java:458–478
+  destroy(boolean force) 调用 processHandle.destroyProcess(force) 后，依次 stdin.close / stdout.close / stderr.close。
+java.base/java/lang/ProcessHandleImpl.java:350–353
+  destroy() 只返回 destroyProcess(false)，不关闭 Process 的管道。
+读取方法：Python zipfile 直接读取上述两个源文件，打印对应方法与行号；未读用户环境或私有配置。
+
+因果链
+Provider 排水宽限到期 → LspPeer.terminate 调用 Process.destroy → 发送 TERM 且提前关闭三路管道 →
+忽略 TERM 的夹具仍活，但晚到 create 无法到达读线程，serverRequestsReceived 未增长 →
+KILL 后进程退出且 unanswered=0 → close 错误地当作已完成全答。
+
+修复与红绿证据
+- LspPeer.terminate 改为 process.toHandle().destroy()；排水到期只关应答开关，保持读管道直到收束。
+- 不改变原退出用例的延迟、预算和 CLOSE_FAILED / 137 断言，不改变夹具尾流行为来凑绿。
+- 新增 terminatePreservesTailReadUntilProcessExit：先 shutdown，再禁应答并 TERM；必须读到一个未答尾流，且对端仍存活、peer 未断。
+- stop2-term-pipes-red.txt：两条用例均 assertion failure，Errors=0，EXIT=1。
+- stop2-term-pipes-green.txt：同命令 EXIT=0，Provider 记录 unanswered=1、exit=137。
+- 该红绿循环只证明 TERM 管道问题修复，不代表 S3/S4/S5 或整个停点已验收。
+
+诊断纠偏
+- SIGQUIT 会将 JVM 线程转储写到 stdout；在 LSP 字节帧流上造成 header lacks Content-Length 是探针污染，不是原故障证据。
+- TMP 日志、SIGQUIT 调用与 psLine/threadDump 临时方法已移除；终检以 lsp/jdtls/src 上搜索 TMP / threadDump / psLine / QUIT 零匹配为准。
+- 后续清理只针对本次捕获的进程句柄/PID，不以名称批量杀进程。

@@ -1,0 +1,13 @@
+# stop2 R3-3 突变绿证据 — 逐字节还原互斥后复绿
+
+突变还原：synchronized (lifecycleLock) 块（缝 → call.checkState() → 登记 + start）逐字节还原。
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderSamplingTest#closeMutuallyExcludesSamplingRegistrationAndRejectsAfterwards' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/r33-mutation-green.log 2>&1; echo "EXIT=$?"
+EXIT=0
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.956 s -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+
+EXIT=0

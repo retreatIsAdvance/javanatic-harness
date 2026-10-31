@@ -1,0 +1,21 @@
+it29 stop2 — Provider接管后独立只读复核（协调者摘要，不是冻结评审原文）
+日期：2026-10-30
+状态：以下为静态事件序列推导，尚未用反例复现，不表示完成或用户批准。
+
+审查面：JdtlsProvider、ProviderInputs、ProviderProtocol、DiagnosticsCache及Provider测试/Fixtures；对照停1冻结契约与停2可变设计。审查代理未修改文件、未运行Maven或被测进程。
+当前源码接管回归：stop2-review-provider-takeover-green.txt，JdtlsProvider*Test模块汇总68/0失败/0错误，EXIT=0。最后历史F2突变缺还原字节证明；本次fresh绿不能追补该缺失。
+
+R3-1 P1 同步失败后的客户端文档状态
+JdtlsProvider.java:574–586。A/v1已同步；didChange(B/v2)开始写但背压超时，openedDocuments仍记A/v1；磁盘恢复A后因hash相同跳过同步，旧帧随后写完使LS仍为B，可能配A锚返回Observed。需要真实背压+取消/超时+再次观察反例，不能当作已接受分析延迟。
+
+R3-2 P1 冻结溢出被Stale分支吞掉
+JdtlsProvider.java:227–231、502–506。冻结overflowed=true后，after变化导致清代并先返回Stale，下轮不再报PROTOCOL。需要同轮溢出与输入变化组合；不得用分别覆盖冒充组合验证。
+
+R3-3 P1 采样线程登记/启动与close竞态
+JdtlsProvider.java:523–530、425–433。close可能在worker登记前完成，随后观察线程启动新worker。目录遍历先于FileReader回调检查；需互斥登记/启动和close拒新工作，不能只靠可中断IO反例。
+
+R3-4 P2 initialize业务结果不校验
+JdtlsProvider.java:142–148。合法JSON-RPC包络中result:null/42仍可使Provider标记初始化成功。initialize返回结构和静态能力必须独立验证，不能外推shutdown/定位允许null的规则。
+
+非缺陷：ABA、无version迟到分析、清单外依赖和窗口不证明索引完成仍为已接受限制。
+上述均待主线程逐项核验、TDD与联合回归。索引锁、Session环境/ps、Peer EOF与协议等既有未闭项见stop2-review-round2.txt。S3未完成；不提交/push/Consumer。

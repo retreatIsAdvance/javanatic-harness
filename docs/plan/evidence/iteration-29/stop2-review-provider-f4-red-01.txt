@@ -1,0 +1,77 @@
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dtest=JdtlsProviderBudgetTest -Dsurefire.failIfNoSpecifiedTests=false
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 1:54:34 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit8063822572587655868' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:54:35 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit16904237426639207765' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:54:37 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit2655203311273762536' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+[ERROR] Tests run: 3, Failures: 2, Errors: 1, Skipped: 0, Time elapsed: 5.488 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.cancellationDuringInitializationDoesNotWaitForHandshake -- Time elapsed: 2.192 s <<< ERROR!
+java.util.concurrent.TimeoutException
+	at java.base/java.util.concurrent.CompletableFuture.timedGet(CompletableFuture.java:1981)
+	at java.base/java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2116)
+	at io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.cancellationDuringInitializationDoesNotWaitForHandshake(JdtlsProviderBudgetTest.java:77)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.locationMustWaitForTheRequestedObservationWindow -- Time elapsed: 0.661 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 0.6S
+ but was: 0.001S
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.locationMustWaitForTheRequestedObservationWindow(JdtlsProviderBudgetTest.java:96)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.queuedObservationConsumesItsOwnEntryBudget -- Time elapsed: 2.619 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting actual:
+  Observed[observation=LspObservation[before=LspAnchor[projectRoot=file:///var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit2655203311273762536/, incarnation=aaaae524-ab7b-4365-868d-987bb2c57a44, generation=0, projectHash=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, document=LspDocument[uri=file:///var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit2655203311273762536/App.java, sha256=Optional[7857929bc003002041fc53ce4fc1b50753a888a667ec0fbd797bc5af02866432]]], after=LspAnchor[projectRoot=file:///var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit2655203311273762536/, incarnation=aaaae524-ab7b-4365-868d-987bb2c57a44, generation=0, projectHash=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, document=LspDocument[uri=file:///var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit2655203311273762536/App.java, sha256=Optional[7857929bc003002041fc53ce4fc1b50753a888a667ec0fbd797bc5af02866432]]], requiredWait=PT0.1S, elapsedWait=PT0.101059208S, capturedAt=2026-10-30T05:54:37.621027Z, evidence=LspEvidence[origin=QUIET_WINDOW, receiveSequence=1, serverVersion=OptionalInt.empty]], items=[]]
+to be an instance of:
+  io.javanatic.harness.lsp.LspResult.TimedOut
+but was instance of:
+  io.javanatic.harness.lsp.LspResult.Observed
+	at io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.queuedObservationConsumesItsOwnEntryBudget(JdtlsProviderBudgetTest.java:46)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Failures: 
+[ERROR]   JdtlsProviderBudgetTest.locationMustWaitForTheRequestedObservationWindow:96 
+expected: 0.6S
+ but was: 0.001S
+[ERROR]   JdtlsProviderBudgetTest.queuedObservationConsumesItsOwnEntryBudget:46 
+Expecting actual:
+  Observed[observation=LspObservation[before=LspAnchor[projectRoot=file:///var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit2655203311273762536/, incarnation=aaaae524-ab7b-4365-868d-987bb2c57a44, generation=0, projectHash=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, document=LspDocument[uri=file:///var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit2655203311273762536/App.java, sha256=Optional[7857929bc003002041fc53ce4fc1b50753a888a667ec0fbd797bc5af02866432]]], after=LspAnchor[projectRoot=file:///var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit2655203311273762536/, incarnation=aaaae524-ab7b-4365-868d-987bb2c57a44, generation=0, projectHash=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855, document=LspDocument[uri=file:///var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit2655203311273762536/App.java, sha256=Optional[7857929bc003002041fc53ce4fc1b50753a888a667ec0fbd797bc5af02866432]]], requiredWait=PT0.1S, elapsedWait=PT0.101059208S, capturedAt=2026-10-30T05:54:37.621027Z, evidence=LspEvidence[origin=QUIET_WINDOW, receiveSequence=1, serverVersion=OptionalInt.empty]], items=[]]
+to be an instance of:
+  io.javanatic.harness.lsp.LspResult.TimedOut
+but was instance of:
+  io.javanatic.harness.lsp.LspResult.Observed
+[ERROR] Errors: 
+[ERROR]   JdtlsProviderBudgetTest.cancellationDuringInitializationDoesNotWaitForHandshake:77 » Timeout
+[ERROR] Tests run: 3, Failures: 2, Errors: 1, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-lsp-jdtls: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-lsp-jdtls
+
+EXIT=1

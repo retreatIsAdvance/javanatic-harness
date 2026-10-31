@@ -1,0 +1,22 @@
+# stop2 R3-1 突变红证据 — 记账挪到 awaitSync 之后
+
+突变：JdtlsProvider.syncDocuments 内 `openedDocuments.put(uri, new OpenDocument(hash, version));`
+与 `awaitSync(flushed, call);` 交换顺序（flush 完成后才记账）。破坏必红 → 还原逐字节 → 复绿。
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderBudgetTest#syncTimeoutStillCommitsThenRevertSendsDidChange+syncCancelledStillCommitsThenRevertSendsDidChange' ...
+> /tmp/it29-stop2-r3-1-mutation-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 23.34 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.syncCancelledStillCommitsThenRevertSendsDidChange -- Time elapsed: 10.78 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: reverted text flushed as didChange v3
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.syncTimeoutStillCommitsThenRevertSendsDidChange -- Time elapsed: 12.55 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: reverted text flushed as didChange v3
+
+红判定：入队即承诺的不变量被破坏（记账延迟到 flush 后），超时/取消两条路径的 v3 判别均击穿——
+突变被两测试各自捕获，「记账在入队点」有测试钉死。
+
+EXIT=1

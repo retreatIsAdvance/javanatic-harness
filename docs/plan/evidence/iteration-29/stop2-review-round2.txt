@@ -1,0 +1,36 @@
+it29 stop2 — Peer / Session / Launch 独立静态复审处置（协调者摘要）
+日期：2026-10-30
+状态：未收口。评审只读、未运行测试或 Maven；Provider/DiagnosticsCache由另一实现代理独占，未在本次评审中读取。此报告不是用户放行。
+
+P1 / R2-1 动态注册假成功
+LspPeer.java:537–555：answerableWithNull仍包含client/registerCapability和client/unregisterCapability，没有动态注册语义。
+协调者已读源码确认。与停1宽进严出及停2设计§3.3不符；将只让workDoneProgress/create成功，未支持方法显式-32601。需要两方法真实请求/响应反例，不只断言私有白名单。
+
+P1 / R2-2 EOF丢待发回复
+LspPeer.java:453–455、573–605：reader到EOF即broke，broke清写队列；若writer因大帧背压且server发送请求后只关stdout、仍保留stdin，已解析请求的reply会丢。
+协调者已确认队列清空路径。EOF应使普通调用CONNECTION并禁止新调用，但必须给EOF之前已解析的server请求有界flush机会；不能把EOF直接等同进程退出。真正写失败/宽限到期应保留未答计数并CLOSE_FAILED。需要半关闭真实管道测试及原有背压/EOF回归。
+
+P1 / R2-3 JSON-RPC解析宽松
+LspPeer.java:464–500：idNode.canConvertToLong允许浮点截断，id:1.9可命中pending1；未要求jsonrpc=2.0；readTree未强制完整消费，尾随JSON可能不报错。
+协调者已确认源码。应校验2.0 envelope、method/id类型、单个完整JSON值；整数响应ID才能匹配自发整数请求。错id/无id仍按已裁记录丢弃，不将错id映射到有效请求。合法error只失败该请求，result:null仍成功。需要wire反例，不用代码文本测试。
+
+P1/P2 / R2-4 字节帧损坏容忍
+LspFrameReader.java:53/78–79：new String以替换字符容忍非法UTF-8；重复Content-Length覆盖旧值。
+协调者已确认。按恒UTF-8与流级断裂契约拒非法字节、重复长度，不猜哪个长度可信。header非ASCII及裸LF容忍也须与设计核对；不能仅改文案掩盖线协议接受面。
+
+P1 / R2-5 同组孤儿回收
+LspPeer.java:295–305/694–697：仅kill时即时descendants；父先退出、子重定向stdio时即时后代查询为空，peer原语可返回而子仍活。
+协调者确认原语不保存后代身份；但最终产品判定由Provider+Session负责，Provider仍在修改，不能仅凭peer内部close断言最终产品假成功。停1仍要求回收已拥有句柄、复验专属组、未知/EPERM不当消失。需以最终Provider入口测试父先退出但同组子仍活；不能将该路径归为“脱组后代”已接受限制。
+
+P2 / R2-6 Windows Java路径
+JdtlsLaunch.java:24–26/46：固定bin/java，没有Windows bin/java.exe分支。
+协调者已读源码确认。Windows Job不在范围不等于可以拒绝正常JDK路径；按宿主平台选java可执行名，并测试构造和argv，不宣称已完成Windows运行验收。
+
+既有未关闭问题
+- Session.start(env!=null)只putAll却注释非整体继承；应对受控无秘密sentinel验证白名单，不转储或列举宿主环境。
+- Session.readPgid/noResidue无界readAllBytes+waitFor；ps本身要有deadline与输出界，超时要回收自有ps，返回未证消失。
+- 索引独占、初始化失败回滚与Provider最终关闭判定需核验。
+
+工作安排
+Provider实现代理已异常结束，未返回完成报告；主线程接管已有代码。其历史Provider回归为68项/0失败/0错误，最后F2突变3项均断言红，但日志缺逐字节还原与复绿证明，不视为完成；当前源码须重新核验并取证。独立复核只读、不并发构建，不启动真实JDT LS。
+新反馈逐项先真实断言红再最小修复复绿；对原有35项Peer集合与Provider接线做联合回归；之后才S4/S5。冻结停0/停1不改，不提交/push/Consumer。

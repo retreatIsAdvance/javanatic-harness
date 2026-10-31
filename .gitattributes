@@ -8,3 +8,9 @@
 # 不参与 diff --check（若错靠什么发现：stop0-freeze-check 的 SHA 对账）。
 docs/plan/evidence/iteration-29/stop0-download-headers.txt -text !eol whitespace=-trailing-space,-blank-at-eof
 docs/plan/evidence/iteration-29/stop0-download-ranges-01/*-headers.txt -text !eol whitespace=-trailing-space,-blank-at-eof
+
+# it29 停 2 证据跑捕获（red/green/mutation/backpressure/focused/term-pipes 等命令输出）：
+# 尾随空白是真实捕获字节（Maven [INFO]/[ERROR] 行、JUnit 断言行），
+# 冻结纪律「证据原文不改写」优先于空白规范 ⇒ whitespace 豁免 + 不进文本规范化；
+# 检测面 = 逐字节还原核验与 MD5 对账（如 known-good provider MD5 848b0dbd…）。
+docs/plan/evidence/iteration-29/stop2-*.txt -text !eol whitespace=-trailing-space,-blank-at-eof

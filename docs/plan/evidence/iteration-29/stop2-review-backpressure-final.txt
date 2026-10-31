@@ -1,0 +1,31 @@
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dtest=LspPeerTest,LspPeerBackpressureTest -Dsurefire.failIfNoSpecifiedTests=false
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 1:37:03 下午 io.javanatic.harness.lsp.jdtls.LspPeer dispatch
+警告: lsp server 'fixture' sent an unmatched response id 10001; dropped
+10月 30, 2026 1:37:06 下午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'fixture' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+owned pid=29720 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29721 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29722 exit=0 pending=0 ioThreadsStopped=true
+owned pid=29723 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29741 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29743 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29744 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29745 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29765 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29766 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29769 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29770 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29771 exit=137 pending=0 ioThreadsStopped=true
+owned pid=29772 exit=137 pending=0 ioThreadsStopped=true
+
+EXIT=0
+{'name': 'io.javanatic.harness.lsp.jdtls.LspPeerTest', 'tests': '16', 'failures': '0', 'errors': '0', 'skipped': '0', 'time': '9.347'}
+{'name': 'io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest', 'tests': '14', 'failures': '0', 'errors': '0', 'skipped': '0', 'time': '6.476'}
+LspPeer.java SHA256=1dda18e198358f38d5dfa3e055f041cd9daee302be627945fb89b0ed7dfa4644
+
+OWNED PID RECHECK: ps -p 29720,29721,29722,29723,29741,29743,29744,29745,29765,29766,29769,29770,29771,29772 -o pid=,ppid=,stat=
+EXIT=1 (1 with no rows means none of these owned PIDs remain)

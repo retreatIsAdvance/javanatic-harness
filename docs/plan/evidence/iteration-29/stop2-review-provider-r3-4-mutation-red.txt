@@ -1,0 +1,48 @@
+# stop2 R3-4 突变红证据 — 校验摘除 + 掩码恢复（takeover-review R3-4 P2）
+
+## 突变 1：validateInitialize 整体摘除（评审所述漏洞本尊）
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderProtocolTest#initializeResultWithoutUsableSyncFailsProtocol+initializeResultWithObjectSyncAcceptsIncrementalShape' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/it29-r3-4-m1-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 8, Failures: 7, Errors: 0, Skipped: 0, Time elapsed: 74.54 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderProtocolTest
+[ERROR] initializeResultWithoutUsableSyncFailsProtocol(String)[1..7] -- Time elapsed: 10.50 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: fixture process exit after failed initialize
+
+红判定：7/7 确定性红——校验摘除后初始化假成功，夹具进程不再被 rollback 收割，进程死亡钉
+（awaitTrue 10s 上界）逐模式击穿。正例过（8-7=1）。每模式 10.5s × 7 为钉的上界成本，可接受。
+
+## 突变 2：掩码恢复（checkLifecycle → checkState 三处：checkInitialized 等待循环、
+## observe 首行与 INITIALIZING 分支，去「先验未来」注释）
+
+命令同上，输出重定向 /tmp/it29-r3-4-m2-red.log：
+EXIT=1
+[ERROR] Tests run: 8, Failures: 7, Errors: 0, Skipped: 0, Time elapsed: 4.042 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderProtocolTest
+[ERROR] initializeResultWithoutUsableSyncFailsProtocol(String)[1..7] -- Time elapsed: ~0.44 s <<< FAILURE!
+org.opentest4j.AssertionFailedError:
+expected: PROTOCOL
+ but was: CONNECTION
+
+红判定：7/7 确定性红——进程死亡后 broken 已置，首行 checkState 的健康检查（peer.checkHealthy）
+抢先抛 CONNECTION，把已存储的 PROTOCOL 校验失败永久掩盖。正例过。
+
+## 演进诚实记录（首跑教训）
+
+1) 首版钉「sleep(200) + 单发断言」对突变 2 非确定性红：实跑全绿（EXIT=0，8/0/0，3.919s）。
+   原因：LspFixtureServer 源码模式启动约 400ms，200ms 时失败未落定，diagnostics 进入等待循环，
+   future 完成后经 join 浮出 PROTOCOL；掩码窗口（stop() 置 broken 至 future 完成，微秒级）未命中。
+2) 更早的掩码竞态是真实的：压缩前 r34-green2.log 曾现 sync-zero 10s 超时「timed out awaiting:
+   initialize failure surfaces as PROTOCOL」——旧代码 observe 首行 checkState 每次 CONNECTION，
+   永远走不到 join 重抛 PROTOCOL，**永久掩盖**。由此引出生产修复（checkLifecycle 拆分：
+   等待段只做中止/closed 检查，peer 健康由握手未来自身承载；observe 先验未来、后验健康）。
+3) 压缩前 r34-mutation.log（掩码恢复、重试环版测试）5 红：no-caps 撞中掩码竞态得
+   「expected: PROTOCOL but was: CONNECTION」，其余 4 个 sync 档为「Expecting code to raise a
+   throwable」——重试环版对掩码恢复非全覆盖、非确定。强化钉（进程死亡 + 单发）后 7/7 确定性红。
+4) 压缩前 r34-mutation1.log（仅摘 sync 校验档，保留结构检查）4 红（sync-none/sync-zero/
+   sync-openclose-only/sync-change-only）——结构检查与同步能力校验各自独立、各自可被突变钉住。
+
+EXIT=1（两档突变均红）

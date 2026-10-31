@@ -1,0 +1,25 @@
+# stop2 Provider EOF 排水修复 — 突变红证据
+
+突变：JdtlsProvider.close() 内 `awaitReplyFlush(drainDeadline);` → `awaitReplyFlush(System.nanoTime());`
+（排水截止立即到期，等待失效）。破坏必红 → 还原逐字节 → 复绿。
+
+命令（仓库根）：
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home \
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderBudgetTest#closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace' \
+-Dsurefire.failIfNoSpecifiedTests=false \
+-Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire.SurefirePlugin=info \
+> /tmp/it29-stop2-mutation-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.434 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace -- Time elapsed: 0.423 s <<< FAILURE!
+[drain grace must be honored before giving up]
+        at io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace(JdtlsProviderBudgetTest.java:304)
+[ERROR]   JdtlsProviderBudgetTest.closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace:304 [drain grace must be honored before giving up]
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+
+红判定：排水等待被失效后，T2 的耗时下限断言（≥400ms）击穿 —— 突变被测试捕获，排水宽限兑现路径有测试钉死。
+
+EXIT=1

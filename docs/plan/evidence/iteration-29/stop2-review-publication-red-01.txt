@@ -1,0 +1,116 @@
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dtest=LspPeerPublicationTest -Dsurefire.failIfNoSpecifiedTests=false
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 1:38:56 下午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'publication-32383' notification callback failed: missing diagnostics array
+10月 30, 2026 1:38:56 下午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'publication-32384' notification callback failed: bad callback
+[ERROR] Tests run: 5, Failures: 5, Errors: 0, Skipped: 0, Time elapsed: 0.462 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.captureAndSequenceCannotObserveHalfPublishedNotification -- Time elapsed: 0.187 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[sequence must wait for callback publication] 
+Expecting value to be true but was false
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.captureAndSequenceCannotObserveHalfPublishedNotification(LspPeerPublicationTest.java:59)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.callbackProtocolFailureIsNotSwallowedOrReclassified -- Time elapsed: 0.072 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting actual:
+  {"jsonrpc":"2.0","id":1,"result":null}
+and:
+  io.javanatic.harness.lsp.LspException: missing diagnostics array
+	at io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.callbackProtocolFailureIsNotSwallowedOrReclassified(LspPeerPublicationTest.java:72)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	...(67 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+to refer to the same object
+	at io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.callbackProtocolFailureIsNotSwallowedOrReclassified(LspPeerPublicationTest.java:79)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.callbackRuntimeFailureBecomesProtocolAndReaderTerminationIsNotEof -- Time elapsed: 0.064 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting actual:
+  {"jsonrpc":"2.0","id":1,"result":null}
+to be an instance of:
+  io.javanatic.harness.lsp.LspException
+but was instance of:
+  com.fasterxml.jackson.databind.node.ObjectNode
+	at io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.assertProtocol(LspPeerPublicationTest.java:181)
+	at io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.callbackRuntimeFailureBecomesProtocolAndReaderTerminationIsNotEof(LspPeerPublicationTest.java:99)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.malformedFrameFailureIsRetainedAndIsNotStdoutEof -- Time elapsed: 0.064 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[reader failure is not EOF] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.malformedFrameFailureIsRetainedAndIsNotStdoutEof(LspPeerPublicationTest.java:111)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.partialFrameEofIsReadFailureNotCleanEof -- Time elapsed: 0.062 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.partialFrameEofIsReadFailureNotCleanEof(LspPeerPublicationTest.java:123)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Failures: 
+[ERROR]   LspPeerPublicationTest.callbackProtocolFailureIsNotSwallowedOrReclassified:79 
+Expecting actual:
+  {"jsonrpc":"2.0","id":1,"result":null}
+and:
+  io.javanatic.harness.lsp.LspException: missing diagnostics array
+	at io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest.callbackProtocolFailureIsNotSwallowedOrReclassified(LspPeerPublicationTest.java:72)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	...(67 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+to refer to the same object
+[ERROR]   LspPeerPublicationTest.callbackRuntimeFailureBecomesProtocolAndReaderTerminationIsNotEof:99->assertProtocol:181 
+Expecting actual:
+  {"jsonrpc":"2.0","id":1,"result":null}
+to be an instance of:
+  io.javanatic.harness.lsp.LspException
+but was instance of:
+  com.fasterxml.jackson.databind.node.ObjectNode
+[ERROR]   LspPeerPublicationTest.captureAndSequenceCannotObserveHalfPublishedNotification:59 [sequence must wait for callback publication] 
+Expecting value to be true but was false
+[ERROR]   LspPeerPublicationTest.malformedFrameFailureIsRetainedAndIsNotStdoutEof:111 [reader failure is not EOF] 
+Expecting value to be false but was true
+[ERROR]   LspPeerPublicationTest.partialFrameEofIsReadFailureNotCleanEof:123 
+Expecting value to be false but was true
+[ERROR] Tests run: 5, Failures: 5, Errors: 0, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-lsp-jdtls: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-lsp-jdtls
+
+EXIT=1

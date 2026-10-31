@@ -1,0 +1,32 @@
+# stop2 R3-4 绿证据 — validateInitialize 结构+能力校验（takeover-review R3-4 P2）
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderProtocolTest#initializeResultWithoutUsableSyncFailsProtocol+initializeResultWithObjectSyncAcceptsIncrementalShape' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/it29-r3-4-green-final.log 2>&1; echo "EXIT=$?"
+EXIT=0
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.102 s -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderProtocolTest
+
+全模块回归（同上，不带 -Dtest，带 surefire logger flag 抓汇总）：
+EXIT=0
+[INFO] Tests run: 177, Failures: 0, Errors: 0, Skipped: 0
+
+生产修复（JdtlsProvider.validateInitialize）：
+- result 须为对象（null/标量 → PROTOCOL）；
+- 须声明 capabilities 对象；
+- textDocumentSync 须非 None 且可全文推送：整型 >=1（1=Full、2=Incremental；0/缺省=None），
+  或对象形态 change >=1 且 openClose=true（真实 JDT LS 形状，正例覆盖）。
+- shutdown/定位允许 null 的既有规则不外推（评审原文要点）。
+
+既有测试夹具合规适配（非凑绿，测试断言未动）：PeerBackpressureServer 的 blocked/provider-blocked/
+sync-blocked 三档 initialize 应答原为 capabilities:{}，被新校验正确拒绝。首次全模块回归（177 跑）
+因此 4 红（JdtlsProviderBudgetTest：syncCancelled/syncTimeout/closeFailsLoudly/closeAfterStdoutEof，
+均为「initialize response declares no text document sync usable for full-text pushes」）——这正是
+新校验对无能力声明的服务端的正确拦截；夹具按真实 server 语义补声明 "capabilities":{"textDocumentSync":1}
+（Full，与 Provider 实际全文推送一致）后：聚焦 4/0/0，全模块 177/0/0。该 4 红即夹具改动的反向证据
+（缺声明必红），与 mutation-red 档同性质。
+
+中间绿（首版测试）：r34-green.log 8/0/0（validateInitialize 首版）；r34-green3.log 8/0/0
+（checkLifecycle 掩码修复后）；本档 green-final 为强化钉后的最终绿。
+
+EXIT=0

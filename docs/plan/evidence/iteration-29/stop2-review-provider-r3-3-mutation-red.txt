@@ -1,0 +1,19 @@
+# stop2 R3-3 突变红证据 — 去掉登记互斥（还原为无锁登记）必须被捕获
+
+突变：readInputs 的 synchronized (lifecycleLock) 块整体还原为裸登记（缝→checkState→登记→start 无锁），
+其余不动（生产/夹具/测试全同）。
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderSamplingTest#closeMutuallyExcludesSamplingRegistrationAndRejectsAfterwards' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/r33-mutation.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.827 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest.closeMutuallyExcludesSamplingRegistrationAndRejectsAfterwards -- Time elapsed: 0.815 s <<< FAILURE!
+	at io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest.closeMutuallyExcludesSamplingRegistrationAndRejectsAfterwards(JdtlsProviderSamplingTest.java:149)
+
+判定：测试在 isNotDone 处捕获（与首红同位置同形状）——close 完成于登记缝 park 期间，互斥缺失即红。
+
+EXIT=1

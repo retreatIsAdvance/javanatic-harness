@@ -1,0 +1,13 @@
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dtest=JdtlsProviderBudgetTest -Dsurefire.failIfNoSpecifiedTests=false
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 1:56:38 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit6776035634535079123' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:56:39 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit16412319825782725410' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:56:41 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit8375173045737616115' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+
+EXIT=0

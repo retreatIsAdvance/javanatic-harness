@@ -1,0 +1,53 @@
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test '-Dtest=LspPeer*Test,LspFrameReaderTest' -Dsurefire.failIfNoSpecifiedTests=false -Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire.SurefirePlugin=info
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running io.javanatic.harness.lsp.jdtls.LspPeerProtocolTest
+10月 30, 2026 2:33:27 下午 io.javanatic.harness.lsp.jdtls.LspPeer dispatch
+警告: lsp server 'protocol-67075' sent a response without integral id; dropped: {"jsonrpc":"2.0","id":1.9,"result":"wrong"}
+10月 30, 2026 2:33:27 下午 io.javanatic.harness.lsp.jdtls.LspPeer dispatch
+警告: lsp server 'protocol-67077' sent a response without integral id; dropped: {"jsonrpc":"2.0","id":1.0,"result":"wrong"}
+10月 30, 2026 2:33:27 下午 io.javanatic.harness.lsp.jdtls.LspPeer dispatch
+警告: lsp server 'protocol-67079' sent a response without integral id; dropped: {"jsonrpc":"2.0","id":"1","result":"wrong"}
+10月 30, 2026 2:33:27 下午 io.javanatic.harness.lsp.jdtls.LspPeer dispatch
+警告: lsp server 'protocol-67080' sent a response without integral id; dropped: {"jsonrpc":"2.0","id":null,"result":"wrong"}
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.815 s -- in io.javanatic.harness.lsp.jdtls.LspPeerProtocolTest
+[INFO] Running io.javanatic.harness.lsp.jdtls.LspPeerTest
+10月 30, 2026 2:33:29 下午 io.javanatic.harness.lsp.jdtls.LspPeer dispatch
+警告: lsp server 'fixture' sent an unmatched response id 10001; dropped
+10月 30, 2026 2:33:31 下午 io.javanatic.harness.lsp.jdtls.LspPeer handleRemoteMessage
+警告: lsp server 'fixture' request arrived after drain grace and will not be answered: window/workDoneProgress/create
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.226 s -- in io.javanatic.harness.lsp.jdtls.LspPeerTest
+[INFO] Running io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.894 s -- in io.javanatic.harness.lsp.jdtls.LspPeerPublicationTest
+[INFO] Running io.javanatic.harness.lsp.jdtls.LspFrameReaderTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in io.javanatic.harness.lsp.jdtls.LspFrameReaderTest
+[INFO] Running io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest
+owned pid=67189 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67190 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67193 exit=0 pending=0 ioThreadsStopped=true
+owned pid=67194 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67213 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67219 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67221 exit=0 pending=0 ioThreadsStopped=true
+owned pid=67222 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67225 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67242 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67243 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67244 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67245 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67246 exit=137 pending=0 ioThreadsStopped=true
+owned pid=67250 exit=137 pending=0 ioThreadsStopped=true
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.902 s -- in io.javanatic.harness.lsp.jdtls.LspPeerBackpressureTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 70, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+
+EXIT=0

@@ -1,0 +1,46 @@
+it29 stop2-S4 突变脚本 7 门禁红绿达标（含中途修正的诚实记录）
+日期：2026-10-30
+状态：以下为实际命令执行结果记录，不代表完成或用户批准。
+
+命令（仓库根，最终达标轮 r3）：
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+export MVN=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn
+bash integration/verify-stop2-mutations.sh --repo-root /Users/abel_yang/study/deepseek/javanatic-harness \
+  --log-dir /tmp/verify-stop2-mutations-it29-r3 > /tmp/it29-s4-mutations-r3.log 2>&1; echo EXIT=$?
+EXIT=0
+
+关键输出（/tmp/it29-s4-mutations-r3.log）：
+== 汇总：7/7 突变红绿达标，日志目录 /tmp/verify-stop2-mutations-it29-r3
+M1 R3-1 同步账本退到 flush 之后：RED exit=1 [ERROR] Tests run: 2, Failures: 2（23.40s）/ GREEN exit=0 2/0/0
+M2 R3-2 溢出检查移到 Stale 之后：RED exit=1 Tests run: 1, Failures: 1（2.392s）/ GREEN 1/0/0
+M3 R3-3 采样登记互斥摘除：RED exit=1 Tests run: 1, Failures: 1（0.920s）/ GREEN 1/0/0
+M4 R3-4 validateInitialize 整体摘除：RED exit=1 Tests run: 8, Failures: 7（74.50s）/ GREEN 8/0/0
+M5 R3-4 掩码恢复（checkLifecycle→checkState）：RED exit=1 Tests run: 8, Failures: 7（4.144s）/ GREEN 8/0/0
+M6 Fixtures 恒 null 上界：RED exit=1 Tests run: 1, Failures: 1（10.30s）/ GREEN 1/0/0
+M7 背压夹具能力声明摘除：RED exit=1 Tests run: 4, Failures: 1, Errors: 3（20.67s）/ GREEN 4/0/0
+
+每突变注入后字节级还原校验 PASS；r3 结束三文件 MD5 与运行前一致：
+JdtlsProvider.java=848b0dbd2fbf6047d402d2671b480c6a（与 R3-4 收口快照 /tmp/it29-JdtlsProvider-fix-snapshot.java 一致）
+Fixtures.java=e2b2ba07292c3ee310bf80c9919a8695
+PeerBackpressureServer.java=845390b3ddbb4d091724618bbbc11729
+
+诚实记录（前两轮失败原因，均不以当前绿重写）：
+1. r1 全绿中 M6 红不达标：恒 null 突变体删掉 Files 引用后，未使用导入被 spotless:check 拦截，
+   测试未跑到（red-M6.log 只有格式违例，无测试失败标记）。
+2. r1 后首轮重跑（bc1laltcb）在 M1 红阶段崩溃：后台命令块把 MVN 写成 shell 变量未导出，
+   脚本回退 PATH 上的 mvn → FileNotFoundError；崩溃时 M1 突变已注入尚未还原，
+   工作树 JdtlsProvider.java 被留成 M1 突变态（MD5 c2f86456…≠基线）。r2 因此 M1 old 串失配、
+   M7 green 受污染失败。
+3. r2 的 M6 红改法一（摘除导入）仍不达标：读面摘净后外层 catch(IOException) 成为不可达
+   检查型异常 → 编译错误（「在相应的 try 语句主体中不能抛出异常错误java.io.IOException」），
+   仍无测试失败标记。
+4. 最终修法（r3 达标）：M6 突变体保留 exists+readString 读面（Files 导入仍被使用、
+   IOException 可达面仍存在），内容一律弃用恒返回 null——上界确定性红语义不变；
+   隔离预检（/tmp/it29-m6-isolated-red.log）先行验证：注入后单测 10.31s
+   "Expecting actual not to be null"（JdtlsProviderTest.java:419）真实红，还原后 MD5 一致。
+5. JdtlsProvider.java 崩溃残留用 /tmp 快照还原（diff 恰等于 M1 两处突变），
+   MD5 848b0dbd… 逐字节核验后才启动 r3。
+
+脚本交付物：integration/verify_stop2_mutations.py + integration/verify-stop2-mutations.sh（thin wrapper）。
+红判定 = exit≠0 且 surefire 有 <<< FAILURE!/<<< ERROR! 标记；绿判定 = exit 0 且 "Failures: 0, Errors: 0"；
+每突变注入后逐字节还原校验，零联网零新进程之外不改工作区。

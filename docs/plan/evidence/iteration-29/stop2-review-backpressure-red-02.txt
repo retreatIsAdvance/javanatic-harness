@@ -1,0 +1,50 @@
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dtest=LspPeerTest,LspPeerBackpressureTest -Dsurefire.failIfNoSpecifiedTests=false
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[ERROR] Failed to execute goal com.diffplug.spotless:spotless-maven-plugin:2.43.0:check (spotless-check) on project harness-lsp-jdtls: The following files had format violations:
+[ERROR]     src/main/java/io/javanatic/harness/lsp/jdtls/LspPeer.java
+[ERROR]         @@ -16,7 +16,6 @@
+[ERROR]          import·java.util.ArrayDeque;
+[ERROR]          import·java.util.Map;
+[ERROR]          import·java.util.OptionalInt;
+[ERROR]         -import·java.util.concurrent.ArrayBlockingQueue;
+[ERROR]          import·java.util.concurrent.CompletableFuture;
+[ERROR]          import·java.util.concurrent.CompletionException;
+[ERROR]          import·java.util.concurrent.ConcurrentHashMap;
+[ERROR] Run 'mvn spotless:apply' to fix these violations.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-lsp-jdtls
+
+EXIT=1
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/DiagnosticsCache.java 6798a53961a00d0774aa4e057c8867b9cdbb87c20b28f9215c00900a40ecece0
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsLaunch.java a0b28055c91f16c4866ab1112043b04ce125132a04b350c4198c5b3f1081ceaf
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java 4fb2672aa6b08524cb1444348245c327515ab908a4dda623c16fdb7a86b7e039
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspFrameReader.java 201899579604e0e52187f3fdc6c40c34fea943972674dcbfd18c2728858ebb6b
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspFrames.java 42bfc62425fe5543b59d61ef70c486de94ec9ff6fc6bd131b56d74627f937719
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspPeer.java 41e808060eba8de62b6f4fa473a9aa0a0c89e6c0e81775a9468b58a9e88d9d17
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspRequestTimeoutException.java 6f7568f4cac62951c066011123d94de309abc2f57e6fcf55b2b9aed5d8f571ec
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/ProjectHash.java f00261ac0a2abecf6a564b2298ad737994e01977ddfdf59ab6c7d3eff9880e26
+SHA256 lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/Session.java 81232ba3428a5dbce6640caa608ce67abcddc0a4d4fb02394c50c5b50393b765
+SHA256 lsp/jdtls/src/main/java/module-info.java c2a033c5f57199e0794f673555d734edbe7a7826327d7c6c28dae00734fb8c7d
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/DiagnosticsCacheTest.java 1cc733404d1f650ec1b11cd5a6bb8a8de7a16aff27324ebd6ffeb5968ff4d7ea
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/Fixtures.java 33ba030553cc85d9abd6a86ec22469def8d5886bd4b7bc8b36e04379bc5b794a
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/JdtlsLaunchTest.java cbb4e86b1163418eeef6a0ee89b8c3ae7d67149c5bd3f3a4fc7ab1a8abd184a0
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/JdtlsProviderTest.java 6c9404b1f5212f083e4b47305d4087874178a6a3b467a37239eb47815ed01fc0
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/LspFrameReaderTest.java 9a68cc456c53a6e08153db27ae5d20a0911325840d8f730d92fcd18732455ad6
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/LspPeerBackpressureTest.java 9905f7a04461ad7882c3ad95139efc42fbab6f5cb7d309397dd586173135e3fa
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/LspPeerPublicationTest.java ae44fec44e6b36ec06ebb92d2de73462553be5520aae157b5ab25c375ff6b6cc
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/LspPeerTest.java 32ae0eaea31af0c6f3c9d118c14e756ea2a3823f016998bc7437598fd0b96602
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/PeerBackpressureServer.java fa12626eb52d490ad135564de6787ceadd8118f38affb22905d97da140e2a954
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/ProjectHashTest.java 783051c665c7244a627e56e5d1e51fdc736a43dfce92ec1a04d345e9ffc820a8
+SHA256 lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/SessionTest.java 81102cd1f572eb680c470268a64f2a21b143da841d5f546a9d4fe80d36f48975
+SHA256 lsp/jdtls/src/test/resources/lsp-fixture/LspFixtureServer.java 3fbb071321a009b948bf6504244df7b34aca8cfb02522aa574ac1979a1db98cf

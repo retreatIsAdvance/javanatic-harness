@@ -1,0 +1,21 @@
+# stop2 R3-3 绿证据 — 登记/启动移入 lifecycleLock 与 close 互斥
+
+修复：readInputs 的采样线程登记+启动移入 synchronized (lifecycleLock)，锁内依次
+beforeSamplingRegistration.run()（测试缝）→ call.checkState()（closed 后拒新登记）→ 登记并 start；
+close 的 closed=true 声明在同一把锁内 → 互斥（close 先到则拒登记，后到则 stopSampling 收已登记线程）。
+锁内只登记并启动、不等待采样完成（文件 IO 无宿主等待）。
+
+聚焦测试（修复后）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderSamplingTest#closeMutuallyExcludesSamplingRegistrationAndRejectsAfterwards' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/r33-green.log 2>&1; echo "EXIT=$?"
+EXIT=0
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.980 s -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+
+全模块回归（修复 + Fixtures 竞态修复后，详见 r3-3-fixtures-race-fix）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test ... > /tmp/r33-full3.log 2>&1; echo "EXIT=$?"
+EXIT=0
+[INFO] Tests run: 169, Failures: 0, Errors: 0, Skipped: 0
+
+EXIT=0

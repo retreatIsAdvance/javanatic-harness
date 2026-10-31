@@ -1,0 +1,85 @@
+== stop2-S5 real JDT LS evidence run start 2026-10-30T09:53:47.651855Z
+prepare: copied pom.xml + src from /Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/project (excluded stop0 run artifacts: target/.settings/.classpath/.project)
+prepare: warm .m2 copied from stop0 home (/Users/abel_yang/study/deepseek/jh-it29-stop0-20261029/home/.m2/repository)
+snapshot fixture-baseline-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+prepare: project copied (pom.xml + src only), index/home fresh under /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run
+== round 1 start 2026-10-30T09:53:47.814887Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+round 1: pid=59388 pgid=OptionalLong[59388]
+round 1 pull: Observed origin=PUBLISHED_DIAGNOSTICS seq=65 serverVersion=OptionalInt.empty items=1 codes=[Optional[16777233]]
+10月 30, 2026 5:57:50 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+close: OK (exit/eof/pending/ioThreads 见上方 INFO 行；close 抛异常即失败)
+post-close: jhThreads=0 no live launcher child (residual-free)
+== round 1 end 2026-10-30T09:58:00.315585Z
+== round 2 start 2026-10-30T09:58:00.315683Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+round 2: pid=61082 pgid=OptionalLong[61082]
+round 2 pull: Observed origin=PUBLISHED_DIAGNOSTICS seq=57 serverVersion=OptionalInt.empty items=1 codes=[Optional[16777233]]
+10月 30, 2026 5:59:32 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+close: OK (exit/eof/pending/ioThreads 见上方 INFO 行；close 抛异常即失败)
+post-close: jhThreads=0 no live launcher child (residual-free)
+== round 2 end 2026-10-30T09:59:42.514174Z
+== round 3 start 2026-10-30T09:59:42.514223Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+round 3: pid=61846 pgid=OptionalLong[61846]
+round 3 pull: Observed origin=PUBLISHED_DIAGNOSTICS seq=57 serverVersion=OptionalInt.empty items=1 codes=[Optional[16777233]]
+10月 30, 2026 6:01:14 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+close: OK (exit/eof/pending/ioThreads 见上方 INFO 行；close 抛异常即失败)
+post-close: jhThreads=0 no live launcher child (residual-free)
+== round 3 end 2026-10-30T10:01:24.567593Z
+== state A (type error) start 2026-10-30T10:01:24.567763Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+state A pull: Observed origin=PUBLISHED_DIAGNOSTICS seq=57 serverVersion=OptionalInt.empty items=1 codes=[Optional[16777233]]
+10月 30, 2026 6:02:56 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+close: OK (exit/eof/pending/ioThreads 见上方 INFO 行；close 抛异常即失败)
+post-close: jhThreads=0 no live launcher child (residual-free)
+== state A end 2026-10-30T10:03:06.735540Z
+== state A2 (warning only) start 2026-10-30T10:03:06.735679Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+state A2 pull: Observed origin=PUBLISHED_DIAGNOSTICS seq=57 serverVersion=OptionalInt.empty items=1 codes=[Optional[268435844]]
+10月 30, 2026 6:04:38 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+close: OK (exit/eof/pending/ioThreads 见上方 INFO 行；close 抛异常即失败)
+post-close: jhThreads=0 no live launcher child (residual-free)
+== state A2 end 2026-10-30T10:04:48.794657Z
+== state B (quiet window) start 2026-10-30T10:04:48.794809Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+snapshot state-Clean.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/Clean.java
+state B pull: Observed origin=PUBLISHED_DIAGNOSTICS seq=43 serverVersion=OptionalInt.empty items=0 codes=[]
+state B: LS 实际发布诊断批次（空数组或非空），按 PUBLISHED_DIAGNOSTICS 如实记录，不改造证据凑 QUIET_WINDOW：items=0
+10月 30, 2026 6:06:20 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+close: OK (exit/eof/pending/ioThreads 见上方 INFO 行；close 抛异常即失败)
+post-close: jhThreads=0 no live launcher child (residual-free)
+== state B end 2026-10-30T10:06:30.888311Z
+== state C (stale) start 2026-10-30T10:06:30.888445Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+state C pull: Stale before=LspAnchor[projectRoot=file:///Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/, incarnation=0e38cb89-c729-4977-b3da-120770a4fa9e, generation=0, projectHash=5884c190b4c55f08b2028968a01a2ee758b5636e11ab48b155c034eee44c8c84, document=LspDocument[uri=file:///Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java, sha256=Optional[625220486314589bb34900e1bd21808afb7508f52fea734f17f85e6bb0529f84]]] after=LspAnchor[projectRoot=file:///Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/, incarnation=0e38cb89-c729-4977-b3da-120770a4fa9e, generation=1, projectHash=40650127c162df7943a3b8db0f82258d76204c2e50113c888178d3314c29fbd9, document=LspDocument[uri=file:///Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java, sha256=Optional[8704589406cd9c57b454e5720c264cbb0bb5f572cc79c0770236ae362cb39351]]]
+10月 30, 2026 6:07:17 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+close: OK (exit/eof/pending/ioThreads 见上方 INFO 行；close 抛异常即失败)
+post-close: jhThreads=0 no live launcher child (residual-free)
+== state C end 2026-10-30T10:07:27.948574Z
+== state D (not ready) start 2026-10-30T10:07:27.948840Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+state D immediate pull: NotReady(INITIALIZING)
+state D warm pull (handshake settles): Observed origin=PUBLISHED_DIAGNOSTICS seq=57 serverVersion=OptionalInt.empty items=1 codes=[Optional[16777233]]
+10月 30, 2026 6:08:29 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+state D close: OK
+state D after-close pull: NotReady(CLOSED)
+== state D end 2026-10-30T10:08:29.975757Z
+== state E (timed out) start 2026-10-30T10:08:29.975807Z
+snapshot state-App.java <- /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run/project/src/main/java/probe/App.java
+state E warm pull: Observed origin=PUBLISHED_DIAGNOSTICS seq=57 serverVersion=OptionalInt.empty items=1 codes=[Optional[16777233]]
+state E tight pull: TimedOut(PT30S)
+10月 30, 2026 6:10:02 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+close: OK (exit/eof/pending/ioThreads 见上方 INFO 行；close 抛异常即失败)
+post-close: jhThreads=0 no live launcher child (residual-free)
+== state E end 2026-10-30T10:10:12.099516Z
+== verdict: ALL ASSERTIONS PASSED

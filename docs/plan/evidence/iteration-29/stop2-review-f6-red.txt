@@ -1,0 +1,484 @@
+CWD=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -pl lsp/jdtls -am test -Dtest=SessionTest -Dsurefire.failIfNoSpecifiedTests=false
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Javanatic Harness                                                  [pom]
+[INFO] harness-kernel-aggregator                                          [pom]
+[INFO] harness-kernel-brand                                               [jar]
+[INFO] harness-kernel-core                                                [jar]
+[INFO] harness-kernel-config                                              [jar]
+[INFO] harness-core-aggregator                                            [pom]
+[INFO] harness-core-session                                               [jar]
+[INFO] harness-llm-aggregator                                             [pom]
+[INFO] harness-llm-llm                                                    [jar]
+[INFO] harness-lsp-aggregator                                             [pom]
+[INFO] harness-lsp-lsp                                                    [jar]
+[INFO] harness-lsp-jdtls                                                  [jar]
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-parent >--------------
+[INFO] Building Javanatic Harness 0.3.0-SNAPSHOT                         [1/12]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] Loaded 74 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-parent ---
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-parent ---
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to jvnet-nexus-releases (https://maven.java.net/content/repositories/releases/): (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --------< io.github.retreatisadvance:harness-kernel-aggregator >--------
+[INFO] Building harness-kernel-aggregator 0.3.0-SNAPSHOT                 [2/12]
+[INFO]   from kernel/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-kernel-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-kernel-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-kernel-brand >-----------
+[INFO] Building harness-kernel-brand 0.3.0-SNAPSHOT                      [3/12]
+[INFO]   from kernel/brand/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-kernel-brand ---
+[INFO] Spotless.Java is keeping 3 files clean - 0 needs changes to be clean, 0 were already clean, 3 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-kernel-brand ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-kernel-brand ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/brand/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-kernel-brand ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-kernel-brand ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/brand/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-kernel-brand ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-kernel-brand ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-kernel-core >-----------
+[INFO] Building harness-kernel-core 0.3.0-SNAPSHOT                       [4/12]
+[INFO]   from kernel/core/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-kernel-core ---
+[INFO] Spotless.Java is keeping 22 files clean - 0 needs changes to be clean, 0 were already clean, 22 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-kernel-core ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-kernel-core ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/core/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-kernel-core ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-kernel-core ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/core/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-kernel-core ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-kernel-core ---
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-kernel-config >----------
+[INFO] Building harness-kernel-config 0.3.0-SNAPSHOT                     [5/12]
+[INFO]   from kernel/config/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-kernel-config ---
+[INFO] Spotless.Java is keeping 9 files clean - 0 needs changes to be clean, 0 were already clean, 9 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-kernel-config ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-kernel-config ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/config/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-kernel-config ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-kernel-config ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/config/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-kernel-config ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-kernel-config ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-core-aggregator >---------
+[INFO] Building harness-core-aggregator 0.3.0-SNAPSHOT                   [6/12]
+[INFO]   from core/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-core-session >-----------
+[INFO] Building harness-core-session 0.3.0-SNAPSHOT                      [7/12]
+[INFO]   from core/session/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-session ---
+[INFO] Spotless.Java is keeping 51 files clean - 0 needs changes to be clean, 0 were already clean, 51 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-session ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-session ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-session ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-session ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/session/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-session ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-session ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running io.javanatic.harness.session.SessionTest
+10月 30, 2026 11:20:02 上午 io.javanatic.harness.session.Session accept
+警告: session append observer failed
+java.lang.IllegalStateException: observer boom
+	at io.javanatic.harness.session.SessionTest.lambda$observerFailureIsContained$0(SessionTest.java:154)
+	at io.javanatic.harness.session.Session.accept(Session.java:126)
+	at io.javanatic.harness.session.Session.append(Session.java:109)
+	at io.javanatic.harness.session.SessionTest.observerFailureIsContained(SessionTest.java:157)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.090 s -- in io.javanatic.harness.session.SessionTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-llm-aggregator >----------
+[INFO] Building harness-llm-aggregator 0.3.0-SNAPSHOT                    [8/12]
+[INFO]   from llm/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-llm-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-llm-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-llm-llm >-------------
+[INFO] Building harness-llm-llm 0.3.0-SNAPSHOT                           [9/12]
+[INFO]   from llm/llm/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-llm-llm ---
+[INFO] Spotless.Java is keeping 17 files clean - 0 needs changes to be clean, 0 were already clean, 17 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-llm-llm ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-llm-llm ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-llm-llm ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-llm-llm ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/llm/llm/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-llm-llm ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-llm-llm ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-lsp-aggregator >----------
+[INFO] Building harness-lsp-aggregator 0.3.0-SNAPSHOT                   [10/12]
+[INFO]   from lsp/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-lsp-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-lsp-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-lsp-lsp >-------------
+[INFO] Building harness-lsp-lsp 0.3.0-SNAPSHOT                          [11/12]
+[INFO]   from lsp/lsp/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-lsp-lsp ---
+[INFO] Spotless.Java is keeping 18 files clean - 0 needs changes to be clean, 0 were already clean, 18 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-lsp-lsp ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-lsp-lsp ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/lsp/lsp/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-lsp-lsp ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-lsp-lsp ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/lsp/lsp/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-lsp-lsp ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-lsp-lsp ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-lsp-jdtls >------------
+[INFO] Building harness-lsp-jdtls 0.3.0-SNAPSHOT                        [12/12]
+[INFO]   from lsp/jdtls/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-lsp-jdtls ---
+[INFO] Spotless.Java is keeping 18 files clean - 0 needs changes to be clean, 2 were already clean, 16 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-lsp-jdtls ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-lsp-jdtls ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-lsp-jdtls ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 10 source files with javac [debug release 25 module-path] to target/classes
+[INFO] JDK-8318913 workaround: patched module-info.class requires version from [25] to [25] on 1 JDK modules [java.base]
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[398,47] com.fasterxml.jackson.databind.JsonNode中的asText(java.lang.String)已过时
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[417,48] com.fasterxml.jackson.databind.JsonNode中的asText(java.lang.String)已过时
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[463,81] com.fasterxml.jackson.databind.JsonNode中的asText(java.lang.String)已过时
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[56,45] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 接口 io.javanatic.harness.lsp.LspService
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[202,12] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 接口 io.javanatic.harness.lsp.LspResult
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[202,22] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 记录 io.javanatic.harness.lsp.LspDiagnostic
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[202,49] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 记录 io.javanatic.harness.lsp.LspQuery
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[202,65] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.llm.llm 中的 接口 io.javanatic.harness.llm.AbortSignal
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[266,12] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 接口 io.javanatic.harness.lsp.LspResult
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[266,22] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 记录 io.javanatic.harness.lsp.LspLocation
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[266,46] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 记录 io.javanatic.harness.lsp.LspPositionQuery
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[266,70] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.llm.llm 中的 接口 io.javanatic.harness.llm.AbortSignal
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[271,12] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 接口 io.javanatic.harness.lsp.LspResult
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[271,22] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 记录 io.javanatic.harness.lsp.LspLocation
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[271,46] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.lsp 中的 记录 io.javanatic.harness.lsp.LspPositionQuery
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java:[271,70] 未使用 'requires transitive' 间接导出模块 io.javanatic.harness.llm.llm 中的 接口 io.javanatic.harness.llm.AbortSignal
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspPeer.java:[394,47] com.fasterxml.jackson.databind.JsonNode中的asText(java.lang.String)已过时
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-lsp-jdtls ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-lsp-jdtls ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 8 source files with javac [debug release 25 module-path] to target/test-classes
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-lsp-jdtls ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running io.javanatic.harness.lsp.jdtls.SessionTest
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.048 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.SessionTest
+[ERROR] io.javanatic.harness.lsp.jdtls.SessionTest.linuxCommandAddsOneWrapperSeparatorAndPreservesArgv -- Time elapsed: 0.038 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+Expecting actual:
+  ["/usr/bin/setsid",
+    "--",
+    "--",
+    "java",
+    "-jar",
+    "server with spaces.jar",
+    "--",
+    "project root"]
+to contain exactly (and in same order):
+  ["/usr/bin/setsid",
+    "--",
+    "java",
+    "-jar",
+    "server with spaces.jar",
+    "--",
+    "project root"]
+but some elements were not expected:
+  ["--"]
+
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.lsp.jdtls.SessionTest.linuxCommandAddsOneWrapperSeparatorAndPreservesArgv(SessionTest.java:17)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   SessionTest.linuxCommandAddsOneWrapperSeparatorAndPreservesArgv:17 
+Expecting actual:
+  ["/usr/bin/setsid",
+    "--",
+    "--",
+    "java",
+    "-jar",
+    "server with spaces.jar",
+    "--",
+    "project root"]
+to contain exactly (and in same order):
+  ["/usr/bin/setsid",
+    "--",
+    "java",
+    "-jar",
+    "server with spaces.jar",
+    "--",
+    "project root"]
+but some elements were not expected:
+  ["--"]
+
+[INFO] 
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Javanatic Harness 0.3.0-SNAPSHOT:
+[INFO] 
+[INFO] Javanatic Harness .................................. SUCCESS [  2.743 s]
+[INFO] harness-kernel-aggregator .......................... SUCCESS [  0.020 s]
+[INFO] harness-kernel-brand ............................... SUCCESS [  0.271 s]
+[INFO] harness-kernel-core ................................ SUCCESS [  0.052 s]
+[INFO] harness-kernel-config .............................. SUCCESS [  0.043 s]
+[INFO] harness-core-aggregator ............................ SUCCESS [  0.014 s]
+[INFO] harness-core-session ............................... SUCCESS [  0.472 s]
+[INFO] harness-llm-aggregator ............................. SUCCESS [  0.013 s]
+[INFO] harness-llm-llm .................................... SUCCESS [  0.039 s]
+[INFO] harness-lsp-aggregator ............................. SUCCESS [  0.013 s]
+[INFO] harness-lsp-lsp .................................... SUCCESS [  0.035 s]
+[ERROR] harness-lsp-jdtls .................................. FAILURE [  1.342 s]
+[INFO] ------------------------------------------------------------------------
+[ERROR] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  5.247 s
+[INFO] Finished at: 2026-10-30T11:20:04+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-lsp-jdtls: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-lsp-jdtls
+
+EXIT=1

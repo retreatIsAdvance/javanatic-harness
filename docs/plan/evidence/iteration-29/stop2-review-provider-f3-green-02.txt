@@ -1,0 +1,109 @@
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dtest=JdtlsProviderProtocolTest -Dsurefire.failIfNoSpecifiedTests=false
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+10月 30, 2026 1:52:10 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit5071499272822072280' failed: malformed LSP value: publishDiagnostics requires diagnostics array
+10月 30, 2026 1:52:12 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit5071499272822072280' close: exit=OptionalInt[143], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:13 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit16494996518416283088' failed: malformed LSP value: publishDiagnostics params must be an object
+10月 30, 2026 1:52:14 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit16494996518416283088' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:14 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit1985415434156407102' failed: malformed LSP value: publishDiagnostics params must be an object
+10月 30, 2026 1:52:15 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit1985415434156407102' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:16 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit15272258681683234772' failed: malformed LSP value: expected string
+10月 30, 2026 1:52:16 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit15272258681683234772' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:17 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit4431886437662332742' failed: malformed LSP value: expected absolute hierarchical URI
+10月 30, 2026 1:52:17 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit4431886437662332742' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:18 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit4138150713165989499' failed: malformed LSP value: expected signed LSP integer
+10月 30, 2026 1:52:18 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit4138150713165989499' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:19 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit971032233134241621' failed: malformed LSP value: expected signed LSP integer
+10月 30, 2026 1:52:19 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit971032233134241621' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:20 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit11850414580373785604' failed: malformed LSP value: diagnostic must be an object
+10月 30, 2026 1:52:20 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit11850414580373785604' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:21 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit17715241355404069889' failed: malformed LSP value: range must be an object
+10月 30, 2026 1:52:22 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit17715241355404069889' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:22 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit6642345386952091208' failed: malformed LSP value: range must be an object
+10月 30, 2026 1:52:23 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit6642345386952091208' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:24 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit9983147873906828457' failed: malformed LSP value: expected string
+10月 30, 2026 1:52:24 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit9983147873906828457' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:25 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit11075069737168746862' failed: malformed LSP value: expected string
+10月 30, 2026 1:52:25 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit11075069737168746862' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:26 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit7565482170073569588' failed: malformed LSP value: expected signed LSP integer
+10月 30, 2026 1:52:26 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit7565482170073569588' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:27 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit18081057821914157450' failed: malformed LSP value: expected string
+10月 30, 2026 1:52:27 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit18081057821914157450' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:28 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit10210338676669419006' failed: malformed LSP value: expected signed LSP integer
+10月 30, 2026 1:52:29 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit10210338676669419006' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:29 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit9992402735492219110' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:30 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit8119845911477990257' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:30 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit6645717321973254203' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:31 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit1245047633768007836' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:31 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit8145389423481443463' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:32 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit10163130658849585481' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:33 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit691454871979102154' close: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:33 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit1423704196336949601' failed: malformed LSP value: position must be an object
+10月 30, 2026 1:52:34 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit1423704196336949601' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:35 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit7167433127261664699' failed: malformed LSP value: expected signed LSP integer
+10月 30, 2026 1:52:35 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit7167433127261664699' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:36 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit10355674769323249010' failed: malformed LSP value: expected signed LSP integer
+10月 30, 2026 1:52:36 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit10355674769323249010' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:37 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit2933024713886130658' failed: malformed LSP value: expected signed LSP integer
+10月 30, 2026 1:52:37 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit2933024713886130658' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:38 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit10732465678342704093' failed: malformed LSP value: position must be nonnegative
+10月 30, 2026 1:52:38 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit10732465678342704093' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:39 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit2282412418778170460' failed: malformed LSP value: expected signed LSP integer
+10月 30, 2026 1:52:40 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit2282412418778170460' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+10月 30, 2026 1:52:41 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider shutdownAndNotify
+警告: lsp shutdown on 'jdtls-junit17327441062976039613' failed: malformed LSP value: range end precedes start
+10月 30, 2026 1:52:41 下午 io.javanatic.harness.lsp.jdtls.JdtlsProvider close
+信息: lsp server 'jdtls-junit17327441062976039613' close: exit=OptionalInt[137], stdoutEof=false, dedicatedGroup=true (perl setsid wrapper), unanswered=0
+
+EXIT=0

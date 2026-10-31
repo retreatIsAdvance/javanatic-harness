@@ -1,0 +1,27 @@
+# stop2 R3-2 绿证据 — PROTOCOL 优先于 Stale + 回归
+
+修复（最小面）：JdtlsProvider.diagnosticsInZone 内 overflowed 检查前移到 Stale 分支之前。
+截点前溢出是窗口内协议事件，毒化当轮拉取（PROTOCOL）；输入竞态（Stale）不得吞掉协议失败。
+溢出位仍随 after 采样见变化而清代——只毒化当轮，下轮（新代）健康，不回永久毒化。
+
+聚焦复跑（修复后）：
+'-Dtest=JdtlsProviderSamplingTest#overflowFrozenInSameRoundAsInputChangeReportsProtocolThenRecovers' ...
+> /tmp/it29-stop2-r3-2-green.log 2>&1; echo "EXIT=$?"
+EXIT=0
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+
+相关类回归（JdtlsProviderSamplingTest 全类，/tmp/it29-stop2-r3-2-sampling.log）：
+EXIT=0
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
+
+全模块回归（/tmp/it29-stop2-r3-2-full.log）：
+EXIT=0
+[INFO] Tests run: 168, Failures: 0, Errors: 0, Skipped: 0（此前 167，+1 新反例）
+FAILURE 行计数：0
+
+语义钉死（测试三拍）：
+1. 组合轮：PROTOCOL 必抛（不因同轮输入变化返回 Stale）；
+2. receipt 证据：fence 应答被解析，证明溢出帧确在同轮窗口内到达；
+3. 下轮健康：Observed、items 空、文档 hash 已变为改写后值——溢出不毒化后续观察。
+
+EXIT=0

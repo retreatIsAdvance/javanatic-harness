@@ -1,0 +1,12 @@
+Scope: four mutable current-state/design documents; frozen stop0/stop1 untouched.
+CHECK: git diff --check
+
+
+EXIT=0
+CHECK: simple local Markdown link targets; count=89
+MISSING=[]
+LINK_EXIT=0
+LIMIT: anchors, prose meaning and unlinked future evidence names not mechanically checked.
+CHECK: frozen contract/ruling/probe packet diff versus HEAD
+FROZEN_EXIT=0
+OVERALL_EXIT=0

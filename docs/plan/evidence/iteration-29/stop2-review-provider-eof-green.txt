@@ -1,0 +1,42 @@
+# stop2 Provider EOF 排水修复 — 绿证据（T1 严格契约钉 + T2 红绿测试，最终形态）
+
+命令（仓库根）：
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home \
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderBudgetTest#closeAfterStdoutEofFlushesRepliesThenUnansweredShutdown+closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace' \
+-Dsurefire.failIfNoSpecifiedTests=false \
+-Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire.SurefirePlugin=info \
+> /tmp/it29-stop2-provider-eof2.log 2>&1; echo "EXIT=$?"
+EXIT=0
+
+关键输出（/tmp/it29-stop2-provider-eof2.log，15:13）：
+[INFO] Running io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.226 s -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+EXIT=0
+
+修复内容（JdtlsProvider.close）：
+1. shutdown 尝试之后、TERM 之前，把 budget.drainGrace() 的真实余量用于等待已解析 server 请求的应答 flush
+   （awaitReplyFlush(drainDeadline)：unanswered>0 且进程存活时按 20ms 片等待至排水截止；到期/进程死即返回，
+   未答由收尾 unanswered 检查报 CLOSE_FAILED）。排水宽限真实兑现给应答 flush（设计 §3.3/§4.2 步 3）。
+2. 严格保留「会话先于 shutdown 握手终结 → CLOSE_FAILED "shutdown unanswered"」（设计 §4.2 步 8，
+   既有测试 processDeathDuringWindowIsConnectionNotTimedOut 钉死）。不跳过 shutdown/exit，不伪称清理成功。
+
+T1（closeAfterStdoutEofFlushesRepliesThenUnansweredShutdown，严格契约钉）断言面：
+- 半关闭后 worker 收到 CONNECTION；resume 后对端收到 "id":"server" 应答（result:null）并 exit 0；
+- close 抛 CLOSE_FAILED，message 含 "shutdown unanswered" 且不含 "unanswered server requests"（应答已全答，不误报）；
+- close 耗时 < 2s、pendingCount=0、ioThreadsStopped=true。
+
+T2（closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace，红绿测试）断言面：
+- 3MiB didOpen 阻塞背压 → EOF 后应答无法在 500ms 排水宽限内 flush；
+- close 抛 CLOSE_FAILED，message 含 "unanswered server requests=1"；
+- close 耗时 ≥ 400ms（排水宽限先给满再失败）；进程死、exit 143。
+
+修复路径诚实记录（中间态已否决）：
+- 首次修复含「peer.isBroken() 时跳过 shutdown/exit」分支 + 排水等待 → T1/T2 绿（/tmp/it29-stop2-provider-eof-green.log，2/0/0）；
+- 全模块跑暴露回归：JdtlsProviderTest.processDeathDuringWindowIsConnectionNotTimedOut:321
+  "Expecting code to raise a throwable"（未答 shutdown 即死：不伪称清理成功）（/tmp/it29-stop2-provider-eof-full.log，165 中 1 失败）；
+- 裁决：跳过 shutdown 违反设计 §4.2 步 8 与既有批准测试 → 回退该分支，仅保留排水宽限等待；T1 改写为严格契约钉。
+  全模块复跑 /tmp/it29-stop2-provider-eof-full2.log：Tests run: 165, Failures: 0, Errors: 0, Skipped: 0，FAILURE 行 0，EXIT=0。
+
+EXIT=0

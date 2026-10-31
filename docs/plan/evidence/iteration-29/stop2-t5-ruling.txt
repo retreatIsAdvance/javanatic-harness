@@ -1,0 +1,35 @@
+IT29 STOP2 T5 RULING — 2026-10-29
+来源：用户本轮新鲜文本裁决（停 1 收口核验 + T5 裁决）；下列原文节选保留裁决含义，事实与主代理解释另列。
+
+用户 T5 裁决原文
+“T5 裁决：**自有边界实现，批准**”
+
+用户裁决理由原文
+- “宽进严出+记录偏离 structurally conflicts with LSP4J strict parsing”（LSP4J 严格解析与「接受已观察兼容形状并记录偏离」冲突）
+- “third hand-written wire protocol with verified precedent — LSP framing simpler than both”（继 mcp/stdio 按行 JSON-RPC、web/fetch-http 钉地址 HTTPS 之后的第三个手写 wire 边界；LSP Content-Length 帧比两者都简单，先例已验证）
+- “zero new third-party deps”（零新第三方依赖）
+
+用户三条实现边界原文
+1. “JsonRpcPeer stays private per transport — lsp/jdtls copies and adapts, no cross-protocol shared module, with a design note ‘若第三个消费者出现可重访抽取’”
+2. “LSP-specific boundary obligations — Content-Length counted in bytes with charset always UTF-8, malformed Content-Length = stream-level break (per mcp/stdio tiering precedent), server-initiated requests MUST be answered (stop 0 measured 412 frames with 18 requests answered; the probe-tolerable tail id19 unanswered is unacceptable for the product client)”
+3. “stop-0 deviation list upgrades from disclosure to client acceptance matrix — four deviations (shutdown {}, progress timing, no-version diagnostics, tail stream) each mapped to ‘client handling + test’”
+
+用户收口批挂账原文（pits.md 通则）
+“收口批时给 pits.md 补一行通则（「verbatim 捕获文件需 `-text !eol` + whitespace 豁免，SHA 对账为检测面」），下次谁再冻结原始响应就不用重新踩一遍。”
+
+用户下一步指令原文
+“收口合格，T5 裁自有边界。下一步：落盘 stop 2 设计（模块布局 lsp/jdtls、生命周期矩阵 ≥3 启停 / TERM→KILL 升级 + 进程组复验 / 退出应答、四态真机区分用停 0 夹具复现、「拉取时点无诊断」账面措辞纪律、偏离对照表）→ 动 Provider 代码。push（2 个提交）仍等点名。”
+
+主代理落实口径（不是新增用户原话）
+1. T5 已裁：自有边界实现，不引入 LSP4J 或任何新第三方依赖；本裁决归档后写进 iteration-29.md T5 行与停 2 设计。
+2. 边界 1（JsonRpcPeer 每 transport 私有）：lsp/jdtls 内复制并按 LSP 帧语义改写，不建跨协议共享模块；设计注记「若第三个消费者出现可重访抽取」。mcp/stdio 的按行帧与 LSP 的 Content-Length 字节帧不共 transport、不共解析器。
+3. 边界 2（LSP 边界义务）：Content-Length 按字节数、charset 恒 UTF-8；Content-Length 畸形 = 流级断裂（沿 mcp/stdio 分层先例，不挽救、不回写）；server 发起请求必须全部应答——停 0 实测 412 帧、18 个请求已答、尾流 id19 未答在探针可容忍，产品客户端不可容忍。
+4. 边界 3（偏离清单升格为客户端验收矩阵）：停 0 四项偏离（shutdown {} 非 null、progress 早于 initialized、无 version 诊断、退出尾流请求）逐项映射「客户端处理 + 测试」，从披露升级为对照验收。
+5. pits.md 通则（verbatim 捕获文件需 `-text !eol` + whitespace 豁免，SHA 对账为检测面）挂收口批，本批不混入。
+6. 下一步按用户指令：落盘停 2 设计（模块布局 lsp/jdtls、生命周期矩阵、四态真机区分、措辞纪律、偏离对照表）→ 动 Provider 代码；push 仍无授权、不入本批。
+
+证据入口
+stop0-jdt-ls-probe.txt（412 帧 / 18 请求已答 / 尾流 id19 未答事实面）
+stop0-run-01/（协议尾流与进程观测）
+stop1-acceptance.txt（停 1 终裁，Provider 生命周期验收矩阵出处）
+iteration-29.md（T5 行与本裁决同步后为准）

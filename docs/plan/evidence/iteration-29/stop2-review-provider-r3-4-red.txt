@@ -1,0 +1,32 @@
+# stop2 R3-4 红证据 — initialize 业务结果不校验（takeover-review R3-4 P2）
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderProtocolTest#initializeResultWithoutUsableSyncFailsProtocol+initializeResultWithObjectSyncAcceptsIncrementalShape' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/r34-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 8, Failures: 7, Errors: 0, Skipped: 0, Time elapsed: 6.476 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderProtocolTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderProtocolTest.initializeResultWithoutUsableSyncFailsProtocol(String)[1..7] -- <<< FAILURE!
+java.lang.AssertionError:
+Expecting code to raise a throwable.
+
+红判定：评审所述反例复现——旧代码对 initialize 的 result 只做包络解析（LspPeer.resultOf），
+业务结果完全不校验：result:null、result:42、无 capabilities、textDocumentSync 缺省/0/仅 openClose/仅 change
+共 7 个坏形状全部被当作初始化成功（diagnostics 正常返回 Observed/空），断言「必抛 LspException(PROTOCOL)」
+击穿。正例（对象形态 sync：openClose + change:2，真实 JDT LS 形状）通过。
+
+夹具支撑：LspFixtureServer 新增 --init-result MODE 一次性故障注入（null|scalar|no-caps|sync-none|
+sync-zero|sync-openclose-only|sync-change-only|sync-object 8 档），initialize 应答形状按档切换；
+无 --init-result 时保持默认 {"capabilities":{"textDocumentSync":1}}。
+
+钉死口径的演进（诚实记录）：首版测试为「sleep(200) 落定 + 单发断言」，此钉对「校验缺失」突变
+确定性红（初始化假成功后进程存活，后续断言击穿），但对「掩码恢复」突变（checkLifecycle 改回
+checkState）**不**确定性红——实跑该突变时 8/0/0 全绿（3.919s）：LspFixtureServer 走 java 单文件
+源码模式启动（JVM+编译约 400ms），200ms 时校验失败尚未落定，diagnostics 进入 checkInitialized
+等待循环；循环在 future 完成后经 join 浮出 PROTOCOL，健康检查抢先的掩码窗口（rollback 的 stop()
+置 broken 到 future 完成之间仅微秒级）未被命中。因此测试改钉「夹具进程死亡」为落定信号
+（rollback 的 stop() 先于 KILL：进程死亡 ⇒ broken 已置），死亡后单发断言。见 mutation-red 档。
+
+EXIT=1

@@ -9,6 +9,9 @@ target/
 # OS
 .DS_Store
 
+# Python (integration verification scripts)
+__pycache__/
+
 # JVM crash logs
 hs_err_pid*
 replay_pid*

@@ -1,0 +1,39 @@
+# stop2 Provider EOF 排水修复 — 红证据（T1/T2 同时跑，夹具已修正后）
+
+命令（仓库根）：
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home \
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderBudgetTest#closeAfterStdoutEofFlushesRepliesThenUnansweredShutdown+closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace' \
+-Dsurefire.failIfNoSpecifiedTests=false \
+-Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire.SurefirePlugin=info \
+> /tmp/it29-stop2-provider-eof-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 2, Failures: 1, Errors: 1, Skipped: 0, Time elapsed: 0.707 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace -- Time elapsed: 0.448 s <<< FAILURE!
+java.lang.AssertionError:
+[drain grace must be honored before giving up]
+Expecting actual:
+  0.101288875S
+to be greater than or equal to:
+  0.4S
+        at io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.closeFailsLoudlyWhenParsedReplyCannotFlushWithinDrainGrace(JdtlsProviderBudgetTest.java:300)
+
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.closeAfterStdoutEofFlushesRepliesThenUnansweredShutdown -- Time elapsed: 0.247 s <<< ERROR!
+io.javanatic.harness.lsp.LspException: lsp server 'jdtls-junit...' did not close cleanly: shutdown unanswered
+        at io.javanatic.harness.lsp.jdtls.JdtlsProvider.close(JdtlsProvider.java:421)
+        at ...closeAfterStdoutEofFlushesRepliesThenUnansweredShutdown(JdtlsProviderBudgetTest.java:262)
+
+红判定：
+- T2（排水宽限兑现）真实红：close 未等排水宽限即失败，101ms < 400ms，断言 [drain grace must be honored before giving up] 击穿。
+- T1 当轮红（旧版期望 plain close() 干净返回）：修复前 close 对「会话先于 shutdown 握手终结」已抛 CLOSE_FAILED "shutdown unanswered"
+  —— 该严格语义与设计 §4.2 步 8 一致，是 T1 旧期望写错，不是产品缺陷；T1 随后改写为严格契约钉（assertThatThrownBy，见绿证据）。
+
+夹具误用诚实记录（无独立日志留存，此轮之前的一击）：
+- 最初 T1/T2 用 provider("provider-blocked", control) 走 Fixtures.fixtureArgv（单文件源启动 LspFixtureServer.java）。
+  LspFixtureServer.parse() 只认识自身 flags，"provider-blocked" 未知 flag → 非 0 退出（观察到 exit=2、control/write-started 缺失、close 时序怪象）。
+- 修正：新增 backpressureProvider helper，用 java -cp test-classes io.javanatic.harness.lsp.jdtls.PeerBackpressureServer <mode> <control> 启动独立 JVM 对端。
+  本红档为夹具修正后的有效红。
+
+EXIT=1

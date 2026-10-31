@@ -1,0 +1,35 @@
+it29 stop2-S4 三层绿取证 — focused / validate / full（全 reactor 304/0/0，其中 lsp/jdtls 177/0/0）
+日期：2026-10-30
+状态：以下为实际命令执行结果记录，不代表完成或用户批准。
+
+1. focused 层（verify-stop.sh，含工作树审计 + 生命周期收尾复验）
+命令（仓库根）：
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+export MVN=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn
+bash integration/verify-stop.sh focused --module lsp/jdtls --log-dir /tmp/it29-s4-verify \
+  > /tmp/it29-s4-focused.log 2>&1; echo "FOCUSED_EXIT=$?"
+FOCUSED_EXIT=0
+证据目录 /private/tmp/it29-s4-verify（01-10 审计 + focused 运行；测试统计未读取旧 XML）。
+10-focused.txt 尾行示例（owned pid 均为夹具对端收尾复验，exit=137 为 KILL 升级路径、exit=0 为应答退出路径）：
+owned pid=46109 exit=137 pending=0 ioThreadsStopped=true
+EXIT=0
+
+2. validate 层（门禁：checkstyle/spotless 等）
+命令：…/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am validate > /tmp/it29-s4-validate.log 2>&1; echo "VALIDATE_EXIT=$?"
+VALIDATE_EXIT=0
+输出仅有 spotless-lib 自身的 sun.misc.Unsafe 弃用 WARNING（第三方库打印，非本仓违规），无 ERROR。
+
+3. full 层（全模块，计数只取模块汇总行「Tests run: N, Failures…」无 -- in 后缀）
+命令：…/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test \
+  -Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire.SurefirePlugin=info \
+  > /tmp/it29-s4-full.log 2>&1; echo "FULL_EXIT=$?"
+FULL_EXIT=0
+模块汇总（按 reactor 顺序，共 7 个模块，计数只取无 -- in 后缀的汇总行）：
+2 / 36 / 18 / 41 / 13 / 17 / 177，合计 304，Failures: 0, Errors: 0, Skipped: 0
+其中 lsp/jdtls 模块 = 177/0/0（口径同 R3-4 收口：169+8=177；该模块 13 个测试类逐类汇总均 0 失败）；
+其余为既有模块汇总：kernel/brand 2、kernel/core 36、kernel/config 18、kernel/session 41、llm 13、lsp/lsp 17。
+订正注：初版把 2/36/18/41/13/17 误标为「单测试类汇总」并称「全模块 177」——177 只是 lsp/jdtls
+模块汇总行，全 reactor（-am 上游模块一并跑）合计 304；本版据 /tmp/it29-s4-full.log 汇总行逐条订正。
+
+判定：S4 三面（7 门禁突变红绿、focused、validate）与 full 层全 reactor 304/0/0 齐绿；
+配合 stop2-s4-mutations-green.txt 使用。真实 JDT LS 证据跑属 S5，未在本证据内。

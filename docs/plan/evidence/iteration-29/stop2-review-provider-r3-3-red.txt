@@ -1,0 +1,22 @@
+# stop2 R3-3 红证据 — 采样线程登记/启动与 close 竞态（takeover-review R3-3 P1）
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderSamplingTest#closeMutuallyExcludesSamplingRegistrationAndRejectsAfterwards' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/r33-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.873 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest.closeMutuallyExcludesSamplingRegistrationAndRejectsAfterwards -- Time elapsed: 0.873 s <<< FAILURE!
+	at io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest.closeMutuallyExcludesSamplingRegistrationAndRejectsAfterwards(JdtlsProviderSamplingTest.java:149)
+
+红判定：评审所述竞态复现——登记缝（beforeSamplingRegistration）park 期间，close 在旧代码（无互斥）下
+直接完成（closeDone 在 300ms 观察窗内已 done），断言 isNotDone 击穿。close 先于登记完成 → 随后
+释放缝后观察线程仍会启动新采样线程，即「close 完成后仍登记/启动 worker」。
+
+诚实记录：首跑被 checkstyle ParameterNumber 门禁拦（新 7 参测试缝构造器超 max=6，非测试失败）；
+按 AGENTS.md「依赖注入构造器等合法超限经 CHECKSTYLE:OFF ParameterNumber 注释豁免并写明理由」先例
+加 OFF/ON 注释（内联理由）后重跑，得上述真实红。
+
+EXIT=1

@@ -13,5 +13,6 @@
     <packaging>pom</packaging>
     <modules>
         <module>lsp</module>
+        <module>jdtls</module>
     </modules>
 </project>

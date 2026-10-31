@@ -905,7 +905,7 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `e2b/*` | — | ❌ 不做 |
 | `web/web` + `web/fetch-http` + `web/search-deepseek` | `web.web` + `web.fetch.http` + `web.search.deepseek`（it28：契约 + 钉地址抓取 + 原生搜索双 Provider）| ✅（it28）|
 | `web/tool-web` | `web.tool`（`web_fetch`/`web_search` + HTML 文本提取 + 分层截断 + 信任前缀/提示段）| ✅（it28；dsh 的信任段与本实现同源常量，搜索只取结构化来源同口径）|
-| `lsp/*` | `lsp/lsp`（JPMS `io.javanatic.harness.lsp`，Definition） | Definition 已写、停 1 已通过并关闭；停 0 限定通过、T1–T3 方向已裁；停 2 Provider 进行中；无可挂载 Provider 或 `lsp-tool`，T4–T7 未整体批准、产品验收未执行（[it29](../plan/iteration-29.md)）|
+| `lsp/*` | `lsp/lsp`（JPMS `io.javanatic.harness.lsp`，Definition）+ `lsp/jdtls`（`JdtlsProvider` 实现 `LspService`，自有 Content-Length 字节帧 wire） | Definition 已写、停 1 已通过并关闭；停 0 限定通过、T1–T3 方向已裁；Provider 已交付、真实生命周期取证完成、[停 2 已通过并关闭](../plan/evidence/iteration-29/stop2-acceptance.txt)；无可挂载 `lsp-tool`、无装配行，T4/T6/T7 未整体批准、产品验收未执行（[it29](../plan/iteration-29.md)）|
 | `subagent/*` | — | 规划预留，未建独立 Definition；按 0.4 路线另行确认 |
 | `workflow/*` | — | ❌ 不做 |
 | `hooks/*` | — | ❌ 不做 |

@@ -1,0 +1,23 @@
+# stop2 R3-2 红证据 — 同轮溢出 + 输入变化组合（takeover-review R3-2 P1）
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderSamplingTest#overflowFrozenInSameRoundAsInputChangeReportsProtocolThenRecovers' \
+-Dsurefire.failIfNoSpecifiedTests=false ... > /tmp/it29-stop2-r3-2-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 2.386 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest.overflowFrozenInSameRoundAsInputChangeReportsProtocolThenRecovers -- Time elapsed: 2.375 s <<< FAILURE!
+java.lang.AssertionError:
+Expecting code to raise a throwable.
+
+红判定：评审所述组合反例复现——同一轮内冻结候选 overflowed=true（513 项单帧超帽，截点前）且
+after 采样见输入变化（RewritingReader 第 3 次读：先读旧字节再改写磁盘并开 publication gate）。
+旧代码先判 Stale 返回，PROTOCOL 被吞，下轮清代后不再报——断言「必抛 LspException(PROTOCOL)」击穿。
+
+同轮组合（非分别覆盖）：溢出帧与输入变化发生在同一观察轮（didOpen 后夹具 gate 等待，
+第 3 次读触发改写+开闸 → 窗口内 513 项帧 + fence 请求 → 冻结后 after 采样见 B'）。
+夹具 receipt 证据（fence 应答被解析）证明溢出帧确在同轮到达。
+
+EXIT=1

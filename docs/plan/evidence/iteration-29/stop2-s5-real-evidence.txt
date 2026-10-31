@@ -1,0 +1,64 @@
+it29 stop2-S5 真实 JDT LS 证据跑 — 最终跑全绿（ALL ASSERTIONS PASSED）
+日期：2026-10-30
+状态：以下为实际命令执行结果记录，不代表完成或用户批准。
+
+0. 入口与钉定
+- 探针：lsp/jdtls/src/test/java/.../JdtlsRealProbe.java（test 域 main 类，类路径模式运行；
+  类名非 *Test，surefire 默认包含规则不匹配，模块测试计数不受影响）
+- 入口脚本：integration/verify-stop2-real.sh（固化类路径 + 钉定参数；--run-root/--stop0-root 必填）
+- 钉定：server-1.63.0（launcher org.eclipse.equinox.launcher_1.8.0.v20260804-1928.jar）
+  + config_mac_arm + 停 0 夹具工作区复制（只取 pom.xml + src）；暖 .m2 供入；零联网。
+- 运行目录：/Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/
+  probe-evidence.txt = 最终源码输出；probe-evidence-first-run.txt = 初版过程记录（见 4）。
+
+1. 命令（最终跑）
+export JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+"$JAVA_HOME/bin/java" -cp "lsp/jdtls/target/classes:lsp/jdtls/target/test-classes:lsp/lsp/target/classes:
+kernel/core/target/classes:llm/llm/target/classes:...jackson-*-2.17.0.jar×3"
+  io.javanatic.harness.lsp.jdtls.JdtlsRealProbe
+  --run-root /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/run
+  --stop0-root /Users/abel_yang/study/deepseek/jh-it29-stop0-20261029
+  --java-home "$JAVA_HOME" --rounds 3
+  > /Users/abel_yang/study/deepseek/jh-it29-stop2-20261030/probe-evidence.txt 2>&1
+PROBE_EXIT=0
+尾部：== verdict: ALL ASSERTIONS PASSED
+
+2. 逐轮（≥3 启停；每轮 close 证据行四要素逐轮复验）
+round 1（冷 300s/240s）：pid=59388 pgid=OptionalLong[59388]
+  pull: Observed PUBLISHED seq=65 items=1 codes=[16777233]（复现停 0 类型错误）
+  close INFO: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true (perl setsid wrapper),
+  unanswered=0, pending=0, ioThreadsStopped=true
+  post-close: jhThreads=0 no live launcher child (residual-free)
+round 2（暖 120s/90s）：pid=61082 pgid=OptionalLong[61082]
+  pull: Observed PUBLISHED seq=57 items=1 codes=[16777233]；close/post-close 同上四要素全达标
+round 3（暖 120s/90s）：pid=61846 pgid=OptionalLong[61846]
+  pull: Observed PUBLISHED seq=57 items=1 codes=[16777233]；close/post-close 同上四要素全达标
+3 轮 pgid==pid（专属组成立）；每轮 close 后 children 有界扫描无 launcher 子进程（无残留）。
+serverVersion 每轮 OptionalInt.empty —— 1.63.0 真机发布批次无 version 字段（D3 路径实录，不作锚）。
+
+3. 四态真机取证
+A（类型错误）：Observed PUBLISHED items=1 codes=[16777233] ☑
+A2（warning-only）：Observed PUBLISHED items=1 codes=[268435844] ☑（停 0 未使用导入警告复现）
+B（清洁用例 Clean.java）：Observed PUBLISHED items=0 codes=[] —— LS 实际发布空数组，按设计 §7 预案
+  如实记 PUBLISHED_DIAGNOSTICS（items=0），不改造证据凑 QUIET_WINDOW ☑
+C（窗内外部改写）：Stale —— generation 0→1、projectHash 与 document sha256 均不同 ☑
+D（未就绪）：immediate(200ms) = NotReady(INITIALIZING) → warm = Observed PUBLISHED
+  → close OK → after-close = NotReady(CLOSED) ☑
+E（期限）：warm = Observed PUBLISHED；tight(30s/30s) = TimedOut(PT30S) ☑
+每态源文件快照落盘 run/evidence/：fixture-baseline-App.java / state-App.java / state-Clean.java。
+
+4. 诚实记录（过程修正，均不影响最终证据）
+a. post-close 初版措辞「pid unknown (capture missed)」把无残留进程表述为捕获失败——违反 §8 措辞纪律，
+   修为「no live launcher child (residual-free)」后重跑（初版输出保留为 probe-evidence-first-run.txt）。
+b. state D 立即 pull 初版用 1s 预算，真实测得 TimedOut(PT1S)：本机 warm handshake ≈1.0–1.5s，
+   1s 预算下「initialize 未完成」前提不成立（实现按契约把已完成初始化的观察走正常路径、窗口内到期）。
+   非 Provider 缺陷；探针预算收窄 200ms（<< 进程 spawn + JVM boot 下限）使前提确定成立，重跑命中 INITIALIZING。
+c. TimedOut 配方取 deadline==window（30s/30s）：设计 §7「略大于窗口」在 warm 同步下余量耗不尽回 Observed；
+   取契约允许的等长下界（窗口 ≤ 期限）保证终检必然过期，探针注释与 packet §7 已登记。
+d. S4 证据档计数口径订正：full 层全 reactor = 304/0/0（7 模块汇总 2/36/18/41/13/17/177），
+   177 只是 lsp/jdtls 模块汇总；初版误标为「全模块 177」已订正（stop2-s4-focused-validate-full-green.txt）。
+
+5. 判定
+真机 3 轮启停 + 6 态全部断言通过，PROBE_EXIT=0；QUIET_WINDOW 真机无实例（didOpen 后 JDT LS 必发
+≥空数组批次），该区分与固定模板由聚焦夹具测试承担（JdtlsProviderTest#quietWindowOnCleanDocument、
+#emptyDiagnosticsArrayIsDistinctFromQuiet）。配合 stop2-review-packet.md 使用。

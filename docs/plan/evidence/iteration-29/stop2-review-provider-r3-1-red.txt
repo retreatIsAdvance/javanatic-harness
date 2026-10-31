@@ -1,0 +1,30 @@
+# stop2 R3-1 红证据 — 同步失败后客户端文档状态失真（takeover-review R3-1 P1 反例）
+
+命令（仓库根）：
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home \
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderBudgetTest#syncTimeoutStillCommitsThenRevertSendsDidChange+syncCancelledStillCommitsThenRevertSendsDidChange' \
+-Dsurefire.failIfNoSpecifiedTests=false \
+-Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire.SurefirePlugin=info \
+> /tmp/it29-stop2-r3-1-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 23.40 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.syncCancelledStillCommitsThenRevertSendsDidChange -- Time elapsed: 10.82 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: reverted text flushed as didChange v3
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderBudgetTest.syncTimeoutStillCommitsThenRevertSendsDidChange -- Time elapsed: 12.56 s <<< FAILURE!
+java.lang.AssertionError: timed out awaiting: reverted text flushed as didChange v3
+[ERROR]   JdtlsProviderBudgetTest.syncCancelledStillCommitsThenRevertSendsDidChange:370 timed out awaiting: reverted text flushed as didChange v3
+[ERROR]   JdtlsProviderBudgetTest.syncTimeoutStillCommitsThenRevertSendsDidChange:332 timed out awaiting: reverted text flushed as didChange v3
+
+红判定：评审所述反例在真实背压下复现——didChange(B/v2) 因对端停读背压而超时/被取消后，
+openedDocuments 仍记 A/v1；磁盘回退 A 后第三观察因 hash 相等跳过同步，wire 上无 didChange(A/v3)，
+与「配 A 锚返回而 LS 仍为 B」同源。两条路径（超时、取消）各自独立反例，判别断言为同一行
+didChange + version:3 + REVERTED（不可分散在不同帧行），夹具 sync-log 证据缺该帧。
+
+夹具增补（本证据前置）：PeerBackpressureServer 增 sync-blocked 模式（initialize 应答 → initialized →
+记录首同步帧 didOpen → 吃第二帧首字节后停读制造真实管道背压 → resume 后重建流并逐帧记 sync-log），
+原收尾循环抽为 drain()（保真重构，既有 scripted/blocked/provider-blocked 行为不变）。
+
+EXIT=1

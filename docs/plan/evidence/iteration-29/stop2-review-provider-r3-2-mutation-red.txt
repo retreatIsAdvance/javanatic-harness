@@ -1,0 +1,19 @@
+# stop2 R3-2 突变红证据 — 次序换回（Stale 先于 PROTOCOL）
+
+突变：把 overflowed 检查与 Stale 分支次序换回（先 Stale 后 PROTOCOL）。
+破坏必红 → 还原逐字节 → 复绿。
+
+命令（仓库根）：
+JAVA_HOME=... mvn -B -q -pl lsp/jdtls -am test \
+'-Dtest=JdtlsProviderSamplingTest#overflowFrozenInSameRoundAsInputChangeReportsProtocolThenRecovers' ...
+> /tmp/it29-stop2-r3-2-mutation-red.log 2>&1; echo "EXIT=$?"
+EXIT=1
+
+关键输出：
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 2.500 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderSamplingTest
+java.lang.AssertionError:
+Expecting code to raise a throwable.
+
+红判定：PROTOCOL 优先于 Stale 的次序被破坏后，组合反例立即击穿——该次序有测试钉死。
+
+EXIT=1

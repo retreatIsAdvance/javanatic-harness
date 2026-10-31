@@ -1,0 +1,29 @@
+# stop2 R3-3 全模块回归期间发现的既有竞态修复 — Fixtures.readFileEventually 空文件窗口
+
+发现：R3-3 修复后首次全模块回归（/tmp/r33-full.log）169/0/1——
+[ERROR] Tests run: 24, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 31.01 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsProviderTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsProviderTest.dedicatedProcessGroupMatchesPid:420 » NumberFormat For input string: ""
+判定与本段改动无关（R3-3 只动 JdtlsProvider 构造器链/readInputs 互斥，不触 pid 文件路径）：既有竞态——
+夹具启动即写 pid 文件（Files.writeString 非原子：CREATE 后、写入完成前存在空文件窗口），
+readFileEventually 的 readFileOrNull 把「文件存在但空」当作成功返回 ""，parseLong("") 击穿。
+（此前 168/0/0 全绿从未触发，纯时序偶发；本次负载下窗口放大。）
+
+修复（最小面）：readFileOrNull 空内容按「对端尚未写完」继续轮询（writeString 非原子）：
+  String text = Files.readString(file);
+  return text.isEmpty() ? null : text; // 空文件 = 对端尚未写完（writeString 非原子），继续轮询
+
+定向验证（修复后，3 连跑）：
+'-Dtest=JdtlsProviderTest#dedicatedProcessGroupMatchesPid' → RUN1 EXIT=0 / RUN2 EXIT=0 / RUN3 EXIT=0（各 1/0/0）
+
+突变检查（时序竞态无法定向构造「空窗口」，取确定性行为突变）：
+突变 readFileOrNull 恒返 null（readFileEventually 永不成功）→
+'-Dtest=JdtlsProviderTest#dedicatedProcessGroupMatchesPid'（/tmp/r33-pid-mutation.log）EXIT=1
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 10.32 s <<< FAILURE!
+（isNotNull 在 10s 轮询满后击穿——测试确实依赖该助手在文件面成功返回。）
+逐字节还原 → 复绿（/tmp/r33-pid-mutation-green.log）EXIT=0，1/0/0，0.607s。
+局限披露：真实「空窗口」突变（空内容即刻返回）无法确定性红（时序竞态），以恒 null 突变
++ 3 连跑 + 全模块复跑作为本修复的验证面。
+
+全模块复跑（/tmp/r33-full3.log）：EXIT=0，169/0/0（168 基线 + R3-3 新测试 1）。
+
+EXIT=0

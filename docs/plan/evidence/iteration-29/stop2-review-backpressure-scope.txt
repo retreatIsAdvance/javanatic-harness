@@ -1,0 +1,58 @@
+COMMAND: SHA256 compare all Java sources recorded in stop2-review-backpressure-red-02.txt; only LspPeer.java and LspPeerBackpressureTest.java may differ after that baseline.
+UNCHANGED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/DiagnosticsCache.java SHA256=6798a53961a00d0774aa4e057c8867b9cdbb87c20b28f9215c00900a40ecece0
+UNCHANGED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsLaunch.java SHA256=a0b28055c91f16c4866ab1112043b04ce125132a04b350c4198c5b3f1081ceaf
+UNCHANGED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/JdtlsProvider.java SHA256=4fb2672aa6b08524cb1444348245c327515ab908a4dda623c16fdb7a86b7e039
+UNCHANGED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspFrameReader.java SHA256=201899579604e0e52187f3fdc6c40c34fea943972674dcbfd18c2728858ebb6b
+UNCHANGED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspFrames.java SHA256=42bfc62425fe5543b59d61ef70c486de94ec9ff6fc6bd131b56d74627f937719
+CHANGED_ALLOWED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspPeer.java SHA256=1dda18e198358f38d5dfa3e055f041cd9daee302be627945fb89b0ed7dfa4644
+UNCHANGED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/LspRequestTimeoutException.java SHA256=6f7568f4cac62951c066011123d94de309abc2f57e6fcf55b2b9aed5d8f571ec
+UNCHANGED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/ProjectHash.java SHA256=f00261ac0a2abecf6a564b2298ad737994e01977ddfdf59ab6c7d3eff9880e26
+UNCHANGED lsp/jdtls/src/main/java/io/javanatic/harness/lsp/jdtls/Session.java SHA256=81232ba3428a5dbce6640caa608ce67abcddc0a4d4fb02394c50c5b50393b765
+UNCHANGED lsp/jdtls/src/main/java/module-info.java SHA256=c2a033c5f57199e0794f673555d734edbe7a7826327d7c6c28dae00734fb8c7d
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/DiagnosticsCacheTest.java SHA256=1cc733404d1f650ec1b11cd5a6bb8a8de7a16aff27324ebd6ffeb5968ff4d7ea
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/Fixtures.java SHA256=33ba030553cc85d9abd6a86ec22469def8d5886bd4b7bc8b36e04379bc5b794a
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/JdtlsLaunchTest.java SHA256=cbb4e86b1163418eeef6a0ee89b8c3ae7d67149c5bd3f3a4fc7ab1a8abd184a0
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/JdtlsProviderTest.java SHA256=6c9404b1f5212f083e4b47305d4087874178a6a3b467a37239eb47815ed01fc0
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/LspFrameReaderTest.java SHA256=9a68cc456c53a6e08153db27ae5d20a0911325840d8f730d92fcd18732455ad6
+CHANGED_ALLOWED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/LspPeerBackpressureTest.java SHA256=5f1d2cbe3a8c22f110abad1a7137b50e6731392cbf49c58308831600aadfe7ea
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/LspPeerPublicationTest.java SHA256=ae44fec44e6b36ec06ebb92d2de73462553be5520aae157b5ab25c375ff6b6cc
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/LspPeerTest.java SHA256=32ae0eaea31af0c6f3c9d118c14e756ea2a3823f016998bc7437598fd0b96602
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/PeerBackpressureServer.java SHA256=fa12626eb52d490ad135564de6787ceadd8118f38affb22905d97da140e2a954
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/ProjectHashTest.java SHA256=783051c665c7244a627e56e5d1e51fdc736a43dfce92ec1a04d345e9ffc820a8
+UNCHANGED lsp/jdtls/src/test/java/io/javanatic/harness/lsp/jdtls/SessionTest.java SHA256=81102cd1f572eb680c470268a64f2a21b143da841d5f546a9d4fe80d36f48975
+UNCHANGED lsp/jdtls/src/test/resources/lsp-fixture/LspFixtureServer.java SHA256=3fbb071321a009b948bf6504244df7b34aca8cfb02522aa574ac1979a1db98cf
+No mutation marker remains; TERM still uses ProcessHandle.destroy().
+EXIT=0
+Scope notes: prior mixed publication/callback/EOF tests retained in LspPeerPublicationTest, not run and not fixed in this backpressure slice. No @Disabled annotations added.
+Verification scope: macOS/Temurin 25, owned JVM fixture pipes; no full reactor test suite, real JDT LS, Provider wiring, atomic capture, registration-policy or cross-platform verification.
+Red-02 is a Spotless unused-import failure, NOT behavioral RED evidence; behavioral RED is red-01/red-03/red-04.
+
+COMMAND: git status --short
+ M docs/plan/current-state.md
+ M docs/plan/iteration-29.md
+ M lsp/pom.xml
+?? docs/plan/evidence/iteration-29/stop2-provider-design.md
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-final.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-green-01.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-green-02.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-green-03.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-mutation-01.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-mutation-02.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-mutation-03.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-red-01.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-red-02.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-red-03.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-red-04.txt
+?? docs/plan/evidence/iteration-29/stop2-review-backpressure-scope.txt
+?? docs/plan/evidence/iteration-29/stop2-review-f6-green.txt
+?? docs/plan/evidence/iteration-29/stop2-review-f6-red.txt
+?? docs/plan/evidence/iteration-29/stop2-review-peer-red-01.txt
+?? docs/plan/evidence/iteration-29/stop2-review-peer-red-02.txt
+?? docs/plan/evidence/iteration-29/stop2-s3-focused-01.txt
+?? docs/plan/evidence/iteration-29/stop2-s3-stress-01.txt
+?? docs/plan/evidence/iteration-29/stop2-t5-ruling.txt
+?? docs/plan/evidence/iteration-29/stop2-term-pipes-diagnosis.txt
+?? docs/plan/evidence/iteration-29/stop2-term-pipes-green.txt
+?? docs/plan/evidence/iteration-29/stop2-term-pipes-red.txt
+?? lsp/jdtls/
+EXIT=0
