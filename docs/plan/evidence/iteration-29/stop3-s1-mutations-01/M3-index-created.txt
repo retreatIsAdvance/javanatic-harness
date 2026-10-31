@@ -1,0 +1,35 @@
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl lsp/jdtls -am test -Dsurefire.failIfNoSpecifiedTests=false '-Dtest=JdtlsPluginConfigTest#toLaunchCreatesHomeAndIndexAndBuildsValidArchive'
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.033 s <<< FAILURE! -- in io.javanatic.harness.lsp.jdtls.JdtlsPluginConfigTest
+[ERROR] io.javanatic.harness.lsp.jdtls.JdtlsPluginConfigTest.toLaunchCreatesHomeAndIndexAndBuildsValidArchive -- Time elapsed: 0.023 s <<< ERROR!
+java.lang.IllegalArgumentException: indexDir must exist and be a directory: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit8694957785180679602/new-idx
+	at io.javanatic.harness.lsp.jdtls.JdtlsLaunch.requireDir(JdtlsLaunch.java:100)
+	at io.javanatic.harness.lsp.jdtls.JdtlsLaunch.<init>(JdtlsLaunch.java:31)
+	at io.javanatic.harness.lsp.jdtls.JdtlsPluginConfig.toLaunch(JdtlsPluginConfig.java:66)
+	at io.javanatic.harness.lsp.jdtls.JdtlsPluginConfigTest.toLaunchCreatesHomeAndIndexAndBuildsValidArchive(JdtlsPluginConfigTest.java:95)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Errors:
+[ERROR]   JdtlsPluginConfigTest.toLaunchCreatesHomeAndIndexAndBuildsValidArchive:95 » IllegalArgument indexDir must exist and be a directory: /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit8694957785180679602/new-idx
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-lsp-jdtls:
+[ERROR]
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/lsp/jdtls/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR]
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-lsp-jdtls
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+
+EXIT=1

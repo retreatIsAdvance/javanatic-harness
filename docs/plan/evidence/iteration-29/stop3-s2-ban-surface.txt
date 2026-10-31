@@ -1,0 +1,17 @@
+it29 stop3-S2 ban-surface check
+date: 2026-10-31 14:44:50
+
+== 主源码（模板面，须 0 命中） ==
+main-exit=1
+
+== 测试源码（执法面，仅允许 doesNotContain 断言字面） ==
+lsp/tool/src/test/java/io/javanatic/harness/lsp/tool/LspToolPluginTest.java:69:                .doesNotContain("项目无错误");
+lsp/tool/src/test/java/io/javanatic/harness/lsp/tool/LspToolOutputTest.java:41:        assertThat(text).doesNotContain("项目无错误", "分析完成", "诊断已同步", "真零");
+lsp/tool/src/test/java/io/javanatic/harness/lsp/tool/LspToolOutputTest.java:48:        assertThat(text).doesNotContain("项目无错误", "无诊断完成");
+lsp/tool/src/test/java/io/javanatic/harness/lsp/tool/LspToolOutputTest.java:117:        assertThat(text).doesNotContain("符号不存在", "无定义");
+test-exit=0
+
+== 测试计数（surefire XML，聚焦跑） ==
+core/tools: 32
+lsp/tool: 28
+lsp/jdtls: 188

@@ -14,5 +14,6 @@
     <modules>
         <module>lsp</module>
         <module>jdtls</module>
+        <module>tool</module>
     </modules>
 </project>

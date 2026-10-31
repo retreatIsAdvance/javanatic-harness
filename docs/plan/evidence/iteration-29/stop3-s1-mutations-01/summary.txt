@@ -1,0 +1,19 @@
+it29 stop3-S1 JdtlsPlugin mutations
+START=2026-10-31T01:15:35.675901+00:00
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+Each mutant runs only its expected test (surefire method filter).
+M1-whitelist: EXIT=1; failures=['unknownKeyFailsLoud']; errors=[]; expected=JdtlsPluginConfigTest#unknownKeyFailsLoud; KILLED=True
+M1-whitelist: restoredBytes=True; SHA256=4face3e737015aed42ec65009c838942f71abefe24b535aa261bbc3795053285
+M2-home-default: EXIT=1; failures=['defaultsProbeJavaHomeAndDeriveTempDirs']; errors=[]; expected=JdtlsPluginConfigTest#defaultsProbeJavaHomeAndDeriveTempDirs; KILLED=True
+M2-home-default: restoredBytes=True; SHA256=4face3e737015aed42ec65009c838942f71abefe24b535aa261bbc3795053285
+M3-index-created: EXIT=1; failures=[]; errors=['toLaunchCreatesHomeAndIndexAndBuildsValidArchive']; expected=JdtlsPluginConfigTest#toLaunchCreatesHomeAndIndexAndBuildsValidArchive; KILLED=True
+M3-index-created: restoredBytes=True; SHA256=4face3e737015aed42ec65009c838942f71abefe24b535aa261bbc3795053285
+M4-on-close: EXIT=1; failures=['applyProvidesServiceAndScopeCloseClosesProvider']; errors=[]; expected=JdtlsPluginTest#applyProvidesServiceAndScopeCloseClosesProvider; KILLED=True
+M4-on-close: restoredBytes=True; SHA256=ec6d73e825fa6021669c54a405a474f74e07b629df133a571bdbd114ca32d62e
+M5-provide: EXIT=1; failures=[]; errors=['applyProvidesServiceAndScopeCloseClosesProvider']; expected=JdtlsPluginTest#applyProvidesServiceAndScopeCloseClosesProvider; KILLED=True
+M5-provide: restoredBytes=True; SHA256=ec6d73e825fa6021669c54a405a474f74e07b629df133a571bdbd114ca32d62e
+ALL_SOURCE_BYTES_RESTORED=True
+ALL_TEST_BYTES_UNCHANGED=True
+RESIDUAL_MUTANT_MARKERS=[]
+END=2026-10-31T01:16:00.741376+00:00
+EXIT=0

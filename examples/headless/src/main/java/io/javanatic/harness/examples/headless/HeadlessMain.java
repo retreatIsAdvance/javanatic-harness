@@ -747,6 +747,7 @@ public final class HeadlessMain {
                 + "; exempt=" + exemptText(root) + ")",
             "  mcp: " + mcpText(root),
             "  web: " + webText(root),
+            "  lsp: " + lspText(root),
             "  audit: " + audit.plugin().replaceFirst("^persistence-", "") + " "
                 + configText(audit, "root") + (persistence.durable() ? " (durable)" : " (non-durable)"),
             "  stop: max-turns=" + limits.maxTurns() + " max-steps=" + limits.maxStepsPerTurn()
@@ -794,6 +795,33 @@ public final class HeadlessMain {
             .map(registry -> registry.definitions(root).stream()
                 .map(ToolDefinition::name)
                 .filter(name -> name.equals("web_fetch") || name.equals("web_search"))
+                .sorted()
+                .toList())
+            .orElseGet(List::of);
+        String mounted = rows.isEmpty() ? "-" : String.join(" + ", rows);
+        return tools.isEmpty()
+            ? mounted + "; tools=0"
+            : mounted + "; tools=" + String.join(",", tools) + " (approval-required)";
+    }
+
+    /**
+     * LSP 声明面（it29）：已启用 lsp 行（名称序）+ 已注册工具（名称序）。base 携带
+     * lsp-jdtls 禁用行 + lsp-tool 行——缺省组合只印 lsp-tool、LspService 缺席只少
+     * 三个工具（双态沿 web_search 先例，禁用行不在 mounted 行集内）；组合者
+     * replace: true 原地启用后印 `lsp-jdtls + lsp-tool`；两行都被移除时印 `-`。
+     * 摘要只说组合里的事实，不猜原因。三工具恒需审批（approvalExempt=false，
+     * 与 approval 行的 exempt 名单互证）。
+     */
+    private static String lspText(Scope root) {
+        List<String> rows = root.require(CompositionManifest.KEY).rows().stream()
+            .map(CompositionManifest.Row::plugin)
+            .filter(plugin -> plugin.equals("lsp-jdtls") || plugin.equals("lsp-tool"))
+            .toList();
+        List<String> tools = root.resolve(ToolRegistry.KEY)
+            .map(registry -> registry.definitions(root).stream()
+                .map(ToolDefinition::name)
+                .filter(name -> name.equals("lsp_diagnostics") || name.equals("lsp_definition")
+                    || name.equals("lsp_references"))
                 .sorted()
                 .toList())
             .orElseGet(List::of);

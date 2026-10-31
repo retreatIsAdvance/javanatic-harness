@@ -20,6 +20,13 @@ class ToolArgsTest {
     }
 
     @Test
+    void readOptionalLongEmptyWhenAbsentAndValueWhenPresent() {
+        assertThat(ToolArgs.parse("{\"req\":\"x\"}", SCHEMA).readOptionalLong("opt")).isEmpty();
+        assertThat(ToolArgs.parse("{\"req\":\"x\",\"opt\":7}", SCHEMA).readOptionalLong("opt"))
+            .hasValue(7);
+    }
+
+    @Test
     void presentOptionalFieldIsValidatedRecursively() {
         assertThat(ToolArgs.parse("{\"req\":\"x\",\"opt\":7}", SCHEMA).readLong("opt")).isEqualTo(7);
         assertThatThrownBy(() -> ToolArgs.parse("{\"req\":\"x\",\"opt\":\"nan\"}", SCHEMA))

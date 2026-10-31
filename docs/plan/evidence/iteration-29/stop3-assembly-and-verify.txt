@@ -1,0 +1,145 @@
+停 3 · 装配面与 `--verify`：base 37、双态计数、fail-loud、双通道 SPI、四处消费面
+时间：2026-10-31
+环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)，
+      Maven=~/Documents/apache-maven-3.10.0/bin/mvn
+说明：`--verify` 启用档（replace 启用 jdtls 行 31/37/0 + 工具面三态）与行序负例
+      （remove+include 落行尾 → 双态失效零工具）在 S4 真机跑取证（jdtls 进程 eager
+      启动，负例需真夹具目录）；本档只做装配计数、fail-loud、SPI 与同步面核对。
+
+------------------------------------------------------------------------
+一、新鲜门禁（EXIT=0）
+------------------------------------------------------------------------
+validate：
+
+  mvn -q validate > /tmp/it29-s3/validate.log 2>&1 → VALIDATE_EXIT=0
+
+全 reactor 测试（-am 闭包，BUILD SUCCESS）：
+
+  mvn -B -pl bundle/base,examples/headless,lsp/tool,lsp/jdtls -am test
+    > /tmp/it29-s3/assembly-fresh.log 2>&1 → FRESH_EXIT=0，BUILD SUCCESS
+
+关键模块计数（surefire XML 求和，AGENTS.md 口径）：
+
+  bundle/base        32 / 0 / 0 / 0
+  examples/headless  84 / 0 / 0 / 0（HeadlessVerifyTest 8/0/0）
+  lsp/jdtls         188 / 0 / 0 / 0
+  lsp/tool           28 / 0 / 0 / 0
+  core/tools         32 / 0 / 0 / 0
+
+------------------------------------------------------------------------
+二、base bundle 行数（37 = 24 可配 + 13 无配）
+------------------------------------------------------------------------
+源文件：bundle/base/src/main/resources/META-INF/harness/bundle.yml
+
+  grep -c "^  - plugin:" .../bundle.yml  → 37
+
+lsp 两行（行序：jdtls 禁用行在 lsp-tool 之前，Provider 先 apply）：
+
+  - plugin: lsp-jdtls
+    disabled: true
+  - plugin: lsp-tool
+
+无配置面（不读 config 键）的 13 行与 12-api-stability.md 同一份清单：
+session-store, agents, system-prompt, llm, approval-auto / approval-deny,
+tools, sandbox-local, fs-tool, ask-user, commands, skill, mcp-registry。
+可配 24 = 其余全部行，含 lsp-jdtls（B27 八键）与 lsp-tool（B28 五键）——
+两者已补入 12-api-stability.md 可配表（本次 S3 落表，见 §七）。
+
+------------------------------------------------------------------------
+三、`--verify` keyless 双态（测试钉死；启用档在 S4）
+------------------------------------------------------------------------
+keyless 缺省（`run("--verify")`，HeadlessVerifyTest 逐字断言）：
+
+  composition: 30 rows, 37 discovered, 0 unreferenced
+  lsp: lsp-tool; tools=0
+
+lsp 行外显双态（Consumer 在场、Provider 缺席 = 零工具，不猜原因）；
+discovered 恒 37（jdtls 坐标在 headless / consumer 候选 / jh 三条腿都在场，
+模块路径全域 ServiceLoader——缺省组合必然 37，裸在场无行即 boot fail，
+这正是 S3 装配机制修正的根因，见 §八）。启用档 31/37/0（replace 启用 jdtls 行）
+与行序负例移 S4 真机跑。
+
+------------------------------------------------------------------------
+四、fail-loud 与突变检查（破坏必红 → 还原复绿）
+------------------------------------------------------------------------
+fail-loud 测试（HeadlessVerifyTest.verifyEnabledJdtlsRowWithMissingServerDirFailsLoud）：
+replace 原地启用 lsp-jdtls 行但 serverDir 不存在 → 装配期
+IllegalStateException（文案含 lsp-jdtls，root cause 文案含
+"serverDir must exist and be a directory"）——不回退为「无工具」，
+进程从未拉起。8/0/0 全绿。
+
+突变 A（JdtlsLaunch.requireDir 文案中性化）：
+
+  lsp/jdtls/.../JdtlsLaunch.java 一行改动 → 聚焦跑
+  Tests run: 1, Failures: 1, Errors: 0 —— "Expecting throwable message" 必红
+  还原（cp 备份，SHA 073f9b39…逐字节一致）→ 复跑 EXIT=0 复绿
+
+突变 B（摘除 bundle.yml lsp-jdtls 行的 disabled: true）：
+
+  缺省 --verify → boot 抛
+  java.lang.IllegalStateException: Plugin failed and rolled back: lsp-jdtls
+  Caused by: ... config missing required 'serverDir' for plugin 'lsp-jdtls'
+  聚焦跑 Tests run: 1, Failures: 0, Errors: 1 必红
+  还原（cp 备份，SHA 3af627de…逐字节一致）→ 复跑 EXIT=0 复绿
+
+突变 B 的红是更锋利的 B15 证明：禁用行是缺省组合可 boot 的承载——
+摘除即「装配期坏配置」，不是「无工具」。
+
+------------------------------------------------------------------------
+五、consumer candidate 腿（隔离仓，全过）
+------------------------------------------------------------------------
+命令：integration/verify-consumer.sh candidate > /tmp/it29-consumer.log 2>&1
+
+  == 汇总：candidate ==
+  失败项：0
+  CONSUMER_EXIT=0（用时 226s）
+
+含四负例：坏版本 9.9.9 解析失败 / 去显式版本构建失败 / 坏治理配置 boot 抛错 /
+生产档撞 AUTO 审批 boot 抛错——文案均逐字命中。
+
+------------------------------------------------------------------------
+六、双通道 SPI 检查单（pits.md :29，4/4）
+------------------------------------------------------------------------
+  lsp/jdtls：module-info `provides io.javanatic.harness.kernel.plugin.Plugin`
+             + META-INF/services/io.javanatic.harness.kernel.plugin.Plugin
+             = io.javanatic.harness.lsp.jdtls.JdtlsPlugin            ✓
+  lsp/tool ：module-info `provides ... with ...LspToolPlugin`
+             + META-INF/services/... = io.javanatic.harness.lsp.tool.LspToolPlugin  ✓
+
+------------------------------------------------------------------------
+七、四处消费面（行集变化同提交同步）
+------------------------------------------------------------------------
+1. dist/jh/pom.xml：jlink `--add-modules` 三行（line 87–89）——
+   io.javanatic.harness.lsp / .lsp.jdtls / .lsp.tool。
+2. examples/headless/pom.xml：叠加依赖三坐标（line 147–155）。
+3. integration/consumer-sample/pom.xml：candidate-closure profile 加 lsp 三坐标
+   （line 219–229）→ 候选闭包 11 → 14 坐标（skill 3 + mcp 4 + web 4 + lsp 3，
+   已逐项核对在场）。
+4. docs/embedding.md §2：候选腿计数 11 → 14 及 lsp 三坐标说明（禁用行语义）。
+
+外加本次 S3 核对的文档同步面：
+  - 12-api-stability.md 可配表补 lsp-jdtls / lsp-tool 两行（24 可配计数由此成立）；
+  - iteration-29.md 停 3 状态三段（S1–S3 已交付、S4–S5 未执行）去「仍无装配行」；
+  - 02-module-layout lsp/* 行、06-scope LSP 段、README 两处去「无可挂载 lsp-tool」；
+  - JdtlsPlugin / HeadlessMain.lspText javadoc 去「本行不进 base」旧稿措辞
+    （改述禁用行 + replace: true 原地启用，注释面与 §八修正同步）。
+  （用户挂账的范围外旧措辞——02 tree / root README build count——不在本批，留收口批。）
+
+------------------------------------------------------------------------
+八、S3 装配机制修正（设计 §9 原稿修正，非停 2 裁决改动）
+------------------------------------------------------------------------
+原稿「lsp-jdtls 不进 base、组合者 before: lsp-tool 锚点插入；缺省 36 discovered」
+执行期证伪：PluginLoader.discover() 是模块路径全域 ServiceLoader，双向校验要求
+每个被发现的插件都被某行引用（含 disabled 行）；jdtls 坐标三条腿都在场，
+缺省组合必然 37 discovered，裸在场无行即 boot fail。修正为 web_search 先例结构：
+base 携带 lsp-jdtls 禁用行（compaction 先例），组合者 replace: true 原地启用
+（Replace 位置保持 = 行序不变式由 base 行位承载）；缺省组合仍零进程零工具
+（B15 口径不变）。负例证据移 S4 真机跑。修正记录见
+stop3-consumer-design.md §9。
+
+------------------------------------------------------------------------
+结论
+------------------------------------------------------------------------
+行集 37、keyless 30/37/0、lsp 行双态、fail-loud、SPI 4/4、四处消费面、candidate
+双腿全过，全部与 stop3-consumer-design.md §2/§6/§7 及 07/12 设计文档计数一致；
+S4（R1 回放 / jlink 真跑 / 启用档 verify / 行序负例 / 真机三能力探针）待执行。

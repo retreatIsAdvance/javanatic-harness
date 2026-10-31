@@ -211,6 +211,24 @@
                     <artifactId>harness-web-tool</artifactId>
                     <version>${harness.version}</version>
                 </dependency>
+                <!-- it29 LSP 三坐标：lsp（契约件）/ jdtls（Provider 装配件，不进 base）/
+                     tool（Consumer，进 base）。Definition 虽无 provides，但消费模块
+                     requires 它，运行闭包须显式在场。 -->
+                <dependency>
+                    <groupId>io.github.retreatisadvance</groupId>
+                    <artifactId>harness-lsp-lsp</artifactId>
+                    <version>${harness.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.retreatisadvance</groupId>
+                    <artifactId>harness-lsp-jdtls</artifactId>
+                    <version>${harness.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.retreatisadvance</groupId>
+                    <artifactId>harness-lsp-tool</artifactId>
+                    <version>${harness.version}</version>
+                </dependency>
             </dependencies>
         </profile>
     </profiles>

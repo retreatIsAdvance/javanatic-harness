@@ -139,6 +139,21 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-web-tool</artifactId>
         </dependency>
+        <!-- it29 LSP 三模块（Definition + Provider 装配件 + Consumer）：lsp-tool 进 base
+             bundle（缺省零工具），lsp-jdtls 供组合者显式加行；运行时 ServiceLoader
+             需在模块路径 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-lsp-lsp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-lsp-jdtls</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-lsp-tool</artifactId>
+        </dependency>
         <!-- 生产模拟场景(it15):boot 后注入 replay 驱动,keyless 确定性;模块无 provides,不污染双向校验 -->
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>

@@ -336,6 +336,33 @@ class JdtlsProviderTest {
     }
 
     @Test
+    void documentOutsideProjectRootIsFencedWithUnsupported() throws Exception {
+        writeDocument("class App { }\n");
+        JdtlsProvider provider = provider();
+        observed(pull(provider, WINDOW)); // 先完成初始化：围栏断言本身不依赖会话时序
+        // 兄弟目录故意共享路径前缀（temp = …/junit12345，outside = …/junit12345-outside）：
+        // 越界判定必须是带尾部斜杠的目录前缀，而非裸字符串前缀。
+        Path outside = temp.resolveSibling(temp.getFileName() + "-outside").resolve("Other.java");
+        LspQuery outsideQuery = new LspQuery(outside.toUri(), GENEROUS, WINDOW);
+        assertThatThrownBy(() -> provider.diagnostics(outsideQuery, AbortSignal.never()))
+            .isInstanceOf(LspException.class)
+            .satisfies(e -> assertThat(((LspException) e).code()).isEqualTo(LspErrorCode.UNSUPPORTED))
+            .hasMessageContaining("outside project root");
+        // 围栏先于文件存在性检查：Other.java 并不存在，仍必须是 UNSUPPORTED 而非 IO。
+        LspPositionQuery position = new LspPositionQuery(outsideQuery, new LspPosition(0, 0));
+        assertThatThrownBy(() -> provider.definition(position, AbortSignal.never()))
+            .isInstanceOf(LspException.class)
+            .satisfies(e -> assertThat(((LspException) e).code()).isEqualTo(LspErrorCode.UNSUPPORTED))
+            .hasMessageContaining("outside project root");
+        assertThatThrownBy(() -> provider.references(position, AbortSignal.never()))
+            .isInstanceOf(LspException.class)
+            .satisfies(e -> assertThat(((LspException) e).code()).isEqualTo(LspErrorCode.UNSUPPORTED))
+            .hasMessageContaining("outside project root");
+        provider.close();
+        assertThat(provider.exitCode()).hasValue(0);
+    }
+
+    @Test
     void abortedSignalPropagatesAbortedException() throws Exception {
         writeDocument("class App { }\n");
         JdtlsProvider provider = provider();

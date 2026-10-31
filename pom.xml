@@ -257,6 +257,16 @@
             </dependency>
             <dependency>
                 <groupId>io.github.retreatisadvance</groupId>
+                <artifactId>harness-lsp-jdtls</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.retreatisadvance</groupId>
+                <artifactId>harness-lsp-tool</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.retreatisadvance</groupId>
                 <artifactId>harness-shell-shell</artifactId>
                 <version>${project.version}</version>
             </dependency>

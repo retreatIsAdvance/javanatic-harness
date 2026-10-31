@@ -46,6 +46,8 @@ import java.util.function.Supplier;
  * 单项目 JDT LS 观察：输入采样、全文同步 flush、完整窗口、原子冻结候选、after 复验。
  * 所有步骤共用入口总期限；项目串行区排队可取消。候选每 URI 末值胜，观察不是索引完成屏障。
  * 正常关闭保持协议应答，随后有界排水、TERM/KILL 升级与自有进程复验；会话先于握手终结 = CLOSE_FAILED。
+ * 观察入口带 document 路径围栏（T6）：规范化 URI 必须落在 projectRoot 内，越界 UNSUPPORTED
+ * ——围栏只约束 JH 把哪些文件交给 LS，不约束 LS 自发扫描（B23，它本来就全权）。
  */
 public final class JdtlsProvider implements LspService {
 
@@ -252,6 +254,7 @@ public final class JdtlsProvider implements LspService {
 
     @Override
     public LspResult<LspDiagnostic> diagnostics(LspQuery query, AbortSignal signal) {
+        requireInsideProject(query.document());
         Call call = new Call(query, signal);
         return observe(call, () -> diagnosticsInZone(call));
     }
@@ -286,12 +289,14 @@ public final class JdtlsProvider implements LspService {
 
     @Override
     public LspResult<LspLocation> definition(LspPositionQuery query, AbortSignal signal) {
+        requireInsideProject(query.query().document());
         Call call = new Call(query.query(), signal);
         return observe(call, () -> locate("textDocument/definition", query, call));
     }
 
     @Override
     public LspResult<LspLocation> references(LspPositionQuery query, AbortSignal signal) {
+        requireInsideProject(query.query().document());
         Call call = new Call(query.query(), signal);
         return observe(call, () -> locate("textDocument/references", query, call));
     }
@@ -362,6 +367,17 @@ public final class JdtlsProvider implements LspService {
             if (acquired) {
                 zoneLock.unlock();
             }
+        }
+    }
+
+    /** 观察入口围栏（T6）：document URI 规范化后必须落在 projectRoot 内，越界 fail loud。 */
+    private void requireInsideProject(URI document) {
+        String root = projectRoot.toUri().normalize().toString();
+        if (!root.endsWith("/")) {
+            root += "/";
+        }
+        if (!document.normalize().toString().startsWith(root)) {
+            throw new LspException(LspErrorCode.UNSUPPORTED, "document outside project root");
         }
     }
 

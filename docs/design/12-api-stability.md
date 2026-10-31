@@ -142,8 +142,10 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | web-fetch-http | `timeoutSeconds` / `maxBodyBytes` | 抓取超时（it28；正数，缺省 30）与读侧上限（正整数，缺省 2097152 = 2 MiB）；声明超限 → `WEB_TOO_LARGE`，流式/缺 CL 截断为 `truncated` 事实 |
 | web-search-deepseek | `baseUrl` / `model` / `apiKeyEnv` / `maxTokens` / `maxUses` / `timeoutSeconds` | DeepSeek 原生搜索（it28）：端点 / 模型 / **环境变量名（不写值）** / 辅助调用 token 与次数上限 / 超时；keyless 行 `disabled`，`available()` 以 key 在场为准 |
 | web-tool | `maxSourceChars` / `maxOutputBytes` / `maxResults` | 消费面上限（it28）：源码字符（缺省 524288）、输出字节（缺省 262144，UTF-8 完整边界）、搜索来源数（缺省 8）；三者均有硬上限 |
+| lsp-jdtls | `javaHome` / `serverDir` / `configurationDir` / `projectRoot` / `indexDir` / `homeDir` / `mavenUserSettings` / `mavenGlobalSettings` | LSP Provider 装配（it29；B27）：`serverDir` / `configurationDir` / `projectRoot` 必填且存在、缺失 fail loud；`javaHome` 缺省主动探测并披露；`indexDir` / `homeDir` 缺省临时目录（不触碰用户 HOME）；maven 两键可选。base 以 `disabled: true` 禁用行在场（缺省零进程零工具），组合者 `replace: true` 原地启用 |
+| lsp-tool | `timeoutSeconds` / `waitSeconds` / `maxDiagnostics` / `maxLocations` / `maxOutputBytes` | LSP 工具消费面（it29；B28）：正整数量纲，`waitSeconds` ≤ `timeoutSeconds`；条数帽与字节帽截断置 `truncated`（锚首行不参与截断）；LspService 缺席只少三工具（双态沿 web_search 先例）|
 
-无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`ask-user`、`commands`、`skill`、`mcp-registry`（35 个 base 行 id = 22 可配 + 13 无配）。
+无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`ask-user`、`commands`、`skill`、`mcp-registry`（37 个 base 行 id = 24 可配 + 13 无配）。
 
 - **插值白名单**（[07](07-profile-bundle.md)）：`${env:NAME}` / `${props:NAME}` / `${cwd}` / `${home}` / `:-默认值`；比较式 `==` / `!=`（右操作数 `null` 或 `'literal'`）——无任意代码；源不在白名单 fail loud。
 - **键名白名单（it23，0.2.0 迁移面）**：profile 顶层 / bundle 顶层 / 行三层均为 allowlist，未列名键（含拼写错误）**装载期 fail loud**（`YamlRows`；**0.1.0 为静默忽略**）——键集与拒绝文案见 [07 §1](07-profile-bundle.md)。

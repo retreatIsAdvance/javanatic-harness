@@ -36,10 +36,11 @@ class HeadlessVerifyTest {
         assertThat(result.exit()).isZero();
         assertThat(result.stdout())
             .contains("Profile: headless   policy: STANDARD")
-            .contains("  composition: 29 rows, 35 discovered, 0 unreferenced")
+            .contains("  composition: 30 rows, 37 discovered, 0 unreferenced")
             .contains("  approval: AUTO (approval-auto; exempt=ask_user)")
             .contains("  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool; tools=0")
             .contains("  web: web-fetch-http + web-tool; tools=web_fetch (approval-required)")
+            .contains("  lsp: lsp-tool; tools=0")
             .contains("  audit: jsonl " + sessions + " (durable)")
             .contains("  stop: max-turns=50 max-steps=40 budget=unlimited");
     }
@@ -95,6 +96,32 @@ class HeadlessVerifyTest {
                 + " tools=mcp__verify-fixture__echo (approval-required)")
             .contains("  approval: AUTO (approval-auto; exempt=ask_user)");
         assertThat(result.stderr()).isEmpty(); // 零噪声：server 不写 stderr，摘要不混诊断
+    }
+
+    @Test
+    void verifyEnabledJdtlsRowWithMissingServerDirFailsLoud() throws Exception {
+        // 装配面 B1 先例（设计 §2）：replace 原地启用 lsp-jdtls 行但 serverDir 不存在 →
+        // 装配期 fail loud，不回退为「无工具」——工具缺席只能由 Provider 缺席解释，
+        // 不能是坏配置被静默吞掉。装配在插件 apply 前抛异常，进程从未拉起。
+        Path profile = workspace.resolve("lsp-bad-server.yml");
+        Files.writeString(profile, """
+            name: headless
+            policy: standard
+            bundles: [base]
+            rows:
+              - plugin: lsp-jdtls
+                replace: true
+                config:
+                  serverDir: '%s'
+                  configurationDir: '%s'
+                  projectRoot: '%s'
+            """.formatted(workspace.resolve("no-server"), workspace.resolve("no-config"),
+            workspace.resolve("no-project")));
+        assertThatThrownBy(() -> run("--verify", "--profile=" + profile))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("lsp-jdtls")
+            .getRootCause()
+            .hasMessageContaining("serverDir must exist and be a directory");
     }
 
     /** 写「启用 mcp-stdio 行」的 profile；args 走测试资源里的最小夹具源码（JDK 直跑）。 */

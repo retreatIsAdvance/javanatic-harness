@@ -84,6 +84,9 @@
                                 <module>io.javanatic.harness.web.fetch.http</module>
                                 <module>io.javanatic.harness.web.search.deepseek</module>
                                 <module>io.javanatic.harness.web.tool</module>
+                                <module>io.javanatic.harness.lsp</module>
+                                <module>io.javanatic.harness.lsp.jdtls</module>
+                                <module>io.javanatic.harness.lsp.tool</module>
                                 <module>io.javanatic.harness.interaction.ask</module>
                                 <module>io.javanatic.harness.sandbox.local</module>
                                 <module>io.javanatic.harness.sandbox.policy</module>

@@ -1,0 +1,28 @@
+it29 stop3-S2 Consumer verification summary
+日期：2026-10-31
+状态：实际命令执行结果记录，不代表用户批准。
+
+新交付：lsp/tool 新模块（LspToolConfig 键白名单/坏值 fail loud、LspToolOutput 四态+异常逐字映射与双帽、
+LspToolPlugin 三工具双态注册 + module-info provides + META-INF/services 双通道）；
+core/tools 增 ToolArgs.readOptionalLong（纯增加，设计 §9 声明）；
+lsp/jdtls 增 document 路径围栏（Provider 层，三入口，越界 UNSUPPORTED）+ 围栏聚焦测试。
+
+命令（仓库根）：
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+export MVN=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn
+mvn -B -q -pl :harness-lsp-tool,:harness-lsp-jdtls,:harness-core-tools -am test  # 聚焦 EXIT=0，见 stop3-s2-final-focused.txt
+mvn -B -q validate                  # 门禁 EXIT=0，见 stop3-s2-final-validate.txt
+（lsp/tool 用工件 ID 选择器：目录选择器 lsp/tool 与反应堆解析不兼容，与停 2 期间发现一致）
+
+测试计数（surefire XML，聚焦跑）：core/tools 32（+1 readOptionalLong）、lsp/tool 28（新模块）、
+lsp/jdtls 188（+1 围栏，S1 基线 187）——全绿。
+
+突变（stop3-s2-mutations.py，8 项单测过滤）：M1 禁词进安静窗模板 / M2 禁词进空批次文案 /
+M3 禁词进空位置文案 / M4 字节帽标记 / M5 条数帽标记 / M6 readOptionalLong 恒空 / M7 围栏摘除 /
+M8 requires 声明摘除——全部 KILLED，源码逐字节还原，主源码无禁词残留。证据：stop3-s2-mutations-01/summary.txt。
+
+禁令面（口径细化见设计 §4.3/§9）：主源码（模板面，含注释/javadoc）grep 0 命中；
+测试侧仅 4 行 doesNotContain 执法断言含禁词字面。证据：stop3-s2-ban-surface.txt。
+
+复核项：双通道 SPI（module-info provides + META-INF/services/io.javanatic.harness.kernel.plugin.Plugin）
+均已落位；三角色纪律——lsp/tool module-info 仅 requires io.javanatic.harness.lsp（无 jdtls import）。

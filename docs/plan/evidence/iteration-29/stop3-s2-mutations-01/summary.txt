@@ -1,0 +1,25 @@
+it29 stop3-S2 Consumer mutations
+START=2026-10-31T06:39:23.596557+00:00
+JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+Each mutant runs only its expected test (surefire method filter).
+M1-banned-word-quiet-window: EXIT=1; failures=['quietWindowTextIsVerbatim']; errors=[]; expected=LspToolOutputTest#quietWindowTextIsVerbatim; KILLED=True
+M1-banned-word-quiet-window: restoredBytes=True; SHA256=6aae42947a0861bf337d2db9651400f9a26f42a3d9304925b97285a642688afc
+M2-banned-word-empty-batch: EXIT=1; failures=['publishedEmptyBatchNamesZeroAndNeverClaimsErrorFree']; errors=[]; expected=LspToolOutputTest#publishedEmptyBatchNamesZeroAndNeverClaimsErrorFree; KILLED=True
+M2-banned-word-empty-batch: restoredBytes=True; SHA256=6aae42947a0861bf337d2db9651400f9a26f42a3d9304925b97285a642688afc
+M3-banned-word-empty-locations: EXIT=1; failures=['emptyLocationsNameZeroResultsNotAbsentSymbol']; errors=[]; expected=LspToolOutputTest#emptyLocationsNameZeroResultsNotAbsentSymbol; KILLED=True
+M3-banned-word-empty-locations: restoredBytes=True; SHA256=6aae42947a0861bf337d2db9651400f9a26f42a3d9304925b97285a642688afc
+M4-byte-cap-marker: EXIT=1; failures=['byteCapCutsAtUtf8BoundaryAndKeepsAnchorHeader']; errors=[]; expected=LspToolOutputTest#byteCapCutsAtUtf8BoundaryAndKeepsAnchorHeader; KILLED=True
+M4-byte-cap-marker: restoredBytes=True; SHA256=6aae42947a0861bf337d2db9651400f9a26f42a3d9304925b97285a642688afc
+M5-count-cap-marker: EXIT=1; failures=['countCapKeepsAnchorHeaderAndAppendsMarker']; errors=[]; expected=LspToolOutputTest#countCapKeepsAnchorHeaderAndAppendsMarker; KILLED=True
+M5-count-cap-marker: restoredBytes=True; SHA256=6aae42947a0861bf337d2db9651400f9a26f42a3d9304925b97285a642688afc
+M6-optional-reader-always-empty: EXIT=1; failures=['readOptionalLongEmptyWhenAbsentAndValueWhenPresent']; errors=[]; expected=ToolArgsTest#readOptionalLongEmptyWhenAbsentAndValueWhenPresent; KILLED=True
+M6-optional-reader-always-empty: restoredBytes=True; SHA256=fd8199534b870f2536e37cb277723bb3b641ad860cc617ed839da50c16ecd2e8
+M7-fence-removed: EXIT=1; failures=['documentOutsideProjectRootIsFencedWithUnsupported']; errors=[]; expected=JdtlsProviderTest#documentOutsideProjectRootIsFencedWithUnsupported; KILLED=True
+M7-fence-removed: restoredBytes=True; SHA256=a5df6b0b5203d092b6ebdd72922fbbb82c287833f10aa2599cb992c06512015c
+M8-requires-declaration-dropped: EXIT=1; failures=['pluginShapeRequiresOnlyTools']; errors=[]; expected=LspToolPluginTest#pluginShapeRequiresOnlyTools; KILLED=True
+M8-requires-declaration-dropped: restoredBytes=True; SHA256=15fb7259ab3f2fe0c6d013ddd8bf056a199af688519a6d49cbfcd74ff1005075
+ALL_SOURCE_BYTES_RESTORED=True
+ALL_TEST_BYTES_UNCHANGED=True
+RESIDUAL_BANNED_WORDS=[]
+END=2026-10-31T06:40:11.679534+00:00
+EXIT=0

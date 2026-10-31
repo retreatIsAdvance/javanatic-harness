@@ -869,7 +869,7 @@ public record ToolDefinition(
 
 ## 8.1 LSP Observation and Process Contract（it29）
 
-停 0 已限定通过，JDT LS `1.63.0 / 202610191322` 为确认路线，compiler API 备选不触发，T1–T3 方向已裁。`lsp/lsp` Definition 已写并经[停 1 评审通过并关闭](../plan/evidence/iteration-29/stop1-acceptance.txt)；`lsp/jdtls` Provider 已交付（`JdtlsProvider` implements `LspService` + `LspPeer`/`LspFrameReader` 自有 Content-Length 字节帧边界，T5 三条实现边界落地），真实 JDT LS 生命周期取证完成并经[停 2 评审通过并关闭](../plan/evidence/iteration-29/stop2-acceptance.txt)。仍无可挂载 `lsp-tool`、无装配行，T4/T6/T7 未整体批准、产品验收未执行，当前停 3（Tool Consumer + 装配 + 验收）进行中。契约细节及 Provider 验收矩阵见[停 1 seam 提案](../plan/evidence/iteration-29/stop1-seam-design.md)，[验证汇总](../plan/evidence/iteration-29/stop1-verification-summary.txt)记录纯值 17 项测试、10 项突变与 full 构建；这些不代替真实生命周期验证。[停 1 审查包](../plan/evidence/iteration-29/stop1-review-packet.md)冻结保留当时提案，不进入 Consumer / 装配。
+停 0 已限定通过，JDT LS `1.63.0 / 202610191322` 为确认路线，compiler API 备选不触发，T1–T3 方向已裁。`lsp/lsp` Definition 已写并经[停 1 评审通过并关闭](../plan/evidence/iteration-29/stop1-acceptance.txt)；`lsp/jdtls` Provider 已交付（`JdtlsProvider` implements `LspService` + `LspPeer`/`LspFrameReader` 自有 Content-Length 字节帧边界，T5 三条实现边界落地），真实 JDT LS 生命周期取证完成并经[停 2 评审通过并关闭](../plan/evidence/iteration-29/stop2-acceptance.txt)。停 3 进行中：`JdtlsPlugin` 装配件（S1，双通道 SPI）与 `lsp/tool` 三工具 Consumer（S2）已交付；装配面已落（S3：base 两行 `lsp-jdtls` 禁用行 + `lsp-tool`、四处消费面、`lsp:` 治理摘要行）。产品验收（R1 回放 / jlink 真跑 / 真实三能力探针 / 模型在环）为停 3 S4–S5，未执行。契约细节及 Provider 验收矩阵见[停 1 seam 提案](../plan/evidence/iteration-29/stop1-seam-design.md)，[验证汇总](../plan/evidence/iteration-29/stop1-verification-summary.txt)记录纯值 17 项测试、10 项突变与 full 构建；这些不代替真实生命周期验证。[停 1 审查包](../plan/evidence/iteration-29/stop1-review-packet.md)冻结保留当时提案，不进入 Consumer / 装配。
 
 - **Definition 导出面**：`LspService.KEY`（`lsp`）与同步阻塞的 `diagnostics` / `definition` / `references`、拥有者调用的 `close()`；`LspQuery` / `LspPositionQuery` 显式总期限与等待窗，位置为零基 UTF-16；`LspResult<T>` 区分 `Observed` / `NotReady` / `Stale` / `TimedOut`，传输等错误走 `LspException` / `LspErrorCode`，取消原样传播。`LspAnchor` / `LspObservation` / `LspEvidence` 等纯值类型承载观察事实，构造校验不证明 Provider 已等待或读取文件。
 - **依赖与发现**：`lsp/lsp` 仅依赖 `kernel/core` + `llm/llm`（`ServiceKey` / `AbortSignal`），零第三方依赖；JPMS `io.javanatic.harness.lsp` exports / opens `io.javanatic.harness.lsp`（opens 仅供同包测试反射）。本批无 Plugin、ServiceLoader 注册、配置键或事件新增。
@@ -896,10 +896,10 @@ public record ToolDefinition(
 | MCP | `mcp.mcp` | `mcp-stdio`（stdio）+ `mcp-http`（Streamable HTTP，it27.1）；两者经 `mcp-registry` 聚合 | `mcp.tool` | ✅（it27.1；轮屏障换代 + `mcp/catalog` + 双 transport）|
 | Web | `web.web` | `web-fetch-http`（钉地址公网抓取）+ `web-search-deepseek`（原生搜索，keyless 行 disabled）| `web.tool` | ✅（it28；双 Provider + 信任前缀 + 分层截断）|
 | Compaction | `core.agent-loop`（`CompactionService`） | 同模块 `CompactionPlugin` | agent-loop | 已实现；非独立三模块布局 |
-| LSP | `lsp/lsp`（`LspService` + 观察值类型） | `jdtls`（`lsp/jdtls` `JdtlsProvider`；已实现，停 3 装配） | 无（停 3 进行中） | Definition 已写、停 1 已通过并关闭；Provider 已交付、真实生命周期取证完成、[停 2 已通过并关闭](../plan/evidence/iteration-29/stop2-acceptance.txt)；Consumer / 装配 / 产品验收未执行 |
+| LSP | `lsp/lsp`（`LspService` + 观察值类型） | `lsp-jdtls`（`lsp/jdtls` `JdtlsProvider` + `JdtlsPlugin` 双通道装配件，停 3 S1） | `lsp-tool`（三工具 + 双态 + 措辞纪律，停 3 S2） | Definition 停 1 已通过并关闭；Provider 真实生命周期停 2 已通过并关闭；装配面停 3 S3 已落（base 两行 + 四处消费面 + `lsp:` 摘要行）；产品验收（R1 回放 / 镜像真跑 / 真机探针 / 模型在环）进行中 |
 | Subagent / Terminal / Jobs | 规划预留，未建独立 Definition | — | — | 按路线另行确认 |
 
-规划预留不等于接口已实现，更不等于可挂载能力。LSP 已有 Definition 与 `JdtlsProvider` 实现，但 Provider 尚无 Plugin / ServiceLoader 注册、无可挂载 `lsp-tool`；不能把纯值聚焦验证或 Provider 真实生命周期取证当作产品验收。停 1 契约已通过并关闭，Provider 真实生命周期已随停 2 通过并关闭，Consumer / 装配在停 3 实现，仍须按 [it29](../plan/iteration-29.md) 的后续裁决推进。
+规划预留不等于接口已实现，更不等于可挂载能力。LSP 已有 Definition、`JdtlsProvider` 实现与 `JdtlsPlugin` 装配件（双通道 SPI）、`lsp/tool` 三工具 Consumer 与装配面；但产品验收（R1 回放零进程、jlink 镜像真跑、真实三能力探针、模型在环）未执行——不能把聚焦验证或 Provider 真实生命周期取证当作产品验收。停 1 契约已通过并关闭，Provider 真实生命周期已随停 2 通过并关闭，Consumer / 装配已随停 3 交付，仍须按 [it29](../plan/iteration-29.md) 的后续裁决推进。
 
 ## 10. 三角色纪律的编译期保障
 

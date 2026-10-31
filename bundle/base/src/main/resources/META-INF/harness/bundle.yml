@@ -108,6 +108,17 @@ rows:
       maxSourceChars: 524288
       maxOutputBytes: 262144
       maxResults: 8
+  # LSP 工具生态（it29）：lsp-jdtls 是 Provider 装配件——serverDir /
+  # configurationDir / projectRoot 是组合者提供的路径、无有意义缺省，故以
+  # 禁用行入 base（沿 compaction 的 disabled: true 先例）：缺省组合零 LSP
+  # 进程、零工具。组合者用 `replace: true` 原地启用（Replace 位置保持 =
+  # 仍在 lsp-tool 之前）；若改 remove+include 落到行尾，lsp-tool 先 apply、
+  # 双态失效零工具（负例证据见 S4 真机跑）。
+  # lsp-tool 是 Consumer：LspService 在场才注册三工具（双态沿 web_search 先例），
+  # 恒需审批；结果文本四态逐字措辞（空结果只称「拉取时点无诊断」）。
+  - plugin: lsp-jdtls
+    disabled: true
+  - plugin: lsp-tool
   # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
   - plugin: todo
     config:

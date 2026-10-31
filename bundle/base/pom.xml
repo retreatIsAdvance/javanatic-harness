@@ -118,6 +118,18 @@
             <artifactId>harness-web-tool</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- it29 lsp 两行入 base bundle：测试模块路径需可见 ServiceLoader 插件;
+             lsp-jdtls 以禁用行在场（缺省零进程），lsp-tool 双态零工具 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-lsp-jdtls</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-lsp-tool</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-fs-tool</artifactId>

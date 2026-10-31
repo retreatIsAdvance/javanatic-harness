@@ -21,6 +21,10 @@
         </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-kernel-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-llm-llm</artifactId>
         </dependency>
         <dependency>

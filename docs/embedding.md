@@ -42,16 +42,18 @@
          （0.1.0 用户把 shell-local 换成 harness-shell-bash-local，见 §7 版本面）
          0.3.0-SNAPSHOT 候选件的闭包另有 skill 三件（skill-skill / skill-local /
          skill-tool）、mcp 四坐标（mcp-mcp / mcp-stdio / mcp-http / mcp-tool；
-         mcp-mcp 提供 mcp-registry 行，其余三坐标各为一行）与 web 四坐标
+         mcp-mcp 提供 mcp-registry 行，其余三坐标各为一行）、web 四坐标
          （web-web / web-fetch-http / web-search-deepseek / web-tool；web-web 是
-         契约件，其余三坐标各为一行）：
+         契约件，其余三坐标各为一行）与 lsp 三坐标（lsp-lsp / lsp-jdtls /
+         lsp-tool；lsp-lsp 是契约件，lsp-tool 进 base bundle，lsp-jdtls 以
+         禁用行进 base——组合者 `replace: true` 原地启用）：
          0.2.0 发布面冻结于其前——示例收在 candidate-closure profile -->
 </dependencies>
 ```
 
-**为什么是 16 条显式依赖而不是一两条**：组合装配期做**双向校验**——每个行引用的插件都必须被发现，每个被发现的插件都必须被某个行引用。`harness-bundle-base` 的发布 POM 只声明编译面依赖，行引用的插件实现（fs/shell/persistence/approval/mcp/web…）要由**消费方自持**，否则 `boot()` 会点名缺失项（文案见 §6）。这正是「不靠 reactor 偶然提供的依赖」的验收点：独立工程写全闭包（基础块 16 条；候选腿再加 11 条）。
+**为什么是 16 条显式依赖而不是一两条**：组合装配期做**双向校验**——每个行引用的插件都必须被发现，每个被发现的插件都必须被某个行引用。`harness-bundle-base` 的发布 POM 只声明编译面依赖，行引用的插件实现（fs/shell/persistence/approval/mcp/web/lsp…）要由**消费方自持**，否则 `boot()` 会点名缺失项（文案见 §6）。这正是「不靠 reactor 偶然提供的依赖」的验收点：独立工程写全闭包（基础块 16 条；候选腿再加 14 条）。
 
-**闭包随发布面走**：0.3 候选闭包比 0.2.0 多 11 个坐标——skill 三件（`skill-skill` / `skill-local` / `skill-tool`）、mcp 四坐标（`mcp-mcp` / `mcp-stdio` / `mcp-http` / `mcp-tool`；`mcp-mcp` 提供 `mcp-registry` 行，其余三坐标各为一行）与 web 四坐标（`web-web` / `web-fetch-http` / `web-search-deepseek` / `web-tool`；`web-web` 是契约件，其余三坐标各为一行，三行都在 base bundle）。示例把它们收在 `candidate-closure` profile——候选腿默认生效，发布腿以 `-P '!candidate-closure'` 停用（机制见 integration/verify-consumer.sh）。升级发布件时，新发布版已含的坐标折回基础依赖块。
+**闭包随发布面走**：0.3 候选闭包比 0.2.0 多 14 个坐标——skill 三件（`skill-skill` / `skill-local` / `skill-tool`）、mcp 四坐标（`mcp-mcp` / `mcp-stdio` / `mcp-http` / `mcp-tool`；`mcp-mcp` 提供 `mcp-registry` 行，其余三坐标各为一行）、web 四坐标（`web-web` / `web-fetch-http` / `web-search-deepseek` / `web-tool`；`web-web` 是契约件，其余三坐标各为一行，三行都在 base bundle）与 lsp 三坐标（`lsp-lsp` / `lsp-jdtls` / `lsp-tool`；`lsp-lsp` 是契约件，`lsp-tool` 进 base bundle，`lsp-jdtls` 以禁用行进 base——serverDir / configurationDir / projectRoot 无有意义缺省，组合者用 `replace: true` 原地启用并给配置，缺省组合零 LSP 进程零工具）。示例把它们收在 `candidate-closure` profile——候选腿默认生效，发布腿以 `-P '!candidate-closure'` 停用（机制见 integration/verify-consumer.sh）。升级发布件时，新发布版已含的坐标折回基础依赖块。
 
 ## 3. 消费两条路：classpath（默认）与 module-path
 

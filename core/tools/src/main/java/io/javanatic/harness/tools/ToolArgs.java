@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalLong;
 
 /**
  * 已校验的工具实参（模型 JSON 经 {@link #parse} 按 schema 校验后封装）。
@@ -89,6 +90,12 @@ public final class ToolArgs {
     /** 读必填数值字段。 */
     public long readLong(String field) {
         return node.get(field).asLong();
+    }
+
+    /** 读可选数值字段（schema 以 {@link ValueSchema.Opt} 包时缺失合法；缺省值由调用方决定）。 */
+    public OptionalLong readOptionalLong(String field) {
+        JsonNode value = node.get(field);
+        return value == null ? OptionalLong.empty() : OptionalLong.of(value.asLong());
     }
 
     /** 读必填布尔字段。 */
