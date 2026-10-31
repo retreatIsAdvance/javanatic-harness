@@ -25,6 +25,8 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.interaction.approval;
     requires io.javanatic.harness.interaction.commands;
     requires io.javanatic.harness.bundle.base;
+    // 测试：LspReplayTest 的 fake LSP service 实现 LspService（Definition 契约）
+    requires io.javanatic.harness.lsp;
     // 测试：WebReplayTest 的 fake 抓取 provider 实现 WebFetchService（Definition 契约）
     requires io.javanatic.harness.web;
     requires org.yaml.snakeyaml;

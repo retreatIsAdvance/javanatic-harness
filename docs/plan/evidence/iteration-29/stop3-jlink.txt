@@ -1,0 +1,88 @@
+停 3 · S4 jlink 镜像真跑 — keyless / 启用档 / 行序负例三态 + 零残留复验
+时间：2026-10-31
+环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)（仅构建用；镜像自带运行时），
+      Maven=~/Documents/apache-maven-3.10.0/bin/mvn
+说明：jlink jh 镜像真跑三条 verify 腿（keyless 缺省 / replace 启用档 / remove+include
+      行序负例），每条腿前后 pgrep equinox.launcher 零进程复验（探针跑完后机器面无
+      其他 LS 进程）；启用档与负例腿均真实拉起钉定 JDT LS 并随 scope 关闭收敛。
+      回放证据见 stop3-replay.txt，真机三能力探针见 stop3-real-three-capabilities.txt。
+
+------------------------------------------------------------------------
+一、镜像构建
+------------------------------------------------------------------------
+  mvn -B -pl dist/jh -am package -DskipTests > /tmp/it29-s4-jlink-build.log 2>&1
+  → BUILD_EXIT=0
+镜像：dist/jh/target/jlink-image/bin/jh（jlink --add-modules 三行含
+  io.javanatic.harness.lsp / .lsp.jdtls / .lsp.tool —— 装配同步面在镜像内生效）
+运行目录：/Users/abel_yang/study/deepseek/jh-it29-stop3-20261031/jh/（profiles /
+  project 夹具复制 / home 双 settings / 暖 .m2 / userhome 隔离 / ws）
+
+------------------------------------------------------------------------
+二、keyless 缺省腿（EXIT=0）
+------------------------------------------------------------------------
+命令：
+  env -u DEEPSEEK_API_KEY JDK_JAVA_OPTIONS=-Duser.home=…/jh/userhome \
+    dist/jh/target/jlink-image/bin/jh --verify --workspace=…/jh/ws
+  → KEYLESS_EXIT=0；PGREP 前后均零 launcher 进程
+
+输出逐字（lsp 行）：
+  composition: 30 rows, 37 discovered, 0 unreferenced
+  lsp: lsp-tool; tools=0
+（与 HeadlessVerifyTest 逐字断言一致；lsp-jdtls 禁用行承载缺省组合可 boot，
+  零进程零工具——B15 口径不变。）
+
+------------------------------------------------------------------------
+三、启用档腿（replace 原地启用，EXIT=0）
+------------------------------------------------------------------------
+命令（profile=enabled.yml：lsp-jdtls 行 replace: true + B27 八键 config）：
+  jh --verify --workspace=…/jh/ws --profile=…/jh/profiles/enabled.yml
+  → ENABLED_EXIT=0；PGREP 前后均零 launcher 进程
+
+输出逐字：
+  composition: 31 rows, 37 discovered, 0 unreferenced
+  lsp: lsp-jdtls + lsp-tool;
+      tools=lsp_definition,lsp_diagnostics,lsp_references (approval-required)
+尾行（真实进程随 scope 关闭收敛）：
+  lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=false,
+  dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0,
+  ioThreadsStopped=true
+（stdoutEof=false 系 close 距启动仅 4s、perl 包装 stdout 未及 EOF——exit=0、
+  unanswered=0、ioThreadsStopped=true 且 pgrep 零残留，收尾证据完整。）
+
+------------------------------------------------------------------------
+四、行序负例腿（remove + include 落行尾，EXIT=0）
+------------------------------------------------------------------------
+命令（profile=order-negative.yml：remove: true 摘 lsp-jdtls 行后普通 include
+  —— 插件已不在行集，Include 走 tail append，lsp-jdtls 落到 lsp-tool 之后）：
+  jh --verify --workspace=…/jh/ws --profile=…/jh/profiles/order-negative.yml
+  → NEGATIVE_EXIT=0；PGREP 前后均零 launcher 进程
+
+输出逐字：
+  composition: 31 rows, 37 discovered, 0 unreferenced
+  lsp: lsp-tool + lsp-jdtls; tools=0
+尾行（真实进程随 scope 关闭收敛）：
+  lsp server 'jdtls-project' close: exit=OptionalInt[0], stdoutEof=true,
+  dedicatedGroup=true (perl setsid wrapper), unanswered=0, pending=0,
+  ioThreadsStopped=true
+
+lsp 行插件序翻转（lsp-tool 在前）正是行序负例的直接证据：两行都挂载
+（31 rows）、LspService 在 lsp-tool apply 时点尚未提供 → 双态失效零工具，
+与设计 §7「行序负例 → 双态失效零工具」逐字一致；lsp-jdtls 行仍在行尾
+正常 apply（真实拉起 LS 进程），不是「行丢失」。
+
+------------------------------------------------------------------------
+五、诚实记录
+------------------------------------------------------------------------
+a. 首轮 pgrep「launcher processes remain」系三能力探针仍在跑（其自有 LS 进程），
+   非 jh 残留；探针结束后各腿 PGREP 前后均零——keyless 零进程由设计承载
+   （禁用行），启用/负例两腿的收敛由尾行 close 证据 + pgrep 双复验承载。
+b. 启用档工具序（lsp_definition,lsp_diagnostics,lsp_references）按工具名排序
+   输出，与 S3 文档预告的三工具集合一致、顺序以本档实际输出为准。
+
+------------------------------------------------------------------------
+结论
+------------------------------------------------------------------------
+镜像构建 EXIT=0；三态 verify 计数逐字命中（30/37/0、31/37/0、31/37/0），
+工具面双态与行序负例零工具成立，每腿 EXIT=0 + 零残留；与
+stop3-consumer-design.md §7 及 S3 装配档「启用档与行序负例移 S4 真机跑」的
+预告一致。

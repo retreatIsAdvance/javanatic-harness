@@ -1,0 +1,74 @@
+停 3 · S4 真实 LS 三能力探针 — definition / references 真机取证（ALL ASSERTIONS PASSED）
+时间：2026-10-31（run 2026-10-31T08:01:03Z → 08:18:48Z，17m45s）
+环境：JAVA_HOME=/Users/abel_yang/Library/Java/JavaVirtualMachines/temurin-25.jdk/Contents/Home
+说明：把生产 JdtlsProvider 接到钉定 1.63.0 / 202610191322 真机（停 0 解包工件 +
+      停 0 夹具工作区复制到自有运行目录），≥3 启停逐轮对三能力（diagnostics /
+      definition / references）取证。类名非 *Test，surefire 默认包含规则不匹配，
+      模块测试计数不受影响；以 java -cp 类路径模式运行。退出码 0 = 全部断言通过。
+      回放证据见 stop3-replay.txt，jlink 三态见 stop3-jlink.txt。
+
+------------------------------------------------------------------------
+一、入口与钉定
+------------------------------------------------------------------------
+探针：lsp/jdtls/src/test/java/.../JdtlsThreeCapabilityProbe.java
+入口脚本：integration/verify-stop3-real.sh（固化类路径 + 钉定参数；--run-root /
+  --stop0-root / --java-home / --rounds）
+命令：
+  bash integration/verify-stop3-real.sh
+    --run-root /Users/abel_yang/study/deepseek/jh-it29-stop3-20261031/run
+    --stop0-root /Users/abel_yang/study/deepseek/jh-it29-stop0-20261029 --rounds 3
+    > /Users/abel_yang/study/deepseek/jh-it29-stop3-20261031/probe-evidence.txt 2>&1
+PROBE_EXIT=0；尾部：== verdict: ALL ASSERTIONS PASSED
+
+------------------------------------------------------------------------
+二、逐轮（≥3 启停；每轮三能力 + close 证据行四要素逐轮复验）
+------------------------------------------------------------------------
+round 1（冷 300s/240s）：pid=9324 pgid=OptionalLong[9324]
+  diagnostics: Observed PUBLISHED_DIAGNOSTICS seq=65 items=1 codes=[268435844]
+  definition : Observed REQUEST_RESPONSE seq=77 items=1 [Calc.java@2:19]
+  references : Observed REQUEST_RESPONSE seq=78 items=2
+               [App.java@5:15; Calc.java@2:19]
+  close INFO: exit=OptionalInt[0], stdoutEof=true, dedicatedGroup=true
+    (perl setsid wrapper), unanswered=0, pending=0, ioThreadsStopped=true
+  post-close: jhThreads=0 no live launcher child (residual-free)
+round 2（暖 120s/90s）：pid=14087 pgid=OptionalLong[14087]
+  diagnostics: Observed PUBLISHED seq=57 items=1 codes=[268435844]
+  definition : Observed REQUEST_RESPONSE seq=59 items=1 [Calc.java@2:19]
+  references : Observed REQUEST_RESPONSE seq=60 items=2 [App.java@5:15; Calc.java@2:19]
+  close/post-close 同上四要素全达标
+round 3（暖 120s/90s）：pid=17815 pgid=OptionalLong[17815]
+  diagnostics: Observed PUBLISHED seq=57 items=1 codes=[268435844]
+  definition : Observed REQUEST_RESPONSE seq=59 items=1 [Calc.java@2:19]
+  references : Observed REQUEST_RESPONSE seq=60 items=2 [App.java@5:15; Calc.java@2:19]
+  close/post-close 同上四要素全达标
+
+3 轮 pgid==pid（专属组成立）；每轮 close 后 children 有界扫描无 launcher 子进程
+（无残留）。serverVersion 每轮 OptionalInt.empty —— 1.63.0 真机发布批次无
+version 字段（与停 2 S5 实录一致，不作锚）。
+
+三能力真机断言（每轮）：
+- diagnostics：PUBLISHED_DIAGNOSTICS 非空（items=1，code 268435844 = 停 0
+  夹具未使用导入警告，与停 2 S5 状态 A2 同源复现）；
+- definition（(5,15) = Calc.twice 引用位）：REQUEST_RESPONSE 非空且唯一位置
+  URI 收于 probe/Calc.java（跳转目标 = 定义位 2:19）；
+- references（同位置）：REQUEST_RESPONSE ≥2 且同时含 Calc.java（声明位，带
+  includeDeclaration）与 App.java（调用位 5:15）。
+
+------------------------------------------------------------------------
+三、诚实记录
+------------------------------------------------------------------------
+a. 本探针 diagnostics 用停 0 清洁夹具（String label = "ok"），三能力取证轮
+  统一以 warning-only 批次为「非空诊断」证据（code 268435844）；类型错误正例
+  （code 16777233）已在停 2 S5 四态真机跑中取证，本档不重复。
+b. 冷轮（round 1）总时长约 8m20s：首启含进程 spawn + 项目索引构建；暖轮
+  （round 2/3）各约 4m40s，与停 2 S5 暖轮量级一致。
+
+------------------------------------------------------------------------
+结论
+------------------------------------------------------------------------
+真实 JDT LS 下三能力（diagnostics / definition / references）3 轮启停全部断言
+通过、PROBE_EXIT=0，每轮 close 证据行四要素 + 零残留复验成立；工具 Consumer
+的三能力请求路径（textDocument/diagnostic、definition、references with
+includeDeclaration）在真机上的 REQUEST_RESPONSE 证据齐备。与
+stop3-consumer-design.md §7 S4「真实 LS 三能力探针」一致；配合
+stop3-replay.txt / stop3-jlink.txt 与 stop3-review-packet.md（S5 出包）使用。

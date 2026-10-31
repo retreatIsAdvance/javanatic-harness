@@ -1,0 +1,79 @@
+停 3 · S4 R1 回放零 LS 进程重建 — LspReplayTest 全绿 + 措辞纪律双突变
+时间：2026-10-31
+环境：JAVA_HOME=$(/usr/libexec/java_home -v 25)，
+      Maven=~/Documents/apache-maven-3.10.0/bin/mvn
+说明：R1 回放证据（零 LS 进程——fake 服务无进程、无网络，回放腿空脚本纯账本重放）
+      由 examples/headless 测试类 LspReplayTest 承担（沿 WebReplayTest 先例）；
+      措辞纪律两条突变（拉取成功→拉取完成 / 拉取时点无诊断→项目无错误）均必红，
+      还原逐字节一致复绿。本档只做回放与措辞面；jlink 真跑见 stop3-jlink.txt，
+      真机三能力探针见 stop3-real-three-capabilities.txt。
+
+------------------------------------------------------------------------
+一、LspReplayTest 结构（镜像 WebReplayTest）
+------------------------------------------------------------------------
+源文件：examples/headless/src/test/java/io/javanatic/harness/examples/headless/LspReplayTest.java
+- SESSION = "it29-lsp-replay"；DOC = file:///proj/src/main/App.java（fake 观察锚钉定）。
+- 期望结果逐字（EXPECTED_RESULT）：
+    拉取成功（hash bbbbbbbb，项目代 3，等待窗 16.0s）；诊断 1 条：
+      src/main/App.java:11:4 [ERROR] Cannot resolve symbol 'Foo'
+  （等待窗 16.0s 来自 LspObservation 记录序：requiredWait=15s、elapsedWait=16s——
+    实测渲染取 elapsedWait，初稿误按 15.0s 断言被红掉后订正，见 §四-a。）
+- live 腿：FakeLsp（私有静态类，implements Plugin，提供 LspService；definition /
+  references 接线抛 UnsupportedOperationException——本回放夹具只接线 diagnostics）+
+  两轮脚本（turn1 看诊断→工具调用 lsp_diagnostics→Finish(TOOL_USE)；turn2 已读→Finish(STOP)）。
+  断言：fake.calls()==1；结果文本逐字等于 EXPECTED_RESULT；事件含 tool/call 与
+  tool/result；ToolCallEvent 名 containsExactly("lsp_diagnostics")；无 lsp/ 类型事件。
+- 回放腿：全新 FakeLsp + 空脚本（ReplayPlugin 纯账本重放）：
+  内容逐字节相等；事件序列 containsExactlyElementsOf(liveEvents)；
+  replayLsp.calls()==0 —— 重建不触碰任何 LSP service（零进程、零联网）。
+
+------------------------------------------------------------------------
+二、命令与计数
+------------------------------------------------------------------------
+聚焦（live + 回放双腿）：
+  mvn -B -pl examples/headless -am -Dtest=LspReplayTest
+    -Dsurefire.failIfNoSpecifiedTests=false test
+    > /tmp/it29-lsp-replay-test2.log 2>&1 → EXIT=0
+  surefire XML：LspReplayTest 1/0/0/0
+
+headless 全量（S4 门禁腿）：
+  mvn -q -pl examples/headless -am test > /tmp/it29-s4-headless-full.log 2>&1 → EXIT=0
+  surefire XML 求和：85/0/0/0（停 3 前 84 + LspReplayTest 1）
+
+------------------------------------------------------------------------
+三、措辞纪律突变（破坏必红 → 还原复绿）
+------------------------------------------------------------------------
+突变 1（非空批次 header 措辞；LspToolOutput.java 首行锚模板）：
+  「拉取成功（hash …」→「拉取完成（hash …」→ 聚焦跑
+  Tests run: 1, Failures: 1 —— expected 含「拉取成功（hash bbbbbbbb…」
+  but was「拉取完成（hash bbbbbbbb…」必红（/tmp/it29-lsp-replay-mut.log）
+  还原（备份 SHA 98f2bb12741376542bcadd04c667c15de4c4fb63 逐字节一致）→
+  复跑 EXIT=0 复绿（/tmp/it29-lsp-replay-regreen.log）
+
+突变 2（用户点名「改成『项目无错误』必红」；QUIET_WINDOW 账面措辞）：
+  LspToolOutput.java 第 66 行「…s），拉取时点无诊断。」→「…s），项目无错误。」→
+  聚焦跑（LspToolOutputTest + LspToolPluginTest）：
+  Tests run: 22, Failures: 3 —— LspToolOutputTest 2 红 + LspToolPluginTest 1 红
+  （两处逐字断言同源措辞，禁用词替换必红；/tmp/it29-lsp-tool-mut-red.log）
+  还原（cp 备份，SHA 98f2bb12…逐字节一致）→ 复跑 22/0/0/0 EXIT=0 复绿
+  （/tmp/it29-lsp-tool-mut-regreen.log）
+
+两条突变共同证明：结果文本是逐字模板钉死的，任何改写（含「项目无错误」类
+包装）都会在测试面被红掉——措辞纪律不是注释承诺而是可执行断言。
+
+------------------------------------------------------------------------
+四、诚实记录
+------------------------------------------------------------------------
+a. EXPECTED_RESULT 初稿等待窗按 15.0s 断言被红掉：LspObservation 记录字段序为
+   (before, after, requiredWait, elapsedWait, …)，夹具传 (15s, 16s) 即
+   requiredWait=15s、elapsedWait=16s，渲染取 elapsedWait → 订正期望为 16.0s 复绿。
+b. 突变 2 首跑 MUT_EXIT=1 系工作目录漂移（"Could not find the selected project
+   in the reactor"）——假红不算证据；dir_path 钉仓库根重跑得到真实红
+   （22/3），红绿依据均为钉根后的运行。
+
+------------------------------------------------------------------------
+结论
+------------------------------------------------------------------------
+R1 回放双腿全绿（重建零 LSP 进程、事件逐字节重放、结果文本逐字），措辞纪律
+两条突变必红+逐字节还原复绿，headless 全量 85/0/0/0；与 stop3-consumer-design.md
+§7 S4 及停 3 评审重点 ①（措辞纪律含「项目无错误」突变）一致。
