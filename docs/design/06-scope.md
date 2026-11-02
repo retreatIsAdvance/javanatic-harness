@@ -191,7 +191,7 @@ rows:
   - plugin: fs-observation-policy
 ```
 
-LSP 停 0 已通过（裸进程工程闭环限定结论），JDT LS 路线确认，compiler API 备选不触发；T1–T3 方向已裁并随停 1 落定，`lsp/lsp` Definition 已写、停 1 已通过并关闭，停 2 Provider 真实生命周期已通过并关闭；停 3（Tool Consumer + 装配）S1–S3 已交付——`lsp/jdtls` 增 `JdtlsPlugin`、新模块 `lsp/tool` 三工具（双通道 SPI），base 增 `lsp-jdtls` 禁用行 + `lsp-tool` 行。preset 不显式启用 LSP 行（缺省组合零进程零工具，组合者 `replace: true` 原地启用），真实生命周期验证已完成、产品验收未执行，T4–T7 未整体批准。现行裁决见 [it29](../plan/iteration-29.md)、[停 0 终裁](../plan/evidence/iteration-29/stop0-acceptance.txt)与[停 1 终裁](../plan/evidence/iteration-29/stop1-acceptance.txt)，观察与进程约束见 [05 §8.1](05-capability-seam.md#81-lsp-observation-and-process-contractit29)。
+LSP 停 0 已通过（裸进程工程闭环限定结论），JDT LS 路线确认，compiler API 备选不触发；T1–T3 方向已裁并随停 1 落定，`lsp/lsp` Definition 已写、停 1 已通过并关闭，停 2 Provider 真实生命周期已通过并关闭；停 3（Tool Consumer + 装配 + 验收）已交付并通过关闭——`lsp/jdtls` 增 `JdtlsPlugin`、新模块 `lsp/tool` 三工具（双通道 SPI），base 增 `lsp-jdtls` 禁用行 + `lsp-tool` 行，产品验收（R1 回放 / 镜像真跑 / 真机三能力 / 模型在环）已随停 3 执行并经[用户终裁通过放行](../plan/evidence/iteration-29/stop3-acceptance.txt)。preset 不显式启用 LSP 行（缺省组合零进程零工具，组合者 `replace: true` 原地启用）。it29 已关账 = 0.3 四站全落；T4–T7 未整体批准。现行裁决见 [it29](../plan/iteration-29.md)、[停 0 终裁](../plan/evidence/iteration-29/stop0-acceptance.txt)与[停 1 终裁](../plan/evidence/iteration-29/stop1-acceptance.txt)，观察与进程约束见 [05 §8.1](05-capability-seam.md#81-lsp-observation-and-process-contractit29)。
 
 **档位不在 preset 里配**：沙箱模式是组合层 `sandbox-policy` 行的 `mode`（词表
 `read-only` / `workspace-write` / `danger-full-access`，写法见

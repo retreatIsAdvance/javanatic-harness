@@ -62,7 +62,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS
 ## 构建与验证
 
 ```sh
-mvn -B package              # 全量编译打包（46 个 reactor 模块，513 项测试；环境门控用例自跳过）
+mvn -B package              # 全量编译打包（64 个项目 = 16 聚合 + 48 叶子，47 个代码模块；1202 项测试 0 失败，31 项环境门控自跳过；2026-11-02 surefire XML 计数口径）
 mvn -B -pl :harness-kernel-core -am package   # 单模块及其依赖
 ```
 

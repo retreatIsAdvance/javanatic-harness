@@ -14,3 +14,9 @@ docs/plan/evidence/iteration-29/stop0-download-ranges-01/*-headers.txt -text !eo
 # 冻结纪律「证据原文不改写」优先于空白规范 ⇒ whitespace 豁免 + 不进文本规范化；
 # 检测面 = 逐字节还原核验与 MD5 对账（如 known-good provider MD5 848b0dbd…）。
 docs/plan/evidence/iteration-29/stop2-*.txt -text !eol whitespace=-trailing-space,-blank-at-eof
+
+# it29 停 3 终裁与模型在环实录（用户裁决原文冻结 + 回贴实录落盘）：
+# 尾随空白是真实捕获字节（模型复述 / 工具结果文本），
+# 冻结纪律「裁决与实录原文不改写」优先于空白规范 ⇒ whitespace 豁免 + 不进文本规范化；
+# 检测面 = SHA 对账（stop3-acceptance.txt 冻结原文、stop3-model-in-loop.txt 回贴实录）。
+docs/plan/evidence/iteration-29/stop3-*.txt -text !eol whitespace=-trailing-space,-blank-at-eof

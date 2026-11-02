@@ -15,7 +15,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 ## 2. 完整模块清单
 
-当前根 reactor 含根共 **62 个项目 = 16 个聚合（含根）+ 46 个叶子**；叶子中 **45 个代码模块**有 `module-info.java`，另一个为无代码的 `dist/jh`。it29 停 1 增量仅 `lsp` 聚合 + `lsp/lsp` Definition 叶子；不增加 Provider / Consumer / 装配行。计数由 Python 递归根 POM `<modules>` 并核对源码 `module-info.java` 实测，排除 `target`（2026-10-29）；导出包计数见 [12 §2](12-api-stability.md#2-包级-apijpms-导出面)。
+当前根 reactor 含根共 **64 个项目 = 16 个聚合（含根）+ 48 个叶子**；叶子中 **47 个代码模块**有 `module-info.java`，另一个为无代码的 `dist/jh`。it29 增量 = `lsp` 聚合 + `lsp/lsp` Definition + `lsp/jdtls` Provider + `lsp/tool` Consumer 三个叶子。计数由 Python 递归根 POM `<modules>` 并核对源码 `module-info.java` 实测，排除 `target`（2026-10-31）；导出包计数见 [12 §2](12-api-stability.md#2-包级-apijpms-导出面)。
 
 ### Kernel 层（框架内核，零业务依赖）
 
@@ -45,7 +45,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 ### Capability 层（可替换 seam）
 
-完整能力按 **Definition + Provider(s) + Consumer** 三角色划分（[05](05-capability-seam.md)）；LSP 当前仅 Definition 已写、停 1 已通过并关闭，不表示三角色均已实现：
+完整能力按 **Definition + Provider(s) + Consumer** 三角色划分（[05](05-capability-seam.md)）；LSP 三角色均已实现（Definition 随停 1、Provider 随停 2、Consumer 随停 3 通过并关闭，it29 已关账）：
 
 #### LLM（模型适配器）
 
@@ -100,7 +100,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 |---|---|---|
 | `harness-lsp-lsp`（`lsp/lsp`） | Definition | `LspService`（`diagnostics` / `definition` / `references` / `close`，`KEY` = `lsp`）+ 查询 / UTF-16 位置 / 诊断 / 定位值类型、`LspAnchor` / `LspObservation` / `LspEvidence` 观察模型、`LspResult` 四态与 typed 错误。Definition 已写、停 1 已通过并关闭，不是可挂载能力 |
 
-依赖边（实况）：`lsp/lsp` → `kernel/core` + `llm/llm`，分别提供 `ServiceKey` 与取消词表；JPMS `io.javanatic.harness.lsp` requires `io.javanatic.harness.kernel` + `io.javanatic.harness.llm.llm`，exports / opens `io.javanatic.harness.lsp`（opens 为同包测试反射）。零第三方依赖，无 Plugin / ServiceLoader 注册、配置键、事件或装配行新增。停 0 限定通过、T1–T3 方向已裁；无 Provider / Consumer，T4–T7 未整体批准、产品验收未执行。契约与待验矩阵见 [05 §8.1](05-capability-seam.md#81-lsp-observation-and-process-contractit29)及[停 1 提案](../plan/evidence/iteration-29/stop1-seam-design.md)。
+依赖边（实况）：`lsp/lsp` → `kernel/core` + `llm/llm`，分别提供 `ServiceKey` 与取消词表；JPMS `io.javanatic.harness.lsp` requires `io.javanatic.harness.kernel` + `io.javanatic.harness.llm.llm`，exports / opens `io.javanatic.harness.lsp`（opens 为同包测试反射）。零第三方依赖，无 Plugin / ServiceLoader 注册、配置键、事件或装配行新增。停 0 限定通过、T1–T3 方向已裁；Provider（`lsp/jdtls`）已随停 2、Consumer（`lsp/tool`）已随停 3 交付并全部通过关闭（it29 已关账，三角色全落；依赖边见 §3 依赖图），T4/T6/T7 未整体批准。契约与待验矩阵见 [05 §8.1](05-capability-seam.md#81-lsp-observation-and-process-contractit29)及[停 1 提案](../plan/evidence/iteration-29/stop1-seam-design.md)。
 
 #### Shell（命令执行）
 
@@ -209,8 +209,10 @@ flowchart TD
         webtool[harness-web-tool]
     end
 
-    subgraph lsp[LSP - Definition 已写 / 停1待审]
+    subgraph lsp[LSP - 三角色全落 / it29 已关账]
         lspdef[harness-lsp-lsp]
+        lspjdtls[harness-lsp-jdtls]
+        lsptool[harness-lsp-tool]
     end
 
     subgraph shell[Shell]
@@ -260,6 +262,11 @@ flowchart TD
     llmdef --> mcpdef
     llmdef --> webdef
     llmdef --> lspdef
+    lspdef --> lspjdtls
+    lspdef --> lsptool
+    kconfig --> lspjdtls
+    kconfig --> lsptool
+    tools --> lsptool
     session --> persistdef
     kconfig --> tools
     tools --> todo
@@ -314,6 +321,8 @@ flowchart TD
     webfetch --> base
     websearch --> base
     webtool --> base
+    lspjdtls --> base
+    lsptool --> base
     local --> base
     docker --> base
     shelltool --> base
@@ -324,13 +333,11 @@ flowchart TD
     plan --> base
     preset --> base
 
-    base --> headless
-
     base --> headlessex
     headlessex --> distjh
 ```
 
-Jackson 只出现在 `core-tools`、`llm/openai-compat`、`persistence-jsonl`、`mcp/stdio`、`mcp/http`、`mcp/tool` 与 `web/search-deepseek` 七个边界模块（model/tool JSON、wire JSON、codec JSON、JSON-RPC 帧、HTTP/SSE JSON 帧、tool JSON Schema、搜索响应块 JSON）；`core-session` 及全部 domain 模块零 Jackson。
+Jackson 只出现在 `core-tools`、`llm/openai-compat`、`persistence-jsonl`、`mcp/stdio`、`mcp/http`、`mcp/tool`、`web/search-deepseek` 与 `lsp/jdtls` 八个边界模块（model/tool JSON、wire JSON、codec JSON、JSON-RPC 帧、HTTP/SSE JSON 帧、tool JSON Schema、搜索响应块 JSON、LSP 帧 JSON）；`core-session` 及全部 domain 模块零 Jackson。
 
 ## 4. module-info.java 示例
 
@@ -461,6 +468,11 @@ harness/
 │   ├── fs/pom.xml
 │   ├── local/pom.xml
 │   └── tool/pom.xml
+├── skill/
+│   ├── pom.xml                      ← 聚合
+│   ├── skill/pom.xml                ← SkillService 契约 + catalog 快照/装载（it26）
+│   ├── local/pom.xml                ← 四根本地发现（项目/用户 × .harness/.agents，近者胜）
+│   └── tool/pom.xml                 ← skill 装载工具 + 轮首目录装载 + skill/catalog 事件（插件 id skill-tool）
 ├── shell/…
 ├── sandbox/…
 ├── mcp/
@@ -477,7 +489,9 @@ harness/
 │   └── tool/pom.xml                 ← web_fetch/web_search + HTML 提取 + 分层截断 + 信任前缀/提示段
 ├── lsp/
 │   ├── pom.xml                      ← 聚合（harness-lsp-aggregator）
-│   └── lsp/pom.xml                  ← LspService + 观察值类型；Definition 已写、停 1 已通过，无 Provider/Consumer
+│   ├── lsp/pom.xml                  ← LspService 契约 + 观察值类型（Definition；停 1 已通过）
+│   ├── jdtls/pom.xml                ← JDT LS Provider（Content-Length 字节帧 wire + JdtlsPlugin 装配件；停 2）
+│   └── tool/pom.xml                 ← lsp_diagnostics/definition/references 三工具 Consumer（LspToolPlugin；停 3）
 ├── session/
 │   ├── pom.xml
 │   ├── persistence/pom.xml          ← SessionStore SPI + SessionEventCodec
@@ -489,8 +503,7 @@ harness/
 │   └── commands/pom.xml
 ├── bundle/
 │   ├── pom.xml
-│   ├── base/pom.xml
-│   └── headless/pom.xml
+│   └── base/pom.xml
 ├── examples/
 │   ├── pom.xml
 │   ├── agent-spine/pom.xml
@@ -905,7 +918,7 @@ dist/jh/target/jlink-image/bin/jh --verify --profile headless   # R4 治理断�
 | `e2b/*` | — | ❌ 不做 |
 | `web/web` + `web/fetch-http` + `web/search-deepseek` | `web.web` + `web.fetch.http` + `web.search.deepseek`（it28：契约 + 钉地址抓取 + 原生搜索双 Provider）| ✅（it28）|
 | `web/tool-web` | `web.tool`（`web_fetch`/`web_search` + HTML 文本提取 + 分层截断 + 信任前缀/提示段）| ✅（it28；dsh 的信任段与本实现同源常量，搜索只取结构化来源同口径）|
-| `lsp/*` | `lsp/lsp`（JPMS `io.javanatic.harness.lsp`，Definition）+ `lsp/jdtls`（`JdtlsProvider` 实现 `LspService`，自有 Content-Length 字节帧 wire + `JdtlsPlugin` 装配件）+ `lsp/tool`（`LspToolPlugin` + 三工具） | Definition 已写、停 1 已通过并关闭；停 0 限定通过、T1–T3 方向已裁；Provider 已交付、真实生命周期取证完成、[停 2 已通过并关闭](../plan/evidence/iteration-29/stop2-acceptance.txt)；停 3 S1–S3 已交付（base 增 `lsp-jdtls` 禁用行 + `lsp-tool` 行、四处消费面），T4/T6/T7 未整体批准、产品验收未执行（[it29](../plan/iteration-29.md)）|
+| `lsp/*` | `lsp/lsp`（JPMS `io.javanatic.harness.lsp`，Definition）+ `lsp/jdtls`（`JdtlsProvider` 实现 `LspService`，自有 Content-Length 字节帧 wire + `JdtlsPlugin` 装配件）+ `lsp/tool`（`LspToolPlugin` + 三工具） | Definition 已写、停 1 已通过并关闭；停 0 限定通过、T1–T3 方向已裁；Provider 已交付、真实生命周期取证完成、[停 2 已通过并关闭](../plan/evidence/iteration-29/stop2-acceptance.txt)；停 3 已通过并关闭（S1–S3 交付 + S4 产品验收三腿 + S5 模型在环真 key 实跑，[终裁](../plan/evidence/iteration-29/stop3-acceptance.txt)）；T4/T6/T7 未整体批准（[it29](../plan/iteration-29.md)）|
 | `subagent/*` | — | 规划预留，未建独立 Definition；按 0.4 路线另行确认 |
 | `workflow/*` | — | ❌ 不做 |
 | `hooks/*` | — | ❌ 不做 |

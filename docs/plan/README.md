@@ -15,7 +15,7 @@
 - `docs/plan/`：逐迭代的范围承诺与验收状态——做没做、验没验
 - 未来 `.agents/notes/` → **已启用（it27.1）**：决策史——为什么改、推翻了什么；索引在 `.agents/notes/README.md`，设计目标态仍在 `docs/design/`（不要把决策史写进本目录）。
 - [当前状态卡](current-state.md)：一页纸的版本 / 模块 / 组合 / 验证现状；[边界登记表](boundary-register.md)：外部输入、信任面与刻意不做项的单一登记处。
-- [it29 四确认](iteration-29.md)：Java LSP 最小闭环；停 0 限定通过、T1–T3 方向已裁并随停 1 落定，`lsp/lsp` Definition 已写、停 1 已通过并关闭，`lsp/jdtls` Provider 已交付、真实生命周期取证完成、[停 2 已通过并关闭](evidence/iteration-29/stop2-acceptance.txt)，当前停 3（Consumer + 装配 + 验收）进行中；无可挂载 `lsp-tool`，T4/T6/T7 未整体批准、产品验收未执行。分层验证脚本的交付前置也在该文件登记。
+- [it29 四确认](iteration-29.md)：Java LSP 最小闭环；停 0 限定通过、T1–T3 方向已裁并随停 1 落定，`lsp/lsp` Definition 已写、停 1 已通过并关闭，`lsp/jdtls` Provider 已交付、真实生命周期取证完成、[停 2 已通过并关闭](evidence/iteration-29/stop2-acceptance.txt)，停 3（Consumer + 装配 + 验收）已交付并通过关闭（[终裁](evidence/iteration-29/stop3-acceptance.txt)：S4 三腿独立核验属实 + S5 模型在环真 key 两轮全过）；it29 已关账 = 0.3 四站全落；T4/T6/T7 未整体批准。分层验证脚本的交付前置也在该文件登记。
 
 ## 设计同步触发规则
 

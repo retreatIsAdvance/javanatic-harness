@@ -73,11 +73,11 @@
 
 - Kernel（core：Scope/Events/Plugin；brand；config）与 Core（session/system-prompt/tools/agent/agent-loop）；compaction 已在 `core/agent-loop` 提供契约与 Provider，不是待实现的独立模块。
 - LLM、FS、Shell、Sandbox 与 JSONL 持久化；人工协作包含 Approval 三模式、命令 registry 与 `ask_user`；治理包含 `--verify` 与 policy 档位；base/headless 组合与 jlink 交付已实现。
-- Skills（it26）、MCP stdio + Streamable HTTP（it27 / it27.1）、Web 抓取 + 搜索（it28）已完成。详细能力、配置与验证现状只在[当前状态卡](../plan/current-state.md)维护。
+- Skills（it26）、MCP stdio + Streamable HTTP（it27 / it27.1）、Web 抓取 + 搜索（it28）、LSP 三能力（it29：Definition / JDT LS Provider / Tool Consumer，停 0–3 全部通过并关闭）已完成。详细能力、配置与验证现状只在[当前状态卡](../plan/current-state.md)维护。
 
 ### In Review, Not Product-Ready
 
-- LSP：停 0 已通过并关闭（裸进程工程闭环限定结论），JDT LS 路线确认、compiler API 备选不触发；T1–T3 方向已裁并随停 1 落定，`lsp/lsp` Definition 已写、停 1 已通过并关闭。[停 1 审查包](../plan/evidence/iteration-29/stop1-review-packet.md)冻结保留当时提案；17 项纯值测试、10 项突变与 full 构建不代替真实生命周期验证。停 2 Provider 真实生命周期已通过并关闭；停 3（Tool Consumer + 装配 + 验收）S1–S3 已交付（`lsp/jdtls` 装配件、`lsp/tool` 三工具、base 两行），T4–T7 未整体批准、产品验收未执行。现行裁决与证据见 [it29](../plan/iteration-29.md)、[停 0 终裁](../plan/evidence/iteration-29/stop0-acceptance.txt)与[停 1 终裁](../plan/evidence/iteration-29/stop1-acceptance.txt)。
+- （空：LSP 已随 it29 停 3 通过并关闭，移入 Implemented。下一 In-Review 项按阶段路线另行确认。）
 
 ### Planned, Not Implemented
 
@@ -111,7 +111,7 @@
 
 ### Phased Evolution Plan
 
-**状态基准：2026-10-31，0.2.0 已发布；0.3 系列已完成 Skills / MCP / Web，LSP 的 it29 停 0 已限定通过、T1–T3 方向已裁并随停 1 落定，`lsp/lsp` Definition 已写、停 1 已通过并关闭，`lsp/jdtls` Provider 已交付、真实生命周期取证完成、停 2 已通过并关闭，当前停 3（Tool Consumer + 装配 + 验收）进行中：S1–S3（装配件 / 三工具 / 装配面）已交付，产品验收（S4–S5）未执行；T4/T6/T7 未整体批准；0.4 仍为计划。** 本节是总体迭代路线的事实源；具体迭代仍须按 [plan/README.md](../plan/README.md) 完成四确认、设计增量、锚点与审查停点，路线落盘不等于实现授权，也不代表验收通过。能力实现不等于 0.3.0 已发布或发布范围已获批准。
+**状态基准：2026-10-31，0.2.0 已发布；0.3 系列四站全落——Skills / MCP / Web / LSP 均已实现并通过各自迭代验收，it29 已关账（停 0–3 全部通过并关闭，产品验收 = S4 三腿 + S5 模型在环真 key 实跑）；待 push 与「0.3.0 发布验收」的独立授权；T4/T6/T7 未整体批准；0.4 仍为计划。** 本节是总体迭代路线的事实源；具体迭代仍须按 [plan/README.md](../plan/README.md) 完成四确认、设计增量、锚点与审查停点，路线落盘不等于实现授权，也不代表验收通过。能力实现不等于 0.3.0 已发布或发布范围已获批准。
 
 规划原则：**维护者场景驱动、真实任务验收、社区反馈校准**。发布初期不等待社区反馈才推进；优先级以生产可用、易用、易扩展为目标，而非模块数量。参考本地 dsh 截至 2026-08-13 的源码与演进记录（不代表远端最新状态；路径口径见 [dsh-reference.md](../dsh-reference.md)），吸收取消收敛、语义检查点、外部插件接入和任务所有权的经验，不照搬其包规模、HMR 或 Web 平台。
 

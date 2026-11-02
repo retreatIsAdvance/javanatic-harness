@@ -1,0 +1,49 @@
+# it29 停 3 S5 模型在环 — 执行结果（评审方真 key 实跑，2026-10-31）
+
+runbook：stop3-model-in-loop-runbook.md（沿 it26 / it27.1 / it28 形态）。执行方：用户本人；
+DEEPSEEK_API_KEY 经 zsh 注入、只存在于执行 shell，未入任何对话 / 文件。镜像与启用档同
+runbook 前置（jlink 镜像 + enabled.yml 停 0 夹具；`--approval=auto`）。以下为回贴实录落盘，
+不代表本档自行验证；判定见末尾。
+
+## Run A — lsp_diagnostics（warning-only 夹具）：通过
+
+- 退出码 0；stats：turn=1 steps=2，elapsed 17.4s。
+- tool/call name = `lsp_diagnostics`，参数含 App.java 的 file:// URI。
+- tool/result 逐字（非空批次走「诊断 n 条」模板，措辞纪律命中）：
+  拉取成功（hash 993e2f62，项目代 0，等待窗 15.0s）；诊断 1 条：
+  … [WARNING] The import java.base is never used (268435844)
+- stdout 模型复述与工具文本逐字一致（非近义改写）。
+
+## Run B — lsp_definition + lsp_references：definition 通过；references 三次重试均 TimedOut（已分类为非产品缺陷）
+
+- definition：位置 1 条 = Calc.java:2:19–2:23，逐字一致。模型中途把查询符号误读成 `twice`、
+  但对位置提出质疑并如实上报（误读是模型的，诚实标记是加分——没编造、把疑点如实上报）。
+- references：三次重试均 TimedOut(30s)——模型逐字使用四态措辞「超时（30s）——不是无诊断」
+  并询问是否重试（四态设计在降级条件下被模型在环验证，全场最有价值的一刻）。
+- 分类结论（评审方，经 Run C 佐证）：Run B 超时 = 多查询会话中的首查索引暖机 / 争用特征，
+  非一致性产品缺陷。
+
+## Run C — lsp_references（评审方追加的分类探针）：通过
+
+- 新会话、仅 references 一查：拉取成功（hash 993e2f62）；位置 2 条：
+  App.java:5:15–5:19 + Calc.java:2:19–2:23（声明 + 调用位，includeDeclaration）；elapsed 17.6s。
+- 与 Run B 同夹具同目标，仅会话 / 查询组合不同 → 佐证 Run B 超时为索引暖机 / 争用，
+  同一查询在新会话 17.6s 内正常返回，非一致性产品缺陷。
+
+## §四 治理面与凭据结构检查：通过
+
+- Authorization 计数 = 0；x-api-key 计数 = 0（日志只落账结构与结果，不落 key 材料）。
+- approval 字段记录 AUTO 放行面。key 值未入对话。
+
+## 偏离（如实登记，不改夹具、不改镜像凑绿）
+
+1. Run B references 超时 ×3：分类为多查询会话首查索引暖机 / 争用（Run C 佐证），非产品缺陷；
+   模型按四态措辞如实上报并询问，未近义改写。
+2. Run C 中模型顺带发现 fs_read 对项目绝对路径报 "path escapes workspace root"：夹具拓扑产物——
+   LSP 项目根在 fs workspace 根之外；非产品缺陷（真实用户场景两根同目录；runbook 偏离节记一行）。
+
+## 判定
+
+Run A / B / C 与 §四 全部执行并回贴：两轮全过 + 一处真实偏离（已分类为非缺陷）。
+模型在环验收有据：固定任务经真实模型 + 真实 LS 完成诊断 → 定位闭环（受控编辑 → 再诊断
+段不在本迭代范围，未执行，不凑证据）。用户停 3 终裁见 stop3-acceptance.txt。

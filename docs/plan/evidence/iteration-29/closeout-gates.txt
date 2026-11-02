@@ -1,0 +1,72 @@
+# it29 停 3 收口批门禁记录（2026-11-02，本批执行）
+
+收口批三项（用户点名）：① runbook 结果落盘（Run A/B/C 实录 + §四计数，Run C 标注评审方追加分类探针）；
+② 验收全勾（模型在环项现在有据）+ B27/B28 登记 + 范围外旧措辞收口 + 提交；③ it29 关账 = 0.3 四站全落
+（Skills / MCP / Web / LSP），push 与「0.3.0 发布验收」另设独立授权。本档只记本批实际执行的命令与结果。
+
+## 门禁 1：validate（全 reactor 校验面）
+
+命令：`export JAVA_HOME=$(/usr/libexec/java_home -v 25) && mvn -B -q validate > /tmp/it29-closeout-validate.log 2>&1`
+（MVN = ~/Documents/apache-maven-3.10.0/bin/mvn，dir = 仓库根）
+结果：EXIT=0；日志尾部仅 spotless ModuleHelper 的既有 WARNING（JDK 内部 API 弃用提醒，与门禁无关）。
+测量面：validate 不执行测试；测试计数见门禁 2。
+
+## 门禁 2：full package（全 reactor 编译 + 测试 + jlink 归档）
+
+命令：`export JAVA_HOME=$(/usr/libexec/java_home -v 25) && mvn -B -q package > /tmp/it29-closeout-full.log 2>&1; echo "EXIT=$?"`
+结果：EXIT=0；`-q` 无 BUILD SUCCESS 横幅，以 EXIT=0 + 全日志零 ERROR + surefire XML 全量计数为证。
+产物：`dist/jh/target/jlink-image/bin/jh`、`javanatic-harness-0.3.0-SNAPSHOT-macos-aarch64.tar.gz` / `.zip` 均 2026-11-02 10:16 新鲜产出。
+计数（surefire XML 汇总口径，非 -q 日志）：TOTAL 1202 项测试，errors=0，failures=0，skipped=31（环境门控自跳过）。
+停 3 门禁五个关键模块逐模块核对（与 S4 取证一致）：
+
+| 模块 | tests | errors/failures/skipped |
+|---|---|---|
+| bundle/base | 32 | 0/0/0 |
+| examples/headless | 85 | 0/0/0 |
+| lsp/jdtls | 188 | 0/0/0 |
+| lsp/tool | 28 | 0/0/0 |
+| core/tools | 32 | 0/0/0 |
+
+reactor 规模实测（同 12-api-stability 口径）：64 个项目 = 16 聚合（含根）+ 48 叶子；47 个代码模块（module-info 在场），
+唯一非代码叶子 dist/jh（其 moditect 插件 `<modules>` 是 JPMS 名而非目录，不得按子模块递归）。
+
+## 门禁 3：消费方闭包（verify-consumer.sh candidate）
+
+命令：`export JAVA_HOME=$(/usr/libexec/java_home -v 25) && integration/verify-consumer.sh candidate`
+结果：EXIT=0，汇总「失败项：0」（含正例构建 + 负例①坏版本 / ②去显式版本 / ③坏治理配置 / ④生产档撞 AUTO 审批四负例逐项 ok）。
+日志：/tmp/it29-closeout-consumer.log。
+
+## 门禁 4：docs 层（verify-stop.sh docs）
+
+命令：`bash integration/verify-stop.sh docs --log-dir /tmp/it29-closeout-docs-2`
+结果：EXIT=1 的唯一原因 = 变化范围内含非文档文件 `.gitattributes`（本批用户点名项：逐字捕获证据文件需
+`-text !eol` + whitespace 豁免，SHA 对账为检测面）——docs 层按契约拒绝为源码改动背书，属预期而非缺陷。
+文档面本身全净：0 MISSING、0 LINK-ERROR、306 项简单本地目标检查通过；worktree 与 index 两侧
+`git diff --check` 均 EXIT=0。证据目录：/private/tmp/it29-closeout-docs-2/。
+
+## 收口批三项逐条对应
+
+① runbook 结果已落盘：[stop3-model-in-loop.txt](stop3-model-in-loop.txt)（Run A 诊断逐字 / Run B 定义逐字 + 引用三次
+TimedOut 分类 / Run C 评审方追加的分类探针双位置引用）与 [stop3-model-in-loop-runbook.md](stop3-model-in-loop-runbook.md)
+（§四治理面 Authorization=0 / x-api-key=0 计数）。Run B 超时 = 多查询会话首查索引暖机 / 争用特征（Run C 新会话
+同查询 17.6s 佐证），非一致性产品缺陷；模型对误读的符号（twice）与超时四态均如实上报——「超时（30s）——不是
+无诊断」被模型在环逐字验证。
+
+② 验收全勾：iteration-29.md 验收清单模型在环项已勾（此前无据，现以 S5 实录为证）；B27（JdtlsPluginConfig 8 键
+白名单）/ B28（LspToolConfig 5 键预算）已登记于边界登记表与 12-api-stability §5 配置键表；范围外旧措辞收口——
+02 树补 skill 三件与 lsp 三叶子 + reactor 计数、05 §9 旧「停 0 待裁」、根 README 构建计数（46 模块 / 513 测试 →
+64 项目 / 47 代码模块 / 1202 测试 0 失败 31 门控跳过）、plan/README 停 3 态、06-scope LSP 段、12-api-stability
+§2 计数与导出表（45/49 → 47/51，含 lsp.jdtls / lsp.tool 两新导出包）+ it29 增量条目补齐停 2 / 停 3。
+冻结原文（stop2-acceptance.txt、stop3-review-packet.md、stop3-acceptance.txt）不改写。
+
+③ it29 关账 = 0.3 四站全落（Skills / MCP / Web / LSP）。QUIET_WINDOW 的区分证据来自夹具测试而非真机（真机上
+该态时序依赖、无确定性实例）——如实保留于验收表述。push（本地相对 origin/master 待推 10 个提交）与
+「0.3.0 发布验收」另设独立对话与点名授权，本批不 push。
+
+## 如实记录（本批教训）
+
+- 全量首跑曾因 cwd 漂移（后台任务未带 dir_path）+ `echo EXIT` 遮蔽 Maven 失败 + 陈旧 surefire XML 呈假绿——退出码
+遮蔽家族再现，读日志自捕后钉根重跑（本档门禁 2 即重跑结果），与前次 S4 假红 / 假绿同源处置，见 iteration-29.md
+修正节。
+- `-q` 下无 BUILD SUCCESS 横幅：计数与成败判定以 surefire XML + 日志零 ERROR + EXIT=0 三重为准，不凭横幅。
+- verify-stop.sh docs 层要求 log-dir 全新（首跑因预建目录 EXIT=2），二跑为最终证据。

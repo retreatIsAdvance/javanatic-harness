@@ -14,7 +14,7 @@
 
 ## 2. 包级 API（JPMS 导出面）
 
-`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（**45 个 reactor 代码模块 / 49 个包**；前缀 `io.javanatic.harness.` 省略）。2026-10-29 用 Python `xml.etree.ElementTree` 递归根 POM `<modules>`，再读取各模块 `src/main/java/module-info.java` 的 `exports` 实测，排除 `target`；根 reactor 含根 62 个项目（16 聚合 + 46 叶子，唯一非代码叶子为 `dist/jh`）。计数包含已通过停 1 评审的 `lsp/lsp`，列出导出面不代表已通过产品验收。
+`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（**47 个 reactor 代码模块 / 51 个包**；前缀 `io.javanatic.harness.` 省略）。2026-10-29 用 Python `xml.etree.ElementTree` 递归根 POM `<modules>`，再读取各模块 `src/main/java/module-info.java` 的 `exports` 实测，排除 `target`，2026-11-02 同法复测（moditect 插件 `<modules>` 里的 JPMS 名不是目录、不按子模块递归，否则 `dist/jh` 被误判为聚合）；根 reactor 含根 64 个项目（16 聚合 + 48 叶子，唯一非代码叶子为 `dist/jh`）。计数包含 it29 停 0–3 全部通过并关闭的 `lsp/lsp`、`lsp/jdtls`、`lsp/tool`，列出导出面不代表已通过产品验收。
 
 | 模块 | 导出包 |
 |---|---|
@@ -48,6 +48,8 @@
 | web/search-deepseek | `web.search.deepseek` |
 | web/tool | `web.tool` |
 | lsp/lsp | `lsp`（Definition 已写、停 1 已通过并关闭） |
+| lsp/jdtls | `lsp.jdtls`（Provider，停 2 已通过并关闭；停 3 增 `JdtlsPlugin` 装配件） |
+| lsp/tool | `lsp.tool`（三工具 Consumer，停 3 已通过并关闭） |
 | shell/shell | `shell.shell` |
 | shell/local | `shell.local` |
 | shell/docker | `shell.docker` |
@@ -78,7 +80,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | `FsService` / `ShellExecutor` / `SandboxProvider` / `SandboxPolicyService` / `BackendStatus` | `fs` / `shell.shell` / `sandbox.sandbox` | capability 入口（换 Provider 即换环境）|
 | `McpClientService` / `McpServerConnection` / `McpToolDescriptor` / `McpCallResult` / `McpServerState` / `McpCatalogSwapException` | `mcp` | MCP 传输中立连接面（it27.1）：注册表 + 当前清单/代际 + call/状态/错误分档；Provider 换 transport 不动契约 |
 | `WebFetchService` / `WebSearchService` / `WebFetchResult` / `WebFetchBody` / `WebSearchResult` / `WebSearchSource` / `WebErrorCode` / `WebException` | `web` | Web 双能力 seam（it28）：抓取/搜索入口、sealed 正文分类、结构化来源、稳定错误码；Provider 可替换，Consumer 不 import 实现 |
-| `LspService` / `LspQuery` / `LspPositionQuery` / `LspResult` / `LspAnchor` / `LspObservation` / `LspEvidence` / `LspDiagnostic` / `LspLocation` / `LspException` | `lsp` | Java 诊断 / 定义 / 引用的同步观察契约，JH hash 不证明 LS 分析来源或完成；Definition 已写、停 1 已通过并关闭，无 Provider / Consumer（[05 §8.1](05-capability-seam.md#81-lsp-observation-and-process-contractit29)） |
+| `LspService` / `LspQuery` / `LspPositionQuery` / `LspResult` / `LspAnchor` / `LspObservation` / `LspEvidence` / `LspDiagnostic` / `LspLocation` / `LspException` | `lsp` | Java 诊断 / 定义 / 引用的同步观察契约，JH hash 不证明 LS 分析来源或完成；Definition 已写、停 1 已通过并关闭，Provider / Consumer 已随停 2 / 停 3 交付并通过关闭（[05 §8.1](05-capability-seam.md#81-lsp-observation-and-process-contractit29)） |
 | `SessionPersistence` / `SessionEventCodec` / `JsonValue` | `session.persistence` | 持久化 seam 与 codec SPI（ServiceLoader）|
 | `ApprovalPrompt` | `interaction.approval` | 人闸回调（ask 模式） |
 | `CommandRegistry` / `Command` / `Handler` / `CommandResult` | `interaction.commands` | 命令面（registry / slash 解析 / 事件对，it14） |
@@ -104,7 +106,11 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 **0.3.0 增量（it28 Web，同属 0.3.0 未发布面）**：新增导出包 `web`（`WebFetchService` / `WebSearchService` / `WebFetchResult` / `WebFetchBody` / `WebSearchResult` / `WebSearchSource` / `WebErrorCode` / `WebException`）、`web.fetch.http`（插件行 `web-fetch-http`）、`web.search.deepseek`（插件行 `web-search-deepseek`）、`web.tool`（插件行 `web-tool`）。**零新会话事件**：外部内容只作为 `tool/result` 入账，回放零联网。工具面契约：`web_fetch` **恒注册**（抓取 Provider 缺失装配期 fail loud）、`web_search` 仅 Provider 在场且 `available()` 时注册（keyless 少一个工具），两者**恒需审批**（无 `approvalExempt` 出口）。成功结果首行恒为 `EXTERNAL_WEB_CONTENT_NOTICE`（与 `Static(70)` 提示段同源常量）——文案是**软防线**，硬边界是公网地址闸 / 钉地址 / 逐跳复验 / 无凭据转发 / 审批审计。错误码 9 个进稳定面；`WebFetchResult.contentType` 属停 1 契约增补（0.3.0 内成形，无旧日志兼容问题）。搜索辅助 token 不进 agent 预算账（T9 显式口径）。
 
-**0.3.0 增量（it29 LSP Definition，未发布、停 1 已通过并关闭）**：新增 `lsp/lsp`（artifactId `harness-lsp-lsp`），JPMS `io.javanatic.harness.lsp` exports / opens `io.javanatic.harness.lsp`；仅依赖 `kernel/core` + `llm/llm`，零第三方依赖。`LspService.KEY` = `lsp`，同步 `diagnostics(LspQuery, AbortSignal)` / `definition(LspPositionQuery, AbortSignal)` / `references(LspPositionQuery, AbortSignal)` 与拥有者 `close()`；`LspResult<T>` 为 `Observed` / `NotReady` / `Stale` / `TimedOut`。`LspQuery` 显式总 timeout / observationWindow，`LspPosition` / `LspRange` / `LspLocation` 使用零基 UTF-16 位置；`LspDocument` / `LspAnchor` / `LspObservation` / `LspEvidence` 承载 JH 观察锚与来源，`LspDiagnostic` 保留诊断字段，`LspErrorCode` / `LspException` 表达失败。观察 hash 不证明 LS 分析来源或完成，空诊断只称“拉取时点无诊断”。本批无 Plugin / ServiceLoader 注册、配置键、事件或装配行新增；无可挂载 Provider 或 `lsp-tool`。停 0 限定通过、T1–T3 方向已裁并随停 1 落定；T4–T7 未整体批准，真实生命周期验证与产品验收未执行，聚焦 EXIT=0 不替代 Provider 运行验收（[契约与证据](../plan/iteration-29.md)）。
+**0.3.0 增量（it29 LSP Definition，未发布、停 1 已通过并关闭）**：新增 `lsp/lsp`（artifactId `harness-lsp-lsp`），JPMS `io.javanatic.harness.lsp` exports / opens `io.javanatic.harness.lsp`；仅依赖 `kernel/core` + `llm/llm`，零第三方依赖。`LspService.KEY` = `lsp`，同步 `diagnostics(LspQuery, AbortSignal)` / `definition(LspPositionQuery, AbortSignal)` / `references(LspPositionQuery, AbortSignal)` 与拥有者 `close()`；`LspResult<T>` 为 `Observed` / `NotReady` / `Stale` / `TimedOut`。`LspQuery` 显式总 timeout / observationWindow，`LspPosition` / `LspRange` / `LspLocation` 使用零基 UTF-16 位置；`LspDocument` / `LspAnchor` / `LspObservation` / `LspEvidence` 承载 JH 观察锚与来源，`LspDiagnostic` 保留诊断字段，`LspErrorCode` / `LspException` 表达失败。观察 hash 不证明 LS 分析来源或完成，空诊断只称“拉取时点无诊断”。本批无 Plugin / ServiceLoader 注册、配置键、事件或装配行新增；无可挂载 Provider 或 `lsp-tool`。停 0 限定通过、T1–T3 方向已裁并随停 1 落定；T4–T7 未整体批准，聚焦 EXIT=0 不替代 Provider 运行验收（[契约与证据](../plan/iteration-29.md)）。
+
+**0.3.0 增量（it29 停 2 LSP Provider，同属 0.3.0 未发布面）**：新增 `lsp/jdtls`（artifactId `harness-lsp-jdtls`），JPMS `io.javanatic.harness.lsp.jdtls` exports / opens 同名包；仅依赖 kernel / kernel.config / llm.llm / lsp + Jackson databind（唯一第三方边界，自有 Content-Length 字节帧 wire，不引 LSP4J）。停 3 增 `JdtlsPlugin` 装配件（插件行 `lsp-jdtls`，双通道 SPI：module `provides` + services 文件），配置键白名单 8 键（B27：`javaHome` / `serverDir` / `configurationDir` / `projectRoot` / `indexDir` / `homeDir` / `mavenUserSettings` / `mavenGlobalSettings`；必填缺失、未知键、非法值 fail loud，目录 `toLaunch()` 时创建）。LS 以用户全权进程运行、不入沙箱，工具治理不构成进程隔离（B23–B25）。
+
+**0.3.0 增量（it29 停 3 LSP 工具 Consumer，同属 0.3.0 未发布面）**：新增 `lsp/tool`（artifactId `harness-lsp-tool`），JPMS `io.javanatic.harness.lsp.tool` exports / opens 同名包；插件行 `lsp-tool`。公开工具名 `lsp_diagnostics`（GENERIC）/ `lsp_definition` / `lsp_references`（LOCATIONS），**恒需审批**（无 `approvalExempt` 出口）；双态：`LspService` 在场才注册三工具，缺省组合零工具零进程零网络（沿 `web_search` 双态先例）。配置键 5 键（B28：`timeoutSeconds` / `waitSeconds` / `maxDiagnostics` / `maxLocations` / `maxOutputBytes`，正整数量纲且 `waitSeconds` ≤ `timeoutSeconds`，非法值 fail loud；条数 / 字节帽截断置 `truncated`，锚首行不参与截断）。**零新会话事件**：审计 = `tool/call` + `tool/result`，回放零联网、零进程。结果文本四态逐字措辞（`Observed` / `NotReady` / `Stale` / `TimedOut`），不把“拉取时点无诊断”说成“项目无错误”。
 
 ## 4. 事件 schema
 
