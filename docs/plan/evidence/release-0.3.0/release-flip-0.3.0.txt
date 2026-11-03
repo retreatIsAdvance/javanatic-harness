@@ -1,0 +1,71 @@
+0.3.0 正式版本翻转与本地验证取证
+==================================
+
+一、版本翻转
+------------
+命令：
+  export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+  ~/Documents/apache-maven-3.10.0/bin/mvn -B -q versions:set \
+      -DnewVersion=0.3.0 -DgenerateBackupPoms=false
+结果：
+  SET_EXIT=0
+
+非 reactor 同步面（versions:set 不覆盖，按 0.2.0 释放先例手动同步）：
+- integration/consumer-sample/pom.xml：`harness.version` 0.3.0-SNAPSHOT → 0.3.0；
+  候选工件注释行同步（发布工件注释仍为 0.2.0 = 上一发布件，与 v0.2.0 先例同形）
+- integration/consumer-sample/README.md：缺省版本 0.3.0-SNAPSHOT → 0.3.0
+- docs/design/02-module-layout.md：6 处 POM 片段 `<version>0.3.0-SNAPSHOT</version>` → `<version>0.3.0</version>`
+
+残留检查（release.md §3.1 口径 = 0）：
+  grep -rl "0.3.0-SNAPSHOT" --include=pom.xml . | wc -l   → 0
+  grep -rl "0.3.0-rc1" --include=pom.xml . | wc -l        → 0
+（docs/embedding.md 与历史迭代档/证据档中的 0.3.0-SNAPSHOT 属发布后收口面，
+按 release.md §5 清单与 v0.2.0 先例不在版本翻转提交内改。）
+
+二、全量构建
+------------
+命令：
+  rm -rf dist/jh/target
+  ~/Documents/apache-maven-3.10.0/bin/mvn -B -q package
+
+首跑：BUILD_EXIT=1 —— `shell/local` 的
+  LocalShellExecutorTest.cancelKillsProcessTreeIncludingGrandchildren:107
+  （grandchild 2s 内未被观察为已回收）。判定为时序抖动而非回归：
+  - 本次提交不含 shell 代码改动；
+  - 同代码的 rc1 全量构建（15:56）与本次前后多次全量均绿；
+  - 聚焦复跑 3 次：`-Dtest=LocalShellExecutorTest` 全绿，
+    surefire XML = tests=6 errors=0 skipped=0 failures=0；
+  - 实测本机负载来自无关进程（Python 约 98% CPU 持续 11 分钟，
+    ReportCrash 长期高占用），非本仓残余。
+
+复跑：BUILD_EXIT=0
+
+版本串冒烟：
+  dist/jh/target/jlink-image/bin/jh --version
+  → 0.3.0
+  VERSION_EXIT=0
+
+三、消费方闭包（候选腿）
+------------------------
+命令：
+  integration/verify-consumer.sh candidate
+
+结果：
+  腿 candidate：harness.version=0.3.0（取自根 pom），隔离本地仓
+  ok 工作树 install → 隔离仓（跳测试）
+  ok 示例编译 / 运行类路径 / 治理自证运行 / 自证通过
+  ok 自有工具可见 / 自有工具可执行
+  四负例全部按预期拒绝（9.9.9 / 缺显式版本 / workspace drift / PRODUCTION+AUTO）
+  失败项：0
+
+发布腿仍指向 0.2.0（`leg release 0.2.0`、脚本汇总行同）——按 release.md §5
+发布后收尾清单随 Publish 后重指 0.3.0，不在本次翻转内改。
+
+四、后续（用户侧）
+------------------
+版本树已就绪（提交承载 0.3.0）。后续序列：
+  mvn -B -P release deploy            # 真签名 + 上传 Central 草稿
+  核对 bundle：59 坐标 + 每主件 `.asc` 齐全（release.md §4.1–4.3 硬门槛）
+  Portal Publish（不可逆）
+  git tag v0.3.0 && git push origin v0.3.0   # CI release-attach 附 8 归档
+  发布后收尾：bump 0.4.0-SNAPSHOT / Roadmap 翻转 / 版本串同步面 / 发布腿重指

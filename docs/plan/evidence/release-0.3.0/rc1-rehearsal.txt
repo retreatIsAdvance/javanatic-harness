@@ -1,0 +1,74 @@
+0.3.0-rc1 排练实录（tag → CI → release-attach 全链）
+====================================================
+
+一、目的
+--------
+release.md §5 纪律：新 CI 面首执行不得是真发布——先以一次性 tag 排练全链。
+本档记录 rc1 排练的四段事实：推送、CI 四腿、release-attach draft、清 rc。
+
+二、推送
+--------
+修复批（见 rc1-version-anchor-fix.txt）+ 版本树提交已就绪后：
+  git -c http.curloptResolve=github.com:443:140.82.112.4 push origin master v0.3.0-rc1
+  PUSH_EXIT=0
+  To https://github.com/retreatIsAdvance/javanatic-harness.git
+     7b409c9..aabc56a  master -> master
+   * [new tag]         v0.3.0-rc1 -> v0.3.0-rc1
+
+远端 ref 核验：
+  refs/heads/master          = aabc56aca94db0ba3d7c99b92a5302958bdd31f1
+  refs/tags/v0.3.0-rc1^{}    = aabc56aca94db0ba3d7c99b92a5302958bdd31f1
+（tag 对象 299df1b → 指向修复提交 aabc56a，版本树 = 0.3.0-rc1）
+
+三、CI 四腿 + release-attach
+----------------------------
+tag run 41599650549：status=completed conclusion=success
+  build: success
+  macos: success
+  windows: success
+  windows-arm: success
+  release-attach: success
+  （watch 退出码 TAG_RUN_EXIT=0）
+
+master run 41599650548：status=completed conclusion=success
+  （watch 退出码 MASTER_RUN_EXIT=0）
+
+四、draft Release 核对
+----------------------
+  gh release view v0.3.0-rc1 --json isDraft,tagName,name,body,assets
+  isDraft=true  tag=v0.3.0-rc1  name=javanatic-harness 0.3.0-rc1
+  assets=8
+    javanatic-harness-0.3.0-rc1-linux-amd64.tar.gz
+    javanatic-harness-0.3.0-rc1-linux-amd64.zip
+    javanatic-harness-0.3.0-rc1-macos-aarch64.tar.gz
+    javanatic-harness-0.3.0-rc1-macos-aarch64.zip
+    javanatic-harness-0.3.0-rc1-windows-amd64.tar.gz
+    javanatic-harness-0.3.0-rc1-windows-amd64.zip
+    javanatic-harness-0.3.0-rc1-windows-aarch64.tar.gz
+    javanatic-harness-0.3.0-rc1-windows-aarch64.zip
+  body 首行 = "Automated draft: CI attached the platform archives; add release
+  notes before publishing."
+
+口径说明：
+- 占位 notes 属预期——rc 版本无 `docs/release-notes-<版本>.md`，release.md §5
+  明文「缺该文件时用占位文本（rc 排练走此分支）」；正式 0.3.0 将取
+  docs/release-notes-0.3.0.md。
+- 坐标 / `.asc` 核对不适用于 rc1：rc 未上传 Central（deploy 属正式发布用户侧动作）；
+  该两项硬门槛在正式 0.3.0 的 deploy 后校验（release.md §4.1–4.3）。
+
+五、清 rc（按裁决序列）
+----------------------
+  gh release delete v0.3.0-rc1 --yes          → 成功
+  gh api -X DELETE .../git/refs/tags/v0.3.0-rc1 → 成功（REMOTE_CLEANED）
+  git tag -d v0.3.0-rc1                        → 已删除（曾为 299df1b）
+
+复核：
+  gh api .../git/ref/tags/v0.3.0-rc1 → HTTP 404 Not Found
+  gh release list --limit 5 → 仅 javanatic-harness 0.2.0（Latest, v0.2.0）与 0.1.0
+
+六、结论
+--------
+tag → CI 四腿 → release-attach → draft（8 归档）全链在 rc1 上成立；
+唯一暴露缺陷（版本格式锚）已在 aabc56a 修复并留突变证据。
+正式 0.3.0 沿同一序列执行，差异仅在：notes 走采用稿、deploy 后须核
+59 坐标与 bundle 内 `.asc` 齐全，Portal Publish 属用户侧不可逆动作。
