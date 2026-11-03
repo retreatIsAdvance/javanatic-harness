@@ -1,12 +1,12 @@
-# 发布流程（0.2.0）
+# 发布流程（0.3.0）
 
 本仓面向发布执行者的操作手册：一次性前置（GPG / Central Portal）、发布前预检、发布命令序列、校验点与失败边界。
 
 > **归属**：发布执行（版本翻转、签名、上传、Portal Publish、tag）为**用户侧动作**——需凭据与公开不可逆授权，agent 只维护本手册与校验点。`git push` 同样需用户放行。
 
-## 0. 发布面（0.2.0）
+## 0. 发布面（0.3.0）
 
-- **坐标 41 个**：根 POM 1 + 聚合器 9（pom-only）+ 叶 31（jar + sources + javadoc 四件套面；较 0.1.0 多 1 = it22 新增 `harness-interaction-ask`）
+- **坐标 59 个**：根 POM 1 + 聚合器 13（pom-only）+ 叶 45（jar + sources + javadoc 四件套面；较 0.2.0 多 18 = +4 聚合（skill / mcp / web / lsp）+ 14 叶（skill 3 + mcp 4 + web 4 + lsp 3，it26–it29））
 - **排除 5 个**：`harness-examples-*`（3）、`harness-dist-*`（2）——release profile `excludeArtifacts` 为实闸（`maven.deploy.skip` 仅兜标准 deploy 路径）
 - groupId `io.github.retreatisadvance`（Central 命名空间 = GitHub 身份）；Java 侧包名/JPMS 名 `io.javanatic.harness.*` 不随发（不同源属有意为之，见 [02](design/02-module-layout.md)）
 - 上传目标 Central Portal；`autoPublish=false`——**上传即草稿，人工审核后 Publish 才公开（不可逆）**
@@ -57,18 +57,18 @@ mvn -B -P release -Dgpg.skip=true package      # release 剖面干跑：sources/
 
 **另注**：Central 硬校验项——每个发布 POM 须**自带** `<name>` 元素（不继承；新增模块时勿漏）。it16 首发实撞：39 个发布包上传后被校验全数拒绝（`Project name is missing`），补 `<name>` 后重传通过。
 
-## 3. 发布序列（0.2.0）
+## 3. 发布序列（0.3.0）
 
-0.2.0 的版本翻转已随 it25.1 落仓（`chore(release): 0.2.0`，即下述 3.1/3.2 的效果）；命令序列留为过程记录与下次发布沿用。
+0.2.0 的版本翻转已随 it25.1 落仓（`chore(release): 0.2.0`，即下述 3.1/3.2 的效果）；0.3.0 沿用同一序列：
 
 ```sh
-# 3.1 版本翻转 0.2.0-SNAPSHOT → 0.2.0（每个 POM 各一处）
-mvn versions:set -DnewVersion=0.2.0 -DgenerateBackupPoms=false   # 首次运行会拉取 versions-maven-plugin
+# 3.1 版本翻转 0.3.0-SNAPSHOT → 0.3.0（每个 POM 各一处）
+mvn versions:set -DnewVersion=0.3.0 -DgenerateBackupPoms=false   # 首次运行会拉取 versions-maven-plugin
 rm -rf dist/jh/target                                            # 旧版本 jar 残留 → jlink「Two versions of module」（注2）
-grep -rl "0.2.0-SNAPSHOT" --include=pom.xml . | wc -l            # 翻转后应为 0；翻转前全仓 47 = reactor 46 + 非 reactor 示例 1（示例不入 versions:set，须手动同步 pom + README）
+grep -rl "0.3.0-SNAPSHOT" --include=pom.xml . | wc -l            # 翻转后应为 0；翻转前全仓 65 = reactor 64 + 非 reactor 示例 1（示例不入 versions:set，须手动同步 pom + README）
 
-# 3.2 提交翻转（tag 指向窗口内发布就绪 HEAD——须承载 0.2.0 版本树，不得落在翻转前；0.1.0 先例 = 翻转 + 2 提交处）
-git add -A && git commit -m "chore(release): 0.2.0"
+# 3.2 提交翻转（tag 指向窗口内发布就绪 HEAD——须承载 0.3.0 版本树，不得落在翻转前；0.2.0 先例 = 翻转 + 2 提交处）
+git add -A && git commit -m "chore(release): 0.3.0"
 
 # 3.3 真签名 + 上传（生成草稿，不公开）
 mvn -B -P release deploy
@@ -83,19 +83,18 @@ mvn -B -P release deploy
 
 - 构建日志给出 Central Portal deployment id
 - 本地 bundle：**根工程 `target/central-publishing/central-bundle.zip`**
-- 干跑基线（0.1.0 实测）：650 项 = 130 主件（30 叶 × 4 + 10 pom-only × 1）+ 520 校验和（4 种 × 130）
-- 0.2.0 预期（+1 叶 = `harness-interaction-ask`）：670 项 = 134 主件（31 叶 × 4 + 10 pom-only × 1）+ 536 校验和——以真 deploy 日志为准
+- 0.3.0 预期：970 项 = 194 主件（45 叶 × 4 + 14 pom-only × 1）+ 776 校验和（4 种 × 194）——以真 deploy 日志为准（0.2.0 实测 650 项 = 130 主件 + 520 校验和）
 
 ### 4.2 Portal 草稿审核
 
 Portal → Publish → Deployments，核对：
 
-- 41 坐标齐全；**examples/dist 坐标零出现**（排除面）
-- 文件面：31 叶 = jar/sources/javadoc/pom 四件套 + 校验和；10 聚合器（含根 POM）= pom-only
+- 59 坐标齐全；**examples/dist 坐标零出现**（排除面）
+- 文件面：45 叶 = jar/sources/javadoc/pom 四件套 + 校验和；14 聚合器（含根 POM）= pom-only
 
 ### 4.3 签名硬门槛（放行必备）
 
-- **bundle 内每主件都有 `.asc`**：真签名后 ≈ 804 项（670 + 134 个 `.asc`；0.1.0 实测 780 = 650 + 130）
+- **bundle 内每主件都有 `.asc`**：真签名后 ≈ 1164 项（970 + 194 个 `.asc`；0.2.0 实测 780 = 650 + 130）
 - 抽查本地工件：`gpg --verify <artifact>.jar.asc <artifact>.jar` → 「完好的签名」
 - 缺 `.asc` = 未真签名（多半误带 `-Dgpg.skip=true`）——**不得**点 Publish
 
@@ -106,35 +105,33 @@ Portal → Publish → Deployments，核对：
 ## 5. tag 与 GitHub Release（用户侧）
 
 ```sh
-git tag v0.2.0 && git push origin v0.2.0      # push 需放行；tag 指向须承载 0.2.0 版本树（见 §3.2）
+git tag v0.3.0 && git push origin v0.3.0      # push 需放行；tag 指向须承载 0.3.0 版本树（见 §3.2）
 ```
 
 **附件自动化（it25.1 落，`.github/workflows/ci.yml` 的 `release-attach` job）**：v* tag 推送后，CI 在四条构建腿（`build` / `macos` / `windows` / `windows-arm`）全绿后自动创建/更新 **draft** Release，并附入 8 个归档工件：
 
 - 收件面：`javanatic-harness-linux-amd64`、`javanatic-harness-macos-aarch64`、`javanatic-harness-windows-amd64`、`javanatic-harness-windows-aarch64` 四个 artifact（各 tar.gz + zip）
 - 幂等：无则 `gh release create --draft --verify-tag`，有则复用；`gh release upload --clobber` 可重跑
-- Release notes 取 `docs/release-notes-<版本>.md`；缺该文件时用占位文本（rc 排练走此分支）
+- Release notes 取 `docs/release-notes-<版本>.md`（0.3.0 = `docs/release-notes-0.3.0.md`，采用稿已落仓）；缺该文件时用占位文本（rc 排练走此分支）
 - **全平台归档由 CI 产出**（it25.1 停点 C 裁决条件 2）：四条构建腿各出本平台归档——macOS 件在 `macos-latest`（arm64）腿产出 `macos-aarch64`，回归 0.1.0 交付承诺
 - **Publish 恒用户侧**：CI 只建 draft；人工审核后点 Publish（§4.4）
-- 纪律：新 CI 面首执行不得是真发布——先以一次性 tag（`v0.2.0-rc1`）排练全链，再打真 `v0.2.0`
+- 纪律：新 CI 面首执行不得是真发布——先以一次性 tag（`v0.3.0-rc1`）排练全链，再打真 `v0.3.0`
 
-归档命名（`dist/jh/target/` 产出，解压即用，顶层目录同名）：`javanatic-harness-0.2.0-<平台>.tar.gz` 与同名 `.zip`；平台面 = linux-amd64 / macos-aarch64 / windows-amd64 / windows-aarch64（四条 CI 腿各出）。Linux 归档在 ubuntu job 于干净 `ubuntu:24.04` 容器内解压冒烟（无 Maven/JDK/bwrap，见 §8）；Windows 归档在对应 job 内解压冒烟同口径。
+归档命名（`dist/jh/target/` 产出，解压即用，顶层目录同名）：`javanatic-harness-0.3.0-<平台>.tar.gz` 与同名 `.zip`；平台面 = linux-amd64 / macos-aarch64 / windows-amd64 / windows-aarch64（四条 CI 腿各出）。Linux 归档在 ubuntu job 于干净 `ubuntu:24.04` 容器内解压冒烟（无 Maven/JDK/bwrap，见 §8）；Windows 归档在对应 job 内解压冒烟同口径。
 
-**发布后清单（Publish 后收尾，随后续提交落；Roadmap 翻转时机裁决 = 推迟到 Publish 后，it25.1）**：
+**发布后清单（Publish 后收尾，随后续提交落；Roadmap 翻转时机裁决 = 推迟到 Publish 后，it25.1 先例）**：
 
-- [x] 版本 bump 回 SNAPSHOT：`mvn versions:set -DnewVersion=0.3.0-SNAPSHOT -DgenerateBackupPoms=false`（见 §6）
-- [x] README×2 的 Roadmap 行翻转（`17–25 (planned)` / `17–25（计划）` → 实况）
-- [x] release notes 定稿：`docs/release-notes-0.2.0.md` 发布前终读，如需最小修正随收尾提交（终读通过、无修正项）
-- [x] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面（表题 bump 时改 `0.2.0`——去 `SNAPSHOT` 字样，如 `0.1.0 vs 0.2.0-SNAPSHOT` → `0.1.0 vs 0.2.0`；同类字样面随核）、`docs/design/02-module-layout.md` POM 片段
-- [x] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.1.0` → 最新发布版（旧 shell 坐标覆写随之退役；0.2.0 起另核一处：示例 pom 的 `candidate-closure` profile 随新发布面折叠——新发布版已含的坐标折回基础块、仅留候选新增坐标，否则发布腿解析不到坐标或 boot 点名缺失，it26 follow-up）
-
-（0.2.0 收尾批：2026-10-08 全数落地——bump `0.3.0-SNAPSHOT` + 本清单五条 + 发布腿 `0.2.0` 真跑复验（repo1 直连 6/6 绿；aliyun 代理对新发布件有同步延迟）；3.10.0 干净全量 598/0/0/23 随批复核。证据 = [S-d §16](plan/evidence/iteration-25.1/S-d-release-engineering.txt)。）
+- [ ] 版本 bump 回 SNAPSHOT：`mvn versions:set -DnewVersion=0.4.0-SNAPSHOT -DgenerateBackupPoms=false`（见 §6）
+- [ ] README×2 的 Roadmap 行翻转：`0.3 系列（推进中，未发布）` → `0.3 系列 ✅ 0.3.0 已发布：工具生态四站（Skills / MCP / Web / LSP）`（0.4 计划行不动；现状卡同步「0.3.0 发布验收」收口）
+- [ ] release notes 定稿：`docs/release-notes-0.3.0.md` 发布前终读，如需最小修正随收尾提交
+- [ ] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面（表题 bump 时改 `0.3.0`——去 `SNAPSHOT` 字样，如 `0.2.0 vs 0.3.0-SNAPSHOT` → `0.2.0 vs 0.3.0`；同类字样面随核）、`docs/design/02-module-layout.md` POM 片段
+- [ ] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.2.0` → `0.3.0`；示例 pom 的 `candidate-closure` profile 随新发布面折叠——0.3.0 已含 skill 三件 + mcp 四坐标 + web 四坐标（11 坐标）→ 折回基础块、仅留候选新增坐标（0.3.0 后候选面 = 空或 lsp 三坐标入候选，随收尾裁决；否则发布腿解析不到坐标或 boot 点名缺失，it26 follow-up 先例）
 
 ## 6. 发布后（main 前进）
 
 ```sh
-mvn versions:set -DnewVersion=0.3.0-SNAPSHOT -DgenerateBackupPoms=false
-git add -A && git commit -m "chore: bump 0.3.0-SNAPSHOT"
+mvn versions:set -DnewVersion=0.4.0-SNAPSHOT -DgenerateBackupPoms=false
+git add -A && git commit -m "chore: bump 0.4.0-SNAPSHOT"
 ```
 
 收尾清单见 §5（bump + Roadmap 行翻转 + notes 定稿 + 版本串同步面）——随发布后收尾提交落。

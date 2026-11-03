@@ -1,0 +1,62 @@
+# 0.3.0 发布验收 · 稳定面差异审计（v0.2.0 → master）
+
+核对基准 = [12-api-stability.md](../../design/12-api-stability.md) §7 三法固化：导出面 =
+module-info.java 扫描；配置键 = 插件 config 读取点；CLI = `jh --help`。本次审计在
+v0.2.0 发布面（41 坐标：1 根 + 9 聚合 + 31 叶）与 master 之间逐项比对，2026-11-03 执行。
+发布执行（版本翻转 / 签名 / 上传 / tag / Publish）属用户侧，本档只承载验收证据。
+
+## 一、既有模块变化清单（排除 pom 版本翻转）
+
+`git diff v0.2.0..master --stat` 全量核（pom.xml 的 0.2.0 → 0.3.0-SNAPSHOT 翻转不列）：
+
+| 模块 | 文件 | 变化 | 面判定 |
+|---|---|---|---|
+| bundle/base | AppBoot.java | workspace 承载键 it21 单源四处 → 五处（it26 增 skill-local.cwd） | 内部一致性断言扩展；签名不变 |
+| bundle/base | bundle.yml | +61 行：新增 14 行插件（skill×3 / mcp×4 / web×3 / lsp×2） | 组合面增量（37 行 = 24 可配 + 13 无配，与现状卡一致） |
+| core/agent-loop | AgentEvents.java | CREATED 键 javadoc 补 NOTIFY 异步时机警告（it26 实证） | 纯注释，零契约变化 |
+| core/tools | ScopedRegistry.java | 私有 masked() 迁至 ConfigValues.masked() 单源 | 内部重构 |
+| core/tools | ToolArgs.java | +`rawJson()`、+`readOptionalLong(String)`；构造器私有化 | 纯增量（新公开方法） |
+| core/tools | ValueSchema.java | **sealed 增 `Opt` 变体**；toJson 序列化点内迁 | **破坏候选**（见 §三） |
+| kernel/config | ConfigValues.java | +`masked(Map)`、+`isSensitiveKey(String)`（词表单源，it27.1） | 纯增量（新公开方法） |
+| session/persistence-jsonl | JsonlPersistence.java | manifest config 值支持结构化（Arr/Object，it27）；写入期递归脱敏 | 实现类（§1 非点名实现类属内部）；manifest 结构化已在 12 §3/§5 记账 |
+
+**零变化面**（只有 pom 版本翻转）：kernel/core、kernel/brand、core/session、core/agent、
+core/system-prompt、core/todo、core/plan、core/preset、llm 五模块、fs 四模块、
+shell 五模块、interaction 三模块、sandbox 四模块、session/persistence、bundle/headless。
+
+## 二、核对三法重跑
+
+1. **导出面**：既有 31 叶模块的 module-info.java 在 v0.2.0..master 零改动（改动只落在
+   新模块 skill×3 / mcp×4 / web×4 / lsp×3 与 examples/headless——后者不在发布面）。
+   既有导出包零增删；新增导出包 14 个全部随新模块入场。12 §2 表（2026-11-02 复测
+   47 模块 / 51 包）与本次 diff 审计互证一致，无漂移。
+2. **事件 schema**：`SessionEvent` sealed permits 零变化（core/session 仅 pom 翻转）；
+   新事件全部走 `ExtensionEvent` + codec SPI（skill/catalog、mcp/catalog）。
+   `PreStepDecision` / `LoopGuard` 等 agentloop seam 类型零变化。
+3. **配置键**：既有插件 id 的 config 键零变化（读取点模块均无源码改动）；新键全部
+   属新插件（skill-local/skill-tool、mcp-stdio/mcp-http/mcp-tool、web-fetch-http/
+   web-search-deepseek/web-tool、lsp-jdtls/lsp-tool），12 §5 表已逐键记账。
+4. **CLI**：bundle/headless 零源码改动 → 冻结 flag 面与 0.2.0 逐字节同源。实测
+   `jlink-image/bin/jh --help` EXIT=0，旗标与 12 §6 清单逐项对齐，无新增 flag；
+   `--verify` EXIT=0，治理摘要 `30 rows, 37 discovered, 0 unreferenced`
+   （与现状卡 30/37/0 一致；keyed 档 32/37 未跑——keyless 即验收口径）。
+
+## 三、破坏候选：ValueSchema.Opt（唯一，需 release notes 声明）
+
+`tools` 导出包内 sealed 接口 `ValueSchema` 新增 `Opt` 变体（it27 停 2，可选字段
+缺失放行语义；wire 侧零变化——解包直写内层 schema）。对穷尽 switch 的消费者是
+源码破坏（编译期新增 case 义务），运行时零影响。0.2.0 已发布消费者按 §1 语义：
+破坏性变更随 0.3.0 次版本发布，release notes 声明迁移路径 = 为
+`ValueSchema.Opt` 补 case（解包 `opt.schema()` 按内层校验或显式跳过）。
+
+其余全部为纯增量：新包、新公开方法（ToolArgs.rawJson/readOptionalLong、
+ConfigValues.masked/isSensitiveKey）、新配置键、新插件行、新扩展事件——均不破
+0.2.0 面，0.2.x 无补丁义务。
+
+## 四、发布面计数（reactor 遍历实测）
+
+- 根 reactor 64 项目 = 16 聚合 + 48 叶子；排除 5（examples 聚合 + dist 聚合 +
+  examples-agent-spine + examples-headless + dist-jh）。
+- **0.3.0 发布面 = 59 坐标**（14 聚合含根 + 45 叶）；较 0.2.0 的 41 坐标
+  +4 聚合（skill/mcp/web/lsp）+ 14 叶（skill 3 / mcp 4 / web 4 / lsp 3）。
+- 排除闸 = release profile `excludeArtifacts`（实闸未变，examples 3 + dist 2 恒排除）。
