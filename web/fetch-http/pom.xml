@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-web-aggregator</artifactId>
-        <version>0.3.0-SNAPSHOT</version>
+        <version>0.3.0-rc1</version>
     </parent>
 
     <artifactId>harness-web-fetch-http</artifactId>
