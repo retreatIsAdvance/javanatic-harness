@@ -1,0 +1,45 @@
+0.3.0 发布：mvn -B -P release deploy 实录
+日期：2026-11-03
+环境：Maven 3.10.0（~/Documents/apache-maven-3.10.0）、JDK 25、GnuPG 2.5.21
+
+一、尝试 1（central-publishing-maven-plugin 0.11.0）
+- 失败点：根 POM 签名，maven-gpg-plugin 3.2.8 exit 2
+  gpg: 签名时失败： 缺少 pinentry / gpg: signing failed: 缺少 pinentry
+- 处置：gpgconf --reload gpg-agent 后重试
+
+二、尝试 2（0.11.0）
+- 构建、签名、bundle 上传均成功；deploymentId 236aeb20-ca9b-4443-90ac-50aba1364809
+- Central 校验失败，BUILD FAILURE（central-publishing:0.11.0:publish @ harness-dist-jh）
+  Bundle has content that does NOT have a .pom file: <59 个坐标>
+- 本地 bundle 复核（target/central-publishing/central-bundle.zip，1518 条目）：
+  59 个 .pom 齐全，194 个 .asc 齐全，但混入了
+  - 59 × maven-metadata-local.xml（artifact 层，无 .pom 的目录内容）
+  - 354 × _remote.repositories[.md5/.sha1/.sha256/.sha512]（version 层）
+- 根因：Maven 3.10 下 0.11.0 在打包前不剔除 staging 元数据；Central 按目录校验，
+  artifact 层只有 maven-metadata-local.xml、没有 .pom → 全部 59 坐标被拒。
+  官方修复：central-publishing-maven-plugin 0.12.0（2026-10-13 Release Notes：
+  Fixed deployments being rejected by Central when built with Apache Maven 3.10.0）。
+
+三、修复与尝试 3
+- 根 POM pluginManagement：central-publishing-maven-plugin 0.11.0 → 0.12.0（附注释）
+- 清理 target/central-staging、target/central-publishing 后重跑
+- 再次触发「缺少 pinentry」；relaunch 前置：gpgconf --kill gpg-agent &&
+  gpgconf --launch gpg-agent，随后 --batch 探测签名 SIGN_EXIT=0
+- mvn -B -P release deploy：
+  DEPLOY_EXIT=0，BUILD SUCCESS，Total time 04:19 min
+  - 0.12.0 日志显式剔除：Pre Bundling - deleted …/maven-metadata-local.xml、
+    …/_remote.repositories、…/.locks
+  - Uploaded bundle successfully, deploymentId 3f878232-9d9b-4dd3-ab19-b31783f9372f
+  - Deployment has been validated. Deployment will require manual publishing
+
+四、签名硬门槛复核（bundle 内计数）
+- TOTAL=1164、MAIN_ARTIFACTS=194、ASC=194、CHECKSUMS=776
+- POM_COUNT=59、EXAMPLES_DIST=0、maven-metadata/_remote.repositories 残留=0
+- 逐个主工件检查 .asc 旁路：MISSING_ASC_FLAG=0
+- 口径：45 个叶子 × 4（jar/sources/javadoc/pom）+ 14 个 pom-only = 194 主工件；
+  194 × 4 = 776 校验和；194 + 194 + 776 = 1164
+
+五、遗留
+- 失败部署 236aeb20-ca9b-4443-90ac-50aba1364809 不得 Publish（已被 3f878232 取代）
+- 根 POM 的 0.12.0 变更尚未提交；tag v0.3.0 前须并入发布树（否则 tag 不可复现构建）
+- Portal Publish 为用户侧不可逆动作；Publish 后再走 tag v0.3.0 + push + release-attach
