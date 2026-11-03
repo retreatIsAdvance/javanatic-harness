@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * LspPeer 会话层行为（夹具 = lsp-fixture 单文件 Content-Length server）：
@@ -98,6 +99,8 @@ class LspPeerTest {
 
     @Test
     void terminatePreservesTailReadUntilProcessExit() throws IOException {
+        // TERM 只发信号不关管道、进程可忽略——POSIX 语义；Windows destroy()=TerminateProcess 立即硬杀。
+        assumeFalse(Fixtures.windows(), "TERM 后尾读窗口仅 POSIX");
         Process process = Fixtures.launchFixture("--ignore-term", "--tail-request-delayed", "1200");
         try (LspPeer peer = peer(process, new CopyOnWriteArrayList<>())) {
             peer.request("shutdown", params(), GENEROUS, AbortSignal.never());

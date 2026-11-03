@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,9 +22,10 @@ public record JdtlsLaunch(Path javaHome, Path serverDir, Path configurationDir, 
 
     public JdtlsLaunch {
         Objects.requireNonNull(javaHome, "javaHome");
-        Path javaBinary = javaHome.resolve("bin").resolve("java");
+        String javaBinaryName = javaBinaryName(isWindows());
+        Path javaBinary = javaHome.resolve("bin").resolve(javaBinaryName);
         if (!Files.isRegularFile(javaBinary) || !Files.isExecutable(javaBinary)) {
-            throw new IllegalArgumentException("javaHome lacks an executable bin/java: " + javaHome);
+            throw new IllegalArgumentException("javaHome lacks an executable bin/" + javaBinaryName + ": " + javaHome);
         }
         requireDir(serverDir, "serverDir");
         requireDir(configurationDir, "configurationDir");
@@ -43,7 +45,7 @@ public record JdtlsLaunch(Path javaHome, Path serverDir, Path configurationDir, 
     /** 启动 argv（同停 0 探针形状；-D 系统属性一律在 -jar 之前）。 */
     List<String> argv() {
         List<String> args = new ArrayList<>();
-        args.add(javaHome.resolve("bin").resolve("java").toString());
+        args.add(javaHome.resolve("bin").resolve(javaBinaryName(isWindows())).toString());
         args.add("-Declipse.application=org.eclipse.jdt.ls.core.id1");
         args.add("-Dosgi.bundles.defaultStartLevel=4");
         args.add("-Declipse.product=org.eclipse.jdt.ls.core.product");
@@ -77,6 +79,15 @@ public record JdtlsLaunch(Path javaHome, Path serverDir, Path configurationDir, 
         environment.put("HOME", homeDir.toString());
         environment.put("TMPDIR", homeDir.resolve("tmp").toString());
         return Map.copyOf(environment);
+    }
+
+    /** 平台感知 java 可执行名（纯函数：分支选择可单测、可突变）；Windows JDK 为 java.exe。 */
+    static String javaBinaryName(boolean windows) {
+        return windows ? "java.exe" : "java";
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
     }
 
     private static Optional<Path> launcherJar(Path serverDir) {

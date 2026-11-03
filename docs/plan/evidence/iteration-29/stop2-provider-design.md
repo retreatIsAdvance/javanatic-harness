@@ -21,7 +21,7 @@ TL;DR（五行）
 - 新模块 `lsp/jdtls`，artifactId `harness-lsp-jdtls`，JPMS `io.javanatic.harness.lsp.jdtls` exports / opens 同名包（opens 仅供同包测试反射），根聚合 `harness-lsp-aggregator` 增一个叶子。
 - 依赖仅：`harness-lsp-lsp`（`LspService` 与观察值类型）+ `harness-kernel-core` + `harness-llm-llm`（`AbortSignal`）+ `jackson-databind`（parent 已管理版本；mcp/stdio 同款，非新第三方依赖）。协议解析只在边界层用 Jackson，结果映射为 `lsp/lsp` 纯值类型。
 - 类布局（除 `JdtlsProvider` 与 `JdtlsLaunch` 外全部 package-private）：
-  - `JdtlsLaunch`：启动档案（javaHome、serverDir、configurationDir、projectRoot、indexDir、homeDir、mavenUserSettings / mavenGlobalSettings 可选）；构造校验路径存在且 `javaHome/bin/java` 可执行；不校验「LS 是否可用」。
+  - `JdtlsLaunch`：启动档案（javaHome、serverDir、configurationDir、projectRoot、indexDir、homeDir、mavenUserSettings / mavenGlobalSettings 可选）；构造校验路径存在且 `javaHome/bin/java`（Windows 为 `bin/java.exe`）可执行；不校验「LS 是否可用」。
   - `JdtlsProvider`：实现 `LspService`；持有 peer、候选缓存、观察串行区；`close()` 走 §4 生命周期。
   - `LspPeer`：单进程会话（改编 mcp/stdio `JsonRpcPeer` 先例，见 §3）。
   - `LspFrameReader`：Content-Length 字节帧读取（改编 `BoundedLineReader` 先例）。

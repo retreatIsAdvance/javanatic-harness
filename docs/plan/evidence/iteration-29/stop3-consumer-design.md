@@ -65,7 +65,7 @@ TL;DR（五行）
 
 | 行 | 键 | 缺省 | 校验 |
 |---|---|---|---|
-| lsp-jdtls | javaHome | `java.home` 系统属性（主动探测，披露句入治理摘要） | 路径存在 + bin/java 可执行（JdtlsLaunch 构造校验） |
+| lsp-jdtls | javaHome | `java.home` 系统属性（主动探测，披露句入治理摘要） | 路径存在 + bin/java（Windows 为 bin/java.exe）可执行（JdtlsLaunch 构造校验） |
 | lsp-jdtls | serverDir | **无（必填）** | 存在；缺失 = fail loud |
 | lsp-jdtls | configurationDir | **无（必填）** | 存在；缺失 = fail loud |
 | lsp-jdtls | projectRoot | **无（必填）** | 存在；缺失 = fail loud |

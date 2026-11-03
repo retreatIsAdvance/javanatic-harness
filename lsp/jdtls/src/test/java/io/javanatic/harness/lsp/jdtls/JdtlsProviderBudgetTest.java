@@ -137,7 +137,7 @@ class JdtlsProviderBudgetTest {
             Object failure = closing.get(5, TimeUnit.SECONDS);
             assertThat(failure).isInstanceOf(LspException.class);
             assertThat(((LspException) failure).code()).isEqualTo(LspErrorCode.CLOSE_FAILED);
-            assertThat(provider.exitCode()).hasValue(137);
+            assertThat(provider.exitCode()).hasValue(Fixtures.signalExit(9)); // POSIX SIGKILL / Windows TerminateProcess
         } finally {
             // 即使快速收口断言失败，也必须等自有关闭升级结束，不能泄漏夹具。
             if (!closing.isDone()) {
@@ -169,7 +169,7 @@ class JdtlsProviderBudgetTest {
             assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(2));
             assertThat(result.get(1, TimeUnit.SECONDS))
                 .isEqualTo(new LspResult.NotReady<>(LspResult.NotReadyReason.CLOSED));
-            assertThat(provider.exitCode()).hasValue(137);
+            assertThat(provider.exitCode()).hasValue(Fixtures.signalExit(9)); // POSIX SIGKILL / Windows TerminateProcess
             assertThat(provider.pendingCount()).isZero();
             assertThat(provider.ioThreadsStopped()).isTrue();
         } finally {
@@ -303,7 +303,7 @@ class JdtlsProviderBudgetTest {
                 .as("drain grace must be honored before giving up")
                 .isGreaterThanOrEqualTo(Duration.ofMillis(400));
             assertThat(ProcessHandle.of(provider.pid()).map(ProcessHandle::isAlive).orElse(false)).isFalse();
-            assertThat(provider.exitCode()).hasValue(143);
+            assertThat(provider.exitCode()).hasValue(Fixtures.signalExit(15)); // POSIX SIGTERM / Windows TerminateProcess
         } finally {
             worker.join(Duration.ofSeconds(1));
             provider.close();

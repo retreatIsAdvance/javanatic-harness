@@ -14,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * JdtlsLaunch 启动档案校验（纯值面，不起进程）：
@@ -47,6 +48,12 @@ class JdtlsLaunchTest {
     }
 
     @Test
+    void javaBinaryNameIsPlatformAware() {
+        assertThat(JdtlsLaunch.javaBinaryName(false)).isEqualTo("java");
+        assertThat(JdtlsLaunch.javaBinaryName(true)).isEqualTo("java.exe");
+    }
+
+    @Test
     void rejectsMissingJavaHome() throws IOException {
         assertThatThrownBy(() -> new JdtlsLaunch(temp.resolve("no-such-java"), dir("server"),
             dir("configuration"), dir("project"), dir("index"), dir("home"),
@@ -65,6 +72,7 @@ class JdtlsLaunchTest {
 
     @Test
     void rejectsNonExecutableJavaBinary() throws IOException {
+        assumeFalse(Fixtures.windows(), "POSIX 权限语义在 Windows 不存在（可执行性由扩展名判定）");
         Path javaHome = dir("java-nox");
         Path java = Files.createDirectories(javaHome.resolve("bin")).resolve("java");
         Files.writeString(java, "not executable");
@@ -127,8 +135,8 @@ class JdtlsLaunchTest {
     void buildsStopZeroShapedArgv() throws IOException {
         JdtlsLaunch launch = validLaunch();
         List<String> argv = launch.argv();
-        assertThat(argv.get(0)).isEqualTo(
-            launch.javaHome().resolve("bin").resolve("java").toString());
+        assertThat(argv.get(0)).isEqualTo(launch.javaHome().resolve("bin")
+            .resolve(JdtlsLaunch.javaBinaryName(Fixtures.windows())).toString());
         assertThat(argv).contains("-Declipse.application=org.eclipse.jdt.ls.core.id1",
             "-Dosgi.bundles.defaultStartLevel=4", "-Declipse.product=org.eclipse.jdt.ls.core.product",
             "-Xmx1G", "--add-modules=ALL-SYSTEM", "--add-opens", "java.base/java.util=ALL-UNNAMED",

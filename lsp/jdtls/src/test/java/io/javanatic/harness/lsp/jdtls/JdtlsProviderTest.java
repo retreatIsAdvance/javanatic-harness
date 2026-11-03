@@ -28,6 +28,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * JdtlsProvider 观察算法 + 生命周期（设计 stop2-provider-design §4–§8，夹具 = lsp-fixture）：
@@ -390,6 +391,8 @@ class JdtlsProviderTest {
 
     @Test
     void termIgnoredEscalatesToKill() throws Exception {
+        // Windows destroy()=TerminateProcess 立即硬杀，无可忽略的 TERM、无升级阶梯——POSIX 专属场景。
+        assumeFalse(Fixtures.windows(), "TERM 忽略与 KILL 升级仅 POSIX");
         writeDocument("class App { }\n");
         JdtlsProvider provider = provider("--hang-on-exit", "--ignore-term");
         provider.close(); // TERM 被忽略 → KILL 升级收敛：无异常
@@ -408,6 +411,8 @@ class JdtlsProviderTest {
 
     @Test
     void tailRequestAfterDrainGraceFailsClose() throws Exception {
+        // Windows 上进程在排水窗内已被 TerminateProcess 瞬杀，尾请求无从到达——「排水到期未答」场景仅 POSIX。
+        assumeFalse(Fixtures.windows(), "排水窗内存活至宽限外尾请求仅 POSIX");
         writeDocument("class App { }\n");
         JdtlsProvider provider = new JdtlsProvider(temp,
             Fixtures.fixtureArgv("--ignore-term", "--tail-request-delayed", "1200"),
@@ -439,6 +444,8 @@ class JdtlsProviderTest {
 
     @Test
     void dedicatedProcessGroupMatchesPid() throws Exception {
+        // pgid 捕获依赖 ps 与 POSIX 会话语义（setsid/perl 包装器），Windows 无此面（Session 已披露）。
+        assumeFalse(Fixtures.windows(), "专属进程组语义仅 POSIX");
         writeDocument("class App { }\n");
         Path pidFile = temp.resolve("fixture.pid");
         JdtlsProvider provider = provider("--pid-file", pidFile.toString());

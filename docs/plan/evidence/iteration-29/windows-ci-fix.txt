@@ -1,0 +1,72 @@
+it29 收口批 push 后 Windows 双腿红：根因、修复与验证证据
+====================================================
+日期：2026-11-02/03
+CI 裁决：run 41383832370（master cd39e36→628d62c 推送后）——macOS 绿 / Linux 绿 /
+Windows 红 / Windows-arm 红，红仅限 harness-lsp-jdtls（该模块首上 Windows 双腿）。
+
+一、红面精确清单（口径：surefire 类摘要求和；双腿清单一致，各 27 个标记）
+------------------------------------------------------------------------
+27 个 `<<< (ERROR|FAILURE)!` 标记 = 20 个测试方法标记（13 FAILURE + 7 ERROR）
++ 7 个类摘要标记。7 个红类：
+
+| 类 | Tests run | Failures | Errors |
+|---|---|---|---|
+| JdtlsLaunchTest | 11 | 5 | 4 |
+| JdtlsPluginConfigTest | 6 | 0 | 1 |
+| JdtlsPluginTest | 4 | 0 | 2 |
+| JdtlsProviderBudgetTest | 11 | 3 | 0 |
+| JdtlsProviderTest | 25 | 3 | 0 |
+| LspPeerTest | 16 | 1 | 0 |
+| SessionTest | 1 | 1 | 0 |
+| 合计 | — | 13 | 7 |
+
+20 = 13 FAILURE + 7 ERROR（此前报告曾写「16 失败 + 7 错误」，16+7=23≠20，属笔误；
+正确口径如上，本档为唯一口径源）。
+
+二、根因（三个簇，评审已批准）
+------------------------------------------------------------------------
+RC1（生产缺陷，唯一真 bug）：JdtlsLaunch 两处硬编码 `bin/java`（构造校验 :24、
+argv 首元素 :46，同一字面量复制两处）——Windows JDK 可执行名为 java.exe，
+构造校验在 Windows 上拒绝一切合法 javaHome ⇒ 依赖有效构造的 11 个用例
+（JdtlsLaunchTest 9 + JdtlsPluginConfigTest 1 + JdtlsPluginTest 2）全部红。
+
+RC2（测试面 POSIX 假设）：5 个用例依赖 POSIX 独有进程语义（TERM 可忽略、
+KILL 升级阶梯、ps/pgid 专属组、TERM 不关管道），Windows destroy()=TerminateProcess
+立即硬杀无此面；另 SessionTest 断言面用字面量 `/usr/bin/setsid`，Windows 的
+Path 渲染用反斜杠分隔符（`\usr\bin\setsid`）→ 形状断言在 Windows 恒错。
+
+RC3（信号退出码编码）：3 处硬编码 137/143（POSIX 128+信号编码），Windows
+TerminateProcess 退出码恒 1——但断言侧其余部分在 Windows 全部通过（被测语义
+是「KILL 升级收敛 / 排水到期收敛」，非编码本身）⇒ 需平台映射而非 gate。
+
+三、修复映射（20 方法全覆盖）
+------------------------------------------------------------------------
+- RC1 → JdtlsLaunch 提取纯函数 `javaBinaryName(boolean windows)`（"java.exe"/"java"），
+  构造与 argv 两处都调用；私有 `isWindows()` 只做 os.name 判定。
+  新增 JdtlsLaunchTest.javaBinaryNameIsPlatformAware 钉死分支选择（true→.exe，
+  false→java）——Windows 分支在 macOS 上可单测、可突变（评审要求的纯函数升级）。
+  覆盖：11 方法。
+- RC2 → 5 个 POSIX 专属用例 assumption gate（assumeFalse(Fixtures.windows())，
+  沿用仓内既有 idiom）+ SessionTest 期望值由 Path 派生（不丢覆盖：`--` 分隔与
+  argv 保形语义两平台同测）。覆盖：5 gate + 1 派生。
+- RC3 → Fixtures.signalExit(int) 平台映射（Windows 恒 1 / POSIX 128+signal），
+  JdtlsProviderBudgetTest 三处 hasValue 改调用。覆盖：3 方法。
+
+边界登记同步：B26 措辞（bin/java Windows 为 bin/java.exe、javaBinaryName 纯函数
+判定、JdtlsLaunchTest 12 项）+ stop2-provider-design.md:24 + stop3-consumer-design.md:68。
+.agents/pits.md 增半句：批量 push 首次暴露新模块 = 侦察跑时点后移。
+
+四、验证证据（macOS 本机，JDK 25）
+------------------------------------------------------------------------
+- 聚焦模块跑：lsp/jdtls 全模块（含 -am 上游构建）15 类 189 测试 0 失败 0 错 0 跳过
+  （surefire XML 求和，EXIT=0）。
+- 突变检查 6 项全杀（M1 javaBinaryName true 分支 / M2 false 分支 / M3 isWindows 翻转 /
+  M4 signalExit POSIX 分支 / M5 SessionTest 派生路径 / M6 windows() 翻转 = 5 gate 翻转
+  skip 信号精确），记录见 windows-fix-mutations.txt；终检 grep 零残留。
+- validate（spotless + checkstyle）EXIT=0。
+- 全量 package：EXIT=0，全 reactor surefire XML 求和 143 类 1203 测试 0 失败 0 错误
+  （31 跳过 = 仓内既有平台门）。
+- 披露：真实 Windows 进程行为（java.exe 启动、TerminateProcess 语义、Path 渲染）由
+  CI 四平台裁决（与 it24「内核绑定真跑」纪律同构）；本地可测面已全部钉死，
+  lsp/tool 首上 Windows 为纯值测试面、无平台假设（夹具 = LspToolFixtures 纯值构造），
+  判定低风险。

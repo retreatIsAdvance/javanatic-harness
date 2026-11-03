@@ -1,0 +1,47 @@
+it29 收口批 push 后 Windows 双腿红（run 41383832370）修复批突变检查记录
+====================================================================
+测量面：macOS 本机（JDK 25），mvn = ~/Documents/apache-maven-3.10.0/bin/mvn，
+JAVA_HOME = $(/usr/libexec/java_home -v 25)。每项突变：改一处 → 跑聚焦测试 → 记红 → 逐字节还原。
+
+M1  javaBinaryName(true) "java.exe" → "java.exee"（JdtlsLaunch.java:86）
+    跑：-pl lsp/jdtls -am -Dtest=JdtlsLaunchTest -Dsurefire.failIfNoSpecifiedTests=false
+    红：12 运行 1 败——恰为 javaBinaryNameIsPlatformAware（expected: "java.exe"）
+    判定：纯函数 true 分支被杀。还原逐字节一致。
+
+M2  javaBinaryName(false) "java" → "javax"（JdtlsLaunch.java:86）
+    跑：同上
+    红：12 运行 6 败 3 错——构造函数拒绝真实 macOS JDK（bin/javax 不存在），
+        全部依赖有效构造的用例级联红（rejectsMissingProjectRoot 等期望消息的用例
+        先撞 "javaHome lacks an executable bin/javax"）
+    判定：false 分支选择逻辑被构造校验路径吃进，突变可观察。还原逐字节一致。
+
+M3  首形态 isWindows() → return true 被 spotless 拦（Locale 未使用），弃用；
+    终形态 isWindows() contains("win") → contains("mac")（JdtlsLaunch.java:90）
+    跑：同上
+    红：12 运行 5 败 3 错——isWindows 翻转使构造找 bin/java.exe 失败；
+        javaBinaryNameIsPlatformAware 照绿（纯函数显式传参，与 os.name 无关，符合预期）
+    判定：平台判定喂给构造分支选择，突变可观察。还原逐字节一致。
+
+M4  Fixtures.signalExit POSIX 分支 128+signal → 128+signal+1（Fixtures.java:34）
+    跑：-Dtest=JdtlsProviderBudgetTest
+    红：11 运行 3 败——恰为三处 hasValue(Fixtures.signalExit(...)) 断言
+    判定：137/143 映射函数被杀，三个消费点全红。还原逐字节一致。
+
+M5  SessionTest 派生期望 Path.of("/usr/bin/setsid") → "/usr/bin/setsidx"
+    跑：-Dtest=SessionTest
+    红：1 运行 1 败——形状断言杀
+    判定：Path 派生期望被吃进断言面。还原逐字节一致。
+
+M6  首形态 Fixtures.windows() → return true 被 spotless 拦（Locale 未使用），弃用；
+    终形态 windows() contains("win") → contains("mac")（Fixtures.java:24）
+    跑：-pl lsp/jdtls -am test（全模块）
+    红：143 个失败/错误标记——javaBin() 返回 bin/java.exe 不存在，夹具启动全崩；
+        signalExit 恒 1 使预算断言翻红。同时 surefire XML 显示恰好 5 个 gated 用例
+        翻转为 skipped（JdtlsLaunchTest.rejectsNonExecutableJavaBinary +
+         JdtlsProviderTest 三项 + LspPeerTest.terminatePreservesTailReadUntilProcessExit），
+        证明 5 个 assumption gate 确实接在 Fixtures.windows() 上。
+    判定：gate 接线被突变可观察（skip 翻转信号精确 = 5）。还原逐字节一致。
+
+终检：grep 零残留（java.exee / javax / setsidx / contains("mac") / 128+signal+1 / return true
+      均无残留；Session.java:34 既有 contains("mac") 为存量平台判定，非突变残留）。
+还原后聚焦复绿：15 类 189 测试 0/0/0/0（surefire XML 求和）。

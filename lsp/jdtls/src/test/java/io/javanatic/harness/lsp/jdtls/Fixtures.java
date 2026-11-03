@@ -19,10 +19,19 @@ final class Fixtures {
     private Fixtures() {
     }
 
+    /** 平台判定（测试面唯一入口，生产 JdtlsLaunch 有等价私有判定）。 */
+    static boolean windows() {
+        return System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
+    }
+
     static String javaBin() {
-        String executable = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win")
-            ? "java.exe" : "java";
+        String executable = windows() ? "java.exe" : "java";
         return Path.of(System.getProperty("java.home"), "bin", executable).toString();
+    }
+
+    /** 信号退出码的平台映射：POSIX = 128+信号（SIGTERM 143 / SIGKILL 137），Windows TerminateProcess 恒 1。 */
+    static int signalExit(int signal) {
+        return windows() ? 1 : 128 + signal;
     }
 
     /** 夹具源码：走 test-classes 资源副本定位（不依赖测试 cwd）。 */
