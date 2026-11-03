@@ -70,3 +70,9 @@ TerminateProcess 退出码恒 1——但断言侧其余部分在 Windows 全部�
   CI 四平台裁决（与 it24「内核绑定真跑」纪律同构）；本地可测面已全部钉死，
   lsp/tool 首上 Windows 为纯值测试面、无平台假设（夹具 = LspToolFixtures 纯值构造），
   判定低风险。
+
+五、CI 终裁（2026-11-03）
+------------------------------------------------------------------------
+推送 b2f284b 后 CI run 41559844431：build / macos / windows / windows-arm 四腿全绿
+（release-attach 照例跳过）——上轮 run 41383832370 红的两条 Windows 腿转绿，
+lsp/tool 首次在 Windows 双腿运行通过。it29 的 Windows 面收齐。
