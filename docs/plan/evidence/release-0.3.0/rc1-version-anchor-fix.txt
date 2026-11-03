@@ -1,0 +1,58 @@
+0.3.0-rc1 排练：版本格式锚修复取证
+====================================
+
+一、暴露过程
+------------
+块 B push（commit 77d9340 + tag v0.3.0-rc1）被 pre-push 钩子拒绝：
+钩子执行 `mvn -B -q package`（与 CI 同口径全量构建 + 全部测试），
+在 harness-examples-headless 红于
+  HeadlessOptionsTest.versionConstantIsBuildInjected
+  Expecting actual: "0.3.0-rc1" to match pattern: "\d+\.\d+\.\d+(-SNAPSHOT)?"
+
+根因：`versions:set -DnewVersion=0.3.0-rc1` 改变了构建期注入的版本串，
+而测试的格式锚只承认 release / SNAPSHOT 两种形态。纯测试面缺陷，
+产品代码零改动；影响面 = rc 版本本地推不出去 + 该 tag 的 CI 四腿必红。
+
+二、修复
+--------
+文件：examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessOptionsTest.java
+  - 原锚：\d+\.\d+\.\d+(-SNAPSHOT)?
+  + 新锚：\d+\.\d+\.\d+(-SNAPSHOT|-rc\d+)?
+Javadoc 同步半句：「rc 排练版本同样合法」。锚的防未过滤/空资源漂移原意保留
+（`${project.version}` 与空串仍不匹配）。
+
+三、突变取证（旧锚必红 → 新锚复绿）
+------------------------------------
+命令（两次同形，仅待测文件内容不同）：
+  export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+  ~/Documents/apache-maven-3.10.0/bin/mvn -B -pl examples/headless -am test \
+      -Dtest=HeadlessOptionsTest -Dsurefire.failIfNoSpecifiedTests=false
+
+旧锚（突变）：
+  MUTATION_EXIT=1
+  [ERROR] io.javanatic.harness.examples.headless.HeadlessOptionsTest.versionConstantIsBuildInjected
+          -- Time elapsed: 0.005 s <<< FAILURE!
+  java.lang.AssertionError:
+  Expecting actual: "0.3.0-rc1"
+  to match pattern: "\d+\.\d+\.\d+(-SNAPSHOT)?"
+          at ...HeadlessOptionsTest.versionConstantIsBuildInjected(HeadlessOptionsTest.java:89)
+
+新锚（还原）：
+  RESTORE_EXIT=0
+  FAILURE 行计数 = 0
+  surefire XML：testcase name="versionConstantIsBuildInjected" ... （无 failure 子元素）
+
+还原一致性：git diff 仅剩两文件（本测试 + .agents/pits.md），无其他残留。
+
+四、全量构建（rc1 版本）
+------------------------
+命令：
+  export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+  ~/Documents/apache-maven-3.10.0/bin/mvn -B -q package
+结果：
+  BUILD_EXIT=0
+
+五、后续动作
+------------
+- rc tag 尚未推送：本地 tag v0.3.0-rc1 重指到修复提交后重推。
+- .agents/pits.md 已回填：排练类版本翻转后先跑全量构建再 tag/push。

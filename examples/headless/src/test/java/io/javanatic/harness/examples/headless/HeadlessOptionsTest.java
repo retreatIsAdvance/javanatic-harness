@@ -83,10 +83,10 @@ class HeadlessOptionsTest {
         assertThat(HeadlessMain.USAGE).contains("--version");
     }
 
-    /** 版本串单源=构建期资源过滤(version.properties ← ${project.version});格式锚防未过滤/空资源漂移。 */
+    /** 版本串单源=构建期资源过滤(version.properties ← ${project.version});格式锚防未过滤/空资源漂移;rc 排练版本同样合法。 */
     @Test
     void versionConstantIsBuildInjected() {
-        assertThat(HeadlessMain.VERSION).matches("\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?");
+        assertThat(HeadlessMain.VERSION).matches("\\d+\\.\\d+\\.\\d+(-SNAPSHOT|-rc\\d+)?");
     }
 
     @Test
