@@ -2,12 +2,12 @@
 # 外部消费方验证（it23，指南 docs/embedding.md §验证）：同一份示例源码、两条工件腿 + 四负例。
 #
 #   候选腿：主仓工作树 `mvn install` 进隔离本地仓（不碰本机仓库）→ 示例编译 + 治理自证运行 exit 0
-#   发布腿：隔离本地仓为空、只取 Maven Central 的 0.2.0 发布件 → 同源复验（交集面）
+#   发布腿：隔离本地仓为空、只取 Maven Central 的 0.3.0 发布件 → 同源复验（交集面）
 #           取件走 settings-central.xml（公共代理）：公司 mirror 对发布件的 jar 曾持续 404（0.1.0 时
 #           16 个 jar 全缺、pom 正常）——发布腿一律经公共 Central 代理取件
 #           坐标：0.2.0 起发布件含 harness-shell-local（it25 S-b 新坐标），旧坐标覆写已退役（见 leg()）
-#           行集：0.2.0 发布面冻结于 it26 之前，bundle 行集不含 skill/mcp 新行——示例 pom 的
-#           candidate-closure profile（skill 三件 + mcp 四坐标）必须停用（-P '!candidate-closure'，见 leg()）
+#           行集：0.3.0 发布件行集已含 skill/mcp/web/lsp 全部行（it26–it29 渐入 base bundle），
+#           candidate-closure 已随 0.3.0 折空；-P '!candidate-closure' 停用保留为 0.4.0 候选前置（见 leg()）
 #   负例：坏版本 / 去显式版本 / 坏治理配置 / 生产档撞 AUTO 审批——各须构建必败或 boot 必抛，诊断可读
 #
 # 用法：integration/verify-consumer.sh [candidate|release|all]   （缺省 all）
@@ -38,7 +38,7 @@ run() { # run <label> <log> <cmd...>
         note "  ok   $label"
         return 0
     fi
-    note "  FAIL $label —— 日志尾部（$log）："
+    note "  FAIL $label —— 日志尾部（${log}）："
     tail -n 25 "$log"
     failures=$((failures + 1))
     return 1
@@ -54,10 +54,10 @@ expect_fail() { # expect_fail <label> <log> <needle> <cmd...>
         return 1
     fi
     if grep -q -- "$needle" "$log"; then
-        note "  ok   $label（已拒，文案含「$needle」）"
+        note "  ok   ${label}（已拒，文案含「${needle}」）"
         return 0
     fi
-    note "  FAIL $label —— 诊断文案缺「$needle」；日志尾部："
+    note "  FAIL $label —— 诊断文案缺「${needle}」；日志尾部："
     tail -n 25 "$log"
     failures=$((failures + 1))
     return 1
@@ -87,31 +87,31 @@ leg() { # leg <name> <version>
     fi
     local -a closure=()
     if [ "$name" = release ]; then
-        # 发布腿停用示例 pom 的 candidate-closure profile：0.2.0 发布件的 bundle 行集
-        # 冻结于 it26 之前（无 skill 三行，亦无对应坐标）——不停用即解析 0.2.0 处不存在的
-        # skill 坐标而败（it26 follow-up：CI run 38495904023 build 腿实撞）
+        # 发布腿停用示例 pom 的 candidate-closure profile：该 profile 收候选件独有坐标，
+        # 发布件不含——0.3.0 已将其折空（坐标入基础块），停用现为无操作前置；
+        # 0.4.0 候选坐标入 profile 后重新生效（it26 follow-up：CI run 38495904023 先例）
         closure=(-P '!candidate-closure')
     fi
-    note "== 腿 $name：harness.version=$version，隔离本地仓 $repo =="
+    note "== 腿 ${name}：harness.version=${version}，隔离本地仓 $repo =="
     if [ "$name" = candidate ]; then
         run "候选：工作树 install → 隔离仓（跳测试）" "$WORK/install-$name.log" \
             "$MVN" -B -ntp -f "$ROOT/pom.xml" -DskipTests -Dmaven.repo.local="$repo" install
     fi
-    run "$name：示例编译" "$WORK/compile-$name.log" \
+    run "${name}：示例编译" "$WORK/compile-$name.log" \
         "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} ${closure[@]+"${closure[@]}"} \
         -f "$SAMPLE/pom.xml" -Dmaven.repo.local="$repo" \
         -Dharness.version="$version" compile
-    run "$name：运行类路径" "$WORK/classpath-$name.log" \
+    run "${name}：运行类路径" "$WORK/classpath-$name.log" \
         "$MVN" -B -ntp ${settings[@]+"${settings[@]}"} ${closure[@]+"${closure[@]}"} \
         -f "$SAMPLE/pom.xml" -Dmaven.repo.local="$repo" \
         -Dharness.version="$version" \
         org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
         -Dmdep.includeScope=runtime -Dmdep.outputFile="$WORK/classpath-$name.txt"
-    run "$name：治理自证运行" "$WORK/run-$name.log" \
+    run "${name}：治理自证运行" "$WORK/run-$name.log" \
         "$JAVA" -cp "$(classpath "$name")" "$SELF_CHECK" "$PROFILE"
-    check "$name：自证通过" "SELF-CHECK OK" "$WORK/run-$name.log"
-    check "$name：自有工具可见" "word_count.visible=true" "$WORK/run-$name.log"
-    check "$name：自有工具可执行" "word_count.invoke.error=false" "$WORK/run-$name.log"
+    check "${name}：自证通过" "SELF-CHECK OK" "$WORK/run-$name.log"
+    check "${name}：自有工具可见" "word_count.visible=true" "$WORK/run-$name.log"
+    check "${name}：自有工具可执行" "word_count.invoke.error=false" "$WORK/run-$name.log"
     note "  用时 $((SECONDS - started))s"
 }
 
@@ -163,7 +163,7 @@ mkdir -p "$WORK" || exit 2
 
 cd "$ROOT" || exit 2
 note "仓库：$ROOT"
-note "候选版本：$CANDIDATE_VERSION（取自根 pom）"
+note "候选版本：${CANDIDATE_VERSION}（取自根 pom）"
 note "工作目录：$WORK"
 note "Maven：$MVN"
 "$MVN" -v | sed -n '1,3p'
@@ -181,7 +181,7 @@ case "$LEG" in
         fi
         ;;
     release)
-        leg release 0.2.0
+        leg release 0.3.0
         ;;
     *)
         note "用法：$0 [candidate|release|all]"
@@ -191,8 +191,8 @@ esac
 
 note ""
 note "== 汇总：$LEG =="
-if [ -f "$WORK/repo-release/io/github/retreatisadvance/harness-bundle-base/0.2.0/_remote.repositories" ]; then
-    note "发布腿取件来源（隔离仓初始为空；0.2.0 只可能来自公共 Central 代理，mirror id 见下）："
+if [ -f "$WORK/repo-release/io/github/retreatisadvance/harness-bundle-base/0.3.0/_remote.repositories" ]; then
+    note "发布腿取件来源（隔离仓初始为空；0.3.0 只可能来自公共 Central 代理，mirror id 见下）："
     sed -n '1,3p' "$WORK/repo-release/io/github/retreatisadvance/harness-bundle-base/0.2.0/_remote.repositories"
 fi
 note "失败项：$failures"

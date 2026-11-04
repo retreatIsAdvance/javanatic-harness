@@ -121,11 +121,11 @@ git tag v0.3.0 && git push origin v0.3.0      # push 需放行；tag 指向须�
 
 **发布后清单（Publish 后收尾，随后续提交落；Roadmap 翻转时机裁决 = 推迟到 Publish 后，it25.1 先例）**：
 
-- [ ] 版本 bump 回 SNAPSHOT：`mvn versions:set -DnewVersion=0.4.0-SNAPSHOT -DgenerateBackupPoms=false`（见 §6）
-- [ ] README×2 的 Roadmap 行翻转：`0.3 系列（推进中，未发布）` → `0.3 系列 ✅ 0.3.0 已发布：工具生态四站（Skills / MCP / Web / LSP）`（0.4 计划行不动；现状卡同步「0.3.0 发布验收」收口）
-- [ ] release notes 定稿：`docs/release-notes-0.3.0.md` 发布前终读，如需最小修正随收尾提交
-- [ ] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面（表题 bump 时改 `0.3.0`——去 `SNAPSHOT` 字样，如 `0.2.0 vs 0.3.0-SNAPSHOT` → `0.2.0 vs 0.3.0`；同类字样面随核）、`docs/design/02-module-layout.md` POM 片段
-- [ ] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.2.0` → `0.3.0`；示例 pom 的 `candidate-closure` profile 随新发布面折叠——0.3.0 已含 skill 三件 + mcp 四坐标 + web 四坐标（11 坐标）→ 折回基础块、仅留候选新增坐标（0.3.0 后候选面 = 空或 lsp 三坐标入候选，随收尾裁决；否则发布腿解析不到坐标或 boot 点名缺失，it26 follow-up 先例）
+- [x] 版本 bump 回 SNAPSHOT：`mvn versions:set -DnewVersion=0.4.0-SNAPSHOT -DgenerateBackupPoms=false`（见 §6）
+- [x] README×2 的 Roadmap 行翻转：`0.3 系列（推进中，未发布）` → `0.3 系列 ✅ 0.3.0 已发布：工具生态四站（Skills / MCP / Web / LSP）`（0.4 计划行不动；现状卡同步「0.3.0 发布验收」收口）
+- [x] release notes 定稿：`docs/release-notes-0.3.0.md` 发布前终读，如需最小修正随收尾提交
+- [x] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值）、`docs/embedding.md` 版本面（表题 bump 时改 `0.3.0`——去 `SNAPSHOT` 字样，如 `0.2.0 vs 0.3.0-SNAPSHOT` → `0.2.0 vs 0.3.0`；同类字样面随核）、`docs/design/02-module-layout.md` POM 片段
+- [x] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.2.0` → `0.3.0`；示例 pom 的 `candidate-closure` profile 随新发布面折叠——0.3.0 已含 skill 三件 + mcp 四坐标 + web 四坐标（11 坐标）→ 折回基础块、仅留候选新增坐标（0.3.0 后候选面 = 空或 lsp 三坐标入候选，随收尾裁决；否则发布腿解析不到坐标或 boot 点名缺失，it26 follow-up 先例）。0.3.0 实况：lsp 三坐标 it29 已随闭包发布（bundle base 含 lsp 行），故一并折入、候选面为空。**新发布刚上线即跑发布腿会撞公共代理同步滞后**（aliyun 对新坐标有分钟到小时级延迟，症状 = `Could not find artifact …:0.3.0` 而 repo1 本体已全）——以 `RELEASE_SETTINGS` 指向 repo1 的直连 settings 复核，代理版腿等同步后自绿
 
 ## 6. 发布后（main 前进）
 

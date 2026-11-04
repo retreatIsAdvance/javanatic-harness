@@ -151,7 +151,7 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 | 15 ✅ | Production simulation in CI: replay-driven (keyless, deterministic) + PRODUCTION policy + multi-step tasks + compaction + mid-flight kill/resume + budget stop + full R1 comparison | [03](docs/design/03-session-event-sourcing.md) |
 | 16 ✅ | Release engineering → **0.1.0** published: Maven Central + GitHub Release (jlink archives), facade freeze, bilingual README | — |
 | 17–25 ✅ | **0.2.0** published: reliable single-agent CLI, cancellation/recovery/resource limits, workspace and session usability, external Java integration, Linux archives + Landlock, Windows confinement + pwsh; Maven Central + GitHub Release (four platform archives) | — |
-| 0.3 series (planned) | Reusable capabilities: skills + MCP Tools first; web access and LSP follow | [Overall plan](docs/design/README.md#phased-evolution-plan) |
+| 0.3 series ✅ | **0.3.0** published: tool ecosystem four stations (Skills / MCP / Web / LSP); Maven Central + GitHub Release (four platform archives) | [Overall plan](docs/design/README.md#phased-evolution-plan) |
 | 0.4 (planned) | Managed background tasks first, then controlled multi-agent delegation | [Overall plan](docs/design/README.md#phased-evolution-plan) |
 
 **Planning principle**: maintainer-led scenarios, real-task acceptance, and community feedback for calibration—not a prerequisite to begin. These future stages have not started; scope, dependencies, and acceptance gates live in the overall plan, with each iteration requiring its own scope confirmation and review checkpoints.

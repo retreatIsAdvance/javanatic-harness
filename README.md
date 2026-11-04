@@ -141,10 +141,10 @@ bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可�
 | 15 ✅ | 生产模拟进 CI：replay 驱动（keyless、确定性）+ PRODUCTION policy + 多步任务 + compaction + 中途 kill/resume + budget 停 + R1 全比对 | [03](docs/design/03-session-event-sourcing.md) |
 | 16 ✅ | 发布工程 → **0.1.0** 已发布：Maven Central + GitHub Release（jlink 归档）、门面冻结、双语 README | — |
 | 17–25 ✅ | **0.2.0** 已发布：可靠单 Agent CLI、取消/恢复/资源边界、工作区与会话易用性、外部 Java 接入、Linux 归档 + Landlock、Windows 本机隔离 + pwsh；Maven Central + GitHub Release（四平台归档） | — |
-| 0.3 系列（推进中，未发布） | Skills / MCP Tools / 网络资料获取已落地；it29 停 0 限定通过、T1–T3 方向已裁并随停 1 落定；`lsp/lsp` Definition 已写、停 1 已通过并关闭，停 2 Provider 进行中；无可挂载 Provider 或 `lsp-tool`，T4–T7 未整体批准、产品验收未执行 | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 0.3 系列 ✅ | **0.3.0** 已发布：工具生态四站（Skills / MCP / Web / LSP）；Maven Central + GitHub Release（四平台归档） | [总体计划](docs/design/README.md#phased-evolution-plan) |
 | 0.4（计划） | 先可管理的后台任务，再受控多 Agent 委派 | [总体计划](docs/design/README.md#phased-evolution-plan) |
 
-**规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。0.3 已在推进，0.4 尚未开工；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。能力落地不等于版本就绪，发布另设验收。
+**规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。0.4 尚未开工；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。能力落地不等于版本就绪，发布另设验收。
 
 **平台支持面（0.2.0）**：macOS、Linux 与 Windows 三平台可用（含同机沙箱）——沙箱是平台候选链，取宿主上第一个可用后端：
 
