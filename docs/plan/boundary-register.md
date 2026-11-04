@@ -1,6 +1,6 @@
 # 边界登记表
 
-> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-10-31（LSP 边界补 B27/B28；停 3 已通过并关闭，it29 已关账 = 0.3 四站全落）。
+> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-11-04（it30 开工；0.5 路线评审预登记 B29——W3 四确认时转正）。
 >
 > 编号消歧：本表原 B4「MCP 消费结果预算」现为 `B-MCP-RESULT`；冻结历史中的旧编号仍按本映射解读。图生成器挂账保留 [it26 提案 B4](evidence/iteration-26/roadmap-diff-proposal.md#b4-capability-graph-机械化建议挂账)，与本表预算项无关。
 
@@ -40,6 +40,12 @@
 | B26 | LSP Provider 输入面 | `JdtlsLaunch` 输入（javaHome / serverDir / configurationDir / projectRoot / indexDir / homeDir / mavenUserSettings / mavenGlobalSettings）**路径只校验存在，不验证内容**——`javaHome/bin/java`（Windows 为 `bin/java.exe`，`javaBinaryName` 纯函数判定）须可执行，其余目录 / 文件内容正确性由 LS 进程自己判定；索引 / home 目录写入是 LS 进程行为，工具治理不覆盖进程 | `lsp/jdtls` `JdtlsLaunch`（构造校验 + `JdtlsLaunchTest` 12 项）；[停 2 设计](evidence/iteration-29/stop2-provider-design.md) §2；装配面已现（停 3 S1/S2），配置键另行登记见 B27/B28 |
 | B27 | LSP 行配置（jdtls） | 键白名单 8 个：`javaHome`（缺省探测 `java.home`，主动探测披露见治理摘要）/ `serverDir` / `configurationDir` / `projectRoot`（三者必填，`JdtlsLaunch` 校验存在）/ `indexDir`（缺省 `homeDir/index`）/ `homeDir`（缺省 `<tmpdir>/jh-lsp-<8位随机>`，LS 缓存 / 索引不触碰用户真实 HOME）/ `mavenUserSettings` / `mavenGlobalSettings`（Optional）。未知键 / 坏值 fail loud；目录创建（homeDir / indexDir）发生在 `toLaunch()`——解析本身无文件系统副作用 | `lsp/jdtls` `JdtlsPluginConfig`；12 §6；[停 3 终裁](evidence/iteration-29/stop3-acceptance.txt) |
 | B28 | LSP 行配置（tool） | 键白名单 5 个，预算缺省有界：`timeoutSeconds` 30 / `waitSeconds` 15 / `maxDiagnostics` 50 / `maxLocations` 50 / `maxOutputBytes` 262144（256 KiB）；全部正整数，`waitSeconds ≤ timeoutSeconds`（LspQuery 构造契约的配置面预校验）；未知键 / 非正 fail loud | `lsp/tool` `LspToolConfig`；12 §6；[停 3 终裁](evidence/iteration-29/stop3-acceptance.txt) |
+
+## 0.5 工作台预登记（2026-11-04 路线评审）
+
+| # | 边界 | 规则 | 落地与证据 |
+|---|---|---|---|
+| B29 | JSON-RPC server 监听面（预登记） | 全仓**第一个监听套接字**：仅绑定 **127.0.0.1 回环**、单用户、无远程暴露、无 TLS（本地回环语义）——W3 验收硬线。授权依据 = [00 §6](../design/00-overview.md)「headless runner + JSON-RPC（ACP 等价物）足够」；Web UI 本体的非目标改判另行决策记录（W3 开工前，全局 grep 旧措辞同步） | 预登记（it30 路线评审）；W3 四确认时转正 |
 
 ## 维护规则
 

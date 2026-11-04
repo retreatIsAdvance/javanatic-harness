@@ -4,6 +4,8 @@
 
 **三项裁决已确认（2026-11-04）**：任务体 = shell 命令后台化；布局 = 独立 `jobs` 组三角色；产品面 = API + 工具 + 装配面（REPL/CLI 操作面留停 3 裁决）。同日路线裁决：it30 → it31 受控委派 → 0.4.0 发布 → 0.5「个人工作台」（TUI 先行，再 JSON-RPC server + 本地 Web；动态配置 = 只读投影 + 新会话换组合，热重载维持不做）——0.5 预告行随本迭代收尾批落盘，Web UI 非目标改判推迟到 server 段（W3）开工前。
 
+路线评审预登记（2026-11-04，四条，不改阶梯）：① W2 终端库选型（JLine 3 / Lanterna / 裸 ANSI 对比：依赖面 / JPMS 兼容 / 维护度）为 W2 四确认置顶必裁项（新增第三方依赖须用户确认）；② it31 四确认时先定稿「与单 Agent 收益对比」的验收任务集——委派是 it22 以来最深的 core 语义改动，排期最大单点；③ W3 JSON-RPC server 的监听边界已预登记 [B29](boundary-register.md)（仅 127.0.0.1 回环、单用户、无远程、无 TLS）；④ W4 Web UI 首版约束 = 无构建链单文件 vanilla JS（server 直接服务 .html，不引入 node 工具链），组合编辑器复用 `dump`/`--verify` 干跑做「启动前校验」（fail-loud 直接变 UX）。
+
 ## 四确认
 
 - **内容**：`jobs` capability 三角色新组——`jobs/jobs` Definition（JobService 契约：`Id` 品牌任务 ID、所属会话、状态判别联合、输出游标读取）、`jobs/local` Provider（shell 命令后台执行：输出限额、超时、取消、完成通知、宿主退出清理、重启后失联如实标记）、`jobs/tool` Consumer（模型操作面：启动 / 状态 / 读输出 / 等待 / 取消工具，恒需审批口径随停 3 定）。完成通知走 ExtensionEvent + codec 通道（第七实例）。装配面：base bundle 行 + `--verify` 摘要行 + R1 入账；缺省组合零后台任务零噪声。
