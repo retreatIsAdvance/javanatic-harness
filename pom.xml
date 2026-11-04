@@ -60,6 +60,7 @@
         <module>session</module>
         <module>sandbox</module>
         <module>interaction</module>
+        <module>jobs</module>
         <module>bundle</module>
         <module>examples</module>
         <module>dist</module>
@@ -323,6 +324,11 @@
             <dependency>
                 <groupId>io.github.retreatisadvance</groupId>
                 <artifactId>harness-interaction-ask</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.retreatisadvance</groupId>
+                <artifactId>harness-jobs-jobs</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

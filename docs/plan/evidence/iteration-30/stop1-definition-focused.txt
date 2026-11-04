@@ -1,0 +1,23 @@
+it30 停 1 取证：jobs/jobs Definition 聚焦测试 + 全仓 validate 门禁
+日期：2026-11-04；Maven 3.10.0（~/Documents/apache-maven-3.10.0）+ temurin-25
+
+一、聚焦测试（mvn -B -pl jobs/jobs -am test）
+TEST_EXIT=0 / BUILD SUCCESS
+Tests run: 3, Failures: 0, Errors: 0 -- in io.javanatic.harness.jobs.JobSliceTest
+Tests run: 5, Failures: 0, Errors: 0 -- in io.javanatic.harness.jobs.JobStateTest
+Tests run: 6, Failures: 0, Errors: 0 -- in io.javanatic.harness.jobs.JobRequestTest
+Tests run: 3, Failures: 0, Errors: 0 -- in io.javanatic.harness.jobs.JobSnapshotTest
+（模块汇总 17 = 3+5+6+3；类行不计入总数，口径见 AGENTS 测试计数）
+harness-jobs-jobs .................................. SUCCESS [  0.927 s]
+中途实撞一次编译红：Id 实际包为 io.javanatic.harness.kernel.brand（非 io.javanatic.harness.brand），
+三处 import 修正后绿——无行为语义变化。
+
+二、全仓门禁（mvn -B -q validate：spotless + checkstyle 全 reactor）
+VALIDATE_EXIT=0
+
+三、交付面
+jobs/jobs Definition 仅契约与事件形状（无进程、工具、第三方依赖）：
+JobService（ServiceKey "jobs"）+ Job 品牌（Id<Job> 工厂）+ JobRequest/JobState(五变体判别联合)
++ JobSnapshot/JobSlice/JobFailureReason + JobException/JobNotFoundException。
+事件形状（codec 随停 2/3 落实现）：job/snapshot 全量快照、按 id fold 末值胜、
+无 generation 字段（B16 同精神）；输出块不事件化（游标读）。

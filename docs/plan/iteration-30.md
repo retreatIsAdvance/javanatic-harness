@@ -33,7 +33,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1 | JobService 契约 / 状态联合 / 游标模型 / job 事件 schema——承载契约 + 新词表 | **准备中** |
+| 停 1 | JobService 契约 / 状态联合 / 游标模型 / job 事件 schema——承载契约 + 新词表 | **已出包，等用户放行**（[seam 提案](evidence/iteration-30/stop1-seam-design.md) / [审查包](evidence/iteration-30/stop1-review-packet.md) / [取证](evidence/iteration-30/stop1-definition-focused.txt)：17/0/0 + validate EXIT=0） |
 | 停 2 | jobs/local Provider——后台执行 + 限额/超时/取消/宿主退出清理/重启失联标记，跨模块效应（进程所有权、durable 面） | 未开 |
 | 停 3 | Consumer + 装配面 + 验收（base 行 + `--verify` 双态 + R1 回放 + 模型在环） | 未开 |
 
