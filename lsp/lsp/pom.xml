@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-lsp-aggregator</artifactId>
-        <version>0.3.0</version>
+        <version>0.4.0-SNAPSHOT</version>
     </parent>
     <artifactId>harness-lsp-lsp</artifactId>
     <name>harness-lsp-lsp</name>
