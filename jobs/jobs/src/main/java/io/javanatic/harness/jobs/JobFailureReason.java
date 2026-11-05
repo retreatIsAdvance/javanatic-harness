@@ -7,5 +7,7 @@ public enum JobFailureReason {
     /** 超时被 Provider 终止（TERM→KILL 语义归 Provider），退出码取实际可观测值。 */
     TIMED_OUT,
     /** 输出管道破裂（进程写端关闭或读取失败），输出捕获不完整。 */
-    PIPE_BROKEN
+    PIPE_BROKEN,
+    /** 进程正常走完但退出码非零（it30 停 2 增补：非零退出是任务失败，不是成功带码）。 */
+    EXIT_NONZERO
 }

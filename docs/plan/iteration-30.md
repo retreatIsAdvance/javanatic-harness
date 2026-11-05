@@ -34,7 +34,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1 | JobService 契约 / 状态联合 / 游标模型 / job 事件 schema——承载契约 + 新词表 | **已通过并关闭**（2026-11-05 评审放行：四裁决点全批；快照 `outputTruncated` 位满足「捕获已停可辨」要求；R1 依据已补 seam 提案 §2——输出到模型的唯一通道是 tool/result 落账，面板读游标不是模型可见面） |
-| 停 2 | jobs/local Provider——后台执行 + 限额/超时/取消/宿主退出清理/重启失联标记，跨模块效应（进程所有权、durable 面） | **已开工**（评审预告三重点：①生命周期矩阵照抄 it29（≥3 启停含 KILL 升级 + 重启扫描标 Lost 真机复现）；②输出文件持久化与游标推进语义（终态保留 / Lost 后可读 / 清理归属）；③`job/snapshot` codec 第七实例 + fold 端到端预演） |
+| 停 2 | jobs/local Provider——后台执行 + 限额/超时/取消/宿主退出清理/重启失联标记，跨模块效应（进程所有权、durable 面） | **已出包，等用户放行**（[设计基线](evidence/iteration-30/stop2-provider-design.md) / [审查包](evidence/iteration-30/stop2-review-packet.md) / [取证](evidence/iteration-30/stop2-provider-focused.txt)：31 绿 + validate EXIT=0 + Lost 扫描突变红绿；真缺陷 randomSuffix 钓出并修复；裁决点：任务树根 tmpdir、EXIT_NONZERO 增补、双宿主真机复现挂账同 JVM 模拟） |
 | 停 3 | Consumer + 装配面 + 验收（base 行 + `--verify` 双态 + R1 回放 + 模型在环） | 未开 |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-30/）

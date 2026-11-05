@@ -1,0 +1,30 @@
+it30 停 2 取证：jobs/local Provider 聚焦测试 + validate + 突变红绿
+日期：2026-11-05；Maven 3.10.0 + temurin-25；macOS arm64（测试命令按 os 分支，CI 四腿待跑）
+
+一、聚焦测试（mvn -B -pl jobs/jobs,jobs/local -am test）
+GREEN_EXIT=0 / BUILD SUCCESS
+Tests run: 6 -- JobSnapshotCodecTest（五态往返 + type 校验）
+Tests run: 8 -- LocalJobServiceTest（成功读输出/非零退出 EXIT_NONZERO/取消收敛且幂等 false/
+  超时 TIMED_OUT/限额停捕获不杀任务 Succeeded+truncated/事件账 fold 标 Lost/未知 id 与坏游标
+  fail-loud/未绑会话 fail-loud）
+（jobs 两模块合计 31 = 定义 17 + Provider 14）
+
+二、全仓门禁（mvn -B -q validate）
+VALIDATE_EXIT=0
+
+三、突变红绿（Lost 扫描禁用 → 目标测试必红 → 还原逐零 → 绿）
+- 突变：bindSession 的 Running→Lost 标记行前置 false
+- MUT_EXIT=1，ledgerFoldMarksPriorLifeRunningAsLost <<< FAILURE（AssertionError，实际 size 0 ≠ 1）
+- 还原后 grep 'false &&' = 0；修复随批绿（GREEN_EXIT=0）
+- 首轮突变跑意外暴露真缺陷：randomSuffix 用 toHexString().substring(0,8)，
+  正数高位零被吞时串长 <8（约 6% 概率）→ start() StringIndexOutOfBounds；
+  已修为 String.format("%08x", ...)（定长 8），修复后 8/8 绿——缺陷与修复同批如实记录
+
+四、航修实录（编译期自纠，无行为语义）
+JsonValue 构建器类型（改 var）、EventListener 双参 lambda、agent-loop 模块名
+io.javanatic.harness.core.agent.loop、checkstyle 行内 FQN ×10、Session 空 seed 触发
+log.get(-1)（测试改 null seed）
+
+五、挂账（packet 风险自报）
+双宿主 kill -9 级真机复现为同 JVM 双实例 fold 模拟（语义等价：事件账 + 新实例首观测）；
+进程级真机复现需持久化装载路径（JsonlPersistence 载回 Session），建议随停 3 装配面或作放行前置
