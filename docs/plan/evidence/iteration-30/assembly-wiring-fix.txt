@@ -1,0 +1,5 @@
+it30 停 3 装配接线修复取证（CI run 41963174053 四腿全红 → 本地复现 → 三层修复）
+① 根因层：行引用插件未发现——缺 META-INF/services 双通道（Plugin×2 + SessionEventCodec×1）
+② 承载层：bundle/base test 域 + examples/headless 编译域补 jobs 两依赖
+③ 钉死面：HeadlessVerifyTest 计数 30/37→32/39 + jobs 摘要行；HostileInstructionsTest 工具清单 ×2 块 +4 工具
+复跑：mvn -B -pl bundle/base,examples/headless -am test → BUILD SUCCESS（AppBootTest 23/0/0 等全绿）

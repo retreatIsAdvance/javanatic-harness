@@ -130,7 +130,7 @@ class HostileInstructionsTest {
                 .extracting(schema -> schema.name())
                 .containsExactlyInAnyOrder("ask_user", "shell", "exit_plan_mode", "fs_delete", "fs_edit",
                     "fs_list", "fs_read", "fs_search", "fs_write", "todo_write", "skill",
-                    "web_fetch");
+                    "web_fetch", "job_start", "job_status", "job_read", "job_cancel");
 
             AgentHandle handle = rt.root().require(AgentRegistry.KEY).create(rt.root(),
                 CreateAgentOptions.of(Session.newId("it21-hostile"), new AgentOptions("replay", "m")));
@@ -172,7 +172,7 @@ class HostileInstructionsTest {
                 .extracting(schema -> schema.name())
                 .containsExactlyInAnyOrder("ask_user", "shell", "exit_plan_mode", "fs_delete", "fs_edit",
                     "fs_list", "fs_read", "fs_search", "fs_write", "todo_write", "skill",
-                    "web_fetch");
+                    "web_fetch", "job_start", "job_status", "job_read", "job_cancel");
             assertThat(stdin.served()).isEqualTo(3);   // 人闸真被问过（不是绕过审批直接执行）
             disposeAndSave(rt, handle);
         } finally {

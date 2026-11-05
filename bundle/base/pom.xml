@@ -132,6 +132,16 @@
         </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-jobs-local</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-jobs-tool</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-fs-tool</artifactId>
             <scope>test</scope>
         </dependency>
