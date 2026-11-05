@@ -29,3 +29,12 @@ dist/jh moditect 模块清单补 jobs 三模块后重建：bin/jh --verify EXIT=
 jobs: jobs-local + jobs-tool; tools=job_cancel,job_read,job_start,job_status
 (approval-required)；composition 32 rows / 39 discovered / 0 unreferenced。
 （缺席态 = 行移除即 tools=0，双态代码路径沿 lsp/web 先例；呈现态证据如上。）
+
+五、Windows 双腿首跑修复（CI 取证 2026-11-05）
+- 症状：断言全过（~2s 到收尾）但 @TempDir 清理炸——硬崩宿主遗留的孤儿
+  sleep 进程在 Windows 锁住其 CWD（ws 目录不可删；POSIX 无此语义）
+- 修复三层：①探针目录脱钩 @TempDir（target/ 下自建，残留随构建清理）+
+  孤儿寿命 300s→60s；②子进程捕获改文件重定向 + waitFor 先行（消除管道时序）；
+  ③根因层：createTempDirectory(相对目录) 返回相对路径 → toAbsolutePath()
+  （绝对路径校验拦死宿主 A，即本地瞬死零输出之谜）
+- 本地复跑：PROBE_EXIT=0（1/0/0）

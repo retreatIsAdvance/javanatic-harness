@@ -12,17 +12,13 @@ import io.javanatic.harness.kernel.config.ConfigRowSpec;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.session.Session;
 import io.javanatic.harness.session.persistence.SessionPersistence;
-import java.io.BufferedReader;
 import java.util.NoSuchElementException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 /**
  * 双宿主真机 Lost 复现（it30 停 3 必验项）：宿主 A = 真 JVM 子进程（真 AppBoot 装配 +
@@ -33,11 +29,11 @@ import org.junit.jupiter.api.io.TempDir;
  */
 class TwoHostLostProbeTest {
 
-    @TempDir
-    Path root;
-
     @Test
     void killedHostRunningJobBecomesLostWithReadableRelic() throws Exception {
+        // 不用 @TempDir：硬崩宿主遗留的孤儿 sleep 进程在 Windows 上锁住其 CWD，
+        // JUnit 严格清理必炸；探针目录建在 target/ 下，残留随构建清理。
+        Path root = Files.createTempDirectory(Path.of("target").toAbsolutePath(), "jh-twohost-");
         Path dataDir = root.resolve("jobs");
         Path sessions = root.resolve("sessions");
         Path ws = root.resolve("ws");
@@ -47,30 +43,23 @@ class TwoHostLostProbeTest {
         String jobSession = "probe-twohost-job";
         String idleSession = "probe-twohost-idle";
 
+        Path hostALog = root.resolve("host-a.log");
         Process hostA = new ProcessBuilder(javaBin(),
                 "-cp", System.getProperty("java.class.path"),
                 ProbeHostA.class.getName(),
                 dataDir.toString(), sessions.toString(), ws.toString(), jobSession, idleSession)
-                .redirectErrorStream(true).start();
-        String marker = null;
-        List<String> hostALines = new ArrayList<>();
-        try (BufferedReader out = new BufferedReader(new InputStreamReader(hostA.getInputStream()))) {
-            String line;
-            while ((line = out.readLine()) != null) {
-                hostALines.add(line);
-                if (line.contains("PROBE_A_READY")) {
-                    marker = line;
-                }
-            }
+                .redirectErrorStream(true).redirectOutput(hostALog.toFile()).start();
+        hostA.waitFor();
+        if (hostA.isAlive()) {
+            hostA.destroyForcibly();
         }
+        List<String> hostALines = Files.exists(hostALog) ? Files.readAllLines(hostALog) : List.of();
+        String marker = hostALines.stream().filter(line -> line.contains("PROBE_A_READY")).findFirst().orElse(null);
+        System.err.println("== 宿主 A exit=" + hostA.exitValue() + " lines=" + hostALines.size() + " ==");
         if (marker == null && !hostALines.isEmpty()) {
             System.err.println("== 宿主 A 输出末 12 行 ==");
             hostALines.subList(Math.max(0, hostALines.size() - 12), hostALines.size())
                     .forEach(System.err::println);
-        }
-        hostA.waitFor();
-        if (hostA.isAlive()) {
-            hostA.destroyForcibly();
         }
         assertThat(marker).as("宿主 A 必须在硬崩前打出 MARKER").isNotNull();
 

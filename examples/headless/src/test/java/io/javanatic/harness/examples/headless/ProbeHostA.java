@@ -59,8 +59,8 @@ public final class ProbeHostA {
         Session session = handle.agent().session();
         JobService jobs = rt.root().require(JobService.KEY);
         jobs.start(new JobRequest(
-                "echo relic-" + jobSession + (windows() ? "; Start-Sleep -Seconds 300" : "; sleep 300"),
-                ws, Duration.ofSeconds(300), 8192));
+                "echo relic-" + jobSession + (windows() ? "; Start-Sleep -Seconds 60" : "; sleep 60"),
+                ws, Duration.ofSeconds(120), 8192));
         Thread.sleep(800);
         persistence.save(session);
         System.out.println("PROBE_A_READY");
