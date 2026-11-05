@@ -1,0 +1,31 @@
+it30 停 3 必验项取证：双宿主真机 Lost 复现（TwoHostLostProbeTest）
+日期：2026-11-05；macOS arm64（命令按 os 分支，CI 四腿同套）
+
+一、形态（全真件，无桩）
+- 宿主 A = 真子 JVM 进程（java -cp 测试类路径）：真 AppBoot 装配（base 含 jobs 两行；
+  dataDir/persistence root 走行配置——B30 键端到端）+ 真 agent（replay provider 免 key）
+  → job_start 长任务（首行遗物标记）→ Running 事件经 SessionPersistence 落 jsonl
+  → 打 MARKER 后 Runtime.halt(0) 硬崩（无 close、无取消收敛——宿主强杀的最小等价）
+- 宿主 B = 同持久化树/dataDir 重新装配：JsonlPersistence.load 载回（JobSnapshotCodec
+  解码真跑）→ Session.create 重放 → LocalJobService.bindSession fold 事件账
+
+二、断言与结果（mvn -B -pl examples/headless -am -Dtest=TwoHostLostProbeTest test）
+PROBE_EXIT=0；Tests run: 1, Failures: 0, Errors: 0
+- 前生命期 Running → Lost（isInstanceOf JobState.Lost）✓
+- Lost 随装配入账（事件账计数 = 1）✓——账面实证：Running → SeedEnd → Lost 三事件序
+- 遗物可读：read(0, 8192) 含 "relic-<会话id>" ✓
+- 重复装配不重复标 Lost（lostCount 恒 1）✓
+- 懒标记负例：未装配的对照会话无 job 事件（header-only 持久化亦无账可标）✓
+- R1 侧写：宿主 B 全程零进程重建——fold 即事件账重放
+
+三、航修实录（探针搭建期，无产品码语义变化）
+profile 需 name 键；workspace 五处同源（skill-local.cwd 第五键）；overlay Replace 须整行
+携带既有键（sandbox mode / shell timeout）；Loaded.events() 是裸 SessionEvent 无信封；
+对照会话 header-only 时 load 抛 NoSuchFile（负例 catch 并集）；AssertJ Stream anyMatch
+弃用改计数式；若干 checkstyle FQN/import 航修。
+
+四、jlink 双态冒烟（同批）
+dist/jh moditect 模块清单补 jobs 三模块后重建：bin/jh --verify EXIT=0，
+jobs: jobs-local + jobs-tool; tools=job_cancel,job_read,job_start,job_status
+(approval-required)；composition 32 rows / 39 discovered / 0 unreferenced。
+（缺席态 = 行移除即 tools=0，双态代码路径沿 lsp/web 先例；呈现态证据如上。）

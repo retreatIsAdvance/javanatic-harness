@@ -87,6 +87,9 @@
                                 <module>io.javanatic.harness.lsp</module>
                                 <module>io.javanatic.harness.lsp.jdtls</module>
                                 <module>io.javanatic.harness.lsp.tool</module>
+                                <module>io.javanatic.harness.jobs</module>
+                                <module>io.javanatic.harness.jobs.local</module>
+                                <module>io.javanatic.harness.jobs.tool</module>
                                 <module>io.javanatic.harness.interaction.ask</module>
                                 <module>io.javanatic.harness.sandbox.local</module>
                                 <module>io.javanatic.harness.sandbox.policy</module>
