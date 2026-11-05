@@ -41,6 +41,12 @@
 | B27 | LSP 行配置（jdtls） | 键白名单 8 个：`javaHome`（缺省探测 `java.home`，主动探测披露见治理摘要）/ `serverDir` / `configurationDir` / `projectRoot`（三者必填，`JdtlsLaunch` 校验存在）/ `indexDir`（缺省 `homeDir/index`）/ `homeDir`（缺省 `<tmpdir>/jh-lsp-<8位随机>`，LS 缓存 / 索引不触碰用户真实 HOME）/ `mavenUserSettings` / `mavenGlobalSettings`（Optional）。未知键 / 坏值 fail loud；目录创建（homeDir / indexDir）发生在 `toLaunch()`——解析本身无文件系统副作用 | `lsp/jdtls` `JdtlsPluginConfig`；12 §6；[停 3 终裁](evidence/iteration-29/stop3-acceptance.txt) |
 | B28 | LSP 行配置（tool） | 键白名单 5 个，预算缺省有界：`timeoutSeconds` 30 / `waitSeconds` 15 / `maxDiagnostics` 50 / `maxLocations` 50 / `maxOutputBytes` 262144（256 KiB）；全部正整数，`waitSeconds ≤ timeoutSeconds`（LspQuery 构造契约的配置面预校验）；未知键 / 非正 fail loud | `lsp/tool` `LspToolConfig`；12 §6；[停 3 终裁](evidence/iteration-29/stop3-acceptance.txt) |
 
+## Jobs Boundaries（it30）
+
+| # | 边界 | 规则 | 落地与证据 |
+|---|---|---|---|
+| B30 | jobs 任务树根 | 行配置 `dataDir`（jobs-local），缺省 `${home}/.harness/jobs/`——「Lost 后只读遗物」的契约承诺要求跨重启确定性存活，不依赖 OS tmp 清理策略；测试注入例外；retention/清理面停 3 裁 | `jobs/local` `LocalJobsPlugin`；[停 2 复跑改判](evidence/iteration-30/stop2-race-fix.txt) |
+
 ## 0.5 工作台预登记（2026-11-04 路线评审）
 
 | # | 边界 | 规则 | 落地与证据 |

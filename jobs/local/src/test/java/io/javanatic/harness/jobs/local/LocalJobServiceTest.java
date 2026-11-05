@@ -18,6 +18,7 @@ import io.javanatic.harness.session.event.LoggedEvent;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -123,6 +124,52 @@ class LocalJobServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.read(started.id(), 100000, 10))
                 .isInstanceOf(IllegalArgumentException.class);
+        service.close();
+    }
+
+    @Test
+    void terminalClassificationPureFunction() {
+        Instant t0 = Instant.parse("2026-11-05T00:00:00Z");
+        assertThat(LocalJobService.terminalFor(true, 143, true, t0))
+                .isInstanceOf(JobState.Cancelled.class);
+        assertThat(LocalJobService.terminalFor(true, 0, false, t0))
+                .isInstanceOf(JobState.Succeeded.class);
+        assertThat(LocalJobService.terminalFor(true, 143, false, t0))
+                .isInstanceOf(JobState.Failed.class)
+                .extracting(st -> ((JobState.Failed) st).reason())
+                .isEqualTo(JobFailureReason.EXIT_NONZERO);
+        assertThat(LocalJobService.terminalFor(true, 1, false, t0))
+                .isInstanceOf(JobState.Failed.class);
+        assertThat(LocalJobService.terminalFor(false, -1, false, t0))
+                .isInstanceOf(JobState.Failed.class)
+                .extracting(st -> ((JobState.Failed) st).reason())
+                .isEqualTo(JobFailureReason.TIMED_OUT);
+    }
+
+    @Test
+    void cancelRaceShakeNeverMisclassifies() throws Exception {
+        // 复跑竞态回归钉：瞬时死于 TERM 的进程 × 50 次取消循环，恒 Cancelled
+        JobService service = bound();
+        for (int i = 0; i < 50; i++) {
+            JobSnapshot started = service.start(request(longSleep(), Duration.ofSeconds(60), 1024));
+            assertThat(service.cancel(started.id())).isTrue();
+            JobSnapshot terminal = awaitTerminal(service, started.id());
+            assertThat(terminal.state())
+                    .as("iteration " + i)
+                    .isInstanceOf(JobState.Cancelled.class);
+        }
+        service.close();
+    }
+
+    @Test
+    void externalKillStillFailsExitNonZero() throws Exception {
+        // 反向负例：非取消路径的 TERM 死亡（进程自杀 143）必须仍落 EXIT_NONZERO
+        JobService service = bound();
+        String selfTerm = windows() ? "exit 5" : "kill -TERM $$";
+        JobSnapshot started = service.start(request(selfTerm, Duration.ofSeconds(15), 4096));
+        JobSnapshot terminal = awaitTerminal(service, started.id());
+        assertThat(terminal.state()).isInstanceOf(JobState.Failed.class);
+        assertThat(((JobState.Failed) terminal.state()).reason()).isEqualTo(JobFailureReason.EXIT_NONZERO);
         service.close();
     }
 

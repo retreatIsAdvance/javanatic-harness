@@ -9,7 +9,7 @@
 
 ## 1. 输出文件与游标（评审重点②）
 
-- 布局：`<sessionRoot>/<sessionId>/jobs/<jobId>/output.part` + `state.json`（会话持久化树内、随会话生命周期）。
+- 布局：`<dataDir>/<sessionId>/<jobId>/output.part`；`dataDir` 行配置（B30）缺省 `${home}/.harness/jobs/`（停 2 复跑改判：遗物跨重启确定性存活，不架在 OS tmp 清理上）；`state.json` 已取消（§4.B）——事件账唯一事实源。
 - 捕获：追加写 output.part 至 outputCapBytes，达限停止捕获、置 outputTruncated；任务继续跑（裁决②）。
 - 游标：read 直接按字节区间读文件（fromByte ≤ 文件长度=capturedBytes），UTF-8 完整边界。
 - 终态后：文件保留至会话清理（与 jsonl 同生命周期）；**Lost 后只读**（进程已不在，文件即遗物）。清理归属 = 会话目录清理面，不另设定时器。

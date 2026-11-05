@@ -5,6 +5,7 @@
  */
 module io.javanatic.harness.jobs.local {
     requires io.javanatic.harness.kernel;
+    requires io.javanatic.harness.kernel.config;
     requires io.javanatic.harness.kernel.brand;
     requires io.javanatic.harness.jobs;
     requires io.javanatic.harness.core.session;

@@ -1,0 +1,32 @@
+it30 停 2 复跑前置：cancel 竞态修复 + dataDir 改判 + 三裁决落账
+日期：2026-11-05（评审复跑钓出阻断项后的修复批）
+
+一、阻断项：cancel 竞态（评审独立复跑红，本机 31 绿系调度运气）
+- 症状：cancelConvergesRunningJob 期望 Cancelled，实际 Failed[EXIT_NONZERO, 143]（143=SIGTERM）
+  ——TERM 后进程 18ms 死亡，退出观测先于取消意图可见，分类误落 EXIT_NONZERO
+- 修复（按评审四条原样）：
+  ① Entry 增 cancelling 原子标志，cancel() 在发 TERM 前置位（与 finalized CAS 同款可见性）
+  ② 退出分类走纯函数 terminalFor(exited, exitCode, cancelling, startedAt)：
+    退出分支先看 cancelling——取消的 TERM 死亡恒 Cancelled，绝不落 EXIT_NONZERO；
+    超时分支不回看 cancelling（超时先发起终止，语义归 TIMED_OUT）
+  ③ 两层钉死：terminalClassificationPureFunction（5 例含 cancelling=true+143→Cancelled）
+    + cancelRaceShakeNeverMisclassifies（瞬时死进程 × 50 次取消循环恒 Cancelled）
+  ④ 反向负例：externalKillStillFailsExitNonZero——进程自杀 kill -TERM $$（143，
+    非取消路径）仍 Failed(EXIT_NONZERO)（Windows 腿 exit 5 同口径）
+
+二、复跑（mvn -B -pl jobs/jobs,jobs/local -am test）
+TEST_EXIT=0 / BUILD SUCCESS
+Tests run: 11 -- LocalJobServiceTest（原 8 + 竞态三层 3）
+Tests run: 6 -- JobSnapshotCodecTest；jobs 合计 34 绿
+VALIDATE_EXIT=0（全仓 validate）
+
+三、三裁决落账
+1. 任务树根改判：插件增 dataDir 行配置（B30），缺省 ${home}/.harness/jobs/（重启确定性
+   存活）；tmpdir 降为测试注入；retention/清理停 3 裁。同步面：设计基线 §1、12 §5 配置键表、
+   boundary-register B30
+2. EXIT_NONZERO：批（additive）；反向负例已配（①④）
+3. 双宿主真机复现：模拟可接受，真机（杀真 jh 进程 → resume → 观察 Lost）升格停 3 必验项
+   ——已写入 iteration-30.md 验收清单
+
+四、push 示下执行
+等本修复批合入后一并推（不把已知 flaky 推给 CI）

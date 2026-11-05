@@ -171,6 +171,7 @@ public final class LocalJobService implements JobService {
         if (entry.snapshot.get().state().terminal()) {
             return false;
         }
+        entry.cancelling.set(true);
         killTree(entry.process);
         if (entry.finalized.compareAndSet(false, true)) {
             finalizeSnapshot(entry, new JobState.Cancelled(
@@ -246,16 +247,12 @@ public final class LocalJobService implements JobService {
                 Thread.currentThread().interrupt();
                 return;
             }
-            JobState terminal;
-            if (exited) {
-                terminal = process.exitValue() == 0
-                        ? new JobState.Succeeded(0, startedOf(entry.snapshot.get()), Instant.now())
-                        : new JobState.Failed(JobFailureReason.EXIT_NONZERO,
-                                process.exitValue(), startedOf(entry.snapshot.get()), Instant.now());
-            } else {
+            JobState terminal = exited
+                    ? terminalFor(true, process.exitValue(), entry.cancelling.get(),
+                            startedOf(entry.snapshot.get()))
+                    : terminalFor(false, exitOf(process), false, startedOf(entry.snapshot.get()));
+            if (!exited) {
                 killTree(process);
-                terminal = new JobState.Failed(JobFailureReason.TIMED_OUT, exitOf(process),
-                        startedOf(entry.snapshot.get()), Instant.now());
             }
             if (entry.finalized.compareAndSet(false, true)) {
                 finalizeSnapshot(entry, terminal);
@@ -307,6 +304,26 @@ public final class LocalJobService implements JobService {
         } catch (IllegalThreadStateException e) {
             return -1;
         }
+    }
+
+    /**
+     * 终局分类纯函数：退出分支先看 cancelling——取消发起的 TERM 死亡（143 等）恒
+     * Cancelled，绝不落 EXIT_NONZERO（停 2 复跑竞态修）；外部杀死（未经 cancel）的
+     * 非零退出仍 Failed(EXIT_NONZERO)。超时分支不回看 cancelling：超时先发起终止，
+     * 语义归 TIMED_OUT（用户随后 cancel 对已终局任务返回 false）。
+     */
+    static JobState terminalFor(boolean exitedWithinTimeout, int exitCode, boolean cancelling,
+                                Instant startedAt) {
+        Instant now = Instant.now();
+        if (exitedWithinTimeout && cancelling) {
+            return new JobState.Cancelled(startedAt, now);
+        }
+        if (!exitedWithinTimeout) {
+            return new JobState.Failed(JobFailureReason.TIMED_OUT, exitCode, startedAt, now);
+        }
+        return exitCode == 0
+                ? new JobState.Succeeded(0, startedAt, now)
+                : new JobState.Failed(JobFailureReason.EXIT_NONZERO, exitCode, startedAt, now);
     }
 
     /** TERM 含后代 → 排水宽限 → KILL → 复验等待（it29 矩阵）。 */
@@ -375,6 +392,7 @@ public final class LocalJobService implements JobService {
         final long capBytes;
         final AtomicLong captured = new AtomicLong();
         final AtomicBoolean finalized = new AtomicBoolean();
+        final AtomicBoolean cancelling = new AtomicBoolean();
         final AtomicBoolean outputTruncatedByCap = new AtomicBoolean();
 
         Entry(JobSnapshot initial, Process process, Path output, long startedAtMillis) {
