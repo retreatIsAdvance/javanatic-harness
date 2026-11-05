@@ -7,7 +7,7 @@
 ## 版本与发布
 
 - 工作版本：`0.4.0-SNAPSHOT`；最近发布：**0.3.0**（Maven Central，2026-11-03；四平台归档随 v0.3.0 GitHub Release）。
-- 0.3 目标：工具生态。it27 交付 MCP stdio；it27.1 交付 Streamable HTTP + 注册表 + 轮屏障换代 + 结果预算；it28 交付网络资料获取（有界网页读取 + 结构化搜索）；it29 交付 Java LSP 三能力（诊断 / 定义 / 引用，it29 已关账）。**0.3 四站全落（Skills / MCP / Web / LSP）；0.3.0 已发布（2026-11-03 上线 Central，[发布实录](evidence/release-0.3.0/deploy-0.3.0.txt)）；发布树 `v0.3.0`（`42681a7`）已推、tag CI 四腿 + release-attach 在跑。**
+- 0.3 目标：工具生态。it27 交付 MCP stdio；it27.1 交付 Streamable HTTP + 注册表 + 轮屏障换代 + 结果预算；it28 交付网络资料获取（有界网页读取 + 结构化搜索）；it29 交付 Java LSP 三能力（诊断 / 定义 / 引用，it29 已关账）。**0.3 四站全落（Skills / MCP / Web / LSP）；0.3.0 已发布（2026-11-03 上线 Central）；**it30 后台任务三停点全部通过并关闭（2026-11-05）**：jobs 三角色落地（Lost=事件账 fold 唯一事实源、读三态措辞、四工具恒需审批）、双宿主真机探针 + 模型在环（含 cancel no-op 漂移增强样本）、CI 四腿绿——0.4 前半站关闭，下一步 it31 受控委派（四确认先定稿「与单 Agent 收益对比」验收任务集）。**
 
 ## 能力面（已实现）
 

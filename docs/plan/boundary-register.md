@@ -45,6 +45,7 @@
 
 | # | 边界 | 规则 | 落地与证据 |
 |---|---|---|---|
+| B31 | jobs 工具读取预算 | `maxReadBytes`（jobs-tool，正整数缺省 262144）；游标语义使上限只影响单片不影响可读总量；与 fs/shell/mcp/web 输出口径同族 | `jobs/tool` `JobsToolConfig`；[停 3 评审批](evidence/iteration-30/stop3-review-packet.md) |
 | B30 | jobs 任务树根 | 行配置 `dataDir`（jobs-local），缺省 `${home}/.harness/jobs/`——「Lost 后只读遗物」的契约承诺要求跨重启确定性存活，不依赖 OS tmp 清理策略；测试注入例外；retention/清理面停 3 裁 | `jobs/local` `LocalJobsPlugin`；[停 2 复跑改判](evidence/iteration-30/stop2-race-fix.txt) |
 
 ## 0.5 工作台预登记（2026-11-04 路线评审）

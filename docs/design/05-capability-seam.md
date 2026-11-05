@@ -881,6 +881,10 @@ public record ToolDefinition(
 
 裁决与推翻对象见 [ADR 0009](../../.agents/notes/0009-lsp-observation-anchor.md)；原始证据保持冻结。
 
+## 8.2 Jobs Background Task Seam（it30）
+
+三角色：`jobs/jobs` Definition（JobService 契约 + JobState 五态判别联合，Lost = 重启失联诚实标记）+ `jobs/local` Provider（TERM→排水→KILL 矩阵、捕获文件与限额、**事件账 fold 为唯一事实源**——state.json 不存在；Lost 由装配期首次观测懒标记）+ `jobs/tool` Consumer（四工具恒需审批；读三态逐字措辞）。事件 `job/snapshot` 全量快照按 id fold 末值胜（无 generation，B16 同精神）、ignorable=true 不进 prompt 组装；输出块不事件化（游标读）。行配置：`jobs-local.dataDir`（B30，缺省 `~/.harness/jobs/`）、`jobs-tool.maxReadBytes`（B31，256 KiB）。
+
 ## 9. Capability Status and Planned Seams
 
 | Seam | Definition 模块 | Provider(s) | Consumer | 状态 |

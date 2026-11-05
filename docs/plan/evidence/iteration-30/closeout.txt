@@ -1,0 +1,5 @@
+it30 收口批取证（2026-11-05）
+1) 缺席态装配级负例（停 3 评审裁决①）：JobsDualStateTest——两行禁用（lsp-jdtls 先例；Remove 会触发双向校验 fail loud，如实记录）→ JobService 缺席 + 零 job 工具；Tests run: 1, Failures: 0（DUAL_EXIT=0）
+2) 新鲜全量门禁：mvn -B -q package（validate+编译+全测+打包 全 reactor）FULL_PACKAGE_EXIT=0
+3) 文档同步：05 §8.2 jobs 节、07 计数 32/39（keyless）/34/39（keyed）+ jobs 摘要句、12 §5 两键、B30/B31、现状卡收口、验收清单八项全勾
+4) B31（maxReadBytes）经停 3 评审批准入表
