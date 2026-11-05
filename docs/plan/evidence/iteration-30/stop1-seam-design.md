@@ -17,6 +17,7 @@
 - **按 id fold 末值胜、无 generation 字段**（B16 同精神，日志序即代）——面板/查询方 fold 即得现状，零投影消费。
 - 发射时机：启动、终态、Lost 标记，各一次；**输出块不事件化**——read 游标读取，R1 账面不被输出洪灌。
 - codec 实现随 Provider/Consumer（停 2/3）落 `SessionEventCodec` 第七实例；ExtensionEvent `ignorable=true`（旧读取方跳过未知）。
+- R1 依据（评审补记）：输出到达模型的唯一通道是工具调用，`tool/result` 已落账（模型所见可重建）；面板/查询方读游标不是模型可见面，不进 R1 管辖——账面不含输出本体是设计而非遗漏。
 
 ## 3. 边界与不做
 
