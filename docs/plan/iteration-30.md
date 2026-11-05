@@ -50,7 +50,7 @@
 - [x] 输出限额：停捕获不杀任务（capStopsCaptureWithoutKilling）
 - [x] R1：事件账 fold 即重放（探针宿主 B 零进程）+ 模型在环账面核验
 - [x] keyless 全绿；`--verify` 呈现态（jlink EXIT=0）+ 缺席态（JobsDualStateTest 禁用行负例）
-- [ ] **双宿主真机复现（必验，停 2 放行裁决升格）**：杀真 jh 宿主进程 → resume 装配 → 观察 Lost 事件与遗物可读；含「未重开会话不标 Lost」懒标记负例
+- [x] **双宿主真机复现（必验，停 2 放行裁决升格）**：真子 JVM halt(0) 硬崩 → 宿主 B 载回 fold → Lost 入账 + 遗物可读 + 幂等 + 懒标记负例（[TwoHostLostProbeTest 取证](evidence/iteration-30/stop3-two-host-lost-probe.txt)，跨平台 CI 四腿绿）；收口批 CI 终验 run 41984348685 success
 - [x] 模型在环（真 key，用户执行）——[实录](evidence/iteration-30/stop3-model-in-loop.txt)：断言面全过，cancel 漂移为 no-op 诚实转述（等价更强证据）
 - [x] 文档同步：05 §8.2 + 07 计数/摘要句 + 12 §5（dataDir/maxReadBytes）+ B30/B31 + 现状卡（收口批）
 
