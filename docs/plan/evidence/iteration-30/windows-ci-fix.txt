@@ -1,0 +1,5 @@
+it30 Windows CI 首跑修复取证（2026-11-05，run 41959963220 双 Windows 腿红）
+根因：JobRequestTest 夹具 DIR=Path.of("/tmp")——Windows 上非绝对路径，构造器先抛 absolute
+（acceptsValidRequest ERROR + 两 rejects FAILURE 均同源）；修为 user.dir。本地修复后 jobs 全模块：
+BUILD SUCCESS
+EXIT=0

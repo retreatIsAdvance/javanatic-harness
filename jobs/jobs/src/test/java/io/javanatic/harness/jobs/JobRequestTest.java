@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /** 启动请求装配期校验：坏请求在此失败，不进 Provider。 */
 class JobRequestTest {
 
-    private static final Path DIR = Path.of("/tmp");
+    private static final Path DIR = Path.of(System.getProperty("user.dir"));
 
     @Test
     void rejectsBlankCommand() {

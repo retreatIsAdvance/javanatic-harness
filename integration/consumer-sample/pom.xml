@@ -224,7 +224,18 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <dependencies>
-                <!-- 0.4.0 候选新增坐标入此（当前为空） -->
+                <!-- it30 jobs 两坐标：jobs-local（行 + Provider）/ jobs-tool（行 + 四工具）。
+                     0.4.0 发布时折回基础块（release.md 发布后清单同规）。 -->
+                <dependency>
+                    <groupId>io.github.retreatisadvance</groupId>
+                    <artifactId>harness-jobs-local</artifactId>
+                    <version>${harness.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.retreatisadvance</groupId>
+                    <artifactId>harness-jobs-tool</artifactId>
+                    <version>${harness.version}</version>
+                </dependency>
             </dependencies>
         </profile>
     </profiles>

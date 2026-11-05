@@ -119,6 +119,10 @@ rows:
   - plugin: lsp-jdtls
     disabled: true
   - plugin: lsp-tool
+  # 后台任务(it30)：jobs-local 起 Provider(行配置 dataDir,B30;缺省 ~/.harness/jobs,
+  # 零任务零噪声);jobs-tool 双态注册四工具(job_start/status/read/cancel,恒需审批)
+  - plugin: jobs-local
+  - plugin: jobs-tool
   # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
   - plugin: todo
     config:
