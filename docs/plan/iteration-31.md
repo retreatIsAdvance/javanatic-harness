@@ -1,4 +1,6 @@
-# 迭代 31 — 受控委派（状态：草稿——四确认待用户确认，2026-11-05）
+# 迭代 31 — 受控委派（状态：进行中——停 1 准备中，2026-11-05 四确认获准）
+
+**四裁定（2026-11-05）**：①delegation 三角色新组；②子 scope 装配期快照 + 运行期不可扩——**证据形态：结构性测试背书**（子 scope 注册面装配后无扩口，ArchUnit 或等效，停 1/停 2 出包必查）；③数值定稿（并行族父上下文降 ≥50% 且总 token ≤2×；串行族任一量纲不劣超 1.5×）+ 三精化原文入案：**墙钟只报告不判赢**（赢 = 价值主张 + 成本界两轴承载，墙钟作观测入档）；**族级聚合**（族内中位数或 ≥75% 达标，单 flaky 不推翻；**基线臂先行验证**——单臂跑不通的任务出局，双臂能完成为准入前提）；**成员准入标准**（验收机械化：退出码/grep 断言禁主观评分；并行族 = ≥3 独立可验子任务；串行族 = 真依赖链）；④fork v1 不含（dsh fork 带 parent-log 前缀种子，引入配 ADR）。
 
 0.4 后半（[路线 §0.4.2](../design/README.md) 六要素：父子所有权 / 权限继承不扩权 / 有界并发·调用深度·总预算 / 问答统一路由 / 结果终局 / 父取消子收敛）。基线：it30 已关账（`f5b1eb8`），master `3fa585f`。前置侦察：[dsh 委派面侦察](evidence/iteration-31/dsh-delegation-recon.md)（已过评审）——「立即返名 + 异步完成通知 ≅ job/snapshot」为 it30 复用的最强证据；dsh「opportunistically 继承」是含糊点不是先例。
 
@@ -9,13 +11,13 @@
 - **为什么**：0.4 序的兑现（后台任务 = 执行地基已关账，委派 = 组合收益证明）；it30 机器复用（取消收敛 / 终局恰一次 / 容量准入 / 异步事件口径——侦察 §2 直引）；JH 显式快照继承优于 dsh 的含糊继承（kernel 子 scope 天然支持，侦察 §3.2）。
 - **不做**：越进程后端（ACP / Codex / Claude / SDK——00 §6 非目标）；team 共享任务板（experimental，六要素不需要）；workflow / goal / schedule / PTC（后续裁决）；fork 历史种子子代（草案裁定④：v1 不含或纳入）；命名 provider 注册表抽象（v1 单 provider，seam 留位）。
 
-## 设计增量（ADDED / MODIFIED / REMOVED）——四确认后补齐
+## 设计增量（ADDED / MODIFIED / REMOVED）
 
 - ADDED（拟）：DelegationService 契约 + 子代状态联合（Running / Succeeded / Failed / Cancelled / NeedsParentInput / …终局形状随停 1）+ `delegation/snapshot` 事件族；`maxDepth` / `maxActive` 行配置键。
 - MODIFIED（拟）：预算面（树总账口径）、`--verify` 摘要（delegation 行）、消费闭包（若新坐标）。
 - REMOVED：无。
 
-## 锚点 / 审查停点（四确认后定稿，拟）
+## 锚点 / 审查停点（定稿）
 
 停 1 委派 seam 契约（所有权 + 权限快照形状 + 状态联合 + 事件）→ 停 2 in-JVM Provider（子代生命周期 + 双闸准入 + 预算贯通 + 取消级联）→ 停 3 工具面 + 装配 + 双臂收益验收（真 key，用户执行）。
 
