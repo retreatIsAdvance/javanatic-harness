@@ -74,6 +74,11 @@ class LocalDelegationIntegrationTest {
                 .filter(e -> e.snapshot().state().terminal()).count();
         assertThat(terminalCount).as("终局事件恰一次").isEqualTo(1);
         assertThat(service.list()).hasSize(1);
+        // 预算贯通回放（R1）：父账 fold 的授予值 == 运行期请求值——零运行期隐藏数
+        long replayedBudget = delegationEvents().stream()
+                .map(DelegationSnapshotEvent.class::cast)
+                .mapToLong(e -> e.snapshot().budgetTokens()).max().orElse(-1);
+        assertThat(replayedBudget).as("回放聚合 == 运行期值").isEqualTo(5000);
     }
 
     @Test

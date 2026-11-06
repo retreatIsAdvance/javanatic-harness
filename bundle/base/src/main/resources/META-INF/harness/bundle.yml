@@ -123,6 +123,11 @@ rows:
   # 零任务零噪声);jobs-tool 双态注册四工具(job_start/status/read/cancel,恒需审批)
   - plugin: jobs-local
   - plugin: jobs-tool
+  # 受控委派(it31)：delegation-local 起 Provider(行配置 provider/model/maxActive,B32;
+  # 缺省 replay/m/8 keyless 安全,真key经行配置指真provider);delegation-tool 双态注册
+  # 四工具(delegate/delegate_list/delegate_answer/delegate_interrupt,恒需审批)
+  - plugin: delegation-local
+  - plugin: delegation-tool
   # 单 agent 顺序工作——并行 in_progress 需 subagent/workflow 场景再开
   - plugin: todo
     config:

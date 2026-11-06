@@ -150,6 +150,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | web-tool | `maxSourceChars` / `maxOutputBytes` / `maxResults` | 消费面上限（it28）：源码字符（缺省 524288）、输出字节（缺省 262144，UTF-8 完整边界）、搜索来源数（缺省 8）；三者均有硬上限 |
 | lsp-jdtls | `javaHome` / `serverDir` / `configurationDir` / `projectRoot` / `indexDir` / `homeDir` / `mavenUserSettings` / `mavenGlobalSettings` | LSP Provider 装配（it29；B27）：`serverDir` / `configurationDir` / `projectRoot` 必填且存在、缺失 fail loud；`javaHome` 缺省主动探测并披露；`indexDir` / `homeDir` 缺省临时目录（不触碰用户 HOME）；maven 两键可选。base 以 `disabled: true` 禁用行在场（缺省零进程零工具），组合者 `replace: true` 原地启用 |
 | lsp-tool | `timeoutSeconds` / `waitSeconds` / `maxDiagnostics` / `maxLocations` / `maxOutputBytes` |
+| delegation-local | `provider` / `model` / `maxActive` | 委派子代 Provider 面（it31；B32）：`provider`/`model` 缺省 replay/m（keyless 安全，真 key 组合经行配置指真 provider）；`maxActive` 正整数缺省 8（根会话单池，预留-放行-还槽） |
 | jobs-local | `dataDir` | 后台任务树根（it30 停 2；B30）：缺省 `${home}/.harness/jobs/`——Lost 遗物跨重启确定性存活；测试经构造器注入临时目录；retention/清理面停 3 裁 | LSP 工具消费面（it29；B28）：正整数量纲，`waitSeconds` ≤ `timeoutSeconds`；条数帽与字节帽截断置 `truncated`（锚首行不参与截断）；LspService 缺席只少三工具（双态沿 web_search 先例）|
 
 无 config 的插件 id：`session-store`、`agents`、`system-prompt`、`llm`、`approval-auto` / `approval-deny`、`tools`、`sandbox-local`、`fs-tool`、`ask-user`、`commands`、`skill`、`mcp-registry`（37 个 base 行 id = 24 可配 + 13 无配）。

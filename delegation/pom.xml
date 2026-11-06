@@ -14,5 +14,6 @@
     <modules>
         <module>delegation</module>
         <module>local</module>
+        <module>tool</module>
     </modules>
 </project>

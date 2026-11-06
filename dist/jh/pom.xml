@@ -90,6 +90,9 @@
                                 <module>io.javanatic.harness.jobs</module>
                                 <module>io.javanatic.harness.jobs.local</module>
                                 <module>io.javanatic.harness.jobs.tool</module>
+                                <module>io.javanatic.harness.delegation</module>
+                                <module>io.javanatic.harness.delegation.local</module>
+                                <module>io.javanatic.harness.delegation.tool</module>
                                 <module>io.javanatic.harness.interaction.ask</module>
                                 <module>io.javanatic.harness.sandbox.local</module>
                                 <module>io.javanatic.harness.sandbox.policy</module>

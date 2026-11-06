@@ -41,6 +41,12 @@
 | B27 | LSP 行配置（jdtls） | 键白名单 8 个：`javaHome`（缺省探测 `java.home`，主动探测披露见治理摘要）/ `serverDir` / `configurationDir` / `projectRoot`（三者必填，`JdtlsLaunch` 校验存在）/ `indexDir`（缺省 `homeDir/index`）/ `homeDir`（缺省 `<tmpdir>/jh-lsp-<8位随机>`，LS 缓存 / 索引不触碰用户真实 HOME）/ `mavenUserSettings` / `mavenGlobalSettings`（Optional）。未知键 / 坏值 fail loud；目录创建（homeDir / indexDir）发生在 `toLaunch()`——解析本身无文件系统副作用 | `lsp/jdtls` `JdtlsPluginConfig`；12 §6；[停 3 终裁](evidence/iteration-29/stop3-acceptance.txt) |
 | B28 | LSP 行配置（tool） | 键白名单 5 个，预算缺省有界：`timeoutSeconds` 30 / `waitSeconds` 15 / `maxDiagnostics` 50 / `maxLocations` 50 / `maxOutputBytes` 262144（256 KiB）；全部正整数，`waitSeconds ≤ timeoutSeconds`（LspQuery 构造契约的配置面预校验）；未知键 / 非正 fail loud | `lsp/tool` `LspToolConfig`；12 §6；[停 3 终裁](evidence/iteration-29/stop3-acceptance.txt) |
 
+## Delegation Boundaries（it31）
+
+| # | 边界 | 规则 | 落地与证据 |
+|---|---|---|---|
+| B32 | 委派子代面 | 行配置 `provider`/`model`（缺省 replay/m——keyless 安全）/ `maxActive`（正整数缺省 8，根会话单池预留-放行-还槽，降额不杀驻留）；权限继承 = spawn 时点快照、子只窄不宽（执法点 DelegationChildSetup，结构性测试双路）；Lost = v1 显式不认领恢复（人工介入点，重访条件：树级 durable 状态立项）；预算随 delegation/snapshot 载荷入账（回放期聚合，零运行期隐藏数） | `delegation/local`；[停 2 设计](evidence/iteration-31/stop2-provider-design.md) |
+
 ## Jobs Boundaries（it30）
 
 | # | 边界 | 规则 | 落地与证据 |

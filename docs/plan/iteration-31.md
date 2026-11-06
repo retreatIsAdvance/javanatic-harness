@@ -21,7 +21,7 @@
 
 停 1 委派 seam 契约——**已出包，等用户放行**（[seam 提案](evidence/iteration-31/stop1-seam-design.md) / [审查包](evidence/iteration-31/stop1-review-packet.md) / [取证](evidence/iteration-31/stop1-definition-focused.txt)：10/0/0 + validate EXIT=0；问败分界 + childSessionId 树链接 + Lost 不预设可恢复性）
 停 2 in-JVM Provider——**已出包，等用户评审**（[设计基线](evidence/iteration-31/stop2-provider-design.md)已获准 / [审查包](evidence/iteration-31/stop2-review-packet.md) / [取证](evidence/iteration-31/stop2-provider-focused.txt)：19/0/0 + validate 绿；四路映射纯函数钉死、预算随载荷、首绑即父、先账后内存 + CAS；服务级集成与结构性测试双路挂账停 3 装配批——如实登记）
-停 3 工具面 + 装配（四件套）+ 双臂收益验收（真 key，用户执行；判读按裁定③三精化）——未开
+停 3 工具面 + 装配 + 验收——**已出包，等用户评审**：集成先行兑现（[取证](evidence/iteration-31/stop3-integration-first.txt)，钓出两真缺陷一边界）；四工具 + 措辞模板 + 缺席态负例 + 装配四件套 + 结构性双路（ArchUnit 调用规则 + 名面字段规则）；预算回放聚合断言入集成测试；jlink verify EXIT 含 delegation 行（34/41）；[模型在环 + 双臂 runbook](evidence/iteration-31/stop3-model-in-loop-runbook.md) 待用户执行
 
 ## 取证（packet 前置）
 
