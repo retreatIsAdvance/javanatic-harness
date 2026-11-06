@@ -17,13 +17,14 @@ class DelegationSnapshotTest {
         Id<Delegation> id = Delegation.newId("del-1");
         Id<Session> child = Session.newId("child-1");
         DelegationState state = new DelegationState.Running(T0);
-        assertThatThrownBy(() -> new DelegationSnapshot(null, "任务", child, state))
+        long budget = 5000;
+        assertThatThrownBy(() -> new DelegationSnapshot(null, "任务", child, budget, state))
                 .hasMessageContaining("id");
-        assertThatThrownBy(() -> new DelegationSnapshot(id, " ", child, state))
+        assertThatThrownBy(() -> new DelegationSnapshot(id, " ", child, budget, state))
                 .hasMessageContaining("taskSummary");
-        assertThatThrownBy(() -> new DelegationSnapshot(id, "任务", null, state))
+        assertThatThrownBy(() -> new DelegationSnapshot(id, "任务", null, budget, state))
                 .hasMessageContaining("childSessionId");
-        assertThatThrownBy(() -> new DelegationSnapshot(id, "任务", child, null))
+        assertThatThrownBy(() -> new DelegationSnapshot(id, "任务", child, budget, null))
                 .hasMessageContaining("state");
     }
 }

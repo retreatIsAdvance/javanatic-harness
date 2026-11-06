@@ -1,0 +1,14 @@
+it31 停 2 取证：delegation/local Provider 聚焦 + 全仓 validate（2026-11-06）
+
+一、聚焦（mvn -B -pl delegation/delegation,delegation/local -am test）TEST_EXIT=0
+Tests run: 6 -- TurnClassifierTest（四路终局映射逐路钉死：Completed+concludesTurn→NeedsParentInput /
+  Completed→Succeeded(finalAnswerText) / Error→Failed(MODEL_ERROR) / Aborted+cancelling→Cancelled /
+  Aborted 非取消→Failed(EXECUTION_ERROR) / 无 TurnEnd→Running）
+Tests run: 3 -- DelegationSnapshotCodecTest（六态往返 + budgetTokens 随载荷——R1 聚合地基）
+Tests run: 10 -- Definition（含 budgetTokens 增补后的快照校验）
+
+二、全仓门禁 mvn -B -q validate VALIDATE_EXIT=0
+
+三、如实登记：服务级集成测试（真装配 + replay 子代全链 + maxActive 准入 + 取消级联）
+挂账停 3 装配面（工具路径与 AppBootTest 形态就位后一并取证）；本停钉死的是评审
+重点①（四路映射）与②（预算入载荷）的纯函数层。
