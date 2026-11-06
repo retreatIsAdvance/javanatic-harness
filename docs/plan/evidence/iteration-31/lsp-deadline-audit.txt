@@ -1,0 +1,12 @@
+it29 遗留批取证：LSP 期限测试 deadline 审计（2026-11-06，CI macos 两轮实撞）
+
+分类（按用户裁决给的精度框架）：
+①JdtlsProviderTest.definitionIgnoreEndsInTimedOut = 冷启动赛跑型（夹具 LS 启动+initialize
+  握手吃掉 1500ms 全部预算 → NotReady[INITIALIZING] 而非 TimedOut）——修：1500→8000ms
+②JdtlsProviderSamplingTest.afterSamplingCannotOutliveTheEntryDeadline = 入口赛跑型（已有暖机；
+  350ms 入口预算输给调度前置开销，未及进入采样即到期）——修：350→2000ms，await 2/1s→8s
+共同原则：被测不变式（TimedOut 语义 / 采样不越期限）与期限数值无关——放宽只增环境鲁棒性，
+不弱化断言；两条修正均附理由注释在案。
+
+本地复跑（mvn -pl lsp/jdtls -Dtest=JdtlsProviderTest,JdtlsProviderSamplingTest）：
+LSP_TEST_EXIT=0；Tests run: 25 + 10，全绿（38.2s + 11.9s，真进程对端）

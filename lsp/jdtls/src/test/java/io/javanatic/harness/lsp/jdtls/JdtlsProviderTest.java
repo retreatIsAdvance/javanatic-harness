@@ -303,7 +303,10 @@ class JdtlsProviderTest {
     void definitionIgnoreEndsInTimedOut() throws Exception {
         writeDocument("class App { }\n");
         JdtlsProvider provider = provider("--definition", "ignore");
-        Duration timeout = Duration.ofMillis(1500);
+        // 预算须同时覆盖夹具启动 + initialize 握手 + 定义请求被忽略后的到期：
+        // 慢 runner 上紧预算会先把预算耗在初始化而落到 NotReady（CI macos 两轮实撞）。
+        // TimedOut 语义与超时值无关，放宽只增加环境鲁棒性。
+        Duration timeout = Duration.ofMillis(8000);
         LspResult<LspLocation> result = define(provider, timeout);
         assertThat(result).isInstanceOf(LspResult.TimedOut.class);
         assertThat(((LspResult.TimedOut<LspLocation>) result).timeout()).isEqualTo(timeout);

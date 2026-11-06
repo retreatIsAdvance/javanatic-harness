@@ -43,10 +43,12 @@ class JdtlsProviderSamplingTest {
             // 先完成初始化，以免将初始化时限误认作 after 采样时限。
             provider.diagnostics(query(document, 6000), AbortSignal.never());
             reader.blockAt.set(reader.reads.get() + 2);
-            CompletableFuture<LspResult<LspDiagnostic>> result = pullAsync(provider, query(document, 350));
+            // 入口预算须在慢 runner 上仍能活着进入采样（CI macos 实撞：350ms 输给调度
+            // 前置开销）；被测不变式 = 「进入采样后不得越过入口期限」，与期限数值无关。
+            CompletableFuture<LspResult<LspDiagnostic>> result = pullAsync(provider, query(document, 2000));
             try {
-                assertThat(reader.entered.await(2, TimeUnit.SECONDS)).isTrue();
-                assertThat(result.get(1, TimeUnit.SECONDS)).isInstanceOf(LspResult.TimedOut.class);
+                assertThat(reader.entered.await(8, TimeUnit.SECONDS)).isTrue();
+                assertThat(result.get(8, TimeUnit.SECONDS)).isInstanceOf(LspResult.TimedOut.class);
             } finally {
                 reader.release.countDown();
                 result.get(3, TimeUnit.SECONDS);
