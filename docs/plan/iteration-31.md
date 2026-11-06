@@ -19,7 +19,9 @@
 
 ## 锚点 / 审查停点（定稿）
 
-停 1 委派 seam 契约（所有权 + 权限快照形状 + 状态联合 + 事件）→ 停 2 in-JVM Provider（子代生命周期 + 双闸准入 + 预算贯通 + 取消级联）→ 停 3 工具面 + 装配 + 双臂收益验收（真 key，用户执行）。
+停 1 委派 seam 契约——**已出包，等用户放行**（[seam 提案](evidence/iteration-31/stop1-seam-design.md) / [审查包](evidence/iteration-31/stop1-review-packet.md) / [取证](evidence/iteration-31/stop1-definition-focused.txt)：10/0/0 + validate EXIT=0；问败分界 + childSessionId 树链接 + Lost 不预设可恢复性）
+停 2 in-JVM Provider（子代生命周期 + 双闸准入 + 预算贯通 + 取消级联 + 继承快照执法与结构性测试 + codec 第八实例）——未开
+停 3 工具面 + 装配（四件套）+ 双臂收益验收（真 key，用户执行；判读按裁定③三精化）——未开
 
 ## 取证（packet 前置）
 

@@ -61,6 +61,7 @@
         <module>sandbox</module>
         <module>interaction</module>
         <module>jobs</module>
+        <module>delegation</module>
         <module>bundle</module>
         <module>examples</module>
         <module>dist</module>
@@ -339,6 +340,11 @@
             <dependency>
                 <groupId>io.github.retreatisadvance</groupId>
                 <artifactId>harness-jobs-tool</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.retreatisadvance</groupId>
+                <artifactId>harness-delegation-delegation</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

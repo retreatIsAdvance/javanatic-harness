@@ -1,0 +1,9 @@
+it31 停 1 取证：delegation/delegation Definition 聚焦测试 + 全仓 validate
+日期：2026-11-05；Maven 3.10.0 + temurin-25
+
+一、聚焦（mvn -B -pl delegation/delegation -am test）TEST_EXIT=0 / BUILD SUCCESS
+Tests run: 4 -- DelegationRequestTest（跨平台夹具 user.dir——it30 pits 纪律首用）
+Tests run: 5 -- DelegationStateTest（问败分界/暂停可续/终态穷尽/时间序）
+Tests run: 1 -- DelegationSnapshotTest（四要素含 childSessionId 树链接）
+
+二、全仓门禁 mvn -B -q validate VALIDATE_EXIT=0
