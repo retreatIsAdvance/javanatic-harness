@@ -132,6 +132,9 @@ public final class LocalDelegationService implements DelegationService {
             throw new IllegalStateException("resume requires NeedsParentInput, was "
                     + entry.snapshot.get().state());
         }
+        // 同步先转 Running（先账后内存）：resume 的返回值不得是过期的暂停快照
+        appendAndShow(entry, requireSession(), new DelegationState.Running(
+                startedOf(entry.snapshot.get().state())));
         driveTurn(entry, answer);
         return entry.snapshot.get();
     }
@@ -144,6 +147,14 @@ public final class LocalDelegationService implements DelegationService {
             return false;
         }
         entry.cancelling.set(true);
+        if (state.paused()) {
+            // 暂停态无在途轮可 abort：直接终局化（轮已结束，子代不再动作）
+            if (entry.finalized.compareAndSet(false, true)) {
+                finalizeSnapshot(entry, requireSession(), new DelegationState.Cancelled(
+                        startedOf(entry.snapshot.get().state()), Instant.now()));
+            }
+            return true;
+        }
         entry.handle.agent().cancel(new AgentCancelCause.User(), CancelOptions.DEFAULT);
         return true;
     }
@@ -201,7 +212,9 @@ public final class LocalDelegationService implements DelegationService {
             DelegationState next = TurnClassifier.classify(
                     entry.handle.agent().session().events(),
                     Instant.ofEpochMilli(entry.startedAtMillis), entry.cancelling.get());
-            if (next.terminal() || next.paused()) {
+            if (next.terminal()) {
+                // 仅终局消耗 finalized CAS；暂停（NeedsParentInput）不消耗——resume 后
+                // 的终局仍须能落账（集成先行钓出的真缺陷：暂停吞 CAS 则 resume/cancel 全哑）
                 if (entry.finalized.compareAndSet(false, true)) {
                     finalizeSnapshot(entry, parent, next);
                 }

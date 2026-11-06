@@ -43,5 +43,20 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-core-agent-loop</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-interaction-ask</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-llm-replay</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-core-system-prompt</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

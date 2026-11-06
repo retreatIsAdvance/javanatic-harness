@@ -1,0 +1,16 @@
+it31 停 3 排序条件兑现取证：集成先行（2026-11-06）
+
+rig = 显式插件清单（AgentLoopTest 权威面 + ask-user）+ ReplayPlugin 剧本注入
++ 桩持久化（save no-op，机制面 it30 探针已证——rig 靶向生命周期）
+
+mvn -B -pl delegation/delegation,delegation/local -am test：TEST_EXIT=0 / BUILD SUCCESS
+Tests run: 4 -- LocalDelegationIntegrationTest（剧本驱动端到端：
+  Succeeded 链恰一次终局 / 问答回路 pause→resume→Succeeded /
+  暂停占槽 maxActive 拒绝 / 取消暂停态终局化 + 幂等 false）
+Tests run: 7 -- TurnClassifierTest（+1：Completed+cancelling→Cancelled）
+合计 delegation 全家 24/24
+
+集成先行钓出的真缺陷（评审排序条件的直接回报）：
+①暂停消耗 finalized CAS → resume/cancel 终局化全哑（修：仅终局消耗 CAS）
+②resume 返回过期暂停快照（修：同步先转 Running 入账再驱动）
+③Completed+cancelling 边：父已取消时迟到的问句不得变 NeedsParentInput（分类器补路 + 钉死）

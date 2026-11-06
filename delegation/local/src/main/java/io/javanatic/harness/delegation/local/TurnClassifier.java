@@ -39,6 +39,9 @@ final class TurnClassifier {
         }
         Instant finishedAt = Instant.now();
         if (last.reason() instanceof TurnEndReason.Completed) {
+            if (cancelling) {
+                return new DelegationState.Cancelled(startedAt, finishedAt);
+            }
             String question = null;
             for (LoggedEvent<? extends SessionEvent> entry : events) {
                 if (entry.event() instanceof ToolResultEvent result

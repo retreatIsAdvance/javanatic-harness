@@ -73,6 +73,16 @@ class TurnClassifierTest {
     }
 
     @Test
+    void completedWithCancellingIsCancelledEvenIfQuestionPresent() {
+        List<LoggedEvent<? extends SessionEvent>> events = new ArrayList<>();
+        events.add(new LoggedEvent<>(1, toolResult("迟到的问句", true)));
+        events.add(new LoggedEvent<>(2, new TurnEnd(3, 1, new TurnEndReason.Completed())));
+        assertThat(TurnClassifier.classify(events, T0, true))
+                .as("父已取消：良性关轮（含迟到的问句）不得变 NeedsParentInput")
+                .isInstanceOf(DelegationState.Cancelled.class);
+    }
+
+    @Test
     void noTurnEndYetIsRunning() {
         assertThat(TurnClassifier.classify(List.of(), T0, false))
                 .isInstanceOf(DelegationState.Running.class);
