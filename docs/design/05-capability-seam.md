@@ -885,6 +885,10 @@ public record ToolDefinition(
 
 三角色：`jobs/jobs` Definition（JobService 契约 + JobState 五态判别联合，Lost = 重启失联诚实标记）+ `jobs/local` Provider（TERM→排水→KILL 矩阵、捕获文件与限额、**事件账 fold 为唯一事实源**——state.json 不存在；Lost 由装配期首次观测懒标记）+ `jobs/tool` Consumer（四工具恒需审批；读三态逐字措辞）。事件 `job/snapshot` 全量快照按 id fold 末值胜（无 generation，B16 同精神）、ignorable=true 不进 prompt 组装；输出块不事件化（游标读）。行配置：`jobs-local.dataDir`（B30，缺省 `~/.harness/jobs/`）、`jobs-tool.maxReadBytes`（B31，256 KiB）。
 
+## 8.3 Delegation Seam（it31）
+
+三角色：`delegation/delegation` Definition（DelegationService 六方法 + DelegationState 六态判别联合——**NeedsParentInput 是暂停非终局**，问与败在枚举层分界；childSessionId = 会话树链接，账本各归各会话）+ `delegation/local` Provider（in-JVM 子代 = durable 会话 Agent；`DelegationChildSetup` = 子 scope 唯一触碰点：**delegate 四工具影子封禁**（最近层同名覆盖，maxDepth=1 结构执法）+ 沙箱/审批恒等继承 + 预算在请求；四路终局映射纯函数；maxActive 根会话单池预留-放行-还槽；Lost = v1 显式不认领恢复）+ `delegation/tool` Consumer（delegate / delegate_list / delegate_answer / delegate_interrupt，恒需审批）。事件 `delegation/snapshot` 全量快照按 id fold、ignorable 不进 prompt；**budgetTokens 随载荷入账**（树总账 = 回放期聚合，零运行期隐藏数）。行配置 B32（provider/model/maxActive，缺省 replay/m/8）。
+
 ## 9. Capability Status and Planned Seams
 
 | Seam | Definition 模块 | Provider(s) | Consumer | 状态 |
