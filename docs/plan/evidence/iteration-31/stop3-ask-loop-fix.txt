@@ -1,0 +1,27 @@
+it31 停 3 模型在环裁决的修复取证：子代工具面（2026-11-08）
+
+一、探针双发现（真 AppBoot 装配直测，ChildFaceBoundaryTest 前身）
+1. ask_user「结构性缺席」未复现：直建与委派路径子代的工具面（ToolRegistry.schemas/
+   definitions 对 child.agent().scope()）均含 ask_user——默认继承即在场。实录中子代
+   以问题作终答，更可能是模型选择（前提错误时选择完成并转述）而非面缺席；问态回路
+   补跑（同款故意错误前提任务）将是决定性检验。
+2. 真缺口坐实：delegate 四工具在子代面无任何封禁——递归委派未执法（模型在环裁决
+   「该禁」项此前只是设计声明，无结构落地）。
+
+二、修复：影子封禁（DelegationChildSetup）
+- 子 setup 内对 delegate / delegate_list / delegate_answer / delegate_interrupt 注册
+  同名桩（描述「递归委派已禁（maxDepth=1）…」、执行恒 error result）——ScopedRegistry
+  最近层同名覆盖（shadowing）语义：子代解析到桩，root 仍解析真工具。
+- maxDepth=1 的结构性执法落地：子代可尝试调用但必得明确拒绝文案，不会产生孙代。
+- delegation/local 增 requires core.tools + pom 依赖（封禁注册需要）。
+
+三、测试（双面）
+- DelegationChildSetupTest（同包）：root 放真 delegate 工具 → 经 setup 建子解析到
+  「递归委派已禁」桩 ×4；root 仍解析真工具（封禁只作用子层）。
+- ChildFaceBoundaryTest（headless 真装配）：ask_user 在场（问态结构前提）；直建子代
+  （不经 setup）见真工具——正好实证封禁只挂在委派路径。
+- delegation 全家 31 绿 + 全仓 validate EXIT=0。
+
+四、待用户复跑（收口前置）
+问态回路场景：同款故意错误前提任务——ask_user 在场（已证）+ 前提错 → 子代应走
+NeedsParentInput（问）而非终答问；父 delegate_answer → resume → 终局。随后双臂。

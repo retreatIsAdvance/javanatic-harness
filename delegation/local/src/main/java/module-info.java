@@ -12,6 +12,7 @@ module io.javanatic.harness.delegation.local {
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.session.persistence;
     requires io.javanatic.harness.core.agent;
+    requires io.javanatic.harness.core.tools;
     requires io.javanatic.harness.core.agent.loop;
 
     exports io.javanatic.harness.delegation.local;
