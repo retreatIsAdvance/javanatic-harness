@@ -11,7 +11,7 @@
 本目录**不在任何 `<modules>` 中**（不进主仓 reactor），坐标与版本由本目录 pom 自持：
 
 - 坐标：`io.github.retreatisadvance.sample:consumer-sample:1.0.0-SNAPSHOT`
-- 唯一版本闸：`-Dharness.version=<版本>`（缺省 `0.4.0-SNAPSHOT`，即候选腿；发布件
+- 唯一版本闸：`-Dharness.version=<版本>`（缺省 `0.4.0`，即候选腿（工作树 install）；发布件
   `-Dharness.version=0.3.0`——candidate-closure 已随 0.3.0 折空，见 pom profiles 注）
 
 ## 跑法
