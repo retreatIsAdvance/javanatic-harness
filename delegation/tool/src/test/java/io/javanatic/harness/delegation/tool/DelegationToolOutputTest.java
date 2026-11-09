@@ -48,6 +48,16 @@ class DelegationToolOutputTest {
                 .isEqualTo("cancelled");
     }
 
+    @Test
+    void guidanceCarriesHonestTradeNotAbsolutePromise() {
+        assertThat(DelegationToolPlugin.DELEGATE_DESCRIPTION)
+                .contains("父上下文").contains("约为数倍")
+                .contains("needs_parent_input").contains("delegate_answer")
+                .doesNotContain("节省 token").doesNotContain("大幅降低");
+        assertThat(DelegationToolPlugin.LIST_DESCRIPTION)
+                .contains("needs_parent_input 即停轮询");
+    }
+
     private static DelegationSnapshot snapshot(DelegationState state, long budget) {
         return new DelegationSnapshot(Delegation.newId("del-tpl"), "并行检索", Session.newId("child-tpl"),
                 budget, state);

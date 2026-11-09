@@ -26,12 +26,21 @@ import java.util.Set;
  */
 public final class DelegationToolPlugin implements Plugin {
 
-    private static final String DELEGATE_DESCRIPTION =
+    // 包可见供措辞钉死测试（it32：诚实交易口径——实测判据入说明书，禁绝对化承诺）
+    static final String DELEGATE_DESCRIPTION =
         "把一件完整子任务派给子代并立即返回（异步）：子代在独立 durable 会话上执行，"
-        + "不占本会话上下文。用 delegate_list 观察状态与终局；子代提问时用 delegate_answer 答复。";
+        + "本会话只见摘要与终局。何时用：中间产物大而结论小（多源检索汇总、批量排查、"
+        + "长文深读提炼）——代价是树总 token 约为数倍（每代各背系统提示基线），换来的"
+        + "是父上下文不受中间产物污染；先问自己在保护什么，答「父上下文」且任务够肥"
+        + "才委派。何时不：微任务或强依赖链（下一步要吃上一步的中间态）——直做更省。"
+        + "等待：别频繁轮询 delegate_list（每次都花父上下文），隔开再查或先做别的。"
+        + "子代遇前提不明会以 needs_parent_input 提问（问题原文随状态可见），"
+        + "转给用户后用 delegate_answer 答复。";
 
-    private static final String LIST_DESCRIPTION =
-        "列出本会话全部委派（含终局与失联）及各子任务摘要、状态、预算与子会话链接。";
+    static final String LIST_DESCRIPTION =
+        "列出本会话全部委派（含终局与失联）及各子任务摘要、状态、预算与子会话链接。"
+        + "见 needs_parent_input 即停轮询：问题原文在状态里，转给用户，"
+        + "答复经 delegate_answer 发回；succeeded 的结果摘要可直接引用。";
 
     private static final String ANSWER_DESCRIPTION =
         "答复处于 needs_parent_input 的子代：答复文本作为子代下一轮 user message 继续。"
