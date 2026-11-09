@@ -1,0 +1,33 @@
+0.4.0 发布：mvn -B -P release deploy 实录
+日期：2026-11-09
+环境：Maven 3.10.0、JDK 25、GnuPG 2.5.21、central-publishing-maven-plugin 0.12.0
+
+前置（rc 排练收口后，部署前）
+- 树 = 0.4.0 正式版（513a510 翻转：reactor 72 POM，坐标 67 = 72 − examples 3 − dist 2，
+  与 59 + jobs 4 + delegation 4 互证；SNAPSHOT 73→0）
+- 0.12.0 在树（0.11.0 在 Maven 3.10 下把 staging 元数据打进 bundle 被 Central 拒收，
+  0.12.0 起打包前剔除——0.3.0 deploy 实录已核）
+- GPG：gpgconf --kill + --launch 重启 agent，--batch 探测签名 SIGN_EXIT=0
+- rc 遗留清理已闭环：远端 tag v0.4.0-rc1 经 gh api GET 404 确认（git 直传窗口仍抖）
+
+deploy 本体
+- mvn -B -P release deploy：DEPLOY_EXIT=0，BUILD SUCCESS，Total time 05:16 min
+- 日志显式剔除：Pre Bundling - deleted …/maven-metadata-local.xml、…/_remote.repositories、
+  …/.locks（每坐标）
+- Uploaded bundle successfully, deploymentId 09491845-16fb-4654-a91c-b3cf9c290a0a
+  Deployment will require manual publishing
+- Deployment 09491845-16fb-4654-a91c-b3cf9c290a0a has been validated
+
+bundle 硬门槛复核（target/central-publishing/central-bundle.zip）
+- TOTAL=1320、MAIN_ARTIFACTS=220、ASC=220、CHECKSUMS=880
+- POM=67（= 51 叶 × 4 + 16 pom-only × 1 = 204 + 16 = 220 主件；67 坐标对账通过）
+- EXAMPLES_DIST=0、maven-metadata/_remote.repositories 残留=0
+- 逐主件查 .asc 旁路：MISSING_ASC_FLAG=0
+- gpg --verify 抽查（kernel-core jar 与 parent pom）：「完好的签名」×2
+  （EDDSA F70A6EF5…，retreatIsAdvance <yxfcyc@163.com>）
+
+下一步（用户侧闸）
+- Portal 草稿审核：67 坐标齐全、examples/dist 零出现、51 叶四件套面
+- Publish（公开、不可逆，用户侧）；Publish 后：tag v0.4.0 + push（放行）+ release-attach
+  8 归档 + 发布后清单（bump 0.5.0-SNAPSHOT、Roadmap 行翻转、notes 定稿、版本串同步面、
+  发布腿重指 0.3.0→0.4.0）
