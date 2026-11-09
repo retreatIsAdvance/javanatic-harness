@@ -41,6 +41,12 @@
 | B27 | LSP 行配置（jdtls） | 键白名单 8 个：`javaHome`（缺省探测 `java.home`，主动探测披露见治理摘要）/ `serverDir` / `configurationDir` / `projectRoot`（三者必填，`JdtlsLaunch` 校验存在）/ `indexDir`（缺省 `homeDir/index`）/ `homeDir`（缺省 `<tmpdir>/jh-lsp-<8位随机>`，LS 缓存 / 索引不触碰用户真实 HOME）/ `mavenUserSettings` / `mavenGlobalSettings`（Optional）。未知键 / 坏值 fail loud；目录创建（homeDir / indexDir）发生在 `toLaunch()`——解析本身无文件系统副作用 | `lsp/jdtls` `JdtlsPluginConfig`；12 §6；[停 3 终裁](evidence/iteration-29/stop3-acceptance.txt) |
 | B28 | LSP 行配置（tool） | 键白名单 5 个，预算缺省有界：`timeoutSeconds` 30 / `waitSeconds` 15 / `maxDiagnostics` 50 / `maxLocations` 50 / `maxOutputBytes` 262144（256 KiB）；全部正整数，`waitSeconds ≤ timeoutSeconds`（LspQuery 构造契约的配置面预校验）；未知键 / 非正 fail loud | `lsp/tool` `LspToolConfig`；12 §6；[停 3 终裁](evidence/iteration-29/stop3-acceptance.txt) |
 
+## Retention（it32 裁决）
+
+| # | 边界 | 规则 | 落地与证据 |
+|---|---|---|---|
+| B33 | jobs/delegation 遗物保留 | **v1 不自动清理**（用户 dataDir 自管理）——静默删用户数据违背显式性品格；与 sessions 目录同策略（最小惊讶）；捕获受 cap 限、累积有界。重访条件：①磁盘压力实测出现；②用户请求会话级联动清理（候选形状：`dataDir/<sessionId>/<jobId>/` 重构使删会话即清遗物成自然语义——代码改动留后续迭代） | [it32 四确认裁决](iteration-32.md)；B30 的 retention 挂账就此收口 |
+
 ## Delegation Boundaries（it31）
 
 | # | 边界 | 规则 | 落地与证据 |
