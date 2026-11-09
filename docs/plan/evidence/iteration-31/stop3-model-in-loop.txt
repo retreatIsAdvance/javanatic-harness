@@ -1,0 +1,30 @@
+it31 停 3 模型在环实录（用户真 key 执行，2026-11-08；口头归档随收口批正式入档）
+
+一、Run 1（基本委派）→ 意外演进为前提纠错回路
+- 任务前提含错误（实为两个子目录非三个、grep TODO 中文误报）
+- 子代表现：拒绝编造、以问题作终答完成；父逐字转述、停轮问用户
+- 已验证面：durable 会话、终局转述保真、子代诚实纪律（前提错不编造）
+- 注意：子代走「终答问」而非 ask_user 问态——当时归因为工具面缺席；
+  后续探针证伪该归因（ask_user 默认继承在场，见 stop3-ask-loop-fix.txt），
+  属模型选择；问态全链的引导缺口挂 it32「问态可发现性提示」
+
+二、Run 2（resume 答复）→ 完整闭环
+- 父收到修正口径 → 尝试 delegate_answer 补发第一子代 → 被正确拒绝
+  （「已 Succeeded，delegate_answer 仅对 needs_parent_input 生效」——
+  停 1 契约 resume 前置 fail-loud 被模型在野外撞上并自适应）
+- 另起子代 → 高质量真实交付：TODO 清单行号准确、假阳性排除有理、
+  it25.1 移交交叉验证、fs 围栏约束如实披露改用只读 shell
+- 已验证面：二次委派、durable resume（turn=2 同会话）、delegate_answer 前置守卫、
+  会话树（父 headless-… + 子 child-del-… 两 durable 会话、childSessionId 链接在账）、
+  delegation/snapshot ×2
+
+三、断言面判定（用户核验）
+编排 ✓ / 转述保真 ✓（含拒绝编造与终局转述）/ 取消终局：未在本两轮触发（双臂中
+机制面由集成测试 + 影子封禁测试背书）/ 账面 ✓ / 凭据：无泄漏
+
+四、修复批（同轮裁决）
+- 探针双发现：ask_user「结构性缺席」未复现（默认继承即在）；真缺口 = delegate
+  四工具无递归禁令 → 影子封禁落地（stop3-ask-loop-fix.txt）
+- 问态回路补跑未随双臂贴回独立实录——机制面证据链：集成测试问答回路
+  （pause→resume→Succeeded）绿 + ask_user 在场实证 + it22 concluding 机制；
+  自然触发引导挂 it32 可发现性项

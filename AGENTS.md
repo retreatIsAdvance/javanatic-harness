@@ -34,6 +34,8 @@ skill/       capability 三角色（it26）：skill/skill Definition（SkillServ
 mcp/         capability 三角色（it27 + it27.1）：mcp/mcp Definition（McpClientService/连接面契约 + `mcp-registry` 注册表）+ mcp/stdio 与 mcp/http 两个 Provider（JSON-RPC stdio / Streamable HTTP）+ mcp/tool Consumer（注册面 + 轮屏障换代 + mcp/catalog）
 web/         capability 三角色（it28）：web/web Definition（WebFetchService/WebSearchService 契约）+ web/fetch-http 与 web/search-deepseek 两个 Provider（钉地址公网抓取 / 原生搜索）+ web/tool Consumer（web_fetch/web_search + HTML 提取 + 分层截断 + 信任前缀）
 lsp/         capability 三角色（it29）：lsp/lsp Definition（LspService 契约 + 观察锚）+ lsp/jdtls Provider（真实 JDT LS 长驻进程 + Content-Length 字节帧）+ lsp/tool Consumer（三工具 + 双态 + 措辞纪律）
+jobs/        可管理后台任务三角色（it30）：jobs/jobs Definition（JobService + 五态联合，Lost=重启失联诚实标记）+ jobs/local Provider（TERM→KILL 矩阵、捕获限额停不杀、事件账 fold 唯一事实源）+ jobs/tool 四工具
+delegation/  受控委派三角色（it31）：delegation Definition（六态联合，NeedsParentInput=暂停非终局）+ local Provider（in-JVM durable 子代、影子封禁防递归、预算随载荷）+ tool 四工具（delegate/list/answer/interrupt）
 session/     persistence seam + jsonl 后端（R1 闭环）
 sandbox/ interaction/   沙箱（seatbelt/bwrap→landlock/windows-acl 平台链 + 策略解析）、审批（三模式 + 等待界）与澄清问答（ask_user）、命令面（it14/it22）
 dist/        jh：jlink 运行时镜像编排（无代码；产出 target/jlink-image/bin/jh 与 tar.gz/zip 归档）

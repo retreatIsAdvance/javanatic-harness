@@ -27,3 +27,5 @@
 ## 与停点评审的关系
 
 review packet 是**当次裁决的提案**，本目录是**裁决落地后的长期记录**。停点被用户修改后，以修改后的裁决更新对应 note；packet 原文保留在 `docs/plan/evidence/`，不回写。
+
+- [0010 双臂验收 token 判据修正：降级为只报告](0010-dual-arm-token-criterion.md)
