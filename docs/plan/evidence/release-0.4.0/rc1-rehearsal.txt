@@ -14,5 +14,6 @@ master run 42576387570：windows-arm 首跑死于 Build-and-test 中途（step �
 判基础设施抖动，rerun --failed 后 run 结论 success（三构建腿 + 复跑腿全绿）。
 
 三、rc 清理
-draft 已删、本地 tag 已删；远端 tag 删除撞网络坏窗口（HTTP2 framing ×5），长重试环挂后台，
-清空后本行由收口批补记（如实登记，不冒充已清）。
+draft 已删、本地 tag 已删；远端 tag 删除曾撞网络坏窗口（HTTP2 framing ×5），后经重试清空——
+补记（收口批）：`gh api GET …/git/refs/tags/v0.4.0-rc1` 返回 404（2026-11-09 复核），
+`gh api releases` 列表无 rc1 draft；git 直传窗口仍抖（ls-remote 报 HTTP2 framing），删除结论以 API 面为准。
