@@ -23,10 +23,10 @@
 
 ## 验收
 
-- [ ] 版本翻转 + 全绿（validate + 全量 package）
-- [ ] 委派指引入描述 + 聚焦测试更新（描述文本钉死面）
-- [ ] release-notes-0.4.0.md 定稿（含判据指引节）
-- [ ] rc 排练全链绿（tag CI 四腿 + release-attach + draft 归档，rc 清理）
+- [x] 版本翻转 + 全绿（[rc 实录](evidence/release-0.4.0/rc1-rehearsal.txt)：翻转 513a510 坐标 67 定案；全量 package 绿）
+- [x] 委派指引入描述 + 钉死测试（9c4e87a：诚实交易口径，禁绝对化承诺突变必红）
+- [x] release-notes-0.4.0.md 定稿（含「何时委派」节：正负结论 + 与 compaction 分工）
+- [x] rc 排练全链绿（tag run 五绿 + master run 复跑绿 + draft 8 归档；rc 清理三件——远端 tag 网络窗口重试中，收口批补记）
 - [ ] deploy 成功 + bundle 硬门槛（.asc 齐全 / 零残留 / 坐标数对账）
 - [ ] Portal Publish（用户侧）+ repo1 抽检验签
 - [ ] tag v0.4.0 + GitHub Release 发布（用户侧 Publish）

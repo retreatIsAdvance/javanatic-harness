@@ -1,0 +1,18 @@
+it32 rc 排练实录：v0.4.0-rc1 全链（2026-11-09）
+
+一、翻转与全绿
+版本翻转 513a510（reactor 72 POM；坐标机械复测 67 = 72 - examples 3 - dist 2，与算术 59+4+4 互证；
+grep 0.4.0-SNAPSHOT 73→0）；指引 + notes 9c4e87a（钉死测试 5 绿）；全量 package：首跑红于
+dist target/modules 双版本残留（it30 同款翻转坑，100/50 双 jar 实测），清后全 reactor EXIT=0。
+
+二、rc 全链
+tag v0.4.0-rc1 → tag run 42576387621 五绿（build/macos/windows/windows-arm + release-attach）；
+draft Release 8 归档、正文 = 占位文本（release-attach 按 tag 版本查 release-notes-0.4.0-rc1.md
+不存在则占位——0.3.0 rc 同款，属预期；正稿在 v0.4.0 时自动取 0.4.0 notes）。
+master run 42576387570：windows-arm 首跑死于 Build-and-test 中途（step 未完、后续 pending、
+日志不可取 log-not-found、job 129024955314）——runner 级死亡特征 + 同 commit 的 tag 腿该腿绿，
+判基础设施抖动，rerun --failed 后 run 结论 success（三构建腿 + 复跑腿全绿）。
+
+三、rc 清理
+draft 已删、本地 tag 已删；远端 tag 删除撞网络坏窗口（HTTP2 framing ×5），长重试环挂后台，
+清空后本行由收口批补记（如实登记，不冒充已清）。
