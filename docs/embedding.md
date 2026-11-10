@@ -25,8 +25,8 @@
 ```xml
 <properties>
     <maven.compiler.release>25</maven.compiler.release>
-    <!-- 0.3.0 = Maven Central 发布件；0.x.0-SNAPSHOT = 主仓工作树 install 的候选件 -->
-    <harness.version>0.3.0</harness.version>
+    <!-- 0.4.0 = Maven Central 发布件；0.x.0-SNAPSHOT = 主仓工作树 install 的候选件 -->
+    <harness.version>0.4.0</harness.version>
 </properties>
 
 <dependencies>
@@ -35,19 +35,20 @@
         <artifactId>harness-bundle-base</artifactId>
         <version>${harness.version}</version>
     </dependency>
-    <!-- 其余 29 条见 integration/consumer-sample/pom.xml：kernel-core / kernel-config /
+    <!-- 其余 33 条见 integration/consumer-sample/pom.xml：kernel-core / kernel-config /
          core-tools / core-session / llm-llm / core-agent / core-system-prompt /
          llm-openai-compat / fs-local / fs-tool / shell-local / shell-tool /
          session-persistence-jsonl / interaction-approval / core-preset，加 0.3.0
          折入的 14 条（skill 三件 / mcp 四坐标 / web 四坐标 / lsp 三坐标——契约件
-         与行件的角色分派见 consumer-sample pom 注）
+         与行件的角色分派见 consumer-sample pom 注）与 0.4.0 折入的 4 条
+         （jobs 两坐标 / delegation 两坐标）
          （0.1.0 用户把 shell-local 换成 harness-shell-bash-local，见 §7 版本面） -->
 </dependencies>
 ```
 
-**为什么是 16 条显式依赖而不是一两条**：组合装配期做**双向校验**——每个行引用的插件都必须被发现，每个被发现的插件都必须被某个行引用。`harness-bundle-base` 的发布 POM 只声明编译面依赖，行引用的插件实现（fs/shell/persistence/approval/mcp/web/lsp…）要由**消费方自持**，否则 `boot()` 会点名缺失项（文案见 §6）。这正是「不靠 reactor 偶然提供的依赖」的验收点：独立工程写全闭包（基础块 30 条 = 0.2.0 面 16 条 + 0.3.0 折入 14 条；candidate-closure 现为空）。
+**为什么是 16 条显式依赖而不是一两条**：组合装配期做**双向校验**——每个行引用的插件都必须被发现，每个被发现的插件都必须被某个行引用。`harness-bundle-base` 的发布 POM 只声明编译面依赖，行引用的插件实现（fs/shell/persistence/approval/mcp/web/lsp/jobs/delegation…）要由**消费方自持**，否则 `boot()` 会点名缺失项（文案见 §6）。这正是「不靠 reactor 偶然提供的依赖」的验收点：独立工程写全闭包（基础块 34 条 = 0.2.0 面 16 条 + 0.3.0 折入 14 条 + 0.4.0 折入 4 条；candidate-closure 现为空）。
 
-**闭包随发布面走**：0.3.0 发布件比 0.2.0 多 14 个坐标——skill 三件（`skill-skill` / `skill-local` / `skill-tool`）、mcp 四坐标（`mcp-mcp` / `mcp-stdio` / `mcp-http` / `mcp-tool`；`mcp-mcp` 提供 `mcp-registry` 行，其余三坐标各为一行）、web 四坐标（`web-web` / `web-fetch-http` / `web-search-deepseek` / `web-tool`；`web-web` 是契约件，其余三坐标各为一行，三行都在 base bundle）与 lsp 三坐标（`lsp-lsp` / `lsp-jdtls` / `lsp-tool`；`lsp-lsp` 是契约件，`lsp-tool` 进 base bundle，`lsp-jdtls` 以禁用行进 base——serverDir / configurationDir / projectRoot 无有意义缺省，组合者用 `replace: true` 原地启用并给配置，缺省组合零 LSP 进程零工具）。这 14 条已随 0.3.0 折入基础依赖块，发布腿与候选腿同闭包；`candidate-closure` profile 保留为下一轮候选坐标的入口——候选腿默认生效，发布腿以 `-P '!candidate-closure'` 停用（机制见 integration/verify-consumer.sh）。升级发布件时，新发布版已含的坐标折回基础依赖块。
+**闭包随发布面走**：0.3.0 发布件比 0.2.0 多 14 个坐标——skill 三件（`skill-skill` / `skill-local` / `skill-tool`）、mcp 四坐标（`mcp-mcp` / `mcp-stdio` / `mcp-http` / `mcp-tool`；`mcp-mcp` 提供 `mcp-registry` 行，其余三坐标各为一行）、web 四坐标（`web-web` / `web-fetch-http` / `web-search-deepseek` / `web-tool`；`web-web` 是契约件，其余三坐标各为一行，三行都在 base bundle）与 lsp 三坐标（`lsp-lsp` / `lsp-jdtls` / `lsp-tool`；`lsp-lsp` 是契约件，`lsp-tool` 进 base bundle，`lsp-jdtls` 以禁用行进 base——serverDir / configurationDir / projectRoot 无有意义缺省，组合者用 `replace: true` 原地启用并给配置，缺省组合零 LSP 进程零工具）。这 14 条已随 0.3.0 折入基础依赖块，发布腿与候选腿同闭包。0.4.0 发布件再增 8 坐标（jobs 组 4 + delegation 组 4）：行件与 Provider 装配件 4 条（`jobs-local` / `jobs-tool` / `delegation-local` / `delegation-tool`）已随 0.4.0 折入基础依赖块（契约件 `jobs-jobs` / `delegation-delegation` 由传递依赖带入）。`candidate-closure` profile 保留为下一轮候选坐标的入口——候选腿默认生效，发布腿以 `-P '!candidate-closure'` 停用（机制见 integration/verify-consumer.sh）。升级发布件时，新发布版已含的坐标折回基础依赖块。
 
 ## 3. 消费两条路：classpath（默认）与 module-path
 
@@ -56,7 +57,7 @@
 **classpath（默认，示例工程走这条，已端到端复跑）**
 
 ```sh
-mvn -f pom.xml -Dharness.version=0.3.0 dependency:build-classpath -Dmdep.outputFile=cp.txt
+mvn -f pom.xml -Dharness.version=0.4.0 dependency:build-classpath -Dmdep.outputFile=cp.txt
 java -cp "target/classes:$(cat cp.txt)" your.Main profile.yml
 ```
 
@@ -136,7 +137,7 @@ try (Runtime runtime = AppBoot.boot(options)) {              // 装配 + 治理�
 | `policy=PRODUCTION 但审批为 AUTO（换 approval-ask / approval-deny）` | 生产档禁 AUTO 审批 | 换审批行，或退回 `STANDARD` |
 | `workspace drift: {…} —— 提示词 cwd 与 fs/shell/sandbox 围栏必须同源(it21)` | `agent-loop.cwd` / `fs-local.root` / `shell-tool.workspace` / `sandbox-policy.workspace` 不同值 | 四处同源（同一工作区根）；**0.2.0 起**装配期拒绝，0.1.0 无此断言 |
 | `llm-openai-compat: no api key (config 'apiKey' or env DEEPSEEK_API_KEY); keyless compositions should disable this row` | 行启用但 key 缺失 | 设环境变量 / 行 `config.apiKey`；或给该行 `disabled: ${env:DEEPSEEK_API_KEY} == null`；只做组合自证时用 `--verify`（不需要 key） |
-| `Could not resolve dependencies … Could not find artifact …:jar:<version>` | 坐标/版本在解析源不存在 | 版本与仓库对齐（0.3.0 = Central；`SNAPSHOT` 只在本机 `install` 过的仓里） |
+| `Could not resolve dependencies … Could not find artifact …:jar:<version>` | 坐标/版本在解析源不存在 | 版本与仓库对齐（0.4.0 = Central；`SNAPSHOT` 只在本机 `install` 过的仓里） |
 | `'dependencies.dependency.version' for io.github.retreatisadvance:harness-kernel-core:jar is missing` | 抄了主仓 reactor 写法（依赖不写版本） | 独立工程必须写显式版本（`<harness.version>`） |
 | javac：`错误: 找不到模块: io.javanatic.harness.bundle.base` | module-path 上缺该 jar | jar 放上 `--module-path`；核对**模块名**而非包名 |
 | java：`java.lang.module.FindException: Module com.fasterxml.jackson.databind not found, required by io.javanatic.harness.llm.openai.compat` | module-path 缺第三方闭包 | 把 `jackson-*`、`snakeyaml` 也列上 module-path（classpath 路线无此问题） |
@@ -146,7 +147,7 @@ try (Runtime runtime = AppBoot.boot(options)) {              // 装配 + 治理�
 
 ```sh
 <repo>/integration/verify-consumer.sh candidate   # 候选腿：主仓工作树 install 进隔离仓 → 示例编译 + 自证运行
-<repo>/integration/verify-consumer.sh release     # 发布腿：隔离仓为空、只从 Central 解析 0.3.0 → 同源复验
+<repo>/integration/verify-consumer.sh release     # 发布腿：隔离仓为空、只从 Central 解析 0.4.0 → 同源复验
 ```
 
 - **候选腿**证明「工作树今天的坐标」可用；**发布腿**证明「Central 上的发布件」可用；两腿跑同一份示例源码，按**交集面**（`compose` / `dump` / `boot` / `Plugin` / `of` / `register`）复验，发布腿的治理自证用 `boot()` fail-loud + `dump()`。
@@ -165,4 +166,4 @@ try (Runtime runtime = AppBoot.boot(options)) {              // 装配 + 治理�
 | `ask_user` 工具（`interaction.ask` 模块 + `ask-user` 行）与 `fs_search`（有界搜索，it21） | ❌（tool 面 8 个：fs 5 + `bash` + `todo_write` + `exit_plan_mode`） | ✅（tool 面 10 个：fs 5 + `fs_search` + `shell` + `todo_write` + `exit_plan_mode` + `ask_user`） |
 | shell provider 坐标 / plugin id / tool 名（it25 S-b 泛化） | `harness-shell-bash-local` / `shell-bash-local` / `bash` | `harness-shell-local` / `shell-local` / `shell`（POSIX 语义不变；Windows 走 pwsh，无 pwsh 则 execute 期 fail-closed） |
 
-升级到 0.2.0 时按上表逐项核对；发布件升级路径见 [docs/release.md](release.md)，发布说明与已知残余见 [release-notes-0.2.0.md](release-notes-0.2.0.md)。0.2.0 → 0.3.0 的升级面（一处破坏性变更 `ValueSchema.Opt` + 14 个新坐标）见 [release-notes-0.3.0.md](release-notes-0.3.0.md)「升级必读」。
+升级到 0.2.0 时按上表逐项核对；发布件升级路径见 [docs/release.md](release.md)，发布说明与已知残余见 [release-notes-0.2.0.md](release-notes-0.2.0.md)。0.2.0 → 0.3.0 的升级面（一处破坏性变更 `ValueSchema.Opt` + 14 个新坐标）见 [release-notes-0.3.0.md](release-notes-0.3.0.md)「升级必读」；0.3.0 → 0.4.0 的升级面（无破坏性变更 + 8 个新坐标 + 8 个恒审批新工具 + 3 组新配置键）见 [release-notes-0.4.0.md](release-notes-0.4.0.md)「升级必读」。

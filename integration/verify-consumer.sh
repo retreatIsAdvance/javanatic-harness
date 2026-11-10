@@ -2,12 +2,12 @@
 # 外部消费方验证（it23，指南 docs/embedding.md §验证）：同一份示例源码、两条工件腿 + 四负例。
 #
 #   候选腿：主仓工作树 `mvn install` 进隔离本地仓（不碰本机仓库）→ 示例编译 + 治理自证运行 exit 0
-#   发布腿：隔离本地仓为空、只取 Maven Central 的 0.3.0 发布件 → 同源复验（交集面）
+#   发布腿：隔离本地仓为空、只取 Maven Central 的 0.4.0 发布件 → 同源复验（交集面）
 #           取件走 settings-central.xml（公共代理）：公司 mirror 对发布件的 jar 曾持续 404（0.1.0 时
 #           16 个 jar 全缺、pom 正常）——发布腿一律经公共 Central 代理取件
 #           坐标：0.2.0 起发布件含 harness-shell-local（it25 S-b 新坐标），旧坐标覆写已退役（见 leg()）
-#           行集：0.3.0 发布件行集已含 skill/mcp/web/lsp 全部行（it26–it29 渐入 base bundle），
-#           candidate-closure 已随 0.3.0 折空；-P '!candidate-closure' 停用保留为 0.4.0 候选前置（见 leg()）
+#           行集：0.4.0 发布件行集已含 skill/mcp/web/lsp/jobs/delegation 全部行（it26–it31 渐入 base bundle），
+#           candidate-closure 已随 0.4.0 折空；-P '!candidate-closure' 停用保留为 0.5.0 候选前置（见 leg()）
 #   负例：坏版本 / 去显式版本 / 坏治理配置 / 生产档撞 AUTO 审批——各须构建必败或 boot 必抛，诊断可读
 #
 # 用法：integration/verify-consumer.sh [candidate|release|all]   （缺省 all）
@@ -88,8 +88,8 @@ leg() { # leg <name> <version>
     local -a closure=()
     if [ "$name" = release ]; then
         # 发布腿停用示例 pom 的 candidate-closure profile：该 profile 收候选件独有坐标，
-        # 发布件不含——0.3.0 已将其折空（坐标入基础块），停用现为无操作前置；
-        # 0.4.0 候选坐标入 profile 后重新生效（it26 follow-up：CI run 38495904023 先例）
+        # 发布件不含——0.4.0 已将其折空（坐标入基础块），停用现为无操作前置；
+        # 0.5.0 候选坐标入 profile 后重新生效（it26 follow-up：CI run 38495904023 先例）
         closure=(-P '!candidate-closure')
     fi
     note "== 腿 ${name}：harness.version=${version}，隔离本地仓 $repo =="
@@ -181,7 +181,7 @@ case "$LEG" in
         fi
         ;;
     release)
-        leg release 0.3.0
+        leg release 0.4.0
         ;;
     *)
         note "用法：$0 [candidate|release|all]"
@@ -191,9 +191,9 @@ esac
 
 note ""
 note "== 汇总：$LEG =="
-if [ -f "$WORK/repo-release/io/github/retreatisadvance/harness-bundle-base/0.3.0/_remote.repositories" ]; then
-    note "发布腿取件来源（隔离仓初始为空；0.3.0 只可能来自公共 Central 代理，mirror id 见下）："
-    sed -n '1,3p' "$WORK/repo-release/io/github/retreatisadvance/harness-bundle-base/0.2.0/_remote.repositories"
+if [ -f "$WORK/repo-release/io/github/retreatisadvance/harness-bundle-base/0.4.0/_remote.repositories" ]; then
+    note "发布腿取件来源（隔离仓初始为空；0.4.0 只可能来自公共 Central 代理，mirror id 见下）："
+    sed -n '1,3p' "$WORK/repo-release/io/github/retreatisadvance/harness-bundle-base/0.4.0/_remote.repositories"
 fi
 note "失败项：$failures"
 exit $((failures > 0))
