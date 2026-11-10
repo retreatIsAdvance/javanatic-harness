@@ -1,0 +1,46 @@
+# 0.4.0 收尾批 · 新鲜门禁 + 消费方双腿 + 核对三法取证
+
+收尾批范围 = iteration-32 四确认 ⑦（bump / Roadmap 翻转 / 发布腿重指 / 版本串同步面），
+2026-11-10 执行。本档承载收尾批自身的验证证据。
+
+## 一、版本 bump
+
+- `mvn versions:set -DnewVersion=0.5.0-SNAPSHOT -DgenerateBackupPoms=false`（reactor
+  72 POM）：BUILD SUCCESS；residue 检查 `<version>0.4.0</version>` = 0 处、
+  `0.5.0-SNAPSHOT` = 72 POM。
+- 非 reactor 同步：`integration/consumer-sample` 缺省值 → `0.5.0-SNAPSHOT`、
+  发布腿 `-Dharness.version=0.4.0`；`docs/design/02-module-layout.md` 六处 POM 片段
+  → `0.5.0-SNAPSHOT`（含三处 0.3.0 遗留片段一并归位）。
+
+## 二、candidate-closure 折叠与发布腿重指
+
+- 基础块 30 条 → **34 条**（0.4.0 折入 jobs 两坐标 + delegation 两坐标；
+  candidate-closure profile 折空，仅留 0.5.0 候选坐标占位）。XML 解析有效。
+- `integration/verify-consumer.sh`：`leg release 0.3.0 → 0.4.0`；取件来源注记
+  路径 `0.2.0 → 0.4.0`（0.3.0 遗留笔误一并修复——此前该注记恒静默跳过）。
+
+## 三、新鲜门禁
+
+`rm -rf dist/jh/target && mvn -B package`（2026-11-10 09:05–09:09）：
+
+- BUILD SUCCESS，EXIT=0（03:52 min）。
+- surefire 新鲜口径（163 suites，仅统计本次 09:04 后产出的 XML）：**1280 tests /
+  0 errors / 31 skipped / 0 failures**。两份旧 XML（AskVisibilityProbe failures=1、
+  IZProbeTest——it31 开发期红探针，测试类已移除）不在本跑范围，已排除。
+
+## 四、消费方双腿（verify-consumer.sh）
+
+- 候选腿（candidate，0.5.0-SNAPSHOT 工作树 install + 34 依赖闭包 + 四负例）：
+  **EXIT=0，失败项 0**。
+- 发布腿（release，0.4.0；隔离仓为空，`RELEASE_SETTINGS` 指向 repo1 直连——公共
+  代理对新坐标有同步滞后，0.3.0 先例同）：**EXIT=0，失败项 0**；取件来源注记
+  `harness-bundle-base-0.4.0.jar>repo1-direct-…`（mirror id 复核通过）。
+
+## 五、核对三法（详见 [audit-stability-surface.txt](audit-stability-surface.txt)）
+
+- 导出面：既有 45 叶 module-info.java 零改动；新增 6（jobs/delegation 叶子）。
+- 事件 schema：`core/session` 主源零改动；新事件 2 类走 ExtensionEvent。
+- 配置键：既有插件 config 读取点零主源改动；新键全属新插件。
+- CLI：`jh --help` EXIT=0；`--verify` EXIT=0 = `34 rows, 41 discovered,
+  0 unreferenced`（keyless 验收口径），jobs:/delegation: 摘要行各点名四工具
+  approval-required。

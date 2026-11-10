@@ -152,9 +152,10 @@ bundle/ examples/   base composition (data-driven AppBoot/ConfigService assembly
 | 16 ✅ | Release engineering → **0.1.0** published: Maven Central + GitHub Release (jlink archives), facade freeze, bilingual README | — |
 | 17–25 ✅ | **0.2.0** published: reliable single-agent CLI, cancellation/recovery/resource limits, workspace and session usability, external Java integration, Linux archives + Landlock, Windows confinement + pwsh; Maven Central + GitHub Release (four platform archives) | — |
 | 0.3 series ✅ | **0.3.0** published: tool ecosystem four stations (Skills / MCP / Web / LSP); Maven Central + GitHub Release (four platform archives) | [Overall plan](docs/design/README.md#phased-evolution-plan) |
-| 0.4 (planned) | Managed background tasks first, then controlled multi-agent delegation | [Overall plan](docs/design/README.md#phased-evolution-plan) |
+| 0.4 series ✅ | **0.4.0** published: managed background tasks + controlled delegation (it30/it31) + delegation strategy guidance (it32); Maven Central + GitHub Release (four platform archives) | [Overall plan](docs/design/README.md#phased-evolution-plan) |
+| 0.5 (planned) | Personal workbench: event projection & query → TUI workbench → JSON-RPC server (127.0.0.1 loopback only) + local web UI | [Overall plan](docs/design/README.md#phased-evolution-plan) |
 
-**Planning principle**: maintainer-led scenarios, real-task acceptance, and community feedback for calibration—not a prerequisite to begin. These future stages have not started; scope, dependencies, and acceptance gates live in the overall plan, with each iteration requiring its own scope confirmation and review checkpoints.
+**Planning principle**: maintainer-led scenarios, real-task acceptance, and community feedback for calibration—not a prerequisite to begin. 0.5 has not started; scope, dependencies, and acceptance gates live in the overall plan, with each iteration requiring its own scope confirmation and review checkpoints.
 
 **Platform support (0.2.0)**: macOS, Linux and Windows, including on-host sandboxing — the sandbox is a platform chain, and the first usable backend on the host wins:
 

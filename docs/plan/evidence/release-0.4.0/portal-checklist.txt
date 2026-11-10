@@ -1,0 +1,89 @@
+0.4.0 Portal 核对单（Publish 前对照面）
+
+提取面：本地 central-bundle.zip（deploy 记录见 deploy-0.4.0.txt），提取日 2026-11-10。
+坐标数：67 = 根 POM（harness-parent，即根工程自身）+ 聚合器 15 + 叶 51。
+排除面：examples（3）/ dist（2）零出现——bundle 内无任何该族坐标。
+
+新增 8 件（0.3.0 59 → 0.4.0 67；注意：非「十件」，67−59=8）：
+  harness-jobs-aggregator
+  harness-jobs-jobs
+  harness-jobs-local
+  harness-jobs-tool
+  harness-delegation-aggregator
+  harness-delegation-delegation
+  harness-delegation-local
+  harness-delegation-tool
+
+Publish 前 Portal 面三查：
+  1. 下方 67 坐标全在场（groupId 一律 io.github.retreatisadvance，version 0.4.0）
+  2. 每个主件带 .asc（签名硬门槛：51 叶 × 4 主件 + 16 pom-only 各带校验和与签名）
+  3. examples/dist 零出现
+
+全量坐标清单（67）：
+  harness-bundle-aggregator
+  harness-bundle-base
+  harness-core-agent
+  harness-core-agent-loop
+  harness-core-aggregator
+  harness-core-plan
+  harness-core-preset
+  harness-core-session
+  harness-core-system-prompt
+  harness-core-todo
+  harness-core-tools
+  harness-delegation-aggregator
+  harness-delegation-delegation
+  harness-delegation-local
+  harness-delegation-tool
+  harness-fs-aggregator
+  harness-fs-fs
+  harness-fs-local
+  harness-fs-tool
+  harness-interaction-aggregator
+  harness-interaction-approval
+  harness-interaction-ask
+  harness-interaction-commands
+  harness-jobs-aggregator
+  harness-jobs-jobs
+  harness-jobs-local
+  harness-jobs-tool
+  harness-kernel-aggregator
+  harness-kernel-brand
+  harness-kernel-config
+  harness-kernel-core
+  harness-llm-aggregator
+  harness-llm-deepseek
+  harness-llm-llm
+  harness-llm-openai-compat
+  harness-llm-replay
+  harness-lsp-aggregator
+  harness-lsp-jdtls
+  harness-lsp-lsp
+  harness-lsp-tool
+  harness-mcp-aggregator
+  harness-mcp-http
+  harness-mcp-mcp
+  harness-mcp-stdio
+  harness-mcp-tool
+  harness-parent
+  harness-sandbox-aggregator
+  harness-sandbox-local
+  harness-sandbox-policy
+  harness-sandbox-sandbox
+  harness-session-aggregator
+  harness-session-persistence
+  harness-session-persistence-jsonl
+  harness-shell-aggregator
+  harness-shell-docker
+  harness-shell-local
+  harness-shell-shell
+  harness-shell-tool
+  harness-skill-aggregator
+  harness-skill-local
+  harness-skill-skill
+  harness-skill-tool
+  harness-web-aggregator
+  harness-web-fetch-http
+  harness-web-search-deepseek
+  harness-web-tool
+  harness-web-web

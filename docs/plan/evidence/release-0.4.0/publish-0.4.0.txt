@@ -1,0 +1,44 @@
+# 0.4.0 发布验收 · 两处 Publish 落地 + repo1 抽检验签
+
+核对基准 = [12-api-stability.md](../../design/12-api-stability.md) §7 + [release.md](../../../release.md) 发布链。
+deploy 实录与 bundle 硬门槛见 [deploy-0.4.0.txt](deploy-0.4.0.txt)（deploymentId
+`09491845-16fb-4654-a91c-b3cf9c290a0a`）；rc1 排练见 [rc1-rehearsal.txt](rc1-rehearsal.txt)。
+Portal Publish 与 GitHub Release Publish 两处均属用户侧执行，本档只承载核验证据。
+
+## 一、Maven Central（Portal Publish，用户侧 2026-11-10）
+
+- Portal 核对单（67 坐标 / 新 8 坐标口径）已先行交付用户逐项 eyeball：
+  [portal-checklist.txt](portal-checklist.txt)。
+- 用户确认 Publish 完成（2026-11-10 上午）。repo1 索引收录有时延（0.3.0 先例：
+  分钟到小时级），探针 `central-watch` 每 120s 轮询 `harness-jobs-local/0.4.0` pom：
+  08:53–09:01 五个 tick 404 → **09:03:26 tick6 200，CENTRAL_OK**。
+
+## 二、repo1 抽检验签（2026-11-10 09:0x 执行，脚本 /tmp/repo1-spotcheck-0.4.0.sh）
+
+1. **十坐标 pom 200**（横跨 0.1/0.2 老面 + 0.3 生态面 + 0.4 新面）：
+   `harness-parent` / `harness-kernel-core` / `harness-bundle-base` /
+   `harness-core-session` / `harness-core-tools` / `harness-fs-local` /
+   `harness-shell-local` / `harness-jobs-local` / `harness-delegation-local` /
+   `harness-lsp-lsp` —— 全部 HTTP 200。
+2. **sha1 一致**：repo1 `.jar.sha1` 与本地 `harness-kernel-core-0.4.0.jar`
+   （`target/central-publishing/central-bundle.zip` 同源）均为
+   `334ab8a23bdd19319016888f66277d3516033d05`。
+3. **EDDSA 验签**：repo1 `.jar.asc` 对本地 jar 验签 = 「完好的签名，来自于
+   retreatIsAdvance <yxfcyc@163.com> [绝对]」（EDDSA 子密钥
+   `F70A6EF502A556926965E9F39B08D129BB5BD9DC`，与 deploy 实录签名密钥一致）。
+4. **metadata latest**：`harness-bundle-base` 与 `harness-jobs-local` 的
+   `maven-metadata.xml` `<latest>` 均为 **0.4.0**。
+
+## 三、GitHub Release（用户侧 Publish，2026-11-10）
+
+- `v0.4.0` tag 已推（rc 排练清理后 tag 重指纪律见 rc1-rehearsal.txt）；
+  release-attach job 8 归档落位（tag run `42588548148` 五绿 + master run
+  `42588548097` 绿，见 [deploy 档](deploy-0.4.0.txt) 与 iteration-32 验收）。
+- Release 正式发布核验：`gh release view v0.4.0` —— `isDraft: false`、
+  `publishedAt: 2026-11-10T00:49:59Z`、8 assets 名与四平台 ×tar.gz/zip 口径一致、
+  正文 = [release-notes-0.4.0.md](../../release-notes-0.4.0.md) 采用稿。
+- 发布中途曾短暂出现 `untagged-56146e…` 临时 URL：系 draft 编辑态地址，
+  正式 Publish 后已归位 tag 地址，无需处理。
+
+**结论：两处 Publish 均落地可核；发布链「deploy → Portal Publish → tag → Release」
+闭环，无失败项。**

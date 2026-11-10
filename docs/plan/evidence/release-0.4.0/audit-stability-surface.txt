@@ -1,0 +1,57 @@
+# 0.4.0 发布验收 · 稳定面差异审计（v0.3.0 → 0.4.0 树）
+
+核对基准 = [12-api-stability.md](../../design/12-api-stability.md) §7 三法固化：导出面 =
+module-info.java 扫描；配置键 = 插件 config 读取点；CLI = `jh --help` / `--verify`。
+本次审计在 v0.3.0 发布面（59 坐标：1 根 + 13 聚合 + 45 叶）与 0.4.0 树之间逐项
+比对，2026-11-10 执行。发布执行（版本翻转 / 签名 / 上传 / tag / Publish）属用户侧，
+本档只承载验收证据。收尾批（bump `0.5.0-SNAPSHOT` 等）不改任何主源，不影响比对。
+
+## 一、导出面（module-info.java 扫描）
+
+`git diff v0.3.0..HEAD -- '**/module-info.java'`：改动**仅** 6 个新文件——
+`jobs/jobs` / `jobs/local` / `jobs/tool` / `delegation/delegation` /
+`delegation/local` / `delegation/tool`（jobs 与 delegation 两聚合为 pom-only，
+无 module-info）。**既有 45 叶模块的 module-info.java 零改动**——既有导出包
+零增删；8 个新导出包全部随 8 个新模块入场，与 release notes 声明一致。
+
+## 二、事件 schema
+
+`git diff v0.3.0..HEAD -- core/session/src/main` 为空：`SessionEvent` sealed
+permits 零变化。新事件 2 类（`job/snapshot`、`delegation/snapshot`）全部走
+`ExtensionEvent` + codec SPI（`ignorable=true`，旧读取方跳过不毁 R1）。
+`PreStepDecision` / `LoopGuard` 等 agentloop seam 类型零变化。
+
+## 三、配置键
+
+非新模块主源改动仅两文件：`bundle/base` bundle.yml（+4 行组合面）与
+`examples/headless` HeadlessMain.java（+2 摘要行纯增量，无 flag 变化）。既有
+插件 config 读取点模块（含 kernel/config、core/tools、interaction 等）**零主源
+改动** → 既有插件 id 的 config 键零变化。新键全部属新插件（B30
+`jobs-local.dataDir`、B31 `jobs-tool.maxReadBytes`、B32 `delegation-local`
+provider/model/maxActive），12 §5 表已逐键记账。
+
+## 四、CLI（jlink 镜像实测，新鲜门禁构建后）
+
+- `dist/jh/target/jlink-image/bin/jh --help` **EXIT=0**：旗标面与 12 §6 清单
+  逐项对齐，无新增 flag。
+- `--verify` **EXIT=0**：治理摘要 `34 rows, 41 discovered, 0 unreferenced`
+  （keyless，即验收口径；keyed 档 36/41 未跑——0.3.0 先例同）。摘要新增
+  `jobs:` 行（jobs-local + jobs-tool；四工具 approval-required）与
+  `delegation:` 行（delegation-local + delegation-tool；四工具
+  approval-required）。base bundle 41 行 = 0.3.0 的 37 行 + jobs 两行 +
+  delegation 两行（四新行均无 base config 块：24 可配 + 17 无配）。
+- 沙箱行：`confining policy "workspace-write" is enforced by backend "seatbelt"
+  (enforcement FULL)`。
+
+## 五、发布面计数（deploy 实录互证）
+
+0.4.0 发布面 = **67 坐标**（59 + 8：jobs 组 4 = jobs 聚合 + jobs-jobs +
+jobs-local + jobs-tool；delegation 组 4 同规）。bundle 硬门槛与坐标明细见
+[deploy-0.4.0.txt](deploy-0.4.0.txt)。
+
+## 结论
+
+**零破坏性变更**。全部为纯增量：8 新模块 / 8 新导出包、8 恒审批新工具、
+2 类 ignorable 扩展事件、3 组新配置键、+4 组合行、+2 摘要行。既有稳定面
+（导出包 / SessionEvent permits / CLI flag / 既有 config 键）零变化，0.3.x
+无补丁义务。

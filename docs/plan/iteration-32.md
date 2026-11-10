@@ -1,4 +1,4 @@
-# 迭代 32 — 0.4.0 发布工程 + 委派策略指引（状态：进行中——2026-11-09 四确认获准）
+# 迭代 32 — 0.4.0 发布工程 + 委派策略指引（状态：已关账——2026-11-10 发布完成，收尾批落盘待 push）
 
 **裁决记录（2026-11-09）**：八件内容 + 零新发明 + 流程节点门全批；**retention = A（v1 不自动清理）**——理由：静默删用户数据违背显式性品格 / 与 ~/.harness/sessions 无自动清理一致（最小惊讶）/ 每任务受 cap 限累积有界；B33 重访条件两条（磁盘压力实测 / 用户请求会话级联动清理，候选形状：dataDir/<sessionId>/<jobId>/ 重构使删会话即清遗物成自然语义——代码改动留后续迭代）。坐标数 65 系草案笔误，正确算术 59+4+4=**67**，翻转批机械复测定案（grep 口径同步 release.md §3.2）。
 
@@ -19,7 +19,11 @@
 
 | 文件 | 覆盖 |
 |---|---|
-（翻转 / rc 排练 / deploy 实录 / 收尾，照 release-0.3.0 目录形制随节点落） |
+| [portal-checklist.txt](evidence/release-0.4.0/portal-checklist.txt) | Portal Publish 前 67 坐标 eyeball 核对单（新 8 坐标口径 + 三查） |
+| [rc1-rehearsal.txt](evidence/release-0.4.0/rc1-rehearsal.txt) | rc1 排练全链（tag run 五绿 + master 复跑 + draft 8 归档 + rc 清理 API 404） |
+| [deploy-0.4.0.txt](evidence/release-0.4.0/deploy-0.4.0.txt) | deploy 实录 + bundle 硬门槛（1320 项 / 67 坐标 / 零 .asc 缺失；deploymentId `09491845`） |
+| [publish-0.4.0.txt](evidence/release-0.4.0/publish-0.4.0.txt) | 两处 Publish 落地核验 + repo1 抽检验签（十项 200 / sha1 / EDDSA / latest=0.4.0） |
+| [audit-stability-surface.txt](evidence/release-0.4.0/audit-stability-surface.txt) | 稳定面差异审计 v0.3.0→0.4.0 树 + 核对三法重跑（导出面 / 事件 / 配置键 / CLI 34-41-0） |
 
 ## 验收
 
@@ -27,8 +31,8 @@
 - [x] 委派指引入描述 + 钉死测试（9c4e87a：诚实交易口径，禁绝对化承诺突变必红）
 - [x] release-notes-0.4.0.md 定稿（含「何时委派」节：正负结论 + 与 compaction 分工）
 - [x] rc 排练全链绿（tag run 五绿 + master run 复跑绿 + draft 8 归档；rc 清理三件——远端 tag 网络窗口重试中，收口批补记）
-- [ ] deploy 成功 + bundle 硬门槛（.asc 齐全 / 零残留 / 坐标数对账）
-- [ ] Portal Publish（用户侧）+ repo1 抽检验签
-- [ ] tag v0.4.0 + GitHub Release 发布（用户侧 Publish）
-- [ ] 收尾批（bump / Roadmap / 发布腿 / 同步面）+ CI 四腿绿
+- [x] deploy 成功 + bundle 硬门槛（.asc 齐全 / 零残留 / 坐标数对账——[实录](evidence/release-0.4.0/deploy-0.4.0.txt)：1320 项、POM=67、MISSING_ASC_FLAG=0）
+- [x] Portal Publish（用户侧）+ repo1 抽检验签（[证据](evidence/release-0.4.0/publish-0.4.0.txt)：十项 200、sha1 一致、EDDSA 完好、latest=0.4.0）
+- [x] tag v0.4.0 + GitHub Release 发布（用户侧 Publish——publishedAt 2026-11-10T00:49:59Z，8 归档）
+- [x] 收尾批（bump 0.5.0-SNAPSHOT / Roadmap 翻转 / 发布腿重指 / 版本串同步面）落盘；本地全量 package 绿（1280/0/31/0）；**CI 四腿待 push 后核（未推，等点名）**
 - [x] retention 裁决落 B 行（B33 = A 案 + 两条重访条件，随翻转批入表）
