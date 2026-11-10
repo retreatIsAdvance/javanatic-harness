@@ -223,7 +223,7 @@ public final class JdtlsProvider implements LspService {
         folder.put("name", serverId);
         ObjectNode clientInfo = params.putObject("clientInfo");
         clientInfo.put("name", "jh-lsp-jdtls");
-        clientInfo.put("version", "0.3.0");
+        clientInfo.put("version", "0.4.0");
         ObjectNode capabilities = params.putObject("capabilities");
         capabilities.putObject("window").put("workDoneProgress", true);
         capabilities.putObject("textDocument").putObject("publishDiagnostics").put("versionSupport", true);

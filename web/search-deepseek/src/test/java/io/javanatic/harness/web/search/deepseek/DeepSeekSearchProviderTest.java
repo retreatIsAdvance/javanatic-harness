@@ -60,7 +60,7 @@ class DeepSeekSearchProviderTest {
             assertThat(request.header("anthropic-version")).isEqualTo("2023-06-01");
             assertThat(request.header("content-type")).isEqualTo("application/json");
             assertThat(request.header("accept")).isEqualTo("application/json");
-            assertThat(request.header("user-agent")).isEqualTo("javanatic-harness/0.3");
+            assertThat(request.header("user-agent")).isEqualTo("javanatic-harness/0.4");
             assertThat(request.bodyText()).doesNotContain(KEY);
 
             JsonNode body = request.json();

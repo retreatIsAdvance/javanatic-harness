@@ -52,8 +52,8 @@ final class PinnedHttpClient {
     /** 单次建连超时（不超过总截止时间）。 */
     static final int CONNECT_TIMEOUT_MILLIS = 10_000;
 
-    /** 0.3 线路标识（版本升级时随 release 更新）。 */
-    static final String USER_AGENT = "javanatic-harness/0.3";
+    /** 线路标识（版本升级时随 release 更新）。 */
+    static final String USER_AGENT = "javanatic-harness/0.4";
 
     private static final int READ_BUFFER_BYTES = 16 * 1024;
 

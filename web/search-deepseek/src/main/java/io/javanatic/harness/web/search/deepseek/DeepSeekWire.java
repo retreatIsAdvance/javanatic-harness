@@ -15,7 +15,7 @@ final class DeepSeekWire {
     static final String API_VERSION = "2023-06-01";
 
     /** 线路标识（与抓取 provider 同版本口径）。 */
-    static final String USER_AGENT = "javanatic-harness/0.3";
+    static final String USER_AGENT = "javanatic-harness/0.4";
 
     /** 原生搜索工具类型。 */
     static final String SEARCH_TOOL_TYPE = "web_search_20250305";

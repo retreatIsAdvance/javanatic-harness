@@ -62,7 +62,7 @@ class PinnedHttpClientTest {
 
             TlsFixture.RecordedRequest request = server.lastRequest();
             assertThat(request.header("Host")).isEqualTo("pinned.test:" + server.port());
-            assertThat(request.header("User-Agent")).isEqualTo("javanatic-harness/0.3");
+            assertThat(request.header("User-Agent")).isEqualTo("javanatic-harness/0.4");
             assertThat(request.header("Accept")).isEqualTo(
                 "text/html,application/xhtml+xml,text/plain,application/json,application/xml");
             assertThat(request.header("Accept-Encoding")).isEqualTo("identity");
