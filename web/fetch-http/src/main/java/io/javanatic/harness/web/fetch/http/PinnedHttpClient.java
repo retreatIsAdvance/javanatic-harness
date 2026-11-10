@@ -107,6 +107,9 @@ final class PinnedHttpClient {
                 } catch (IOException e) {
                     throw translate(e, deadline, signal, target);
                 }
+                // 读体期取消在 Linux 上以 EOF 呈现（readToEof 视为正常收尾）或短读协议错——
+                // 先查取消，杜绝静默成功/包装成 WebException。
+                signal.checkAbort();
                 WebFetchBody content = FetchContent.decode(head, body.bytes());
                 return new WebFetchResult(target.base().toString(), head.statusCode(),
                     head.first("content-type"), content, body.truncated());
@@ -145,6 +148,10 @@ final class PinnedHttpClient {
             } catch (RuntimeException e) {
                 closeQuietly(plain);
                 active.set(null);
+                // Linux 下取消以 close→shutdown 唤醒阻塞读为 EOF：readHead 见 -1
+                // 抛「empty response」WebException 走本分支（macOS/Windows 抛 IOException
+                // 走 translate）。取消优先于协议错重抛，维持「取消永不包装成 WebException」。
+                signal.checkAbort();
                 throw e;
             }
         }
