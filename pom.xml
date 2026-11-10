@@ -62,6 +62,7 @@
         <module>interaction</module>
         <module>jobs</module>
         <module>delegation</module>
+        <module>workbench</module>
         <module>bundle</module>
         <module>examples</module>
         <module>dist</module>
@@ -355,6 +356,11 @@
             <dependency>
                 <groupId>io.github.retreatisadvance</groupId>
                 <artifactId>harness-delegation-tool</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.retreatisadvance</groupId>
+                <artifactId>harness-workbench-projection</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
