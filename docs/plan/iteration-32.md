@@ -34,5 +34,5 @@
 - [x] deploy 成功 + bundle 硬门槛（.asc 齐全 / 零残留 / 坐标数对账——[实录](evidence/release-0.4.0/deploy-0.4.0.txt)：1320 项、POM=67、MISSING_ASC_FLAG=0）
 - [x] Portal Publish（用户侧）+ repo1 抽检验签（[证据](evidence/release-0.4.0/publish-0.4.0.txt)：十项 200、sha1 一致、EDDSA 完好、latest=0.4.0）
 - [x] tag v0.4.0 + GitHub Release 发布（用户侧 Publish——publishedAt 2026-11-10T00:49:59Z，8 归档）
-- [x] 收尾批（bump 0.5.0-SNAPSHOT / Roadmap 翻转 / 发布腿重指 / 版本串同步面）落盘；本地全量 package 绿（1280/0/31/0）；**CI 四腿待 push 后核（未推，等点名）**
+- [x] 收尾批（bump 0.5.0-SNAPSHOT / Roadmap 翻转 / 发布腿重指 / 版本串同步面）落盘；本地全量 package 绿（1280/0/31/0）；CI 四腿全绿 run 42763536094（head 816bde8）——首跑 42749556217 红（ubuntu build 腿取消-EOF 竞态，Linux 独显）后补两提交：`55a0262` 两处 checkAbort + pits 回填、`816bde8` 漏网版本串同步（UA ×2 + JDT LS clientInfo）
 - [x] retention 裁决落 B 行（B33 = A 案 + 两条重访条件，随翻转批入表）
