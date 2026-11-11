@@ -69,6 +69,7 @@
                             </modulePath>
                             <modules>
                                 <module>io.javanatic.harness.examples.headless</module>
+                                <module>io.javanatic.harness.workbench.projection</module>
                                 <module>io.javanatic.harness.core.plan</module>
                                 <module>io.javanatic.harness.core.todo</module>
                                 <module>io.javanatic.harness.core.preset</module>

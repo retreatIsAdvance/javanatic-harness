@@ -1,6 +1,6 @@
 # 边界登记表
 
-> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-11-04（it30 开工；0.5 路线评审预登记 B29——W3 四确认时转正）。
+> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-11-10（it33 停 1 评审：新增 B34 挂账）。
 >
 > 编号消歧：本表原 B4「MCP 消费结果预算」现为 `B-MCP-RESULT`；冻结历史中的旧编号仍按本映射解读。图生成器挂账保留 [it26 提案 B4](evidence/iteration-26/roadmap-diff-proposal.md#b4-capability-graph-机械化建议挂账)，与本表预算项无关。
 
@@ -65,6 +65,12 @@
 | # | 边界 | 规则 | 落地与证据 |
 |---|---|---|---|
 | B29 | JSON-RPC server 监听面（预登记） | 全仓**第一个监听套接字**：仅绑定 **127.0.0.1 回环**、单用户、无远程暴露、无 TLS（本地回环语义）——W3 验收硬线。授权依据 = [00 §6](../design/00-overview.md)「headless runner + JSON-RPC（ACP 等价物）足够」；Web UI 本体的非目标改判另行决策记录（W3 开工前，全局 grep 旧措辞同步） | 预登记（it30 路线评审）；W3 四确认时转正 |
+
+## Core Session 空 seed 挂账（it33 停 1 评审）
+
+| # | 边界 | 规则 | 落地与证据 |
+|---|---|---|---|
+| B34 | core `Session.create` 空 seed 边缘 | 空事件列表 seed 触潜在 IndexOutOfBoundsException（`log.get(-1)` 形态）——**第二次现形**（首现 it30 停 2 工作日志，当时以 null-seed 绕过）。投影层 `messages()` 的 `isEmpty` 短路是**正确防御**，不视作 core 修复。**挂账不阻塞 it33**；重访条件：搭下一次触 core/session 的批或独立小修——core 修复须自带 fail-loud 测试（core/session 是稳定面） | `core/session`；`workbench/projection`（防御已实施，M5 实证） | 挂账（it33 停 1 评审裁决）；[停 1 证据](evidence/iteration-33/stop1-evidence.md) |
 
 ## 维护规则
 

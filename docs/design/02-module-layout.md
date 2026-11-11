@@ -136,6 +136,12 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-interaction-commands` | Definition | `CommandRegistry`（slash 命令；register 即 effect、重复名 fail loud）+ `parseCommand` + `command/run`/`command/done` 事件对（it14 实装，[05 §9](05-capability-seam.md)）|
 | `harness-interaction-ask` | Consumer（工具面） | `ask_user(question)` 澄清问答（插件 id `ask-user`，it22）：**免审批声明**（提问不是副作用）+ **停轮结果**（`concludesTurn=true`，答复 = 下一轮 user message；[05 §8](05-capability-seam.md)、[04 §15](04-agent-loop.md)）|
 
+### Workbench（工作台，it33）
+
+| 模块 | 角色 | 职责 |
+|---|---|---|
+| `harness-workbench-projection` | 纯库（非 capability 三角） | 会话日志只读投影（五视图：turns/tools/usage/timeline/messages）：`List<SessionEvent>` → 结构化视图 record 的纯函数（`SessionProjection`）；无 Provider/Consumer、无插件装载、零写路径，只消费 `SessionPersistence.Loaded`。文本渲染归消费方（headless 的 `--session` CLI 接线）|
+
 ### Bundle 层（组合发行）
 
 | 模块 | 职责 | dsh 对应 |
@@ -231,6 +237,10 @@ flowchart TD
         approval[harness-interaction-approval]
     end
 
+    subgraph workbench[Workbench]
+        projection[harness-workbench-projection<br/>只读投影]
+    end
+
     subgraph bundles[Bundles]
         base[harness-bundle-base]
     end
@@ -307,6 +317,8 @@ flowchart TD
     shelldef --> docker
     shelldef --> shelltool
     persistdef --> jsonl
+    session --> projection
+    persistdef --> projection
 
     compat --> base
     deepseek --> base
@@ -334,6 +346,7 @@ flowchart TD
     preset --> base
 
     base --> headlessex
+    projection --> headlessex
     headlessex --> distjh
 ```
 

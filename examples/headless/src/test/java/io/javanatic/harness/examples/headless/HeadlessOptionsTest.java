@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 
@@ -239,5 +240,51 @@ class HeadlessOptionsTest {
         HeadlessMain.RunnerOptions options = HeadlessMain.parse(
             new String[] {"t", "--api-key-env=JH_DEFINITELY_UNSET_VAR"});
         assertThat(HeadlessMain.run(options, workspace, sessions)).isEqualTo(2);
+    }
+
+    /** it33 --session/--session-view:只读检视入口的解析面(词表/缺省/配对/缺值)。 */
+    @Test
+    void sessionViewFlagParsesVocabularyDefaultsToTurnsAndRequiresSession() {
+        HeadlessMain.RunnerOptions options = HeadlessMain.parse(new String[] {"--session=s1"});
+        assertThat(options.session()).isEqualTo("s1");
+        assertThat(options.sessionView()).isEqualTo("turns");
+        for (String view : List.of("turns", "tools", "usage", "timeline", "messages")) {
+            assertThat(HeadlessMain.parse(
+                new String[] {"--session=s1", "--session-view=" + view}).sessionView())
+                .isEqualTo(view);
+        }
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--session=s1", "--session-view=wat"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("turns|tools|usage|timeline|messages");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"t", "--session-view=tools"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--session");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--session="}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("参数缺值");
+    }
+
+    /** 检视互斥矩阵:沿 --sessions 先例(一次只做一件事,不猜意图)。 */
+    @Test
+    void sessionFlagMutexMatrix() {
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"任务", "--session=s1"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("任务文本");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--session=s1", "--resume=s2"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--resume");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--session=s1", "--verify"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--verify");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--session=s1", "--sessions"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--sessions");
+    }
+
+    /** --help 一眼分清读/写:检视(只读)与续跑(写侧)措辞钉死在 USAGE。 */
+    @Test
+    void usageDistinguishesReadOnlyInspectionFromResume() {
+        assertThat(HeadlessMain.USAGE).contains("--session=", "--session-view=",
+            "只读检视", "续跑写侧");
     }
 }

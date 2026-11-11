@@ -19,6 +19,8 @@
 - **ADDED**：`workbench/projection` 模块（JPMS `io.javanatic.harness.workbench.projection`；纯库——无 plugin、无 base bundle 行、无 ServiceLoader 双通道；依赖 session + session/persistence seam；五视图纯函数契约）
 - **ADDED**：未知事件边界声明（按 type 字符串渲染、不解码、未知负载不进输出）
 - **ADDED**：CLI `--session=` / `--session-view=` 两 flag + 互斥矩阵行 + `--help` 读/写区分文案
+- **ADDED**（停 1 评审钉死）：tools 视图配对键 = `callId`（`ToolResultBlock.toolUseId ↔ ToolCallEvent.callId`，与 R2 审计同一把键）——全系统一把配对键，乱序并行结果不错配；usage 视图保留「未报告计量」的轮（usage=null 与 turns 同序——「没报告」与「报告为零」严格分界）
+- **ADDED**（停 1 评审挂账）：core `Session.create` 空 seed 潜在 IndexOutOfBoundsException → 边界登记表 **B34** 挂账（第二次现形，首现 it30 停 2 工作日志「空 seed 触发 log.get(-1)」；投影层 `isEmpty` 短路为正确防御，非 core 修复；core 修复需自带 fail-loud 测试，不阻塞 it33）
 - **MODIFIED**：02 模块表（workbench 组 + 新叶）、00 模块总览、12 稳定面（CLI flag 加法，纯增量）、AGENTS.md 布局节、docs/design/README.md、current-state.md、README.md（模块清单同步面）
 - **REMOVED**：无
 
@@ -29,24 +31,27 @@
 | `examples/headless/src/main/java/.../HeadlessMain.java`（RunnerOptions / parse / USAGE / runSessions） | 增 `--session=`/`--session-view=` 解析、互斥矩阵、USAGE 行、检视执行路径 | 否 |
 | `examples/headless/src/test/java/.../HeadlessOptionsTest.java` | 钉死面：新 flag 解析 / 互斥 / 缺省视图 / help 行 | 否 |
 | `examples/headless/src/test/java/.../HeadlessSessionsTest.java` | 检视面复用其夹具风格 | 否 |
-| `session/persistence` SessionPersistence.java | 只消费（load/list），不改 | 否 |
+| `session/persistence` SessionPersistence.java | 只消费（load/list），不改 | 是（停 1 只读消费，未改） |
 | `examples/headless/pom.xml` + `module-info.java` | 编译域依赖 + requires | 否 |
 | `dist/jh/pom.xml` | moditect 模块清单登记 workbench.projection（pits #38④） | 否 |
-| 根 `pom.xml` + `workbench/pom.xml` | workbench 组注册 | 否 |
+| 根 `pom.xml` + `workbench/pom.xml` | workbench 组注册 | 是（停 1） |
 | `docs/design/02` / `00` / `12`、`AGENTS.md`、`README.md`、`current-state.md` | 同步面 | 否 |
 
 ## 审查停点（2 停，按评审精化）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1：投影契约 + 五视图（夹具驱动） | workbench/projection 全模块 | 未到 |
-| 停 2：CLI 接线 + 真实会话验收（双臂夹具 + 检视实录） | HeadlessMain 解析/执行面 + jlink 真跑 | 未到 |
+| 停 1：投影契约 + 五视图（夹具驱动） | workbench/projection 全模块 | 已过（2026-11-10 评审放行） |
+| 停 2：CLI 接线 + 真实会话验收（双臂夹具 + 检视实录） | HeadlessMain 解析/执行面 + jlink 真跑 | 出包等评审（2026-11-11） |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-33/）
 
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
-| （随停点产出） | |
+| [stop1-evidence.md](evidence/iteration-33/stop1-evidence.md) | 停 1：红 30 错 → 3 断言修钉 → 终绿 30 测 → validate → 突变 M1–M5 → 残留 grep |
+| [stop1-review-packet.md](evidence/iteration-33/stop1-review-packet.md) | 停 1 评审包：契约面、三行映射、偏离清单 |
+| [stop2-evidence.md](evidence/iteration-33/stop2-evidence.md) | 停 2：聚焦 36/36 + 突变 M1–M3 必红→逐字节还原 + validate 0 违例 + verify 计数 8/8 + 真实会话五视图实录（委派树乱序 callId 配对 / aborted 多轮 / error 工具） |
+| [stop2-review-packet.md](evidence/iteration-33/stop2-review-packet.md) | 停 2 评审包：承载面（parse 分支/旁路/失败词面/渲染器）、三行映射、偏离清单、携带要求核对 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 

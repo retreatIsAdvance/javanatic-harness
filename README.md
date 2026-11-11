@@ -81,11 +81,13 @@ dist/jh/target/jlink-image/bin/jh            # 裸启动进 REPL（it14）：非
 DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在目录> "任务文本"
 # 每次运行打印独立会话 id（headless-<时间戳>-<短随机>）；--resume=<id> 续跑同一会话
 # --sessions[=<N>] 列会话（id/状态/cwd/最后活动/事件数；keyless 只读，缺省 20，与任务文本/--resume/--verify 互斥）
+# --session=<id> [--session-view=<view>] 只读检视会话日志（it33：五视图 turns/tools/usage/timeline/messages，
+#   缺省 turns；keyless、零写路径；与任务文本/--resume/--verify/--sessions 互斥；id 不存在或写者锁冲突 exit 3）
 # --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
 # --resume 命中占用（另一进程/实例持写者锁）fail loud：exit 3、stdout 为空
 # 任务结果契约（it17；it22 增「等待答复」）：
 #   stdout = 成功给最终答案 / 等待答复给提问文本（exit 5）/ 失败为空（成功但无文本合法，exit 0）
-#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败（含 --resume 写者锁冲突） · 4 任务被取消 · 5 等待人工答复
+#   退出码 0 完成 · 1 --verify 违规 · 2 用法/缺 key · 3 任务失败（含 --resume 写者锁冲突 / --session 不存在或占用） · 4 任务被取消 · 5 等待人工答复
 #   诊断（失败文案、模型遗言）走 stderr；`out=$(bin/jh "任务")` 取答案、按退出码判成败
 #   一问一答（it22）：exit 5 的答复 = 下一轮 user message（bin/jh --resume=<id> "答复文本"）
 # --approval=ask 的等待界（it22）：非交互终端缺省 300 秒后按拒绝（fail-closed，绝不无限挂起）；
@@ -115,6 +117,7 @@ session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端�
 interaction/        审批三模式（auto/ask/deny，it7）+ 命令面（registry/slash 解析/事件对，it14）
 dist/               jlink 运行时镜像编排：产出 bin/jh（解出即用，无需手拼 module-path，it13）
 bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可运行示例（agent-spine / headless）
+workbench/           工作台（it33）：projection 纯库——会话日志只读投影五视图（零写路径）
 ```
 
 ## 实现路线（垂直切片）

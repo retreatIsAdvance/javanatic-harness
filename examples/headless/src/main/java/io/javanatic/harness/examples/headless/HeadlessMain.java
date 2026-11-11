@@ -99,6 +99,10 @@ public final class HeadlessMain {
     /** `--approval` 词表：与 interaction/approval 三个 Provider id 的 "approval-" 后缀一致。 */
     private static final List<String> APPROVAL_MODES = List.of("auto", "ask", "deny");
 
+    /** `--session-view` 词表：与 workbench/projection 五视图一一对应（缺省 turns）。 */
+    private static final List<String> SESSION_VIEWS =
+        List.of("turns", "tools", "usage", "timeline", "messages");
+
     /** 会话列举时间戳：本地时区 ISO-8601（带偏移；同一次运行内 created/last 可比）。 */
     private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
@@ -111,9 +115,13 @@ public final class HeadlessMain {
           jh [flags]                            进入交互模式(需 API key;/help 命令;/exit、EOF 或
                                                 空闲 Ctrl-C 退出;进行中的轮 Ctrl-C 取消,以
                                                 aborted 落账,可 --resume 续)
-          jh --resume=<sessionId> [flags]       在既有会话上进入交互模式(带任务文本则一次性续跑)
+          jh --resume=<sessionId> [flags]       在既有会话上进入交互模式(续跑写侧;带任务文本
+                                                则一次性续跑)
+          jh --session=<id> [--session-view=<view>]
+                                                只读检视会话日志(五视图投影,零写路径;
+                                                无 key 可跑)
           jh --sessions[=<N>]                  列举会话(id/活动时间/事件数/写者状态/cwd;
-                                                无 key 可跑;续跑用行内 id)
+                                                无 key 可跑;续跑/检视用行内 id)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1;
                                                 通过时 stdout 打印 07 §6 治理摘要)
           jh --version                         打印版本串(如 0.2.0;exit 0)
@@ -142,6 +150,10 @@ public final class HeadlessMain {
           --sessions[=<N>]           列举会话:每行 <id> created=… last=… events=… <busy|idle>
                                      cwd=…,按最后活动降序(缺省 20 条;截断时尾行提示
                                      --sessions=<N> 放大上限);与任务文本 / --resume / --verify 互斥
+          --session=<sessionId>     只读检视会话(--session-view 五视图投影,零写路径;
+                                     无 key 可跑);与任务文本 / --resume / --verify / --sessions 互斥
+          --session-view=<view>     检视视图:turns|tools|usage|timeline|messages(缺省 turns;
+                                     仅与 --session 同用)
           --provider=<名>            厂商名(缺省 deepseek)
           --model=<名>               模型(缺省 deepseek-chat)
           --base-url=<url>           OpenAI 兼容端点(缺省 https://api.deepseek.com)
@@ -171,7 +183,8 @@ public final class HeadlessMain {
           0  任务完成(或 --verify 通过 / --sessions 成功 / --help / --version)
           1  --verify 违规
           2  用法错误 / 缺少 API key
-          3  任务失败(厂商错误 / 守卫或预算超限 / --resume 会话不存在或写者锁冲突;原因在 stderr)
+          3  任务失败(厂商错误 / 守卫或预算超限 / --resume 或 --session 的会话不存在或
+             写者锁冲突;原因在 stderr)
           4  任务被取消(REPL 路径不适用:退出码 0)
           5  等待人工答复(模型提问停轮;stdout = 提问文本,答复 = --resume=<id> "答复文本")
         契约:成功有结果 / 失败为空 / 等待答复有提问——失败的 stdout 为空,诊断(会话 id、事件
@@ -213,7 +226,7 @@ public final class HeadlessMain {
                          String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile,
                          String resume, boolean docker, String image, Path workspace, String approval,
                          long budget, boolean help, boolean version, OptionalInt sessions,
-                         OptionalInt approvalTimeout) {
+                         OptionalInt approvalTimeout, String session, String sessionView) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -303,6 +316,8 @@ public final class HeadlessMain {
         long budget = 0;
         OptionalInt sessions = OptionalInt.empty();
         OptionalInt approvalTimeout = OptionalInt.empty();
+        String session = null;
+        String sessionView = null;
         for (String arg : args) {
             if ("--help".equals(arg) || "-h".equals(arg)) {
                 help = true;
@@ -346,6 +361,14 @@ public final class HeadlessMain {
                 sessions = OptionalInt.of(RunnerOptions.DEFAULT_SESSIONS_LIMIT);
             } else if (arg.startsWith("--sessions=")) {
                 sessions = OptionalInt.of(positiveInt(valueOf(arg)));
+            } else if (arg.startsWith("--session=")) {
+                session = valueOf(arg);
+            } else if (arg.startsWith("--session-view=")) {
+                sessionView = valueOf(arg);
+                if (!SESSION_VIEWS.contains(sessionView)) {
+                    throw new IllegalArgumentException("--session-view 只支持 "
+                        + String.join("|", SESSION_VIEWS) + ",收到: " + sessionView);
+                }
             } else if (arg.startsWith("--")) {
                 throw new IllegalArgumentException("未知参数: " + arg);
             } else if (task == null) {
@@ -373,13 +396,35 @@ public final class HeadlessMain {
                 throw new IllegalArgumentException("--sessions 与 --verify 互斥（一次只做一件事）");
             }
         }
+        if (sessionView != null && session == null) {
+            throw new IllegalArgumentException("--session-view 需与 --session 同用（单独指定视图无从检视）");
+        }
+        if (session != null) {
+            // 检视是只读旁路:与"要跑什么"的参数同用即为用法错误(不猜意图)
+            if (sessionView == null) {
+                sessionView = "turns"; // 缺省视图在 parse 应用(仿 provider/model 先例)
+            }
+            if (task != null) {
+                throw new IllegalArgumentException("--session 与任务文本互斥（检视不执行任务）");
+            }
+            if (resume != null) {
+                throw new IllegalArgumentException("--session 与 --resume 互斥（检视与续跑请分开运行）");
+            }
+            if (verify) {
+                throw new IllegalArgumentException("--session 与 --verify 互斥（一次只做一件事）");
+            }
+            if (sessions.isPresent()) {
+                throw new IllegalArgumentException(
+                    "--session 与 --sessions 互斥（指定单会话与列举请分开运行）");
+            }
+        }
         return new RunnerOptions(task, verify, policy,
             provider == null ? RunnerOptions.DEFAULT_PROVIDER : provider,
             model == null ? RunnerOptions.DEFAULT_MODEL : model,
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
             apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, version,
-            sessions, approvalTimeout);
+            sessions, approvalTimeout, session, sessionView);
     }
 
     private static String valueOf(String flag) {
@@ -448,6 +493,13 @@ public final class HeadlessMain {
         return cause instanceof WriterLockException lock ? lock : null;
     }
 
+    /** --session 检视遇写者占用:与 --resume 同 fail-loud 词表(写者锁冲突 → exit 3),
+     *  只读旁路不等待、不写——占用即拒。 */
+    static String busySessionText(String sessionId, WriterLockException lock) {
+        return "会话被另一写者占用（写者锁冲突）: " + lock.getMessage()
+            + "；先结束占用该会话的进程/实例，再重试 --session=" + sessionId;
+    }
+
     /** 每次运行新会话 id(07 §7):时间戳 + 短随机,不再复用固定 id 混写同一 log.jsonl。 */
     static String newRunSessionId() {
         return "headless-" + System.currentTimeMillis() + "-"
@@ -507,6 +559,10 @@ public final class HeadlessMain {
                 // 只读旁路:不进 API key 检查、不建 agent——列举的是落盘事实
                 sessionListing(rt.root(), options.sessions().getAsInt()).forEach(out::println);
                 return 0;
+            }
+            if (options.session() != null) {
+                // 只读检视旁路:不进 API key 检查、不建 agent、零写路径——呈现落盘投影
+                return runSessionView(rt.root(), options.session(), options.sessionView(), out);
             }
             String apiKey = options.resolvedApiKey();
             if (apiKey == null) {
@@ -925,9 +981,41 @@ public final class HeadlessMain {
         return TIMESTAMP.format(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()));
     }
 
+    /**
+     * --session 只读检视:load → 投影 → 纯文本渲染(零写路径;占用即拒不等待)。
+     * 未知 id 与写者锁冲突同为 exit 3(与 --resume 词表一致,诊断走 LOG/stderr);
+     * 其余 IO 异常原样上抛。
+     */
+    static int runSessionView(Scope root, String sessionId, String view, PrintStream out)
+            throws Exception {
+        try {
+            SessionPersistence.Loaded loaded =
+                root.require(SessionPersistence.KEY).load(Session.newId(sessionId));
+            SessionViewRenderer.render(loaded, view).forEach(out::println);
+            return 0;
+        } catch (NoSuchElementException e) {
+            // 未知 id 不是崩溃面:给恢复指引(可用 id 在 --sessions),与 --resume 同为 exit 3
+            LOG.log(Level.ERROR, "{0}", unknownSessionText(sessionId, "--session=<id>"));
+            return 3;
+        } catch (IOException | CompletionException e) {
+            // 写者锁冲突:load 探测直抛 WriterLockException——只读检视不等待、不写
+            WriterLockException lock = writerLockCause(e);
+            if (lock == null) {
+                throw e;
+            }
+            LOG.log(Level.ERROR, "{0}", busySessionText(sessionId, lock));
+            return 3;
+        }
+    }
+
     /** 未知 --resume id 的诊断 + 恢复指引（stderr;id 原样回显,可用 id 在 --sessions）。 */
     static String unknownSessionText(String sessionId) {
-        return "会话不存在: " + sessionId + "；用 jh --sessions 查看可用会话，再 --resume=<id>";
+        return unknownSessionText(sessionId, "--resume=<id>");
+    }
+
+    /** 通用形:--session 检视与 --resume 续跑共用同一指引骨架,重试 flag 各自点名。 */
+    static String unknownSessionText(String sessionId, String retryFlag) {
+        return "会话不存在: " + sessionId + "；用 jh --sessions 查看可用会话，再 " + retryFlag;
     }
 
     /** 清单中首个前缀挂载行（治理摘要 / 会话列举按插件 id 定位挂的是哪个实现；缺失 fail loud）。 */

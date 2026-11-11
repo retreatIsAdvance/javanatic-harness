@@ -22,6 +22,7 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.shell.tool;
     requires io.javanatic.harness.session.persistence;
     requires io.javanatic.harness.session.persistence.jsonl;
+    requires io.javanatic.harness.workbench.projection;
     requires io.javanatic.harness.interaction.approval;
     requires io.javanatic.harness.interaction.commands;
     requires io.javanatic.harness.bundle.base;

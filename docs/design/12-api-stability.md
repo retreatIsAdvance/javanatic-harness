@@ -161,7 +161,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 ## 6. CLI 面（`jh`，dist/jh jlink 镜像）
 
-`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--approval-timeout=<秒>` / `--budget=` / `--docker [--image=]` / `--resume=` / `--sessions[=<N>]` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--version` / `--help`（`-h` 同）。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）/ `/cancel`（it22：取消在途轮，同 Ctrl-C 收敛；空闲回「无进行中的轮」）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。`--version` 打印版本串（如 `0.2.0`；keyless、exit 0）。`--sessions` 只读旁路（keyless、不建会话；与任务文本 / `--resume` / `--verify` 互斥——一次只做一件事）。
+`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--approval-timeout=<秒>` / `--budget=` / `--docker [--image=]` / `--resume=` / `--sessions[=<N>]` / `--session=` / `--session-view=` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--version` / `--help`（`-h` 同）。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）/ `/cancel`（it22：取消在途轮，同 Ctrl-C 收敛；空闲回「无进行中的轮」）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。`--version` 打印版本串（如 `0.2.0`；keyless、exit 0）。`--sessions` 只读旁路（keyless、不建会话；与任务文本 / `--resume` / `--verify` 互斥——一次只做一件事）。`--session=<id>` 只读检视旁路（it33；keyless、零写路径；`--session-view=<view>` 五视图投影 `turns|tools|usage|timeline|messages`，缺省 turns；与任务文本 / `--resume` / `--verify` / `--sessions` 互斥；会话不存在或写者锁冲突 exit 3）。
 
 一次性任务的结果契约（it17 起，输出形状的稳定承诺）：
 
@@ -170,7 +170,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | 0 | 任务完成（本轮 `turn/end` Completed；`--verify` 通过 / `--help` / `--version` 同） |
 | 1 | `--verify` 违规（不变） |
 | 2 | 用法错误 / 缺少 API key（不变） |
-| 3 | 任务失败（`turn/end` Error：厂商错误 / 守卫或预算超限 / `--resume` 写者锁冲突;无 turn/end 同归 3） |
+| 3 | 任务失败（`turn/end` Error：厂商错误 / 守卫或预算超限 / `--resume` 或 `--session` 的会话不存在或写者锁冲突;无 turn/end 同归 3） |
 | 4 | 任务被取消（`turn/end` Aborted;REPL 路径不适用,恒 0） |
 | 5 | 等待人工答复（it22：本轮 Completed 且含 `concludesTurn` 的 `tool/result`——模型经 `ask_user` 提问停轮） |
 
@@ -179,7 +179,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 - “本次运行新开轮” = `seq >= Session.firstLiveSeq()`（seed 长度）;`--resume` 续跑不误判旧轮文本与旧终局。
 - 诊断（会话 id、事件清单、`FailureKind` 文案、模型遗言）全部走 stderr;kind 级分辨读 stderr 文案,退出码保持三态粗粒度（不设预算专属码）。**成功路径** stderr 另有一行轮末统计（it20）：`stats: turn=… steps=… tokens_in=… tokens_out=… elapsed=…s`——与 REPL 轮末行同形，数据源全在事件流（`step/start` 计数、`assistant/message` 的 usage 求和、`turn/start→turn/end` 事件时间差）；stdout 契约不受影响。失败路径不另打统计行；**等待答复（exit 5）**同成功路径打统计行，并追加一行答复指引（`jh --resume=<id> "答复文本"`）。
 - **输出编码固定 UTF-8**（it25 S-c locale 修复）：入口把 `System.out/err` 换成 UTF-8 流——Windows GBK 控制台与 Linux 非 UTF-8 locale（`LANG` 缺省,it24 实测中文降级为 `?`）下 jh 自身输出不再随宿主编码漂移;外部系统工具自己写出的字节不在此列（shell 执行面事实,见 05 §6）。
-- **`--resume=` 占用拒绝**（it19，单写者保护）：目标会话正被另一写者（另一进程 / 同 JVM 另一 Runtime）占用时,启动期以「写者锁冲突」文案拒绝（exit 3、stdout 空）——不等待、不并发写;写者锁随进程死亡释放（崩溃/SIGKILL 后可直接 resume,不需要人工清理）。
+- **`--resume=` 占用拒绝**（it19，单写者保护）：目标会话正被另一写者（另一进程 / 同 JVM 另一 Runtime）占用时,启动期以「写者锁冲突」文案拒绝（exit 3、stdout 空）——不等待、不并发写;写者锁随进程死亡释放（崩溃/SIGKILL 后可直接 resume,不需要人工清理）。`--session` 只读检视同规则（it33）：占用即拒（exit 3、stdout 空），不等待、不写。
 
 Ctrl-C（SIGINT）契约（it18 起，随 §1 语义声明）：
 
