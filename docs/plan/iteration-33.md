@@ -1,4 +1,4 @@
-# 迭代 33 — 0.5 工作台 W1：事件投影与查询（状态：进行中）
+# 迭代 33 — 0.5 工作台 W1：事件投影与查询（状态：已关账，2026-11-11）
 
 基线：it32 已关账（0.4.0 发布完成，CI 四腿全绿 run 42763536094）；工作版本 `0.5.0-SNAPSHOT`。0.5 路线（[总体计划](../design/README.md#phased-evolution-plan)）：W1 事件投影与查询 → W2 TUI 工作台（终端库选型为 W2 四确认置顶必裁项）→ W3 JSON-RPC server（B29 已预登记：仅 127.0.0.1 回环）→ W4 本地 Web UI（无构建链单文件 vanilla JS）。
 
@@ -21,28 +21,28 @@
 - **ADDED**：CLI `--session=` / `--session-view=` 两 flag + 互斥矩阵行 + `--help` 读/写区分文案
 - **ADDED**（停 1 评审钉死）：tools 视图配对键 = `callId`（`ToolResultBlock.toolUseId ↔ ToolCallEvent.callId`，与 R2 审计同一把键）——全系统一把配对键，乱序并行结果不错配；usage 视图保留「未报告计量」的轮（usage=null 与 turns 同序——「没报告」与「报告为零」严格分界）
 - **ADDED**（停 1 评审挂账）：core `Session.create` 空 seed 潜在 IndexOutOfBoundsException → 边界登记表 **B34** 挂账（第二次现形，首现 it30 停 2 工作日志「空 seed 触发 log.get(-1)」；投影层 `isEmpty` 短路为正确防御，非 core 修复；core 修复需自带 fail-loud 测试，不阻塞 it33）
-- **MODIFIED**：02 模块表（workbench 组 + 新叶）、00 模块总览、12 稳定面（CLI flag 加法，纯增量）、AGENTS.md 布局节、docs/design/README.md、current-state.md、README.md（模块清单同步面）
+- **MODIFIED**：02 模块表（workbench 组 + 新叶）、12 稳定面（CLI flag 加法，纯增量）、AGENTS.md 布局节、docs/design/README.md（0.5 状态基准与路线行）、current-state.md、README.md（模块清单同步面）；00 §2 总览图不加 workbench（粗粒度示意，权威在 02，见偏离表）
 - **REMOVED**：无
 
 ## 锚点（开工前填写：本次将改动的既有代码位置）
 
 | 锚点（文件:符号） | 预期改动 | 完成 |
 |---|---|---|
-| `examples/headless/src/main/java/.../HeadlessMain.java`（RunnerOptions / parse / USAGE / runSessions） | 增 `--session=`/`--session-view=` 解析、互斥矩阵、USAGE 行、检视执行路径 | 否 |
-| `examples/headless/src/test/java/.../HeadlessOptionsTest.java` | 钉死面：新 flag 解析 / 互斥 / 缺省视图 / help 行 | 否 |
-| `examples/headless/src/test/java/.../HeadlessSessionsTest.java` | 检视面复用其夹具风格 | 否 |
+| `examples/headless/src/main/java/.../HeadlessMain.java`（RunnerOptions / parse / USAGE / runSessions） | 增 `--session=`/`--session-view=` 解析、互斥矩阵、USAGE 行、检视执行路径 | 是（停 2） |
+| `examples/headless/src/test/java/.../HeadlessOptionsTest.java` | 钉死面：新 flag 解析 / 互斥 / 缺省视图 / help 行 | 是（停 2） |
+| `examples/headless/src/test/java/.../HeadlessSessionsTest.java` | 检视面复用其夹具风格 | 是（停 2：新增 HeadlessSessionViewTest 同风格夹具） |
 | `session/persistence` SessionPersistence.java | 只消费（load/list），不改 | 是（停 1 只读消费，未改） |
-| `examples/headless/pom.xml` + `module-info.java` | 编译域依赖 + requires | 否 |
-| `dist/jh/pom.xml` | moditect 模块清单登记 workbench.projection（pits #38④） | 否 |
+| `examples/headless/pom.xml` + `module-info.java` | 编译域依赖 + requires | 是（停 2） |
+| `dist/jh/pom.xml` | moditect 模块清单登记 workbench.projection（pits #38④） | 是（停 2） |
 | 根 `pom.xml` + `workbench/pom.xml` | workbench 组注册 | 是（停 1） |
-| `docs/design/02` / `00` / `12`、`AGENTS.md`、`README.md`、`current-state.md` | 同步面 | 否 |
+| `docs/design/02` / `00` / `12`、`AGENTS.md`、`README.md`、`current-state.md` | 同步面 | 是（停 2 + 收口） |
 
 ## 审查停点（2 停，按评审精化）
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1：投影契约 + 五视图（夹具驱动） | workbench/projection 全模块 | 已过（2026-11-10 评审放行） |
-| 停 2：CLI 接线 + 真实会话验收（双臂夹具 + 检视实录） | HeadlessMain 解析/执行面 + jlink 真跑 | 出包等评审（2026-11-11） |
+| 停 2：CLI 接线 + 真实会话验收（双臂夹具 + 检视实录） | HeadlessMain 解析/执行面 + jlink 真跑 | 已过（2026-11-11 评审放行） |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-33/）
 
@@ -52,16 +52,17 @@
 | [stop1-review-packet.md](evidence/iteration-33/stop1-review-packet.md) | 停 1 评审包：契约面、三行映射、偏离清单 |
 | [stop2-evidence.md](evidence/iteration-33/stop2-evidence.md) | 停 2：聚焦 36/36 + 突变 M1–M3 必红→逐字节还原 + validate 0 违例 + verify 计数 8/8 + 真实会话五视图实录（委派树乱序 callId 配对 / aborted 多轮 / error 工具） |
 | [stop2-review-packet.md](evidence/iteration-33/stop2-review-packet.md) | 停 2 评审包：承载面（parse 分支/旁路/失败词面/渲染器）、三行映射、偏离清单、携带要求核对 |
+| [stop2-review-verdict.md](evidence/iteration-33/stop2-review-verdict.md) | 停 2 评审结论归档：独立复核结果、两处 P3 引文修正、偏离清单裁决、四项携带要求确认 |
 
 ## 验收（证据 = 实际执行的命令与结果）
 
-- [ ] 五视图（turns/tools/usage/timeline/messages）在夹具会话上输出正确（聚焦测试绿 + 突变检查）
-- [ ] 未知 ExtensionEvent（jobs/delegation/skill/mcp 实型）按 type 渲染不失败、负载不进输出
-- [ ] `--session`/`--session-view` 解析 + 互斥矩阵 + `--help` 读/写区分（钉死测试）
-- [ ] 真实入口验收：jlink `jh --session=<it31 双臂真实会话 id>` 检视实录（委派树 / 真实 usage / 工具失败 / 长轮次）
-- [ ] 设计同步面（02/00/12/AGENTS/README/现状卡）与模块表一致
-- [ ] validate + 全量 package 绿；dist/jh 镜像 `--verify` 无回归
-- [ ] 零写路径证明（检视全程无写者锁、无日志追加）
+- [x] 五视图（turns/tools/usage/timeline/messages）在夹具会话上输出正确（聚焦测试绿 + 突变检查）——SessionViewRendererTest 8 测逐行钉死 + HeadlessSessionViewTest 3 测 e2e + 突变 M1–M3 必红→逐字节还原（[stop2-evidence.md](evidence/iteration-33/stop2-evidence.md)）
+- [x] 未知 ExtensionEvent（jobs/delegation/skill/mcp 实型）按 type 渲染不失败、负载不进输出——TimelineViewTest.unknownExtensionRendersTypeOnlyAndNeverTouchesPayload（bomb payload）+ 真实会话 timeline 视图含未知型零失败（[stop1-evidence.md](evidence/iteration-33/stop1-evidence.md) / [stop2-evidence.md](evidence/iteration-33/stop2-evidence.md)）
+- [x] `--session`/`--session-view` 解析 + 互斥矩阵 + `--help` 读/写区分（钉死测试）——HeadlessOptionsTest 3 测（词表+缺省 turns、互斥矩阵、usage 读/写区分）
+- [x] 真实入口验收：jlink `jh --session=<it31 双臂真实会话 id>` 检视实录（委派树 / 真实 usage / 工具失败 / 长轮次）——五视图 exit 0 实录 + 乱序 callId 配对实锤（seq 540→547、541→548、542→546）+ 用户独立复跑确认（[stop2-evidence.md](evidence/iteration-33/stop2-evidence.md) / [stop2-review-verdict.md](evidence/iteration-33/stop2-review-verdict.md)）
+- [x] 设计同步面（02/12/AGENTS/README/现状卡/设计 README）与模块表一致——12 §6 两 flag 入冻结清单 + 02 workbench 组 + AGENTS/README/现状卡逐 diff 核对（用户复核确认）；00 §2 总览图按偏离表不加 workbench
+- [x] validate + 全量 package 绿；dist/jh 镜像 `--verify` 无回归——收口门禁重跑：validate EXIT=0、package EXIT=0（3:45）、`unset DEEPSEEK_API_KEY` jlink `--verify` EXIT=0、composition `34 rows, 41 discovered, 0 unreferenced` 计数不变
+- [x] 零写路径证明（检视全程无写者锁、无日志追加）——busySessionInspectionExitsThreeWithoutWriting（写者持锁时检视 exit 3、stdout 空、不等待不写）；只读旁路仅 `load` 读侧（HeadlessMain.runSessionView），无 Writer 创建、无事件追加；keyless 全程 exit 0
 
 ## 修正（如有）
 
@@ -72,3 +73,6 @@
 
 | 设计文档条目 | 实现实况 | 偏离理由 | 处理（迭代内已同步 / 挂账） |
 |---|---|---|---|
+| 12 §6 冻结清单：exit 0 行未单列 `--session` | 检视旁路成功即 exit 0，与既有「成功但无文本合法」同语义 | 渲染行契约不因旁路而改，12 §6 已加旁路句与退出码 3 扩展 | 迭代内已同步（用户评审同意） |
+| 00 §2 总览图未加 workbench 一行 | 该图是粗粒度示意，本就不列 jobs/delegation/sandbox/session/interaction/lsp/web/mcp/skill/dist 等组 | 权威在 02 模块表（已加 workbench 组） | 迭代内已同步（用户评审同意） |
+| 停 2 packet 两处引文曾与代码不符（词表错误消息 / `load(Session.newId(...))`） | 评审 P3 发现 → 已逐字修正（packet 引文保真度纪律） | 引文保真度属 packet 落盘要求 | 迭代内已修（stop2-review-verdict.md 归档） |
