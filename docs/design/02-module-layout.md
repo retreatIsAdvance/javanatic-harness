@@ -123,7 +123,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 | 模块 | 角色 | 职责 |
 |---|---|---|
-| `harness-session-persistence` | Definition | `SessionStore` SPI + **`SessionEventCodec`**（序列化归 seam；domain record 零 Jackson 注解，[03 §6](03-session-event-sourcing.md)）|
+| `harness-session-persistence` | Definition | `SessionStore` SPI + **`SessionEventCodec`**（序列化归 seam；domain record 零 Jackson 注解，[03 §6](03-session-event-sourcing.md)）+ `SessionTail`（it34：只读流式读面四契约——无锁 / 不修撕裂尾 / 完整行纪律 / seq 连续）|
 | `harness-session-persistence-jsonl` | Provider | JSONL 后端（插件 id `persistence-jsonl`）；Jackson 边界之一（另有 core-tools、llm/openai-compat）|
 
 > MVP 只做 JSONL，不做 SQLite。接口预留。

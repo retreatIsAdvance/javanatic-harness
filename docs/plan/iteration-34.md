@@ -59,7 +59,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1：seam 流式面四契约 | session/persistence-jsonl 只读 tail seam 全模块（四契约逐条钉死 + 真实会话 tail 取证 + load() 锁语义对照 + 突变） | 待开工 |
+| 停 1：seam 流式面四契约 | session/persistence-jsonl 只读 tail seam 全模块（四契约逐条钉死 + 真实会话 tail 取证 + load() 锁语义对照 + 突变） | 已交付（TDD 实录 + 突变 M1–M4 全闭环，[packet](evidence/iteration-34/stop1-review-packet.md) 待放行） |
 | 停 2：workbench/tui 渲染与按键面 + CLI 接线 + 装配面 | 渲染器纯函数五视图 + 按键解析 + 端子薄壳；HeadlessOptions 词表/互斥/usage；headless 依赖 + dist/jh 三行 + antrun 烧入；同步面 02/12/AGENTS/README/current-state | 待开工 |
 | 停 3：真机验收 + 收口 | jlink 真 TTY 冒烟（检视态五视图 + 跟随态 live tail + launcher 烧入取证）+ CI 四腿 + review packet | 待开工 |
 
@@ -68,10 +68,12 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 | 文件 | 覆盖（停点/验收项） |
 |---|---|
 | [preflight-jline-460.txt](evidence/iteration-34/preflight-jline-460.txt) | 落盘前置：repo1 元数据 / jar --describe-module / ModuleFinder 决定性实测 / jdeps / 许可证 / moditect 无 options 面 / launcher 逐字 / 活链 |
+| [stop1-seam-design.md](evidence/iteration-34/stop1-seam-design.md) | 停 1 设计定稿：四契约条款 / 接口形状 / 机制（位置推进、clamp）/ 测试矩阵 T1–T10 / 突变 M1–M4 / 同步面 |
+| [stop1-tdd-evidence.md](evidence/iteration-34/stop1-tdd-evidence.md) | 停 1 TDD 实录：RED（10 红 ServiceNotAvailable）/ 夹具订正 / GREEN（10 绿 + 全反应器回归）/ M1–M4 突变逐条红绿 |
 
 ## 验收
 
-- [ ] 流式 seam 四契约逐条有契约测试，load() 锁语义对照测试成立（进行中会话 load() 抛 WriterLockException vs tail 无锁可读）
+- [x] 流式 seam 四契约逐条有契约测试，load() 锁语义对照测试成立（进行中会话 load() 抛 WriterLockException vs tail 无锁可读）——T1–T10 全绿 + M1–M4 突变全闭环（[实录](evidence/iteration-34/stop1-tdd-evidence.md)）
 - [ ] `jh --workbench [--session=<id>] [--follow]` 解析 + 互斥矩阵 + `--help` 读/写区分（钉死测试）
 - [ ] 检视态五视图全屏渲染正确（夹具会话，聚焦测试绿 + 突变检查）
 - [ ] 跟随态对进行中会话 live tail 真机实录（无锁、完整行纪律、seq 单调）
@@ -84,6 +86,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
+| （停 1 批，随停 1 提交） | T4 残片与 T5 手工行原写 `"seq":2`——turn/start 实为 seq 0（seed null 无重放），严格连续规则下「写者的下一条」应为 seq 1 | 实现前订正为 seq 1（RED 重验仍 10 红 ServiceNotAvailable）；T3 残片（第三事件位 seq 2）与 T6 跳号（seq 5）不动；诚实交易记入 [stop1-tdd-evidence.md](evidence/iteration-34/stop1-tdd-evidence.md) §2 |
 
 ## 设计偏离（如有）
 

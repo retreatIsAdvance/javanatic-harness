@@ -7,6 +7,7 @@ import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.session.persistence.SessionCodecRegistry;
 import io.javanatic.harness.session.persistence.SessionEventCodec;
 import io.javanatic.harness.session.persistence.SessionPersistence;
+import io.javanatic.harness.session.persistence.SessionTail;
 
 import java.nio.file.Path;
 import java.util.ServiceLoader;
@@ -61,6 +62,7 @@ public final class JsonlPersistencePlugin implements Plugin {
         scope.provide(SessionCodecRegistry.KEY, codecs);
         JsonlPersistence persistence = new JsonlPersistence(root(scope), codecs);
         scope.provide(SessionPersistence.KEY, persistence);
+        scope.provide(SessionTail.KEY, persistence); // 同实例双实现:只读流式读面
         scope.onClose(persistence.attach(scope));
     }
 }

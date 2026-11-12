@@ -16,6 +16,7 @@ import io.javanatic.harness.session.persistence.SessionCodecRegistry;
 import io.javanatic.harness.session.persistence.SessionEventCodec;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 import io.javanatic.harness.session.persistence.SessionSummary;
+import io.javanatic.harness.session.persistence.SessionTail;
 import io.javanatic.harness.session.persistence.WriterLockException;
 
 import java.io.IOException;
@@ -53,8 +54,11 @@ import java.util.stream.Stream;
  * 从未在此持久化,屏障跳过不假证);
  * load/续写打开时修复撕裂尾(末行无换行终止:
  * 可解析则补换行,否则截到最后完整行——丢失至多半行),内部行破损仍 fail loud。
+ *
+ * <p>另实现 {@link SessionTail} 只读流式读面(四契约:无锁 / 不修复撕裂尾 /
+ * 完整行纪律 / seq 连续)——观察进行中会话(load 被写者锁拒)的唯一路径。
  */
-public final class JsonlPersistence implements SessionPersistence {
+public final class JsonlPersistence implements SessionPersistence, SessionTail {
 
     private static final System.Logger LOG = System.getLogger(JsonlPersistence.class.getName());
 
@@ -143,6 +147,17 @@ public final class JsonlPersistence implements SessionPersistence {
             repairTornTail(dir.resolve("log.jsonl"));
             return readLoaded(dir, headerFile, id);
         }
+    }
+
+    @Override
+    public SessionTail.Follower open(Id<Session> id) throws IOException {
+        Path dir = root.resolve(id.value());
+        Path headerFile = dir.resolve("header.json");
+        if (!Files.isRegularFile(headerFile)) {
+            throw new NoSuchElementException("session not on disk: " + id.value());
+        }
+        SessionHeader header = HeaderCodec.read(JacksonBridge.read(Files.readString(headerFile)));
+        return new JsonlFollower(id, dir.resolve("log.jsonl"), header);
     }
 
     @Override
@@ -279,26 +294,33 @@ public final class JsonlPersistence implements SessionPersistence {
                 throw new IllegalStateException("seq broken at " + seq + " (expected "
                     + events.size() + ") in session " + id.value());
             }
-            String type = envelope.get("type").asString();
-            SessionEventCodec<?> codec = codecs.forType(type).orElse(null);
-            if (codec == null) {
-                if (envelope.get("ignorable").asBool()) {
-                    events.add(new ExtensionEvent() {
-                        @Override public long time() {
-                            return envelope.get("data").get("time").asLong();
-                        }
-
-                        @Override public String type() {
-                            return type;
-                        }
-                    });
-                    continue;
-                }
-                throw new IllegalStateException("unknown non-ignorable event type in log: " + type);
-            }
-            events.add(decode(codec, envelope.get("data")));
+            events.add(decodeEnvelope(envelope));
         }
         return new Loaded(header, events);
+    }
+
+    /**
+     * 信封解码(load 与 tail 共用):未知类型 ignorable → ExtensionEvent(time+type);
+     * 未知非 ignorable → fail loud。seq 校验在调用方(load 按行序、tail 按交付计数)。
+     */
+    private SessionEvent decodeEnvelope(JsonValue.Obj envelope) {
+        String type = envelope.get("type").asString();
+        SessionEventCodec<?> codec = codecs.forType(type).orElse(null);
+        if (codec == null) {
+            if (envelope.get("ignorable").asBool()) {
+                return new ExtensionEvent() {
+                    @Override public long time() {
+                        return envelope.get("data").get("time").asLong();
+                    }
+
+                    @Override public String type() {
+                        return type;
+                    }
+                };
+            }
+            throw new IllegalStateException("unknown non-ignorable event type in log: " + type);
+        }
+        return decode(codec, envelope.get("data"));
     }
 
     @SuppressWarnings("unchecked")
@@ -425,6 +447,93 @@ public final class JsonlPersistence implements SessionPersistence {
             } catch (IOException e) {
                 LOG.log(System.Logger.Level.WARNING, "writer lock channel close failed", e);
             }
+        }
+    }
+
+    /**
+     * 只读流式跟随游标(SessionTail 四契约):字节位置推进,每次 {@code nextEvents}
+     * 重新打开 READ 通道读 position→EOF 即关——不持有长通道(跨平台无占用面)。
+     * 无锁(不探针/不创建 {@code .writer.lock})、零写(不修复撕裂尾)、末行无
+     * {@code '\n'} 终止 = 残片「尚不可用」留待下轮;交付事件 seq 与已交付计数
+     * 严格连续(与 readLoaded 同款 fail loud),空行跳过不占 seq。
+     */
+    private final class JsonlFollower implements SessionTail.Follower {
+        private final Id<Session> id;
+        private final Path log;
+        private final SessionHeader header;
+        /** 已消费字节(只越过 '\n' 终止的完整行;残片不越过)。 */
+        private long position;
+        /** 下一条应交付事件的 seq(= 已交付计数)。 */
+        private long expectedSeq;
+
+        JsonlFollower(Id<Session> id, Path log, SessionHeader header) {
+            this.id = id;
+            this.log = log;
+            this.header = header;
+        }
+
+        @Override
+        public SessionHeader header() {
+            return header;
+        }
+
+        @Override
+        public synchronized List<SessionEvent> nextEvents() throws IOException {
+            if (!Files.isRegularFile(log)) {
+                return List.of(); // 尚无事件落盘(create 后未 append)
+            }
+            long size = Files.size(log);
+            if (position > size) {
+                // 防御性 clamp:文件被外力截小(repairTornTail 截断只删尾残片,
+                // 理论上到不了此态)——不抛,从新末端继续
+                LOG.log(System.Logger.Level.WARNING,
+                    "tail position {0} beyond size {1}, clamped for session {2}",
+                    position, size, id.value());
+                position = size;
+            }
+            if (position == size) {
+                return List.of();
+            }
+            byte[] bytes = new byte[(int) (size - position)];
+            try (SeekableByteChannel channel = Files.newByteChannel(log,
+                    StandardOpenOption.READ)) {
+                channel.position(position);
+                ByteBuffer buffer = ByteBuffer.wrap(bytes);
+                while (buffer.hasRemaining() && channel.read(buffer) != -1) {
+                    // 读满或 EOF
+                }
+            }
+            List<SessionEvent> events = new ArrayList<>();
+            int start = 0;
+            int end = 0;
+            while (end < bytes.length) {
+                if (bytes[end] != '\n') {
+                    end++;
+                    continue;
+                }
+                String line = new String(bytes, start, end - start, StandardCharsets.UTF_8);
+                position += end - start + 1; // 完整行(含 '\n')已消费——先推进再交付;
+                start = end + 1;             // 交付 fail loud 后游标状态无谓
+                end = start;
+                if (line.isBlank()) {
+                    continue; // 空行跳过,不占 seq(与 readLoaded parity)
+                }
+                JsonValue.Obj envelope = JacksonBridge.read(line);
+                long seq = envelope.get("seq").asLong();
+                if (seq != expectedSeq) {
+                    throw new IllegalStateException("seq broken at " + seq + " (expected "
+                        + expectedSeq + ") in session " + id.value());
+                }
+                expectedSeq++;
+                events.add(decodeEnvelope(envelope));
+            }
+            // start..bytes.length 无 '\n' 终止 = 残片:位置停在残片前,下轮再读
+            return events;
+        }
+
+        @Override
+        public void close() {
+            // 无持久资源(通道每次调用即开即关);AutoCloseable 为 W3 长驻消费面预留
         }
     }
 
