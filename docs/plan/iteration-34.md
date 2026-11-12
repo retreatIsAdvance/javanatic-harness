@@ -1,4 +1,4 @@
-# 迭代 34 — W2 TUI 工作台（状态：进行中——四确认已裁，2026-11-12）
+# 迭代 34 — W2 TUI 工作台（状态：进行中——四确认已裁；停 1 已放行；停 2 S1–S3 已出包待评审，2026-11-12）
 
 **裁决记录（2026-11-12）**：W2 四确认讨论稿评估通过，三类可核实事实对实后落盘——**必裁项 JLine 4 同意**（版本钉 4.6.0 + 四落盘条件：jar --describe-module 实测、BSD-3-Clause 进依赖登记、只引端子层 jline-terminal、jlink `--enable-native-access` 集成成本进设计增量）；**入口形态 `jh --workbench` 独立 flag 同意**（REPL 是 12 §6 冻结面，混装即破坏稳定面）；**live 面读法流式逐行读面同意**（四契约条款化钉死；降级路径改「若流式实现遇阻，本停点降级为检视态 only」，删除「可刷新快照」伪选项——该档与跟随态同撞写者锁，已被证伪）；**四确认草稿本体同意，两处精化**：不要求运行中的进程配合从口号升为四契约条款；live 视图消费投影每 poll 全量重投影（增量投影不做，写进「不做」防过度设计）。
 
@@ -60,7 +60,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1：seam 流式面四契约 | session/persistence-jsonl 只读 tail seam 全模块（四契约逐条钉死 + 真实会话 tail 取证 + load() 锁语义对照 + 突变） | 已放行（评审通过；P3 header 原子性随独立 mini-fix 关闭，见 [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md)） |
-| 停 2：workbench/tui 渲染与按键面 + CLI 接线 + 装配面 | 渲染器纯函数五视图 + 按键解析 + 端子薄壳；HeadlessOptions 词表/互斥/usage；headless 依赖 + dist/jh 三行 + antrun 烧入；同步面 02/12/AGENTS/README/current-state | 待开工 |
+| 停 2：workbench/tui 渲染与按键面 + CLI 接线 + 装配面 | 渲染器纯函数五视图 + 按键解析 + 端子薄壳；HeadlessOptions 词表/互斥/usage；headless 依赖 + dist/jh 四行 + antrun 烧入；同步面 02/12/AGENTS/README/current-state | 已出包待评审（S1–S3 完成；取证与审查包见 [stop2-evidence.md](evidence/iteration-34/stop2-evidence.md) / [stop2-review-packet.md](evidence/iteration-34/stop2-review-packet.md)） |
 | 停 3：真机验收 + 收口 | jlink 真 TTY 冒烟（检视态五视图 + 跟随态 live tail + launcher 烧入取证）+ CI 四腿 + review packet | 待开工 |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-34/）
@@ -71,16 +71,18 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 | [stop1-seam-design.md](evidence/iteration-34/stop1-seam-design.md) | 停 1 设计定稿：四契约条款 / 接口形状 / 机制（位置推进、clamp）/ 测试矩阵 T1–T10 / 突变 M1–M4 / 同步面 |
 | [stop1-tdd-evidence.md](evidence/iteration-34/stop1-tdd-evidence.md) | 停 1 TDD 实录：RED（10 红 ServiceNotAvailable）/ 夹具订正 / GREEN（10 绿 + 全反应器回归）/ M1–M4 突变逐条红绿 |
 | [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md) | 停 1-F1 mini-fix：backfill header 原子化（竞态 RED 逐字症状 → temp+ATOMIC_MOVE GREEN → 突变复红 → 还原复绿 → 44/44 回归） |
+| [stop2-evidence.md](evidence/iteration-34/stop2-evidence.md) | 停 2 取证：S1/S2 渲染/按键/状态 TDD 复跑突变 M-a–M-c；S3 CLI 接线突变 M1–M7 + 门禁（validate 0 checkstyle / 全反应器 1399/0/0）+ jlink 镜像冒烟（burn 行 / 五模块 / exit 3 keyless / verify 计数不变） |
+| [stop2-review-packet.md](evidence/iteration-34/stop2-review-packet.md) | 停 2 审查包：交付物 / 不变量增量 / 取证摘要 / 诚实交易（派发顺序单元层不可观察 + preflight 订正）/ 请裁决 |
 
 ## 验收
 
 - [x] 流式 seam 四契约逐条有契约测试，load() 锁语义对照测试成立（进行中会话 load() 抛 WriterLockException vs tail 无锁可读）——T1–T10 全绿 + M1–M4 突变全闭环（[实录](evidence/iteration-34/stop1-tdd-evidence.md)）
-- [ ] `jh --workbench [--session=<id>] [--follow]` 解析 + 互斥矩阵 + `--help` 读/写区分（钉死测试）
-- [ ] 检视态五视图全屏渲染正确（夹具会话，聚焦测试绿 + 突变检查）
+- [x] `jh --workbench [--session=<id>] [--follow]` 解析 + 互斥矩阵 + `--help` 读/写区分（钉死测试）
+- [x] 检视态五视图全屏渲染正确（夹具会话，聚焦测试绿 + 突变检查）
 - [ ] 跟随态对进行中会话 live tail 真机实录（无锁、完整行纪律、seq 单调）
 - [ ] jlink 镜像 launcher 含 `--enable-native-access=org.jline.terminal.ffm`（sh + bat 双面取证），真 TTY 冒烟零警告
-- [ ] `--verify` 计数不变（34 rows / 41 discovered / 0 unreferenced——tui 非 bundle 行）
-- [ ] 同步面（02/12/AGENTS/README/current-state）与模块表一致；12 §6 检视=零新事件/流式面=真零写
+- [x] `--verify` 计数不变（34 rows / 41 discovered / 0 unreferenced——tui 非 bundle 行）
+- [x] 同步面（02/12/AGENTS/README/current-state）与模块表一致；12 §6 检视=零新事件/流式面=真零写
 - [ ] validate + 全量 package 绿；CI 四腿绿
 
 ## 修正（如有）
@@ -89,6 +91,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 |---|---|---|
 | （停 1 批，随停 1 提交） | T4 残片与 T5 手工行原写 `"seq":2`——turn/start 实为 seq 0（seed null 无重放），严格连续规则下「写者的下一条」应为 seq 1 | 实现前订正为 seq 1（RED 重验仍 10 红 ServiceNotAvailable）；T3 残片（第三事件位 seq 2）与 T6 跳号（seq 5）不动；诚实交易记入 [stop1-tdd-evidence.md](evidence/iteration-34/stop1-tdd-evidence.md) §2 |
 | （停 1-F1 mini-fix，随停 1-F1 提交） | 停 1 评审 P3：`backfill()` 裸 `Files.writeString(header.json)` 非原子写，并发无锁 `open()` 在「文件已建、内容未写完」窗口可读到撕裂/空 header（此暴露 `list()` 早年就有） | `atomicWriteString` 助手（同目录 temp + `ATOMIC_MOVE`/`REPLACE_EXISTING` + 降级普通 move + finally 清理）；HeaderAtomicWriteTest 竞态测试钉死（TDD RED 逐字命中预测症状 + 突变复红）；实录见 [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md) |
+| （停 2 批，随停 2 提交） | preflight 断言错误：W2 开工时称「jline-terminal 的 module-info 不 requires org.jline.nativ ⇒ 排除 jline-native」——S3 jh 镜像实测 jlink 报 `Module org.jline.nativ not found, required by org.jline.terminal` | 订正：describe-module 完整输出含非 static `requires org.jline.nativ` + 字节码直引 `JLineLibrary`/`JLineNativeLoader`（javac 惰性解析不报错、jlink 全图解析必败）；workbench/tui 移除排除、moditect 清单加 `org.jline.nativ` 一行；§2/§3 与 [preflight-jline-460.txt](evidence/iteration-34/preflight-jline-460.txt) 已订正（证据后置偏离，如实登记） |
 
 ## 设计偏离（如有）
 
