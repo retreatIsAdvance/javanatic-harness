@@ -61,7 +61,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 |---|---|---|
 | 停 1：seam 流式面四契约 | session/persistence-jsonl 只读 tail seam 全模块（四契约逐条钉死 + 真实会话 tail 取证 + load() 锁语义对照 + 突变） | 已放行（评审通过；P3 header 原子性随独立 mini-fix 关闭，见 [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md)） |
 | 停 2：workbench/tui 渲染与按键面 + CLI 接线 + 装配面 | 渲染器纯函数五视图 + 按键解析 + 端子薄壳；HeadlessOptions 词表/互斥/usage；headless 依赖 + dist/jh 四行 + antrun 烧入；同步面 02/12/AGENTS/README/current-state | 修订版已出包待复审（评审 F1/F2/F3 已修 + 三项铁证；[stop2-review-packet.md](evidence/iteration-34/stop2-review-packet.md) §5 修订记录） |
-| 停 3：真机验收 + 收口 | jlink 真 TTY 冒烟（检视态五视图 + 跟随态 live tail + launcher 烧入取证）+ CI 四腿 + review packet | 待开工 |
+| 停 3：真机验收 + 收口 | jlink 真 TTY 冒烟（检视态五视图 + 跟随态 live tail + launcher 烧入取证）+ CI 四腿 + review packet | 已出包待评审（PTY 真终端双态实录 + Follower 关闭钩子 TDD；[stop3-review-packet.md](evidence/iteration-34/stop3-review-packet.md)） |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-34/）
 
@@ -73,17 +73,20 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 | [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md) | 停 1-F1 mini-fix：backfill header 原子化（竞态 RED 逐字症状 → temp+ATOMIC_MOVE GREEN → 突变复红 → 还原复绿 → 44/44 回归） |
 | [stop2-evidence.md](evidence/iteration-34/stop2-evidence.md) | 停 2 取证：S1/S2 渲染/按键/状态 TDD 复跑突变 M-a–M-c；S3 CLI 接线突变 M1–M7 + 门禁（validate 0 checkstyle / 全反应器 1399/0/0）+ jlink 镜像冒烟（burn 行 / 五模块 / exit 3 keyless / verify 计数不变）+ §6 修订取证（F2 TDD 红绿突变 + F1/F3 修复 + 三项铁证） |
 | [stop2-review-packet.md](evidence/iteration-34/stop2-review-packet.md) | 停 2 审查包：交付物 / 不变量增量 / 取证摘要 / 诚实交易（派发顺序单元层不可观察 + preflight 订正）/ §5 修订记录（F1/F2/F3 → 三项铁证）/ 请裁决 |
+| [stop3-evidence.md](evidence/iteration-34/stop3-evidence.md) | 停 3 取证：Follower 关闭钩子 TDD（RED 编译红 + AutoCloseable 踩坑 + GREEN 10/10 + 突变单点红）；镜像重建（755/逗号清单/模块在镜/verify 不变）；PTY 真终端双态冒烟（五视图逐键 + live tail events=2→4 + 双态零 WARNING + 清理零残留）；诚实交易四项 |
+| [stop3-review-packet.md](evidence/iteration-34/stop3-review-packet.md) | 停 3 审查包：关闭钩子交付 / 真机不变量 / PTTY 方法学声明 / 验证摘要 / 诚实交易 / 请裁决 |
+| [stop3-closeout.md](evidence/iteration-34/stop3-closeout.md) | 停 3 门禁面：全反应器 179 XML = 1403/0/0/31（与停 2 的 1399 逐项对账：+3 TermIoTest 修订批 + 1 关闭钩子）；AskVisibilityProbe Nov 6 陈旧件隔离；CI 四腿回填位 |
 
 ## 验收
 
 - [x] 流式 seam 四契约逐条有契约测试，load() 锁语义对照测试成立（进行中会话 load() 抛 WriterLockException vs tail 无锁可读）——T1–T10 全绿 + M1–M4 突变全闭环（[实录](evidence/iteration-34/stop1-tdd-evidence.md)）
 - [x] `jh --workbench [--session=<id>] [--follow]` 解析 + 互斥矩阵 + `--help` 读/写区分（钉死测试）
 - [x] 检视态五视图全屏渲染正确（夹具会话，聚焦测试绿 + 突变检查）
-- [ ] 跟随态对进行中会话 live tail 真机实录（无锁、完整行纪律、seq 单调）
-- [ ] jlink 镜像 launcher 含 `--enable-native-access=org.jline.terminal.ffm,org.jline.nativ`（sh 面已取证、bat 面随 CI Windows 腿），真 TTY 冒烟零警告
+- [x] 跟随态对进行中会话 live tail 真机实录（无锁、完整行纪律、seq 单调）——PTY 真终端 `events=2→4` + 追加行入窗 + `[follow]` 逐字（[实录](evidence/iteration-34/stop3-evidence.md) §3b）
+- [x] jlink 镜像 launcher 含 `--enable-native-access=org.jline.terminal.ffm,org.jline.nativ`（sh 面已取证、bat 面随 CI Windows 腿），真 TTY 冒烟零警告——PTY 双态 WARNING=0（[实录](evidence/iteration-34/stop3-evidence.md) §3）
 - [x] `--verify` 计数不变（34 rows / 41 discovered / 0 unreferenced——tui 非 bundle 行）
 - [x] 同步面（02/12/AGENTS/README/current-state）与模块表一致；12 §6 检视=零新事件/流式面=真零写
-- [ ] validate + 全量 package 绿；CI 四腿绿
+- [ ] validate + 全量 package 绿；CI 四腿绿（本地全反应器随 [stop3-closeout.md](evidence/iteration-34/stop3-closeout.md) 落盘；CI 四腿随收口批 push）
 
 ## 修正（如有）
 
