@@ -41,7 +41,7 @@ public final class WorkbenchRenderer {
         Objects.requireNonNull(viewport, "viewport");
         Objects.requireNonNull(size, "size");
         List<String> content = contentLines(views, viewport.view());
-        int windowRows = Math.max(0, size.rows() - 2);
+        int windowRows = windowRows(size);
         int maxTop = Math.max(0, content.size() - windowRows);
         int top = viewport.follow() ? maxTop : Math.min(viewport.scrollTop(), maxTop);
         List<String> lines = new ArrayList<>(size.rows());
@@ -59,6 +59,11 @@ public final class WorkbenchRenderer {
     }
 
     // ────────── 行 0:状态栏 ──────────
+
+    /** 内容窗口行数 = 总行数 - 状态栏 - footer(几何只由尺寸决定)。 */
+    static int windowRows(Size size) {
+        return Math.max(0, size.rows() - 2);
+    }
 
     private static String status(SessionViews views, Viewport viewport) {
         String line = "session=" + views.header().id() + "  view=" + viewport.view().displayName()

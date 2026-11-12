@@ -44,6 +44,7 @@
         <assertj.version>3.25.3</assertj.version>
         <jqwik.version>1.8.5</jqwik.version>
         <archunit.version>1.5.0</archunit.version>
+        <jline.version>4.6.0</jline.version>
         <!-- 无 preview：全仓库不启用 Java preview 特性（docs/design/11-java25-upgrade.md） -->
     </properties>
 
@@ -106,6 +107,17 @@
                 <artifactId>archunit</artifactId>
                 <version>${archunit.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jline</groupId>
+                <artifactId>jline-terminal</artifactId>
+                <version>${jline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jline</groupId>
+                <artifactId>jline-terminal-ffm</artifactId>
+                <version>${jline.version}</version>
+                <scope>runtime</scope>
             </dependency>
             <!-- 内部模块：版本唯一声明处 -->
             <dependency>

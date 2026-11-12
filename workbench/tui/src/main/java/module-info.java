@@ -8,6 +8,7 @@ module io.javanatic.harness.workbench.tui {
     requires io.javanatic.harness.workbench.projection;
     requires io.javanatic.harness.core.session;
     requires io.javanatic.harness.kernel.brand;
+    requires org.jline.terminal;
 
     exports io.javanatic.harness.workbench.tui;
     // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性

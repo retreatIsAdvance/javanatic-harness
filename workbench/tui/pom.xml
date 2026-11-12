@@ -26,5 +26,20 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-kernel-brand</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-terminal</artifactId>
+            <exclusions>
+                <!-- ffm 提供方替代 jni 版 native 提供方（preflight 已核：仅引 terminal 面，不含 reader/line editor） -->
+                <exclusion>
+                    <groupId>org.jline</groupId>
+                    <artifactId>jline-native</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-terminal-ffm</artifactId>
+        </dependency>
     </dependencies>
 </project>
