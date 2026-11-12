@@ -7,9 +7,11 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
 /**
- * 端子薄壳(停 2-S2)：JLine 4 的唯一触点。open() 建系统终端并进 raw 模式
- * (真 TTY 面,停 3 冒烟验收);单测面 = 委托 + 尺寸回退(0 取 80×24)+ 帧封装
- * (home + 每行清至行尾 + CRLF,纯函数)。close 委托端子关闭(restore 属性)。
+ * 端子薄壳(停 2-S2)：JLine 4 的唯一触点。open() 建系统终端、拒哑终端
+ * (退化环境 JLine 不抛而是建哑终端,此处显式 fail loud,exit 2 契约的行为面)
+ * 再进 raw 模式(真 TTY 面,停 3 冒烟验收);单测面 = checkedOpen 判定(哑终端
+ * 拒绝 + 委托) + 尺寸回退(0 取 80×24)+ 帧封装(home + 每行清至行尾 + CRLF,
+ * 纯函数)。close 委托端子关闭(restore 属性)。
  */
 public final class TermIo implements KeyInput, ScreenOutput, AutoCloseable {
 
@@ -28,9 +30,23 @@ public final class TermIo implements KeyInput, ScreenOutput, AutoCloseable {
         this.terminal = Objects.requireNonNull(terminal, "terminal");
     }
 
-    /** 打开系统终端并进 raw 模式(真实 TTY;仅停 3 冒烟调用)。 */
+    /** 打开系统终端、拒哑终端并进 raw 模式(真实 TTY;仅停 3 冒烟调用)。 */
     public static TermIo open() throws IOException {
-        Terminal terminal = systemTerminal();
+        return checkedOpen(systemTerminal());
+    }
+
+    /**
+     * 打开判定(单测 seam)：哑终端(JLine 的 dumb/dumb-color 两型,退化环境——
+     * 无控制终端/管道/TERM=dumb——建出的退化端子)先关端子再抛「无真 TTY」
+     * (工作台需交互 TTY,exit 2 契约);真终端进 raw 模式后包装。
+     */
+    static TermIo checkedOpen(Terminal terminal) throws IOException {
+        Objects.requireNonNull(terminal, "terminal");
+        String type = terminal.getType();
+        if (Terminal.TYPE_DUMB.equals(type) || Terminal.TYPE_DUMB_COLOR.equals(type)) {
+            terminal.close();
+            throw new IOException("无真 TTY（哑终端类型 " + type + "）");
+        }
         terminal.enterRawMode();
         return new TermIo(terminal);
     }

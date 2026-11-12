@@ -72,3 +72,34 @@ mvn test                # 全反应器 BUILD SUCCESS 3:46（2026-11-12 12:40）
 - **派发顺序突变在单元层不可观察**：`HeadlessWorkbenchTest` 经 seam 直测 `runWorkbench`/`workbenchSource`，不经 `main()` 派发——「workbench 旁路先于 API key 检查」的换序突变在单元套件无信号，不伪称有测试钉死。实跑面有真实观察：keyless 镜像 `jh --workbench --session=no-such-id` 出 exit 3（会话诊断）而非 exit 2（缺 key）——若顺序相反必先报 key 错误，§4 输出为证。
 - **preflight 订正（jline-native，证据后置偏离）**：W2 开工 preflight 断「terminal module-info 无 requires 边 ⇒ 排除 jline-native」；S3 镜像实测推翻（describe-module 完整输出含 `requires org.jline.nativ` 非 static + 字节码直引 `JLineLibrary`/`JLineNativeLoader`；javac 惰性解析不报错而 jlink 全图解析必败）。处置：workbench/tui 移除排除 + moditect 加行；iteration-34 §2/§3 与 [preflight-jline-460.txt](preflight-jline-460.txt) 已订正（随停 2 批提交）。
 - 真 TTY 面（检视态全屏五视图 + 跟随态 live tail 实录 + launcher 零警告取证）留停 3 真机冒烟；`.bat` 烧入随 Windows 档案走 archive-windows profile，本地 macOS 无 .bat 生成，留 CI Windows 腿取证。
+
+## 6. 修订取证（停 2 评审处置 F1/F2/F3，2026-11-12）
+
+评审结论「暂不放行——修订后重出 packet」（全文见 [stop2-review-verdict.md](stop2-review-verdict.md)）：F1 烧入模块清单不全（真调受限方法的是 `org.jline.nativ` 的 `System::load`）、F2 「无真 TTY exit 2」是广告词不是行为、F3 antrun replace 剥执行位。三项处置与重取证如下；§1–§5 为修订前实录，冻结不改。
+
+### 6a. F2 哑终端判定（TDD：RED → GREEN → 突变）
+
+- RED（实现前）：`TermIoTest` 新增三测引用未实现符号 `TermIo.checkedOpen`——编译失败逐字 `找不到符号 方法 checkedOpen`（TermIoTest.java:93/104/114）= 功能缺失的预期红。
+- GREEN：`TermIo.checkedOpen(Terminal)` seam——JLine 两哑型（`Terminal.TYPE_DUMB`="dumb"、`TYPE_DUMB_COLOR`="dumb-color"，javap -constants 实测）先关端子再抛 `IOException("无真 TTY（哑终端类型 " + type + "）")`；真终端进 raw 模式后包装；`open()` 只剩 `checkedOpen(systemTerminal())` 接线。TermIoTest **11/11**（原 8 + 新 3：哑型拒绝并关端子 / dumb-color 拒绝 / 真终端包装不关），tui 模块 5 类 **58 tests** 全绿。
+- 突变：判定摘除 `Terminal.TYPE_DUMB`（只剩 dumb-color）→ 11 run / 1 failure（恰为 `checkedOpenRejectsDumbTypeAndClosesTerminal`）；还原复绿 11/11。
+
+### 6b. F1 烧入双模块 + F3 chmod（dist/jh/pom.xml 两处）
+
+- 烧入值 sh/bat 双面 → `--enable-native-access=org.jline.terminal.ffm,org.jline.nativ`（实际调受限方法的模块进授权清单）；pom 注释同步写明理由。
+- sh 执行体 `<replace>` 后补 `<chmod file=".../bin/jh" perm="755"/>`（ant replace 经 java.nio 临时文件改写会剥执行位，实测修订前 `jh` 为 `-rw-------`）。
+
+### 6c. 重建镜像 + 三项铁证（dist/jh target/jlink-image，2026-11-12 14:55 重建）
+
+构建 `mvn -pl dist/jh -am package -DskipTests` BUILD SUCCESS（validate 相位 0 checkstyle）。
+
+- **① 启动 stderr 零 WARNING**：烧入行在镜 = `JLINK_VM_OPTIONS="--enable-native-access=org.jline.terminal.ffm,org.jline.nativ"`；三面零 WARNING——`./bin/jh --version` stderr 0 字节；`./bin/jh --verify` stderr 196 字节 = 1 行 INFO（sandbox 观测行，非警告），grep WARNING 计数 0；`./bin/jh --workbench --session=no-such-id` stderr 185 字节 = 1 行 ERROR 会话诊断，grep WARNING 计数 0。
+- **② 直接执行 `./bin/jh`（非 `sh`）exit 正常**：`ls -l bin/` 实测 `jh` = `-rwxr-xr-x`（与 java/keytool 同 755）；`./bin/jh --version` → `0.5.0-SNAPSHOT` EXIT=0。
+- **③ 哑终端环境 exit 2 + 指引词面**（修订前同环境渲染 1139 字节 ANSI 帧后 EOF exit 0）：
+  - 无控制终端（python `os.setsid()`）+ `TERM=dumb` + stdin DEVNULL + stdout 管道：EXIT=2，STDOUT_BYTES=0，stderr = `--workbench 需要真 TTY（终端不可用: 无真 TTY（哑终端类型 dumb））；请在本机终端直接运行,勿重定向或管道化`。
+  - `TERM=dumb` + stdout 重定向 + stdin DEVNULL：EXIT=2，STDOUT_BYTES=0，`无真 TTY（哑终端类型 dumb）`。
+  - 会话面用真实 id `headless-1794139537162-5124`（idle、1593 事件）——load 成功后才进端子面，证明 exit 2 恰由哑终端判定触发。
+
+### 6d. 修订批门禁
+
+- tui 聚焦 58/58 全绿（§6a）；`mvn -pl dist/jh -am package -DskipTests` 全链 BUILD SUCCESS（含 checkstyle）。
+- 修订前全反应器 1399/0/0/31 与十例突变记录仍有效（改动面为 TermIo 增量 + pom 两处，不触已测面）。

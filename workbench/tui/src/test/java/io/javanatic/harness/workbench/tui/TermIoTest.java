@@ -8,6 +8,7 @@ import java.io.StringWriter;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.jline.terminal.Attributes;
+import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.AbstractTerminal;
 import org.jline.terminal.spi.SystemStream;
 import org.jline.terminal.spi.TerminalProvider;
@@ -85,6 +86,37 @@ class TermIoTest {
                 .isInstanceOf(NullPointerException.class);
     }
 
+    @Test
+    void checkedOpenRejectsDumbTypeAndClosesTerminal() throws Exception {
+        FakeTerminal terminal = new FakeTerminal("fake", Terminal.TYPE_DUMB, 24, 80);
+
+        assertThatThrownBy(() -> TermIo.checkedOpen(terminal))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("无真 TTY")
+                .hasMessageContaining(Terminal.TYPE_DUMB);
+        assertThat(terminal.closed).isTrue();
+    }
+
+    @Test
+    void checkedOpenRejectsDumbColorType() throws Exception {
+        FakeTerminal terminal = new FakeTerminal("fake", Terminal.TYPE_DUMB_COLOR, 24, 80);
+
+        assertThatThrownBy(() -> TermIo.checkedOpen(terminal))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("无真 TTY");
+        assertThat(terminal.closed).isTrue();
+    }
+
+    @Test
+    void checkedOpenWrapsRealTerminalWithoutClosing() throws Exception {
+        FakeTerminal terminal = new FakeTerminal("fake", "xterm-256color", 24, 80);
+
+        TermIo io = TermIo.checkedOpen(terminal);
+
+        assertThat(io).isNotNull();
+        assertThat(terminal.closed).isFalse();
+    }
+
     /** 假端子：继承 AbstractTerminal 兜底大部分面，只覆写薄壳触到的点。 */
     private static final class FakeTerminal extends AbstractTerminal {
 
@@ -96,7 +128,11 @@ class TermIoTest {
         private boolean closed;
 
         private FakeTerminal(int rows, int cols) throws IOException {
-            super("fake", "fake");
+            this("fake", "fake", rows, cols);
+        }
+
+        private FakeTerminal(String name, String type, int rows, int cols) throws IOException {
+            super(name, type);
             this.rows = rows;
             this.cols = cols;
         }

@@ -127,8 +127,12 @@
                  name/module/mainClass、core 命令无 jlink options 透传 ⇒ jlink 官方
                  add-options 插件不可达 ⇒ 后置替换 launcher 空行(jdk.jlink
                  DefaultImageBuilder 模板实测:sh 三平台全生成、.bat 仅 Windows)。
+                 授权清单须含实际调用受限方法的模块:org.jline.nativ 的
+                 System::load(JNI)与 org.jline.terminal.ffm,缺其一启动即 WARNING。
                  同 package 相位,声明序保证在 moditect 之后、assembly 之前;
-                 token 缺失 fail loud(替换不到 = 镜像缺烧入,停 3 冒烟兜底)。 -->
+                 token 缺失 fail loud(替换不到 = 镜像缺烧入,停 3 冒烟兜底)。
+                 ant replace 经 java.nio 临时文件改写会剥执行位(600),replace 后
+                 chmod 755 恢复(java/keytool 同为 755,直接执行 ./bin/jh 依赖此位)。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
@@ -142,8 +146,9 @@
                             <target>
                                 <replace file="${project.build.directory}/jlink-image/bin/jh"
                                          token="JLINK_VM_OPTIONS="
-                                         value="JLINK_VM_OPTIONS=&quot;--enable-native-access=org.jline.terminal.ffm&quot;"
+                                         value="JLINK_VM_OPTIONS=&quot;--enable-native-access=org.jline.terminal.ffm,org.jline.nativ&quot;"
                                          failOnNoReplacements="true"/>
+                                <chmod file="${project.build.directory}/jlink-image/bin/jh" perm="755"/>
                             </target>
                         </configuration>
                     </execution>
@@ -196,7 +201,8 @@
             <activation><os><family>windows</family></os></activation>
             <properties><jh.archive.platform>windows-${os.arch}</jh.archive.platform></properties>
             <!-- Windows 面 launcher 烧入:.bat 仅 isWindows() 生成(DefaultImageBuilder
-                 实测),烧入随平台档案走;token 缺失 fail loud,与 sh 同规则。 -->
+                 实测),烧入随平台档案走;token 缺失 fail loud,与 sh 同规则;授权清单
+                 与 sh 同双模块(org.jline.nativ 的 System::load + org.jline.terminal.ffm)。 -->
             <build>
                 <plugins>
                     <plugin>
@@ -211,7 +217,7 @@
                                     <target>
                                         <replace file="${project.build.directory}/jlink-image/bin/jh.bat"
                                                  token="set JLINK_VM_OPTIONS="
-                                                 value="set JLINK_VM_OPTIONS=--enable-native-access=org.jline.terminal.ffm"
+                                                 value="set JLINK_VM_OPTIONS=--enable-native-access=org.jline.terminal.ffm,org.jline.nativ"
                                                  failOnNoReplacements="true"/>
                                     </target>
                                 </configuration>
