@@ -16,5 +16,6 @@
 
     <modules>
         <module>projection</module>
+        <module>tui</module>
     </modules>
 </project>
