@@ -1,0 +1,111 @@
+# W2 前置实证：JLine 4.6.0 依赖面探测（2026-11-12）
+
+落盘前置（四落盘条件之一：「落盘时 jar --describe-module 实测 + JPMS 链接换活的」）。命令与结果逐字保留。
+
+## 1. repo1 权威元数据（solrsearch 索引滞后勿信）
+
+```
+$ curl -sf https://repo1.maven.org/maven2/org/jline/jline-terminal/maven-metadata.xml | tail -25
+      <version>4.4.8</version>
+      <version>4.5.0</version>
+      <version>4.6.0</version>
+    </versions>
+    <lastUpdated>20261110125847</lastUpdated>
+  </versioning>
+```
+
+4.6.0 在 repo1 权威元数据中（lastUpdated 20261110125847），与用户 repo1 实核一致。
+
+## 2. 四工件下载与 jar --describe-module 实测（JDK 25）
+
+```
+$ curl -sf .../org/jline/{jline-terminal,jline-terminal-ffm,jline-reader,jline-native}/4.6.0/*.jar -O
+jline-terminal OK 435988
+jline-terminal-ffm OK 79450
+jline-reader OK 199871
+jline-native OK 235209
+```
+
+```
+$ jar --describe-module --file jline-terminal-4.6.0.jar
+org.jline.terminal@4.6.0 .../module-info.class
+exports org.jline.terminal
+exports org.jline.terminal.impl
+exports org.jline.terminal.impl.exec
+exports org.jline.terminal.spi
+exports org.jline.utils
+requires java.base
+requires java.desktop static transitive
+```
+
+```
+$ jar --describe-module --file jline-terminal-ffm-4.6.0.jar
+releases: 22
+没有根模块描述符, 请指定 --release
+```
+
+```
+$ jar --describe-module --file jline-terminal-ffm-4.6.0.jar --release 22
+releases: 22
+org.jline.terminal.ffm@4.6.0 ...!/META-INF/versions/22/module-info.class
+exports org.jline.terminal.impl.ffm
+requires java.base
+requires org.jline.terminal transitive
+provides org.jline.terminal.spi.TerminalProvider with org.jline.terminal.impl.ffm.FfmTerminalProvider
+```
+
+```
+$ jar --describe-module --file jline-reader-4.6.0.jar
+org.jline.reader@4.6.0 .../module-info.class
+exports org.jline.keymap / org.jline.reader / org.jline.reader.impl / ...completer / ...history
+requires java.base
+requires org.jline.terminal transitive
+```
+
+```
+$ jar --describe-module --file jline-native-4.6.0.jar
+org.jline.nativ@4.6.0 .../module-info.class
+exports org.jline.nativ
+requires java.base
+contains org.jline.nativ.FreeBSD.x86 / ...Linux.arm64 / ...
+```
+
+## 3. 决定性实测：JDK 25 ModuleFinder 对 ffm jar 的解析
+
+TestFinder（ModuleFinder.of(jar).findAll() 打印 descriptor）：
+
+```
+$ java TestFinder.java jline-terminal-ffm-4.6.0.jar jline-terminal-4.6.0.jar
+jline-terminal-ffm-4.6.0.jar -> org.jline.terminal.ffm automatic=false
+jline-terminal-4.6.0.jar -> org.jline.terminal automatic=false
+```
+
+**结论：JDK 25 的 ModuleFinder 读取多版本 jar 的 META-INF/versions/22/module-info.class，ffm jar 被解析为命名模块 `org.jline.terminal.ffm`（automatic=false）。** 因此无需 moditect 注入 root module-info；workbench/tui 直接 `requires org.jline.terminal.ffm`。manifest 的 `Automatic-Module-Name: org.jline.terminal.ffm` 只是低版本 JDK 的自动模块退路。
+
+## 4. 引用面与许可
+
+- ffm jar 内 `org/jline/nativ` 路径条目计数 = 0（unzip -l | grep -c）——ffm provider 零引用 jline-native。
+- jline-terminal 的 module-info 不 `requires org.jline.nativ`（仅 java.base + java.desktop static）；POM 对 jline-native 是 compile 依赖但模块图零边 ⇒ workbench/tui 声明依赖时排除 jline-native，镜像不含之。
+- jdeps 全量扫 jline-terminal-4.6.0.jar：java.desktop 引用计数 0（`requires static transitive` 是保守声明，字节码零引用）⇒ jlink 镜像不含 java.desktop（static requires 不触发解析）无运行时风险。
+- 许可证：terminal 与 ffm 两 jar 的 `Bundle-License: https://opensource.org/licenses/BSD-3-Clause`；jline-parent-4.6.0.pom `<license><name>The BSD License</name><url>https://opensource.org/licenses/BSD-3-Clause</url>`。
+
+## 5. jlink --enable-native-access 烧入通路实测
+
+- moditect-maven-plugin 1.2.2.Final `org.moditect.mavenplugin.image.model.Launcher`（javap）：仅 getName/getModule/getMainClass——**无 JVM options 面**。
+- moditect core `org.moditect.commands.CreateRuntimeImage`（javap -private）：字段仅 modulePath/modules/launcher/compression/...——**无 jlink options 透传**。
+- `jlink --list-plugins` 有官方插件 `--add-options <options>`（在生成映像中调用虚拟机时前置 VM 选项）——但 moditect 不透传，不可用。
+- moditect 生成的 launcher（dist/jh 历史镜像 dist/jh/target/jlink-image/bin/jh 逐字）：
+
+```
+#!/bin/sh
+JLINK_VM_OPTIONS=
+DIR=`dirname $0`
+$DIR/java $JLINK_VM_OPTIONS -m io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain "$@"
+```
+
+⇒ 烧入方案：dist/jh package 相位在 moditect create-runtime-image 之后、assembly 归档之前，用 antrun 替换 launcher 的 `JLINK_VM_OPTIONS=` 空行为 `JLINK_VM_OPTIONS="--enable-native-access=org.jline.terminal.ffm"`（Windows `bin/jh.bat` 的 `set JLINK_VM_OPTIONS=` 行同规则；.bat 模板实况以首次 jlink 冒烟取证为准）。
+
+## 6. JPMS 文档活链（替换草案死链）
+
+- `https://jline.org/docs/modules/terminal-providers` → HTTP 200，含「FFM Provider … uses Java's FFM API (available in Java 22+)」与「JLine 4.x has removed the JNA and Jansi providers」原文。
+- `https://jline.org/docs/architecture` → 200。
