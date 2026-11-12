@@ -117,7 +117,7 @@ session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端�
 interaction/        审批三模式（auto/ask/deny，it7）+ 命令面（registry/slash 解析/事件对，it14）
 dist/               jlink 运行时镜像编排：产出 bin/jh（解出即用，无需手拼 module-path，it13）
 bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可运行示例（agent-spine / headless）
-workbench/           工作台（it33）：projection 纯库——会话日志只读投影五视图（零写路径）
+workbench/           工作台（it33 / it34 W2）：projection 纯库——会话日志只读投影五视图（零写路径）；tui 纯库——全屏工作台渲染与端子薄壳（JLine 4）
 ```
 
 ## 实现路线（垂直切片）

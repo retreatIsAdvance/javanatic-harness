@@ -14,7 +14,7 @@
 
 ## 2. 包级 API（JPMS 导出面）
 
-`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（**47 个 reactor 代码模块 / 51 个包**；前缀 `io.javanatic.harness.` 省略）。2026-10-29 用 Python `xml.etree.ElementTree` 递归根 POM `<modules>`，再读取各模块 `src/main/java/module-info.java` 的 `exports` 实测，排除 `target`，2026-11-02 同法复测（moditect 插件 `<modules>` 里的 JPMS 名不是目录、不按子模块递归，否则 `dist/jh` 被误判为聚合）；根 reactor 含根 64 个项目（16 聚合 + 48 叶子，唯一非代码叶子为 `dist/jh`）。计数包含 it29 停 0–3 全部通过并关闭的 `lsp/lsp`、`lsp/jdtls`、`lsp/tool`，列出导出面不代表已通过产品验收。
+`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（**55 个 reactor 代码模块 / 59 个包**；前缀 `io.javanatic.harness.` 省略）。2026-10-29 用 Python `xml.etree.ElementTree` 递归根 POM `<modules>`，再读取各模块 `src/main/java/module-info.java` 的 `exports` 实测，排除 `target`，2026-11-02 同法复测、2026-11-12 三测（55/59；moditect 插件 `<modules>` 里的 JPMS 名不是目录、不按子模块递归，否则 `dist/jh` 被误判为聚合；根 reactor 75 个项目 = 19 聚合 + 56 叶子，唯一非代码叶子为 `dist/jh`，另 55 代码模块）。计数含 it29 的 `lsp/*` 与 it33/it34 W2 的 `workbench/*`；jobs/delegation 六模块的表行与计数差额属 it30–32 登记挂账（导出面已含在 55/59 内）。列出导出面不代表已通过产品验收。
 
 | 模块 | 导出包 |
 |---|---|
@@ -62,6 +62,8 @@
 | interaction/approval | `interaction.approval` |
 | interaction/ask | `interaction.ask` |
 | interaction/commands | `interaction.commands` |
+| workbench/projection | `workbench.projection`（it33 五视图投影纯库） |
+| workbench/tui | `workbench.tui`（it34 W2 全屏 TUI 渲染与端子薄壳；`WorkbenchSource`/`KeyInput`/`ScreenOutput` seam） |
 | bundle/base | `boot` |
 | examples/agent-spine | `examples.agent.spine` |
 | examples/headless | `examples.headless` |
@@ -161,7 +163,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 
 ## 6. CLI 面（`jh`，dist/jh jlink 镜像）
 
-`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--approval-timeout=<秒>` / `--budget=` / `--docker [--image=]` / `--resume=` / `--sessions[=<N>]` / `--session=` / `--session-view=` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--version` / `--help`（`-h` 同）。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）/ `/cancel`（it22：取消在途轮，同 Ctrl-C 收敛；空闲回「无进行中的轮」）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。`--version` 打印版本串（如 `0.2.0`；keyless、exit 0）。`--sessions` 只读旁路（keyless、不建会话；与任务文本 / `--resume` / `--verify` 互斥——一次只做一件事）。`--session=<id>` 只读检视旁路（it33；keyless、零新事件——load 会探写者锁并可能修复撕裂尾，「真零写」属 session/persistence 的 `SessionTail` 流式读面（it34）；`--session-view=<view>` 五视图投影 `turns|tools|usage|timeline|messages`，缺省 turns；与任务文本 / `--resume` / `--verify` / `--sessions` 互斥；会话不存在或写者锁冲突 exit 3）。
+`jh --help` 为唯一权威清单（本文列面与它对齐）。冻结项：`--workspace=` / `--verify` / `--policy=STANDARD|PRODUCTION` / `--approval=auto|ask|deny` / `--approval-timeout=<秒>` / `--budget=` / `--docker [--image=]` / `--resume=` / `--sessions[=<N>]` / `--session=` / `--session-view=` / `--workbench` / `--follow` / `--provider=` / `--model=` / `--base-url=` / `--api-key-env=` / `--api-key=` / `--profile=` / `--version` / `--help`（`-h` 同）。REPL：非 `/` 行成轮；`/help` / `/exit`（EOF 同）/ `/cancel`（it22：取消在途轮，同 Ctrl-C 收敛；空闲回「无进行中的轮」）；每轮末渲染一行轮末统计（`stats:` 见下）。`--verify` 无 key 可跑，exit 0/1；通过时 stdout 打印治理摘要（07 §6）。`--version` 打印版本串（如 `0.2.0`；keyless、exit 0）。`--sessions` 只读旁路（keyless、不建会话；与任务文本 / `--resume` / `--verify` 互斥——一次只做一件事）。`--session=<id>` 只读检视旁路（it33；keyless、零新事件——load 会探写者锁并可能修复撕裂尾，「真零写」属 session/persistence 的 `SessionTail` 流式读面（it34）；`--session-view=<view>` 五视图投影 `turns|tools|usage|timeline|messages`，缺省 turns；与任务文本 / `--resume` / `--verify` / `--sessions` 互斥；会话不存在或写者锁冲突 exit 3）。`--workbench` 全屏只读工作台（it34 W2；`--session=<id>` 必配，`--follow` 选配跟随态——检视态 = load→投影一次定值快照，跟随态 = tail 流式读面每 poll 全量重投影 live tail；键 1-5 切五视图；与任务文本 / `--resume` / `--verify` / `--sessions` / `--session-view` 互斥，`--follow` 与 `--workbench` 必配；无 key 可跑；会话不存在或写者锁冲突 exit 3、无真 TTY exit 2）。
 
 一次性任务的结果契约（it17 起，输出形状的稳定承诺）：
 

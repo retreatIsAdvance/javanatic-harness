@@ -6,7 +6,7 @@
 
 ## 四确认
 
-- **内容**：①`workbench/tui` 新模块——全屏 TUI 工作台，纯消费 W1 投影（workbench/projection 五视图）+ 本迭代新增的 seam 流式读面；终端层 JLine 4.6.0（jline-terminal + jline-terminal-ffm 两坐标，jline-reader 不引、jline-native 排除）。②session/persistence-jsonl 新增**只读流式 tail seam**（四契约，条款见设计增量 §1）——W2 TUI 与 W3 server 的唯一读侧地基，三站不各自手搓解析。③CLI `jh --workbench [--session=<id>] [--follow]` 独立 flag：检视态（复用 W1 五视图投影渲染）＋跟随态（--follow 对流式读面轮询、每 poll 全量重投影 live tail）。④装配面：headless 依赖 workbench/tui；dist/jh moditect 清单三行 + `--enable-native-access` 烧入（antrun 后置替换，见设计增量 §3）；同步面 02/12/AGENTS/README/current-state。
+- **内容**：①`workbench/tui` 新模块——全屏 TUI 工作台，纯消费 W1 投影（workbench/projection 五视图）+ 本迭代新增的 seam 流式读面；终端层 JLine 4.6.0（jline-terminal + jline-terminal-ffm 两坐标直引，jline-native 为 terminal 的传递依赖必进镜像——terminal 模块描述符硬 requires `org.jline.nativ`（非 static），S3 jlink 实测排除即败，§2 已订正；jline-reader 不引）。②session/persistence-jsonl 新增**只读流式 tail seam**（四契约，条款见设计增量 §1）——W2 TUI 与 W3 server 的唯一读侧地基，三站不各自手搓解析。③CLI `jh --workbench [--session=<id>] [--follow]` 独立 flag：检视态（复用 W1 五视图投影渲染）＋跟随态（--follow 对流式读面轮询、每 poll 全量重投影 live tail）。④装配面：headless 依赖 workbench/tui；dist/jh moditect 清单四行（含 org.jline.nativ）+ `--enable-native-access` 烧入（antrun 后置替换，见设计增量 §3）；同步面 02/12/AGENTS/README/current-state。
 - **目标**：复盘一次运行不手工翻 JSONL 的第二站——全屏工作台交互式检视会话（任务执行可视化）；跟随态对进行中会话 live tail。渲染器纯函数可测，端子 IO 薄壳最小化。
 - **为什么**：it33 L13 目标延续（投影层成为 W2 TUI 与 W3 server 的唯一读侧地基）；**用户点透的关键矛盾**——`JsonlPersistence.load()`（session/persistence-jsonl/…/JsonlPersistence.java:125-145）对外来会话先 `WriterLock.acquire(dir)` 探针（占用即拒）再 `repairTornTail`（修复是写操作），跟随态 tail 的进行中会话按定义被活跃写者占用 ⇒ load() 必抛 WriterLockException。推论：无锁流式读不是「推荐」而是观察进行中会话的**唯一路径**；「可刷新快照」降级档同样撞写者锁，不成立。顺带修正 W1 措辞（检视「零写路径」实况是「零新事件」）。
 - **不做**：写侧任何面（工作台只读）；运行中任务（W4/W5 面）；动态配置/组合编辑器；鼠标支持；**增量投影**（每 poll 全量重投影——主会话 1593 事件余量充足，W3 server 若需要再裁）；**jline-reader**（首版输入面＝导航式按键自管解析；命令编辑/补全需求出现再按输入面设计裁）；JSON-RPC server（W3，B29 预登记在案）、Web UI（W4）；会话「最新活动」自动发现（--follow 必配 --session，显式＞隐式）。
@@ -30,14 +30,14 @@
 |---|---|---|---|
 | org.jline:jline-terminal | 4.6.0 | BSD-3-Clause（Bundle-License + parent POM 双证） | 端子抽象层；命名模块 `org.jline.terminal`（root module-info）；`requires java.desktop static transitive` 但 jdeps 字节码引用 0 |
 | org.jline:jline-terminal-ffm | 4.6.0 | BSD-3-Clause | FFM 端子提供者；多版本 jar（releases: 22）；**JDK 25 ModuleFinder 实测解析为命名模块 `org.jline.terminal.ffm`**（读 META-INF/versions/22/module-info.class，automatic=false，manifest 的 Automatic-Module-Name 仅为低版本退路）⇒ 无需 moditect 注入 module-info |
-| org.jline:jline-native | （排除） | — | terminal POM 的 compile 传递依赖，但 module-info 无 requires 边、ffm jar 零引用（实测）⇒ workbench/tui 声明时排除，不进镜像 |
+| org.jline:jline-native | 4.6.0 | BSD-3-Clause | terminal POM 的 compile 传递依赖。**S3 jh 镜像实测推翻 W2 开工时「排除」论断**：`org.jline.terminal` 模块描述符为 `requires org.jline.nativ`（非 static），且字节码直引 `JLineLibrary`/`JLineNativeLoader`（JNI 回退面）；javac 惰性解析不报错，但 jlink 全图解析缺之即败（`Module org.jline.nativ not found`）。⇒ workbench/tui 不排除，moditect 清单加 `org.jline.nativ` 一行，三坐标同进镜像 |
 | org.jline:jline-reader | （不引） | — | 首版输入面不需要（见「不做」） |
 
 前置实证全文：[preflight-jline-460.txt](evidence/iteration-34/preflight-jline-460.txt)（repo1 元数据、jar --describe-module、ModuleFinder 决定性实测、jdeps、许可证、moditect 无 options 面、launcher 逐字、活链）。JPMS 文档活链：<https://jline.org/docs/modules/terminal-providers>（FFM Provider 专页，替换草案死链）。
 
 ### §3 jlink `--enable-native-access` 集成行
 
-- dist/jh moditect `<modules>` 清单加三行：`io.javanatic.harness.workbench.tui`、`org.jline.terminal`、`org.jline.terminal.ffm`。
+- dist/jh moditect `<modules>` 清单加四行：`io.javanatic.harness.workbench.tui`、`org.jline.terminal`、`org.jline.terminal.ffm`、`org.jline.nativ`（native 行 = S3 jlink 实测订正，见 §2）。
 - 烧入通路（实测钉死）：moditect 1.2.2 的 Launcher 仅 name/module/mainClass、core 命令无 jlink options 透传 ⇒ jlink 官方 `--add-options` 插件不可达 ⇒ **dist/jh package 相位在 moditect create-runtime-image 之后、assembly 归档之前，用 maven-antrun-plugin 替换 launcher 空行**：`bin/jh`（sh）的 `JLINK_VM_OPTIONS=` → `JLINK_VM_OPTIONS="--enable-native-access=org.jline.terminal.ffm"`；`bin/jh.bat`（Windows）的 `set JLINK_VM_OPTIONS=` 行同规则（.bat 模板实况以首次 jlink 冒烟取证为准）。
 - java.desktop 不进镜像（static requires 不触发 jlink 解析；jdeps 零引用背书）。
 

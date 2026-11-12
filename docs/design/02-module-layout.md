@@ -15,7 +15,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 
 ## 2. 完整模块清单
 
-当前根 reactor 含根共 **64 个项目 = 16 个聚合（含根）+ 48 个叶子**；叶子中 **47 个代码模块**有 `module-info.java`，另一个为无代码的 `dist/jh`。it29 增量 = `lsp` 聚合 + `lsp/lsp` Definition + `lsp/jdtls` Provider + `lsp/tool` Consumer 三个叶子。计数由 Python 递归根 POM `<modules>` 并核对源码 `module-info.java` 实测，排除 `target`（2026-10-31）；导出包计数见 [12 §2](12-api-stability.md#2-包级-apijpms-导出面)。
+当前根 reactor 含根共 **75 个项目 = 19 个聚合（含根）+ 56 个叶子**；叶子中 **55 个代码模块**有 `module-info.java`，另一个为无代码的 `dist/jh`。计数由 Python 递归根 POM `<modules>` 并核对源码 `module-info.java` 实测，排除 `target`（2026-11-12 三测，与 [12 §2](12-api-stability.md#2-包级-apijpms-导出面) 同口径）；it30–32 的 jobs/delegation 六模块表行未登记（登记挂账，计数与导出面已含，见 12 §2）。
 
 ### Kernel 层（框架内核，零业务依赖）
 
@@ -136,11 +136,12 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 | `harness-interaction-commands` | Definition | `CommandRegistry`（slash 命令；register 即 effect、重复名 fail loud）+ `parseCommand` + `command/run`/`command/done` 事件对（it14 实装，[05 §9](05-capability-seam.md)）|
 | `harness-interaction-ask` | Consumer（工具面） | `ask_user(question)` 澄清问答（插件 id `ask-user`，it22）：**免审批声明**（提问不是副作用）+ **停轮结果**（`concludesTurn=true`，答复 = 下一轮 user message；[05 §8](05-capability-seam.md)、[04 §15](04-agent-loop.md)）|
 
-### Workbench（工作台，it33）
+### Workbench（工作台，it33 / it34 W2）
 
 | 模块 | 角色 | 职责 |
 |---|---|---|
-| `harness-workbench-projection` | 纯库（非 capability 三角） | 会话日志只读投影（五视图：turns/tools/usage/timeline/messages）：`List<SessionEvent>` → 结构化视图 record 的纯函数（`SessionProjection`）；无 Provider/Consumer、无插件装载、零写路径，只消费 `SessionPersistence.Loaded`。文本渲染归消费方（headless 的 `--session` CLI 接线）|
+| `harness-workbench-projection` | 纯库（非 capability 三角） | 会话日志只读投影（五视图：turns/tools/usage/timeline/messages）：`List<SessionEvent>` → 结构化视图 record 的纯函数（`SessionProjection`）；无 Provider/Consumer、无插件装载、零写路径，只消费 `SessionPersistence.Loaded`。文本渲染归消费方（headless 的 `--session-view` CLI 与 workbench/tui 全屏五视图）|
+| `harness-workbench-tui` | 纯库（非 capability 三角，it34 W2） | 全屏 TUI 工作台：渲染纯函数（五视图帧）+ 按键解析 + 端子薄壳（`TermIo`，JLine 4 唯一触点）；source/input/output 三 seam 全注入，headless 可测；纯消费投影（`SessionViews`）与 tail 流式读面（`WorkbenchSource` 快照约定）。依赖 `org.jline`（terminal + terminal-ffm + native 三坐标，BSD-3-Clause；native 不可排除——`org.jline.terminal` 模块描述符硬 requires，jlink 全图解析缺之即败）|
 
 ### Bundle 层（组合发行）
 
@@ -239,6 +240,7 @@ flowchart TD
 
     subgraph workbench[Workbench]
         projection[harness-workbench-projection<br/>只读投影]
+        tui[harness-workbench-tui<br/>全屏 TUI（it34 W2）]
     end
 
     subgraph bundles[Bundles]
@@ -319,6 +321,8 @@ flowchart TD
     persistdef --> jsonl
     session --> projection
     persistdef --> projection
+    projection --> tui
+    session --> tui
 
     compat --> base
     deepseek --> base
@@ -347,6 +351,7 @@ flowchart TD
 
     base --> headlessex
     projection --> headlessex
+    tui --> headlessex
     headlessex --> distjh
 ```
 

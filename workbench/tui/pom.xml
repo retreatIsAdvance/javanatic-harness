@@ -29,13 +29,10 @@
         <dependency>
             <groupId>org.jline</groupId>
             <artifactId>jline-terminal</artifactId>
-            <exclusions>
-                <!-- ffm 提供方替代 jni 版 native 提供方（preflight 已核：仅引 terminal 面，不含 reader/line editor） -->
-                <exclusion>
-                    <groupId>org.jline</groupId>
-                    <artifactId>jline-native</artifactId>
-                </exclusion>
-            </exclusions>
+            <!-- jline-native 不可排除:org.jline.terminal 模块描述符硬 requires org.jline.nativ
+                 (非 static),且代码直引 JLineLibrary/JLineNativeLoader——排除后 javac 惰性解析
+                 不报错,但 jlink 全图解析必缺模块(jh 镜像实测)。ffm 是 terminal 提供方
+                 替代实现,jni 版 native 仅作回退面,两者同进镜像。 -->
         </dependency>
         <dependency>
             <groupId>org.jline</groupId>

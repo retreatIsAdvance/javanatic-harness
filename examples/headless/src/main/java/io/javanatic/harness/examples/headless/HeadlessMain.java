@@ -38,12 +38,18 @@ import io.javanatic.harness.session.message.TextBlock;
 import io.javanatic.harness.session.message.UserMessage;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 import io.javanatic.harness.session.persistence.SessionSummary;
+import io.javanatic.harness.session.persistence.SessionTail;
 import io.javanatic.harness.session.persistence.WriterLockException;
 import io.javanatic.harness.systemprompt.PromptSection;
 import io.javanatic.harness.systemprompt.SystemPromptService;
 import io.javanatic.harness.tools.ApprovalService;
 import io.javanatic.harness.tools.ToolDefinition;
 import io.javanatic.harness.tools.ToolRegistry;
+import io.javanatic.harness.workbench.projection.SessionProjection;
+import io.javanatic.harness.workbench.projection.SessionViews;
+import io.javanatic.harness.workbench.tui.TermIo;
+import io.javanatic.harness.workbench.tui.WorkbenchApp;
+import io.javanatic.harness.workbench.tui.WorkbenchSource;
 
 import java.io.BufferedReader;
 import java.io.FileDescriptor;
@@ -106,6 +112,9 @@ public final class HeadlessMain {
     /** 会话列举时间戳：本地时区 ISO-8601（带偏移；同一次运行内 created/last 可比）。 */
     private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
+    /** 工作台轮询节拍（毫秒）：跟随态 tail poll 与端子输入读等待共用（检视态同节拍自刷新）。 */
+    private static final int WORKBENCH_POLL_MILLIS = 100;
+
     /** `--help` 文本。 */
     static final String USAGE = """
         Javanatic Harness headless runner —— 一次性任务与交互模式(REPL)
@@ -120,6 +129,10 @@ public final class HeadlessMain {
           jh --session=<id> [--session-view=<view>]
                                                 只读检视会话日志(五视图投影,零写路径;
                                                 无 key 可跑)
+          jh --workbench --session=<id> [--follow]
+                                                全屏只读工作台:检视态五视图(键 1-5 切
+                                                换);--follow 跟随态对进行中会话 live tail
+                                                (需真 TTY;无 key 可跑)
           jh --sessions[=<N>]                  列举会话(id/活动时间/事件数/写者状态/cwd;
                                                 无 key 可跑;续跑/检视用行内 id)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1;
@@ -153,7 +166,10 @@ public final class HeadlessMain {
           --session=<sessionId>     只读检视会话(--session-view 五视图投影,零写路径;
                                      无 key 可跑);与任务文本 / --resume / --verify / --sessions 互斥
           --session-view=<view>     检视视图:turns|tools|usage|timeline|messages(缺省 turns;
-                                     仅与 --session 同用)
+                                     仅与 --session 同用,与 --workbench 互斥)
+          --workbench               全屏只读工作台(--session 必配;与任务文本 / --resume /
+                                    --verify / --sessions / --session-view 互斥;需真 TTY)
+          --follow                  工作台跟随态:流式读面 live tail(--workbench 必配)
           --provider=<名>            厂商名(缺省 deepseek)
           --model=<名>               模型(缺省 deepseek-chat)
           --base-url=<url>           OpenAI 兼容端点(缺省 https://api.deepseek.com)
@@ -182,7 +198,7 @@ public final class HeadlessMain {
         退出码:
           0  任务完成(或 --verify 通过 / --sessions 成功 / --help / --version)
           1  --verify 违规
-          2  用法错误 / 缺少 API key
+          2  用法错误 / 缺少 API key / --workbench 无真 TTY
           3  任务失败(厂商错误 / 守卫或预算超限 / --resume 或 --session 的会话不存在或
              写者锁冲突;原因在 stderr)
           4  任务被取消(REPL 路径不适用:退出码 0)
@@ -226,7 +242,8 @@ public final class HeadlessMain {
                          String baseUrl, String apiKeyEnv, String apiKeyLiteral, String profile,
                          String resume, boolean docker, String image, Path workspace, String approval,
                          long budget, boolean help, boolean version, OptionalInt sessions,
-                         OptionalInt approvalTimeout, String session, String sessionView) {
+                         OptionalInt approvalTimeout, String session, String sessionView,
+                         boolean workbench, boolean follow) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -318,6 +335,8 @@ public final class HeadlessMain {
         OptionalInt approvalTimeout = OptionalInt.empty();
         String session = null;
         String sessionView = null;
+        boolean workbench = false;
+        boolean follow = false;
         for (String arg : args) {
             if ("--help".equals(arg) || "-h".equals(arg)) {
                 help = true;
@@ -363,6 +382,10 @@ public final class HeadlessMain {
                 sessions = OptionalInt.of(positiveInt(valueOf(arg)));
             } else if (arg.startsWith("--session=")) {
                 session = valueOf(arg);
+            } else if ("--workbench".equals(arg)) {
+                workbench = true;
+            } else if ("--follow".equals(arg)) {
+                follow = true;
             } else if (arg.startsWith("--session-view=")) {
                 sessionView = valueOf(arg);
                 if (!SESSION_VIEWS.contains(sessionView)) {
@@ -396,6 +419,32 @@ public final class HeadlessMain {
                 throw new IllegalArgumentException("--sessions 与 --verify 互斥（一次只做一件事）");
             }
         }
+        if (follow && !workbench) {
+            throw new IllegalArgumentException("--follow 需与 --workbench 同用（跟随态是工作台的一种模式）");
+        }
+        if (workbench) {
+            // 工作台是只读旁路:与"要跑什么"/其他旁路同用即为用法错误(不猜意图)
+            if (session == null) {
+                throw new IllegalArgumentException("--workbench 需与 --session 同用（显式指定会话，不自动发现）");
+            }
+            if (task != null) {
+                throw new IllegalArgumentException("--workbench 与任务文本互斥（工作台只读，不执行任务）");
+            }
+            if (resume != null) {
+                throw new IllegalArgumentException("--workbench 与 --resume 互斥（检视与续跑请分开运行）");
+            }
+            if (verify) {
+                throw new IllegalArgumentException("--workbench 与 --verify 互斥（一次只做一件事）");
+            }
+            if (sessions.isPresent()) {
+                throw new IllegalArgumentException(
+                    "--workbench 与 --sessions 互斥（指定单会话与列举请分开运行）");
+            }
+            if (sessionView != null) {
+                throw new IllegalArgumentException(
+                    "--workbench 与 --session-view 互斥（工作台自带五视图按键切换）");
+            }
+        }
         if (sessionView != null && session == null) {
             throw new IllegalArgumentException("--session-view 需与 --session 同用（单独指定视图无从检视）");
         }
@@ -424,7 +473,7 @@ public final class HeadlessMain {
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
             apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, version,
-            sessions, approvalTimeout, session, sessionView);
+            sessions, approvalTimeout, session, sessionView, workbench, follow);
     }
 
     private static String valueOf(String flag) {
@@ -559,6 +608,10 @@ public final class HeadlessMain {
                 // 只读旁路:不进 API key 检查、不建 agent——列举的是落盘事实
                 sessionListing(rt.root(), options.sessions().getAsInt()).forEach(out::println);
                 return 0;
+            }
+            if (options.workbench()) {
+                // 只读工作台旁路:不进 API key 检查、不建 agent——全屏 TUI 消费投影/流式读面
+                return runWorkbench(rt.root(), options.session(), options.follow());
             }
             if (options.session() != null) {
                 // 只读检视旁路:不进 API key 检查、不建 agent、零写路径——呈现落盘投影
@@ -1006,6 +1059,66 @@ public final class HeadlessMain {
             LOG.log(Level.ERROR, "{0}", busySessionText(sessionId, lock));
             return 3;
         }
+    }
+
+    /**
+     * --workbench 数据源装配:检视态 = load → 投影一次(定值快照);跟随态 = 流式
+     * tail 每 poll 全量重投影(位置推进,不重开)。两态对未知 id 同款
+     * NoSuchElementException,检视态撞写者锁同款 WriterLockException——两态界限
+     * 在 seam:跟随无锁可读进行中会话,检视探锁占用即拒。
+     */
+    static WorkbenchSource workbenchSource(Scope root, String sessionId, boolean follow)
+            throws IOException {
+        if (!follow) {
+            SessionPersistence.Loaded loaded =
+                root.require(SessionPersistence.KEY).load(Session.newId(sessionId));
+            SessionViews views = SessionProjection.project(loaded);
+            return () -> views;
+        }
+        SessionTail.Follower follower = root.require(SessionTail.KEY).open(Session.newId(sessionId));
+        List<SessionEvent> events = new ArrayList<>();
+        return () -> {
+            events.addAll(follower.nextEvents());
+            return SessionProjection.project(new SessionPersistence.Loaded(follower.header(), events));
+        };
+    }
+
+    /**
+     * --workbench 只读工作台:source 装配 → 真 TTY → 全屏循环。未知 id / 写者
+     * 锁冲突同为 exit 3(与 --session 词表一致,诊断走 LOG);终端不可用 exit 2
+     * (TUI 需真 TTY,重定向/管道化环境无此面);其余 IO 异常原样上抛。
+     */
+    static int runWorkbench(Scope root, String sessionId, boolean follow) throws Exception {
+        WorkbenchSource source;
+        try {
+            source = workbenchSource(root, sessionId, follow);
+        } catch (NoSuchElementException e) {
+            LOG.log(Level.ERROR, "{0}", unknownSessionText(sessionId, "--session=<id>"));
+            return 3;
+        } catch (IOException | CompletionException e) {
+            WriterLockException lock = writerLockCause(e);
+            if (lock == null) {
+                throw e;
+            }
+            LOG.log(Level.ERROR, "{0}", busySessionText(sessionId, lock));
+            return 3;
+        }
+        TermIo io;
+        try {
+            io = TermIo.open();
+        } catch (IOException e) {
+            LOG.log(Level.ERROR, "{0}", workbenchNoTerminalText(e));
+            return 2;
+        }
+        try (io) {
+            return WorkbenchApp.run(source, io, io, WORKBENCH_POLL_MILLIS, follow);
+        }
+    }
+
+    /** 终端不可用诊断:工作台需要交互 TTY,重定向/管道化无此面(fail loud,exit 2)。 */
+    static String workbenchNoTerminalText(IOException failure) {
+        return "--workbench 需要真 TTY（终端不可用: " + failure.getMessage()
+            + "）；请在本机终端直接运行,勿重定向或管道化";
     }
 
     /** 未知 --resume id 的诊断 + 恢复指引（stderr;id 原样回显,可用 id 在 --sessions）。 */

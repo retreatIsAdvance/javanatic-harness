@@ -78,6 +78,11 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-workbench-projection</artifactId>
         </dependency>
+        <!-- it34 W2 工作台(渲染纯函数 + 按键面 + 端子薄壳):workbench CLI 接线程消费 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-workbench-tui</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-interaction-approval</artifactId>

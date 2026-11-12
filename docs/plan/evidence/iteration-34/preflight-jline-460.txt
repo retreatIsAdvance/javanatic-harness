@@ -86,6 +86,7 @@ jline-terminal-4.6.0.jar -> org.jline.terminal automatic=false
 
 - ffm jar 内 `org/jline/nativ` 路径条目计数 = 0（unzip -l | grep -c）——ffm provider 零引用 jline-native。
 - jline-terminal 的 module-info 不 `requires org.jline.nativ`（仅 java.base + java.desktop static）；POM 对 jline-native 是 compile 依赖但模块图零边 ⇒ workbench/tui 声明依赖时排除 jline-native，镜像不含之。
+  > **订正（2026-11-12，S3 jh 镜像实测）**：上句 module-info 断言错误。`jar --describe-module` 对 root module-info 的完整输出含 `requires org.jline.nativ`（非 static）；字节码另有 `org.jline.nativ.JLineLibrary`/`JLineNativeLoader` 直引。javac 惰性解析不报错（最小实验：仅 terminal 上模块路径编译 `requires org.jline.terminal` 模块通过），但 jlink 全图解析缺之即败——`Module org.jline.nativ not found, required by org.jline.terminal`。处置：workbench/tui 移除排除、moditect 清单加 `org.jline.nativ` 一行（§2/§3 已订正），三坐标同进镜像。
 - jdeps 全量扫 jline-terminal-4.6.0.jar：java.desktop 引用计数 0（`requires static transitive` 是保守声明，字节码零引用）⇒ jlink 镜像不含 java.desktop（static requires 不触发解析）无运行时风险。
 - 许可证：terminal 与 ffm 两 jar 的 `Bundle-License: https://opensource.org/licenses/BSD-3-Clause`；jline-parent-4.6.0.pom `<license><name>The BSD License</name><url>https://opensource.org/licenses/BSD-3-Clause</url>`。
 

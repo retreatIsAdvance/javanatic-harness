@@ -98,6 +98,14 @@
                                 <module>io.javanatic.harness.sandbox.local</module>
                                 <module>io.javanatic.harness.sandbox.policy</module>
                                 <module>io.javanatic.harness.shell.docker</module>
+                                <!-- it34 W2:工作台 TUI + JLine 4 三件套。nativ 必进:
+                                     org.jline.terminal 模块描述符硬 requires(非 static),
+                                     jlink 全图解析缺之即败(jh 镜像实测);ffm 为 terminal
+                                     提供方,两者同进镜像 -->
+                                <module>io.javanatic.harness.workbench.tui</module>
+                                <module>org.jline.terminal</module>
+                                <module>org.jline.terminal.ffm</module>
+                                <module>org.jline.nativ</module>
                             </modules>
                             <outputDirectory>${project.build.directory}/jlink-image</outputDirectory>
                             <!-- NONE:不带 jars/ 依赖拷贝;null 会令 moditect copyJars NPE -->
@@ -111,6 +119,32 @@
                                 <name>jh</name>
                                 <module>io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain</module>
                             </launcher>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 2.5) launcher 烧入 native-access VM 选项:moditect 1.2.2 的 Launcher 仅
+                 name/module/mainClass、core 命令无 jlink options 透传 ⇒ jlink 官方
+                 add-options 插件不可达 ⇒ 后置替换 launcher 空行(jdk.jlink
+                 DefaultImageBuilder 模板实测:sh 三平台全生成、.bat 仅 Windows)。
+                 同 package 相位,声明序保证在 moditect 之后、assembly 之前;
+                 token 缺失 fail loud(替换不到 = 镜像缺烧入,停 3 冒烟兜底)。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>burn-native-access-into-launcher-sh</id>
+                        <phase>package</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <replace file="${project.build.directory}/jlink-image/bin/jh"
+                                         token="JLINK_VM_OPTIONS="
+                                         value="JLINK_VM_OPTIONS=&quot;--enable-native-access=org.jline.terminal.ffm&quot;"
+                                         failOnNoReplacements="true"/>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
@@ -161,6 +195,31 @@
             <id>archive-windows</id>
             <activation><os><family>windows</family></os></activation>
             <properties><jh.archive.platform>windows-${os.arch}</jh.archive.platform></properties>
+            <!-- Windows 面 launcher 烧入:.bat 仅 isWindows() 生成(DefaultImageBuilder
+                 实测),烧入随平台档案走;token 缺失 fail loud,与 sh 同规则。 -->
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>burn-native-access-into-launcher-bat</id>
+                                <phase>package</phase>
+                                <goals><goal>run</goal></goals>
+                                <configuration>
+                                    <target>
+                                        <replace file="${project.build.directory}/jlink-image/bin/jh.bat"
+                                                 token="set JLINK_VM_OPTIONS="
+                                                 value="set JLINK_VM_OPTIONS=--enable-native-access=org.jline.terminal.ffm"
+                                                 failOnNoReplacements="true"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
