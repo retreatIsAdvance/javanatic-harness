@@ -1,6 +1,17 @@
 # 停 1 审查包：SessionTail 只读流式 seam（W2 四确认 → 四契约落地）
 
-状态：待放行。放行后进停 2（workbench/tui 渲染与按键面 + CLI 接线 + 装配面）。
+状态：**已放行**（2026-11-12 用户评审，独立复跑 10/10 + 模块回归 26/26 + CI 四腿实锤全对）。
+评审发现 P3 一处 → 处置如下。
+
+## 0. 评审处置（放行后）
+
+- **P3 · header 原子性**：`backfill()` 裸 `Files.writeString(header.json)` 非原子写，并发
+  `open()` 在「文件已建、内容未落」窗口读到空/撕裂 header → 未分类解析异常（此暴露
+  `list()` 自 it22 就有，tail 添了更积极的读者）。**处置：停 2 开工前 mini-fix 先行——已关闭**
+  （2026-11-12）：backfill 改同目录 temp 写 + `ATOMIC_MOVE` + `REPLACE_EXISTING`（`AtomicMoveNotSupportedException`
+  降级普通 move），TDD 竞态测试钉死（写者连续 backfill × 观察者 spin open，只容忍
+  NoSuchElementException），突变 = 还原非原子写必红（RED 逐字命中预测症状）。实录见 [stop1-f1-header-atomicity.md](stop1-f1-header-atomicity.md)。
+- **P3 · 首 poll 全量读入**：接受（TUI 规模余量充足；「重开即全量重放」已文档化；W3 server 若嫌大再裁）。
 
 ## 1. 交付物
 

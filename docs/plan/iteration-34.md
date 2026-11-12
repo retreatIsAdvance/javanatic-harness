@@ -59,7 +59,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1：seam 流式面四契约 | session/persistence-jsonl 只读 tail seam 全模块（四契约逐条钉死 + 真实会话 tail 取证 + load() 锁语义对照 + 突变） | 已交付（TDD 实录 + 突变 M1–M4 全闭环，[packet](evidence/iteration-34/stop1-review-packet.md) 待放行） |
+| 停 1：seam 流式面四契约 | session/persistence-jsonl 只读 tail seam 全模块（四契约逐条钉死 + 真实会话 tail 取证 + load() 锁语义对照 + 突变） | 已放行（评审通过；P3 header 原子性随独立 mini-fix 关闭，见 [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md)） |
 | 停 2：workbench/tui 渲染与按键面 + CLI 接线 + 装配面 | 渲染器纯函数五视图 + 按键解析 + 端子薄壳；HeadlessOptions 词表/互斥/usage；headless 依赖 + dist/jh 三行 + antrun 烧入；同步面 02/12/AGENTS/README/current-state | 待开工 |
 | 停 3：真机验收 + 收口 | jlink 真 TTY 冒烟（检视态五视图 + 跟随态 live tail + launcher 烧入取证）+ CI 四腿 + review packet | 待开工 |
 
@@ -70,6 +70,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 | [preflight-jline-460.txt](evidence/iteration-34/preflight-jline-460.txt) | 落盘前置：repo1 元数据 / jar --describe-module / ModuleFinder 决定性实测 / jdeps / 许可证 / moditect 无 options 面 / launcher 逐字 / 活链 |
 | [stop1-seam-design.md](evidence/iteration-34/stop1-seam-design.md) | 停 1 设计定稿：四契约条款 / 接口形状 / 机制（位置推进、clamp）/ 测试矩阵 T1–T10 / 突变 M1–M4 / 同步面 |
 | [stop1-tdd-evidence.md](evidence/iteration-34/stop1-tdd-evidence.md) | 停 1 TDD 实录：RED（10 红 ServiceNotAvailable）/ 夹具订正 / GREEN（10 绿 + 全反应器回归）/ M1–M4 突变逐条红绿 |
+| [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md) | 停 1-F1 mini-fix：backfill header 原子化（竞态 RED 逐字症状 → temp+ATOMIC_MOVE GREEN → 突变复红 → 还原复绿 → 44/44 回归） |
 
 ## 验收
 
@@ -87,6 +88,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
 | （停 1 批，随停 1 提交） | T4 残片与 T5 手工行原写 `"seq":2`——turn/start 实为 seq 0（seed null 无重放），严格连续规则下「写者的下一条」应为 seq 1 | 实现前订正为 seq 1（RED 重验仍 10 红 ServiceNotAvailable）；T3 残片（第三事件位 seq 2）与 T6 跳号（seq 5）不动；诚实交易记入 [stop1-tdd-evidence.md](evidence/iteration-34/stop1-tdd-evidence.md) §2 |
+| （停 1-F1 mini-fix，随停 1-F1 提交） | 停 1 评审 P3：`backfill()` 裸 `Files.writeString(header.json)` 非原子写，并发无锁 `open()` 在「文件已建、内容未写完」窗口可读到撕裂/空 header（此暴露 `list()` 早年就有） | `atomicWriteString` 助手（同目录 temp + `ATOMIC_MOVE`/`REPLACE_EXISTING` + 降级普通 move + finally 清理）；HeaderAtomicWriteTest 竞态测试钉死（TDD RED 逐字命中预测症状 + 突变复红）；实录见 [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md) |
 
 ## 设计偏离（如有）
 

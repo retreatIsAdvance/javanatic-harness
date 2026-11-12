@@ -27,8 +27,10 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -377,6 +379,28 @@ public final class JsonlPersistence implements SessionPersistence, SessionTail {
         }
     }
 
+    /**
+     * 原子写字符串：同目录 temp 写 + ATOMIC_MOVE + REPLACE_EXISTING（同文件系统
+     * rename 原子）。观察者（list()/SessionTail.open()）只见「不存在 / 完整」两态，
+     * 无「文件已建、内容未落」撕裂窗（停 1 评审 P3）；不支持原子 move 的文件系统
+     * 降级普通 move——同目录 rename 在主流平台仍原子，远好于原位截断重写。
+     */
+    private static void atomicWriteString(Path target, String content) throws IOException {
+        Path dir = target.getParent();
+        Path temp = Files.createTempFile(dir, target.getFileName().toString(), ".tmp");
+        try {
+            Files.writeString(temp, content, StandardCharsets.UTF_8);
+            try {
+                Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException notSupported) {
+                Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temp);
+        }
+    }
+
     private SessionWriter writer(Session session) throws IOException {
         SessionWriter existing = writers.get(session.id());
         if (existing != null) {
@@ -562,7 +586,7 @@ public final class JsonlPersistence implements SessionPersistence, SessionTail {
 
         void backfill(Session session) throws IOException {
             Files.createDirectories(dir);
-            Files.writeString(dir.resolve("header.json"),
+            atomicWriteString(dir.resolve("header.json"),
                 JacksonBridge.write(HeaderCodec.write(session.header())));
             rewrite(session);
         }
