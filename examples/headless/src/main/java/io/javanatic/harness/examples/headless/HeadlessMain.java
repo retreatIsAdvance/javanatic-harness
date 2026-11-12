@@ -1077,9 +1077,18 @@ public final class HeadlessMain {
         }
         SessionTail.Follower follower = root.require(SessionTail.KEY).open(Session.newId(sessionId));
         List<SessionEvent> events = new ArrayList<>();
-        return () -> {
-            events.addAll(follower.nextEvents());
-            return SessionProjection.project(new SessionPersistence.Loaded(follower.header(), events));
+        return new WorkbenchSource() {
+            @Override
+            public SessionViews snapshot() throws IOException {
+                events.addAll(follower.nextEvents());
+                return SessionProjection.project(
+                    new SessionPersistence.Loaded(follower.header(), events));
+            }
+
+            @Override
+            public void close() throws IOException {
+                follower.close(); // 透传游标释放(今天空操作,W3 长驻面预留语义)
+            }
         };
     }
 
@@ -1110,7 +1119,7 @@ public final class HeadlessMain {
             LOG.log(Level.ERROR, "{0}", workbenchNoTerminalText(e));
             return 2;
         }
-        try (io) {
+        try (io; source) {
             return WorkbenchApp.run(source, io, io, WORKBENCH_POLL_MILLIS, follow);
         }
     }

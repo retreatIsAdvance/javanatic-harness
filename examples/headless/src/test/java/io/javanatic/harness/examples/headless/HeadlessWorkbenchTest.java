@@ -2,14 +2,18 @@ package io.javanatic.harness.examples.headless;
 
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
+import io.javanatic.harness.kernel.scope.Scope;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.Session;
+import io.javanatic.harness.session.SessionHeader;
 import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.session.SessionStorePlugin;
 import io.javanatic.harness.session.event.RequestHeader;
+import io.javanatic.harness.session.event.SessionEvent;
 import io.javanatic.harness.session.event.TurnEnd;
 import io.javanatic.harness.session.event.TurnEndReason;
 import io.javanatic.harness.session.event.TurnStart;
+import io.javanatic.harness.session.persistence.SessionTail;
 import io.javanatic.harness.session.persistence.WriterLockException;
 import io.javanatic.harness.session.persistence.jsonl.JsonlPersistencePlugin;
 import io.javanatic.harness.workbench.projection.SessionViews;
@@ -20,12 +24,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -156,6 +162,54 @@ class HeadlessWorkbenchTest {
                     .isInstanceOf(WriterLockException.class);
                 live.append(new TurnEnd(2, 1, new TurnEndReason.Completed()));
                 assertThat(tail.snapshot().timeline()).hasSize(2);
+            }
+        }
+    }
+
+    /**
+     * 跟随态 source 关闭语义:close() 关闭 tail 游标(检视态无资源,close 为空)。
+     * 停 2 评审 P3 遗留——SessionTail.Follower.close 今天是空操作,但为 W3
+     * 长驻消费面预留了语义,装配点必须透传而非吞掉。child scope 注入计数
+     * wrapper(父链取真实现,无递归)。
+     */
+    @Test
+    void followSourceCloseReleasesTailCursor() throws Exception {
+        try (Runtime writer = new Runtime()) {
+            new PluginLoader().loadAll(writer, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(sessions)));
+            writer.root().require(SessionStore.KEY)
+                .create(writer.root(), Session.newId("wb-close"), CreateOptions.empty())
+                .append(new TurnStart(1, 1));
+            try (Runtime observer = new Runtime()) {
+                new PluginLoader().loadAll(observer, List.of(
+                    new SessionStorePlugin(), new JsonlPersistencePlugin(sessions)));
+                AtomicInteger closed = new AtomicInteger();
+                Scope observing = observer.root().child();
+                observing.provide(SessionTail.KEY, id -> {
+                    SessionTail.Follower real =
+                        observer.root().require(SessionTail.KEY).open(id);
+                    return new SessionTail.Follower() {
+                        @Override
+                        public SessionHeader header() {
+                            return real.header();
+                        }
+
+                        @Override
+                        public List<SessionEvent> nextEvents() throws IOException {
+                            return real.nextEvents();
+                        }
+
+                        @Override
+                        public void close() {
+                            closed.incrementAndGet();
+                            real.close();
+                        }
+                    };
+                });
+                WorkbenchSource followed = HeadlessMain.workbenchSource(observing, "wb-close", true);
+                assertThat(followed.snapshot().timeline()).hasSize(1);
+                followed.close();
+                assertThat(closed.get()).isEqualTo(1);
             }
         }
     }
