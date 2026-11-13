@@ -17,5 +17,6 @@
     <modules>
         <module>projection</module>
         <module>tui</module>
+        <module>rpc</module>
     </modules>
 </project>
