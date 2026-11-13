@@ -41,3 +41,4 @@
 - ant `<replace>` 剥执行位（it34 停 2 评审 F3 实撞）：maven-antrun 的 replace 经 java.nio 临时文件改写（600）——`bin/jh` 从 jlink 的 755 变 600，直接执行 126；发行归档因 assembly 强制 0755 不受影响，只坑 loose 镜像的冒烟。replace 后补 `<chmod perm="755"/>`；用 `sh bin/jh` 冒烟会掩盖此坑，launcher 取证须**直接执行** `./bin/jh`。
 - packet/取证档引用的评审编号（P3/F1 等）必须可追溯至落盘的评审结论归档（it34 停 3 实撞：关闭钩子引「停 2 评审 P3 遗留」，但停 2 归档仅 F1/F2/F3——凭会话记忆引用会断链）；引用前 grep 归档确认编号存在，不存在就改可追溯出处并登记修正表。根因是不对称归档：否决裁决落了档、**放行裁决的附言（提醒项）没落档**——放行裁决的附言同样要归档（it34 停 3 复审补档：P3 原文已补进 stop2-review-verdict.md 附注），否则每轮「放行 + 提醒」的提醒项都会重演断链。
 - 收口批待推清单以 `git log --oneline origin/master..HEAD` 生成，不手工枚举（it34 停 3 实撞：closeout 手工列 7 笔漏停 1 两笔，按清单推会漏推）；跨停点留置的多笔提交尤其容易漏。
+- 双宿主 Lost 探针（it30）在 `halt(0)` 硬崩前无「遗物已落盘」同步屏障（it34 回填 run `43357319802` macos 首跑红实撞）：echo→pipe→捕获虚线程写 `output.part` 与硬崩之间仅 800ms sleep 硬间隔，负载下 CI 偶发红（遗物空串）；捕获路径 IOException 静默吞、零诊断。处置纪律：红先看 diff 面（纯文档提交不可能回归）→ `gh run rerun --failed` 取证 → 绿则 flake 登记，勿直接改代码；探针硬化（遗物屏障）挂账另裁。

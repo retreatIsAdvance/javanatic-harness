@@ -20,3 +20,4 @@ mvn test
   - antrun `burn-native-access-into-launcher-bat` 步两腿均执行（win log 5751 / win-arm log 5800）。
   - 镜像冒烟 + 归档解包冒烟四面：`jh.bat --help` 含 `--workbench` 行、`jh.bat --verify` 计数 `composition: 34 rows, 41 discovered, 0 unreferenced`（win 6020/6146、win-arm 6069/6195）、windows-acl 强制行断言通过、LASTEXITCODE 闸全过。
   - **运行期 WARNING 面 = 零**：F1 签名（`A restricted method in java.lang.System` / `System::load`）双腿 0 命中；全腿 857 处 WARNING 均为 Build and test 步 javac `[WARNING]` 编译面（既有）+ spotless Unsafe 告警,与烧入无关。
+- 回填 run `43357319802`（push `ab6fa9b` 触发,纯文档 3 文件）：macos **首跑红**——`TwoHostLostProbeTest.killedHostRunningJobBecomesLostWithReadableRelic` 遗物断言空串（宿主 A `exit=0 lines=1` 只打 MARKER、账本正常,唯捕获线程未把 echo 字节写进 `output.part`——`halt(0)` 前无「遗物已落盘」同步屏障,echo→pipe→捕获写与硬崩之间仅 800ms sleep 硬间隔）。判定：同 headSha 代码上一 run macos 绿、其余三腿同 run 全绿、与绿 run 的 diff 仅 3 个文档文件 ⇒ 时序 flake,非回归。`gh run rerun --failed` 重跑 macos 腿 **绿** → run 终局 `success` 四腿全绿（release-attach skipped 预期）。探针硬化（遗物屏障）挂账,见 pits。
