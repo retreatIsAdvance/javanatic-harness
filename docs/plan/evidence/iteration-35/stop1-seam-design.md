@@ -57,13 +57,13 @@ HTTP 层（transport 守卫，协议语义归 wire 层）：非 POST → 405（`
 
 ## 6. 测试矩阵（S2，TDD 红绿 + 突变）
 
-纯 wire（T1–T6）：合法请求 id 回显 / 畸形 JSON → -32700 / 非对象·batch·通知 → -32600 / method not found → -32601 / params 型错矩阵 → -32602 / 域码翻译三件（SESSION_NOT_FOUND·SESSION_LOCKED·LOG_CORRUPT）+ 预算 → -32004。
+纯 wire（13 用例）：合法请求 id 回显（number/string 原样）/ 畸形 JSON → -32700 / 非对象·batch 数组·id null 通知·缺 id·缺 method·错 version → -32600 / params 非对象 → -32602 / RpcException 翻译（域码 + data 携带、标准码原样透传）/ 意外 RuntimeException → -32603「Internal error」不泄堆栈。
 
-handler（T7–T11，夹具 = 真实 jsonl 后端临时目录 + TestEvents 同款事件，keyless）：sessionsList 摘要映射 + 截断 total / sessionViews 五视图 JSON 形状断言 / sessionTail 游标矩阵（-1·中间·尾部·超前·空增量）/ 撕裂尾容忍（不完整行不交付）/ 预算注入小值 → RESPONSE_TOO_LARGE。
+handler（23 用例，夹具 = in-memory fakes——module-info 只挂 API 模块，真实 jsonl 后端实现类编译期不可见；撕裂尾容忍等 jsonl 后端既有保证归停 3 真机 curl 实测面）：sessionsList 摘要映射 + 截断 total / sessionViews 五视图 JSON 形状断言 / **域码翻译三件（SESSION_NOT_FOUND·SESSION_LOCKED·LOG_CORRUPT）——域码在 handler 层生成，断言 handler 输出的 errorCode（停 1 评审裁决②：断言面在哪层就在哪层测）** / 意外 IOException → -32603 / method not found → -32601 / sessionTail 游标矩阵（-1·中间·尾部·超前·< -1·缺失·空账）+ 跨批排空累积 / 预算注入小值 → RESPONSE_TOO_LARGE + 预算内通过。
 
-绑定面（T12–T13，ephemeral 端口真 HTTP 往返，java.net.http.HttpClient）：loopback 断言（`isLoopbackAddress`）/ 405 / 404 / 端到端三方法闭环 / 并发 tail 请求无共享态冒烟。
+绑定面（7 用例，ephemeral 端口真 HTTP 往返，java.net.http.HttpClient）：loopback 断言（`isLoopbackAddress`）/ bind 失败原样上抛（不翻译不吞）/ 405 / 404 / 端到端三方法闭环 / 并发 tail 请求无共享态 / close 停止。
 
-突变 M1–M4：域码翻译单点摘除 → T6 必红；游标 clamp 摘除 → T9 必红；loopback 换 wildcard → T12 必红；预算判断摘除 → T11 必红。写者锁冲突夹具对实 it33 停 2 既有手法后沿用。
+突变 M1–M4：域码翻译破坏 → `unknownSessionYieldsSessionNotFound` 必红；游标 clamp 摘除 → `tailAheadOfLogYieldsInvalidParams` 必红；loopback 换 wildcard → `bindsToLoopbackAddressOnly` 必红；预算判断摘除 → `oversizedResponseYieldsResponseTooLarge` 必红。写者锁冲突夹具（fake 抛 WriterLockException）承接 it33 停 2 既有手法。
 
 ## 7. 同步面（随停点批）
 
