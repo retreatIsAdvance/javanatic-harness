@@ -1,4 +1,4 @@
-# 迭代 34 — W2 TUI 工作台（状态：进行中——四确认已裁；停 1 已放行；停 2 修订版已出包待复审（F1/F2/F3 已修 + 三项铁证），2026-11-12）
+# 迭代 34 — W2 TUI 工作台（状态：进行中——四确认已裁；停 1 已放行；停 2 修订版已出包待复审（F1/F2/F3 已修 + 三项铁证）；停 3 修订版已出包待复审（文档同步面 7 项订正），2026-11-13）
 
 **裁决记录（2026-11-12）**：W2 四确认讨论稿评估通过，三类可核实事实对实后落盘——**必裁项 JLine 4 同意**（版本钉 4.6.0 + 四落盘条件：jar --describe-module 实测、BSD-3-Clause 进依赖登记、只引端子层 jline-terminal、jlink `--enable-native-access` 集成成本进设计增量）；**入口形态 `jh --workbench` 独立 flag 同意**（REPL 是 12 §6 冻结面，混装即破坏稳定面）；**live 面读法流式逐行读面同意**（四契约条款化钉死；降级路径改「若流式实现遇阻，本停点降级为检视态 only」，删除「可刷新快照」伪选项——该档与跟随态同撞写者锁，已被证伪）；**四确认草稿本体同意，两处精化**：不要求运行中的进程配合从口号升为四契约条款；live 视图消费投影每 poll 全量重投影（增量投影不做，写进「不做」防过度设计）。
 
@@ -38,7 +38,7 @@
 ### §3 jlink `--enable-native-access` 集成行
 
 - dist/jh moditect `<modules>` 清单加四行：`io.javanatic.harness.workbench.tui`、`org.jline.terminal`、`org.jline.terminal.ffm`、`org.jline.nativ`（native 行 = S3 jlink 实测订正，见 §2）。
-- 烧入通路（实测钉死）：moditect 1.2.2 的 Launcher 仅 name/module/mainClass、core 命令无 jlink options 透传 ⇒ jlink 官方 `--add-options` 插件不可达 ⇒ **dist/jh package 相位在 moditect create-runtime-image 之后、assembly 归档之前，用 maven-antrun-plugin 替换 launcher 空行**：`bin/jh`（sh）的 `JLINK_VM_OPTIONS=` → `JLINK_VM_OPTIONS="--enable-native-access=org.jline.terminal.ffm"`；`bin/jh.bat`（Windows）的 `set JLINK_VM_OPTIONS=` 行同规则（.bat 模板实况以首次 jlink 冒烟取证为准）。
+- 烧入通路（实测钉死）：moditect 1.2.2 的 Launcher 仅 name/module/mainClass、core 命令无 jlink options 透传 ⇒ jlink 官方 `--add-options` 插件不可达 ⇒ **dist/jh package 相位在 moditect create-runtime-image 之后、assembly 归档之前，用 maven-antrun-plugin 替换 launcher 空行**：`bin/jh`（sh）的 `JLINK_VM_OPTIONS=` → `JLINK_VM_OPTIONS="--enable-native-access=org.jline.terminal.ffm,org.jline.nativ"`；`bin/jh.bat`（Windows）的 `set JLINK_VM_OPTIONS=` 行同规则（.bat 模板实况以首次 jlink 冒烟取证为准）。
 - java.desktop 不进镜像（static requires 不触发 jlink 解析；jdeps 零引用背书）。
 
 ### §4 W1 措辞修正（12 §6 两层语义）
@@ -61,7 +61,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 |---|---|---|
 | 停 1：seam 流式面四契约 | session/persistence-jsonl 只读 tail seam 全模块（四契约逐条钉死 + 真实会话 tail 取证 + load() 锁语义对照 + 突变） | 已放行（评审通过；P3 header 原子性随独立 mini-fix 关闭，见 [stop1-f1-header-atomicity.md](evidence/iteration-34/stop1-f1-header-atomicity.md)） |
 | 停 2：workbench/tui 渲染与按键面 + CLI 接线 + 装配面 | 渲染器纯函数五视图 + 按键解析 + 端子薄壳；HeadlessOptions 词表/互斥/usage；headless 依赖 + dist/jh 四行 + antrun 烧入；同步面 02/12/AGENTS/README/current-state | 修订版已出包待复审（评审 F1/F2/F3 已修 + 三项铁证；[stop2-review-packet.md](evidence/iteration-34/stop2-review-packet.md) §5 修订记录） |
-| 停 3：真机验收 + 收口 | jlink 真 TTY 冒烟（检视态五视图 + 跟随态 live tail + launcher 烧入取证）+ CI 四腿 + review packet | 已出包待评审（PTY 真终端双态实录 + Follower 关闭钩子 TDD；[stop3-review-packet.md](evidence/iteration-34/stop3-review-packet.md)） |
+| 停 3：真机验收 + 收口 | jlink 真 TTY 冒烟（检视态五视图 + 跟随态 live tail + launcher 烧入取证）+ CI 四腿 + review packet | 修订版已出包待复审（PTY 真终端双态实录 + Follower 关闭钩子 TDD；修订批文档同步面订正见 [stop3-review-packet.md](evidence/iteration-34/stop3-review-packet.md) §6） |
 
 ## 取证（packet 前置：命令 / 关键输出行 / EXIT 回显落盘 docs/plan/evidence/iteration-34/）
 
@@ -75,7 +75,7 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 | [stop2-review-packet.md](evidence/iteration-34/stop2-review-packet.md) | 停 2 审查包：交付物 / 不变量增量 / 取证摘要 / 诚实交易（派发顺序单元层不可观察 + preflight 订正）/ §5 修订记录（F1/F2/F3 → 三项铁证）/ 请裁决 |
 | [stop3-evidence.md](evidence/iteration-34/stop3-evidence.md) | 停 3 取证：Follower 关闭钩子 TDD（RED 编译红 + AutoCloseable 踩坑 + GREEN 10/10 + 突变单点红）；镜像重建（755/逗号清单/模块在镜/verify 不变）；PTY 真终端双态冒烟（五视图逐键 + live tail events=2→4 + 双态零 WARNING + 清理零残留）；诚实交易四项 |
 | [stop3-review-packet.md](evidence/iteration-34/stop3-review-packet.md) | 停 3 审查包：关闭钩子交付 / 真机不变量 / PTTY 方法学声明 / 验证摘要 / 诚实交易 / 请裁决 |
-| [stop3-closeout.md](evidence/iteration-34/stop3-closeout.md) | 停 3 门禁面：全反应器 179 XML = 1403/0/0/31（与停 2 的 1399 逐项对账：+3 TermIoTest 修订批 + 1 关闭钩子）；AskVisibilityProbe Nov 6 陈旧件隔离；CI 四腿回填位 |
+| [stop3-closeout.md](evidence/iteration-34/stop3-closeout.md) | 停 3 门禁面：全反应器 179 XML = 1403/0/0/31（与停 2 的 1399 逐项对账：+3 TermIoTest 修订批 + 1 关闭钩子）；AskVisibilityProbe Nov 6 / IZProbeTest Oct 13 陈旧件隔离；CI 四腿回填位 |
 
 ## 验收
 
@@ -98,6 +98,10 @@ live 视图每轮 poll 对已消费事件全量重投影（JH 会话规模余量
 | （停 2 修订批） | 停 2 评审 F1（阻塞）：烧入清单只授 `org.jline.terminal.ffm`——真调受限方法（`System::load` JNI）的是 `org.jline.nativ`，每次启动 4 行 WARNING | sh/bat 双面烧入值 → `--enable-native-access=org.jline.terminal.ffm,org.jline.nativ`；重建镜像后三面（--version/--verify/unknown-id）stderr 零 WARNING（铁证 ①，[实录](evidence/iteration-34/stop2-evidence.md) §6） |
 | （停 2 修订批） | 停 2 评审 F2（阻塞）：「无真 TTY exit 2」是广告词不是行为——JLine 4 `TerminalBuilder` 退化环境建哑终端不抛，exit-2 分支死码（四种退化环境全渲染 ANSI 帧后 exit 0） | `TermIo.checkedOpen` 判定：JLine 两哑型（TYPE_DUMB="dumb"/TYPE_DUMB_COLOR="dumb-color"，javap 实测）先关端子再抛 IOException「无真 TTY」；TDD（RED 编译红 → GREEN 11/11 → 突变 1 红 → 还原复绿）；哑终端双环境（os.setsid 无控制终端 / TERM=dumb 管道）EXIT=2 + stdout 0 字节 + 指引词面（铁证 ③） |
 | （停 2 修订批） | 停 2 评审 F3（非阻塞）：antrun replace 经 java.nio 临时文件改写剥 `bin/jh` 执行位（600，直接执行 126；发行归档不受影响——assembly 强制 0755） | sh 执行体 `<replace>` 后补 `<chmod perm="755">`；`ls -l` 实测 755 与 java/keytool 同、`./bin/jh --version`（非 sh）EXIT=0（铁证 ②） |
+| （停 3 修订批） | closeout 待推批次手工枚举漏列停 1 两笔（`9b6cf22`/`de828ea`）——收口批按清单推会漏推 | 清单补全 9 笔 + 本批 = 10 笔；批清单以 `git log --oneline origin/master..HEAD` 为准 |
+| （停 3 修订批） | F1 后同步面欠账：AGENTS.md 现状行与 §3 正文/preflight 烧入值仍为旧单模块值（「同步面按语义覆盖范围划」实撞） | AGENTS.md 现状行 / §3 / preflight 订正为逗号清单；AGENTS.md 补 F3 chmod 755 面 |
+| （停 3 修订批） | 停 3 packet 关闭钩子出处引「停 2 评审 P3 遗留」无法追溯（停 2 评审归档仅 F1/F2/F3，无 P3）——引文保真度纪律（it33 先例） | packet / evidence / 测试 Javadoc 三处出处订正为可追溯事实（停 2 交付 source seam 无 close 生命周期面，W3 长驻消费前置缺口）；pits 回填 |
+| （停 3 修订批） | packet 笔误「验收清单两项勾结」；current-state 进行中段陈旧（仍写停 2 出包） | 「两项收勾」；current-state 更新为停 3 修订版出包待复审；closeout 陈旧件补具名 IZProbeTest |
 
 ## 设计偏离（如有）
 

@@ -2,7 +2,7 @@
 
 命令面（仓库根、`export JAVA_HOME=$(/usr/libexec/java_home -v 25)`、Maven `~/Documents/apache-maven-3.10.0/bin/mvn`；驱动脚本 `/tmp/it34-stop3/pty-smoke.py`、`pty-follow.py`——非仓内工件）。
 
-## 1. Follower 关闭钩子（停 2 评审 P3 遗留，TDD）
+## 1. Follower 关闭钩子（source seam 生命周期对称缺口，TDD）
 
 - RED（实现前）：`HeadlessWorkbenchTest` 新增 `followSourceCloseReleasesTailCursor`（child scope 注入计数 wrapper——父链取真实现,无递归），首跑编译红逐字：`找不到符号 方法 close() 位置: 类型为 io.javanatic.harness.workbench.tui.WorkbenchSource 的变量 followed`（HeadlessWorkbenchTest.java:211）。
 - 首实现踩一坑（诚实记录）：只给 `WorkbenchSource` 加 `default close()` 不够——try-with-resources 要求静态类型实现 `AutoCloseable`，编译红 `WorkbenchSource 无法转换为 java.lang.AutoCloseable`；补 `extends AutoCloseable`（close 收窄为 throws IOException）后过。

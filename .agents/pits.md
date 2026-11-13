@@ -39,3 +39,5 @@
 - JLine 4 退化环境不抛而是建哑终端（it34 停 2 评审 F2 实撞）：`TerminalBuilder` 在无控制终端/管道/`TERM=dumb`/`TERM` 缺省等一切退化环境都**静默建 dumb/dumb-color 端子**，不抛 IOException——「无真 TTY 报错」的契约若不显式判定就是死码，且 TUI 会把 ANSI 帧倒进管道（更糟于 fail loud）。`TermIo.checkedOpen` 显式拒 `Terminal.TYPE_DUMB`（"dumb"）与 `TYPE_DUMB_COLOR`（"dumb-color"）两型再进 raw 模式；判定勿用 `System.console()`（agent 工具的 PTY 冒烟会误杀）。
 - `--enable-native-access` 授权清单要覆盖**实际调用受限方法的模块**（it34 停 2 评审 F1 实撞）：jlink 烧入只授 `org.jline.terminal.ffm` 时每次启动仍 4 行 WARNING——真调 `System::load`（JNI）的是依赖 `org.jline.nativ`；「烧入行在镜」≠「烧入有效」，验收面是**启动 stderr 零 WARNING**（不是只看行存在）。
 - ant `<replace>` 剥执行位（it34 停 2 评审 F3 实撞）：maven-antrun 的 replace 经 java.nio 临时文件改写（600）——`bin/jh` 从 jlink 的 755 变 600，直接执行 126；发行归档因 assembly 强制 0755 不受影响，只坑 loose 镜像的冒烟。replace 后补 `<chmod perm="755"/>`；用 `sh bin/jh` 冒烟会掩盖此坑，launcher 取证须**直接执行** `./bin/jh`。
+- packet/取证档引用的评审编号（P3/F1 等）必须可追溯至落盘的评审结论归档（it34 停 3 实撞：关闭钩子引「停 2 评审 P3 遗留」，但停 2 归档仅 F1/F2/F3——凭会话记忆引用会断链）；引用前 grep 归档确认编号存在，不存在就改可追溯出处并登记修正表。
+- 收口批待推清单以 `git log --oneline origin/master..HEAD` 生成，不手工枚举（it34 停 3 实撞：closeout 手工列 7 笔漏停 1 两笔，按清单推会漏推）；跨停点留置的多笔提交尤其容易漏。

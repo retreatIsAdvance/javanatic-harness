@@ -104,7 +104,7 @@ DIR=`dirname $0`
 $DIR/java $JLINK_VM_OPTIONS -m io.javanatic.harness.examples.headless/io.javanatic.harness.examples.headless.HeadlessMain "$@"
 ```
 
-⇒ 烧入方案：dist/jh package 相位在 moditect create-runtime-image 之后、assembly 归档之前，用 antrun 替换 launcher 的 `JLINK_VM_OPTIONS=` 空行为 `JLINK_VM_OPTIONS="--enable-native-access=org.jline.terminal.ffm"`（Windows `bin/jh.bat` 的 `set JLINK_VM_OPTIONS=` 行同规则；.bat 模板实况以首次 jlink 冒烟取证为准）。
+⇒ 烧入方案：dist/jh package 相位在 moditect create-runtime-image 之后、assembly 归档之前，用 antrun 替换 launcher 的 `JLINK_VM_OPTIONS=` 空行为 `JLINK_VM_OPTIONS="--enable-native-access=org.jline.terminal.ffm,org.jline.nativ"`（Windows `bin/jh.bat` 的 `set JLINK_VM_OPTIONS=` 行同规则；.bat 模板实况以首次 jlink 冒烟取证为准）。
 
 ## 6. JPMS 文档活链（替换草案死链）
 

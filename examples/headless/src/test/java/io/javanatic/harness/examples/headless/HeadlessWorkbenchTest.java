@@ -168,7 +168,7 @@ class HeadlessWorkbenchTest {
 
     /**
      * 跟随态 source 关闭语义:close() 关闭 tail 游标(检视态无资源,close 为空)。
-     * 停 2 评审 P3 遗留——SessionTail.Follower.close 今天是空操作,但为 W3
+     * source seam 生命周期对称缺口——SessionTail.Follower.close 今天是空操作,但为 W3
      * 长驻消费面预留了语义,装配点必须透传而非吞掉。child scope 注入计数
      * wrapper(父链取真实现,无递归)。
      */
