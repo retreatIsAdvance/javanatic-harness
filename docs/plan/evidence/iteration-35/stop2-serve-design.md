@@ -26,7 +26,7 @@
 ## 3. 装配面（it34 tui 先例）
 
 - `examples/headless`：pom + `harness-workbench-rpc` 依赖；module-info `requires io.javanatic.harness.workbench.rpc` + `requires static jdk.httpserver` → **`requires jdk.httpserver`**（测试面转真运行时消费；static = 不进 jlink 镜像，非 static 后全图解析自动带入）。
-- `dist/jh` moditect 清单 **+2 行**：`io.javanatic.harness.workbench.rpc` + `jdk.httpserver`（it16 出链回补，四确认 T3：镜像 67→68 + `bin/jwebserver` 回归，停 3 `--list-modules` 实录）。
+- `dist/jh` moditect 清单 **+2 行**：`io.javanatic.harness.workbench.rpc` + `jdk.httpserver`（it16 出链回补，四确认 T3：镜像 67→69（停 3 实录订正算术滑点）+ `bin/jwebserver` 回归，停 3 `--list-modules` 实录）。
 - **零 bundle 行、零新配置键**（四确认裁决）——`--verify` 计数不变（34/41/0，S3 取证）；Server 双 seam（SessionPersistence/SessionTail）由 persistence-jsonl 既有行提供，rpc 纯构造注入。
 - **四件套自问**：① META-INF/services 双通道——无 plugin、无 ServiceLoader，N/A；② bundle/base test 域 + headless 编译域承载——base 零加行、headless pom/module-info 承载，N/A；③ headless 钉死面同步——12 §6 + USAGE + HeadlessOptionsTest（本停钉死）；④ moditect 清单登记——本停落 +2 行。
 

@@ -4,7 +4,7 @@
 
 ## 0. 交付物与分层
 
-- 新模块 `workbench/rpc`（artifactId `harness-workbench-rpc`，JPMS `io.javanatic.harness.workbench.rpc`）。**零 Plugin**（headless 直依赖接线，it34 tui 先例——四确认裁决）；**零新第三方**（Jackson 已在树、边界归属 +1；`jdk.httpserver` = JDK 模块，镜像 67→68 + `bin/jwebserver` 回归已登记）。
+- 新模块 `workbench/rpc`（artifactId `harness-workbench-rpc`，JPMS `io.javanatic.harness.workbench.rpc`）。**零 Plugin**（headless 直依赖接线，it34 tui 先例——四确认裁决）；**零新第三方**（Jackson 已在树、边界归属 +1；`jdk.httpserver` = JDK 模块，镜像 67→69（停 3 实录订正）+ `bin/jwebserver` 回归已登记）。
 - 三层形状（可测性纪律：纯函数核 + 薄壳）：
   1. **`JsonRpcWire`**（纯函数）：JSON-RPC 2.0 帧——请求解析 → 方法派发 → 结果/错误序列化。词表 record：`RpcRequest` / `RpcResponse` / `RpcError`（全部不可变，无注解）。
   2. **`WorkbenchRpc`**（handler）：构造器注入 `SessionPersistence` + `SessionTail` + `maxResponseBytes`；三方法 face；域错误抛内部 `RpcException`（wire 层翻译成错误对象）。

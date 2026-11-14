@@ -1,0 +1,15 @@
+===== 探针时点进程状态 =====
+COMMAND   PID      USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+java    96082 abel_yang    7u  IPv6 0x9b406357a4c8a808      0t0  TCP 127.0.0.1:8787 (LISTEN)
+===== B29a LAN IP 拒绝 =====
+EXIT=7
+===== B29b IPv6 拒绝 =====
+EXIT=7
+===== loopback 127.0.0.1 GET / (405) =====
+405
+===== -32601 method not found =====
+{"jsonrpc":"2.0","id":9,"error":{"code":-32601,"message":"method not found"}}
+===== -32001 SESSION_NOT_FOUND =====
+{"jsonrpc":"2.0","id":10,"error":{"code":-32001,"message":"session not found","data":{"session":"no-such-session"}}}
+===== -32004 RESPONSE_TOO_LARGE 不触发（预算 8 MiB 内正常）跳过；-32602 lastSeq 超前 =====
+{"jsonrpc":"2.0","id":11,"error":{"code":-32602,"message":"invalid params"}}

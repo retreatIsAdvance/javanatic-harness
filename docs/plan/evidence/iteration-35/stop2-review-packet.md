@@ -16,7 +16,7 @@
 |---|---|---|
 | S1 §2 `Follower.close` 赋义（幂等、关后拒读、四契约口径不动；R3 收口语义——tail 资源随服务关闭回收） | `SessionTail.Follower` Javadoc 契约 + `JsonlTailFollower.close` 实现 | `SessionTailTest` 13（close 幂等 + 关后 header()/nextEvents() 抛 IllegalStateException） |
 | S2 §1 CLI 词表 + 互斥矩阵 + runServe + ServeShutdown + bindSigint + dispatch keyless | HeadlessMain（DEFAULT_SERVE_PORT=8787、USAGE 两段、RunnerOptions、parse 校验块、runServe、ServeShutdown、bindSigint(Runnable) 重载、dispatch 分支） | HeadlessOptionsTest 29（serve 词表/端口域/互斥矩阵/--help）+ HeadlessServeTest 3（停机裁决 + e2e + exit 3） |
-| S3 §3 装配面（headless 直依赖 + module-info + dist/jh moditect） | headless pom 依赖 1 行 + module-info（rpc requires + jdk.httpserver static→非 static）+ dist/jh moditect +2 行 | 全量 headless（-am）+ 停 3 jlink（镜像 67→68 list-modules 实录） |
+| S3 §3 装配面（headless 直依赖 + module-info + dist/jh moditect） | headless pom 依赖 1 行 + module-info（rpc requires + jdk.httpserver static→非 static）+ dist/jh moditect +2 行 | 全量 headless（-am）+ 停 3 jlink（镜像 67→69 list-modules 实录——停 3 订正：四确认「67→68」算术滑点，67+2 行恰两模块） |
 | S4 §4 同步面（B29 转正 / B35 登记 / 12 §6 / 02 §6 / 00 §6 / README / notes 0011 / AGENTS / current-state / pits） | 各文档同步 | keyless `--verify` 34/41/0 计数不变 |
 
 ## 偏离清单
