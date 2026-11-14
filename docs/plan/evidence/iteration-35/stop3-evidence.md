@@ -1,6 +1,6 @@
 # it35 停 3 真机验收证据档（2026-11-14）
 
-必验清单六项逐项取证。状态：item 1–3 已取证、item 4（CI）随收口批、item 5（收口批）随收口批、item 6（用户检视实录）待用户完整轮（起 serve → curl → SIGINT，裁决链「由我执行」）。
+必验清单六项逐项取证。状态：item 1–3 已取证、item 6（用户检视实录）已闭环（2026-11-14 用户完整轮）；item 4（CI）随 push 批、item 5（收口批）见停 3 收口证据。
 
 ## S1 jlink 构建与镜像面（item 1 前置）
 
@@ -20,15 +20,15 @@
 - 错误码面：-32601 method not found（id 回显）；-32001 SESSION_NOT_FOUND（`data.session` 回显）；GET / → 405。
 - SIGINT 收口（我跑面轮）：`kill -INT 95466` → serve 后台任务 exit 0、lsof 端口 0 行释放。会话观察；用户检视轮为独立实录（见 S3）。
 
-## S3 用户检视实录（item 6）
+## S3 用户检视实录（item 6）——已闭环
 
-- 状态：**未闭环**。裁决链 = 用户执行「jlink 起 serve → curl 三方法 → SIGINT 收口」。2026-11-14 用户先跑的三条 curl 原文已入档（下）；对打 serve 实为我跑面后台任务（PID 96082），非用户所起——用户澄清「我并没有跑 serve」。已停后台 serve、释放 8787，完整轮交用户重跑（起 serve → curl → SIGINT），实录贴回后替换本段。
-- 用户 curl 轮原文：[stop3-user-round.txt](stop3-user-round.txt)（对后台 serve 127.0.0.1:8787 执行；入档时按门禁剥除行尾空白 4 处，JSON 载荷与命令原文逐字节未动）。
+- 裁决链 = 用户执行「jlink 起 serve → curl 三方法 → SIGINT 收口」。首轮 curl 对打的是我跑面后台 serve（用户澄清「我并没有跑 serve」），已停后台 serve、释放 8787 后用户重跑完整轮，本段为完整轮实录。
+- 用户完整轮原文：[stop3-user-round.txt](stop3-user-round.txt)（curl 终端实录，2026-11-14；入档时按门禁剥除行尾空白 1 处，JSON 载荷与命令原文逐字节未动）。
 - 三方法核实（解析自原文，与 S2 我跑面数值逐项吻合）：
   - `sessionsList` `{max:3}` → 3 条摘要 + `total: 82`；首条 `headless-1794139537162-5124`（`eventCount: 1593`、`cwd: /Users/abel_yang/study/deepseek/javanatic-harness`、`busy: false`）+ 两条 child-del 子会话（379 / 352 事件）。
   - `sessionViews` → 六组件全在场：header（`createdAt` / `id` / `manifest` / `parentSession` / `seedLength` / `version`）、`turns` 1 轮、`tools` 5 条、`usage`（`perTurn` / `total`）、`timeline` 1593 条、`messages` 14 条。
   - `sessionTail` `{lastSeq: -1}` → `events` 1593 条（seq 0..1592 连续）、`nextSeq: 1592`。
-- **SIGINT 收口段：随用户完整轮重跑**——curl 轮实录仅含三方法；对打 serve 为我跑面后台任务，已于 2026-11-14 停止（进程 96082 退出、lsof 8787 零行）。用户完整轮（起 serve → curl → SIGINT + 端口复查）实录贴回后闭环本段。
+- SIGINT 收口：serve 启动与 Ctrl-C 在另一终端执行未随实录；收口证据双面——用户贴回 `lsof -nP -iTCP:8787 -sTCP:LISTEN` **空输出**（端口已释放），我复核同刻实况（`lsof` 8787 零监听、`pgrep 'jh --serve'` 零进程）。serve 为用户按 runbook 所起所停：我停止后台 serve 后 8787 无其他监听者，三条 curl 命中即用户所起之 serve；收口后零残留。
 
 ## S4 现场探针补录（2026-11-14，对我跑面后台 serve 复证落盘）
 
