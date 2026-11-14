@@ -1,6 +1,6 @@
 # it35 停 3 真机验收证据档（2026-11-14）
 
-必验清单六项逐项取证。状态：item 1–3 已取证、item 4（CI）随收口批、item 5（收口批）随收口批、item 6（用户检视实录）三方法段已入档、SIGINT 段待补。
+必验清单六项逐项取证。状态：item 1–3 已取证、item 4（CI）随收口批、item 5（收口批）随收口批、item 6（用户检视实录）待用户完整轮（起 serve → curl → SIGINT，裁决链「由我执行」）。
 
 ## S1 jlink 构建与镜像面（item 1 前置）
 
@@ -22,13 +22,14 @@
 
 ## S3 用户检视实录（item 6）
 
-- **原文入档**：[stop3-user-round.txt](stop3-user-round.txt)（zsh 实录，2026-11-14 用户执行；入档时按门禁剥除行尾空白 4 处，JSON 载荷与命令原文逐字节未动）。
+- 状态：**未闭环**。裁决链 = 用户执行「jlink 起 serve → curl 三方法 → SIGINT 收口」。2026-11-14 用户先跑的三条 curl 原文已入档（下）；对打 serve 实为我跑面后台任务（PID 96082），非用户所起——用户澄清「我并没有跑 serve」。已停后台 serve、释放 8787，完整轮交用户重跑（起 serve → curl → SIGINT），实录贴回后替换本段。
+- 用户 curl 轮原文：[stop3-user-round.txt](stop3-user-round.txt)（对后台 serve 127.0.0.1:8787 执行；入档时按门禁剥除行尾空白 4 处，JSON 载荷与命令原文逐字节未动）。
 - 三方法核实（解析自原文，与 S2 我跑面数值逐项吻合）：
   - `sessionsList` `{max:3}` → 3 条摘要 + `total: 82`；首条 `headless-1794139537162-5124`（`eventCount: 1593`、`cwd: /Users/abel_yang/study/deepseek/javanatic-harness`、`busy: false`）+ 两条 child-del 子会话（379 / 352 事件）。
   - `sessionViews` → 六组件全在场：header（`createdAt` / `id` / `manifest` / `parentSession` / `seedLength` / `version`）、`turns` 1 轮、`tools` 5 条、`usage`（`perTurn` / `total`）、`timeline` 1593 条、`messages` 14 条。
   - `sessionTail` `{lastSeq: -1}` → `events` 1593 条（seq 0..1592 连续）、`nextSeq: 1592`。
-- **SIGINT 收口段：待补**——实录附件仅含三方法 curl；serve 进程 96082 截至本档落笔仍在监听（lsof 一行 `TCP 127.0.0.1:8787 (LISTEN)`）。用户补 `kill -INT 96082` + 端口复查实录后闭环。
+- **SIGINT 收口段：随用户完整轮重跑**——curl 轮实录仅含三方法；对打 serve 为我跑面后台任务，已于 2026-11-14 停止（进程 96082 退出、lsof 8787 零行）。用户完整轮（起 serve → curl → SIGINT + 端口复查）实录贴回后闭环本段。
 
-## S4 现场探针补录（2026-11-14，对用户轮在跑 serve 复证落盘）
+## S4 现场探针补录（2026-11-14，对我跑面后台 serve 复证落盘）
 
 [stop3-my-round-probes.txt](stop3-my-round-probes.txt)：B29a LAN IP EXIT=7 / B29b `[::1]` EXIT=7 / loopback GET / → 405 / -32601（id 回显）/ -32001（`data.session` 回显）/ -32602（lastSeq 超前）。文件首行含探针时点进程状态（PID 96082 LISTEN）。
