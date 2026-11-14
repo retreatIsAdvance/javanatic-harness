@@ -106,6 +106,11 @@
                                 <module>org.jline.terminal</module>
                                 <module>org.jline.terminal.ffm</module>
                                 <module>org.jline.nativ</module>
+                                <!-- it35 W3:serve 回环 JSON-RPC。rpc 为 headless 硬 requires
+                                     (非 static);jdk.httpserver 随 module-info 非 static 转正
+                                     自动带入(镜像 67→68,停 3 list-modules 实录) -->
+                                <module>io.javanatic.harness.workbench.rpc</module>
+                                <module>jdk.httpserver</module>
                             </modules>
                             <outputDirectory>${project.build.directory}/jlink-image</outputDirectory>
                             <!-- NONE:不带 jars/ 依赖拷贝;null 会令 moditect copyJars NPE -->

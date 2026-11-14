@@ -24,6 +24,7 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.session.persistence.jsonl;
     requires io.javanatic.harness.workbench.projection;
     requires io.javanatic.harness.workbench.tui;
+    requires io.javanatic.harness.workbench.rpc;
     requires io.javanatic.harness.interaction.approval;
     requires io.javanatic.harness.interaction.commands;
     requires io.javanatic.harness.bundle.base;
@@ -34,7 +35,8 @@ module io.javanatic.harness.examples.headless {
     requires org.yaml.snakeyaml;
     // SIGINT 取消入口(sun.misc.Signal);非 static——jlink 镜像须含 jdk.unsupported(dist 实跑验证)
     requires jdk.unsupported;
-    requires static jdk.httpserver; // 测试:本地假服务端 e2e(static=不进 jlink 镜像)
+    // it35 W3 --serve:RpcHttpServer 真运行时消费(非 static——jlink 镜像须含 jdk.httpserver)
+    requires jdk.httpserver;
 
     exports io.javanatic.harness.examples.headless;
     // JUnit 运行时反射实例化同包测试类需要 opens；只放开运行时反射，不改编译期可见性

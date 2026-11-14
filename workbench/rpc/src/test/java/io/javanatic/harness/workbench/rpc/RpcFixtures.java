@@ -156,7 +156,8 @@ final class RpcFixtures {
     }
 
     /** 可配置失败的内存 SessionTail:分批交付(缺省一批全量)、之后空批;撕裂尾由
-     *  seam 不交付,handler 只见完整批。batchSize 钉多批排空路径。 */
+     *  seam 不交付,handler 只见完整批。batchSize 钉多批排空路径。close 镜像
+     *  seam 契约(停 2 赋义):Follower 关后拒读 fail loud,外层 closed 记透传。 */
     static final class FakeTail implements SessionTail {
 
         final Map<String, List<SessionEvent>> sessions = new HashMap<>();
@@ -176,14 +177,22 @@ final class RpcFixtures {
             return new Follower() {
 
                 private int cursor;
+                /** close 赋义镜像(停 2 契约):关后 header/nextEvents 拒读 fail loud。 */
+                private boolean terminated;
 
                 @Override
                 public SessionHeader header() {
+                    if (terminated) {
+                        throw new IllegalStateException("follower closed");
+                    }
                     return headerOf(events);
                 }
 
                 @Override
                 public List<SessionEvent> nextEvents() {
+                    if (terminated) {
+                        throw new IllegalStateException("follower closed");
+                    }
                     if (cursor >= events.size()) {
                         return List.of();
                     }
@@ -194,7 +203,8 @@ final class RpcFixtures {
 
                 @Override
                 public void close() {
-                    closed = true;
+                    terminated = true;
+                    closed = true; // FakeTail 级透传标志(server close 断言面)
                 }
             };
         }

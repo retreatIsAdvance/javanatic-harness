@@ -43,20 +43,28 @@ public interface SessionTail {
     /** 跟随读面游标:位置推进式只读,零写、零锁、零修复。 */
     interface Follower extends AutoCloseable {
 
-        /** 会话头(open 时读一次;header 由 backfill 一次写成、之后不改)。 */
+        /** 会话头(open 时读一次;header 由 backfill 一次写成、之后不改)。
+         *  close 后调用抛 {@link IllegalStateException}(fail loud,见 {@link #close()})。 */
         SessionHeader header();
 
         /**
          * 下一批新事件:仅 '\n' 终止的完整行;无新内容返回空列表;
          * 末行不完整＝尚不可用(不交付、不抛,下轮再读)。空行跳过(load 同款,
          * 不占 seq)。交付事件的 seq 从 0 起严格连续(跳号 fail loud)。
+         * close 后调用抛 {@link IllegalStateException}(不静默返回空)。
          *
          * @return 自上次交付位置以来的全部新事件(可为空)
          * @throws IllegalStateException 日志破损(seq 跳号或不可忽略的未知类型)
+         *         或游标已 {@link #close() close}
          */
         List<SessionEvent> nextEvents() throws IOException;
 
-        /** 丢弃游标(无持久资源;AutoCloseable 为 W3 长驻消费面预留的对称形状)。 */
+        /**
+         * 终结游标(停 2 赋义):幂等;关闭后 {@link #header()} 与 {@link #nextEvents()}
+         * 抛 {@link IllegalStateException}——fail loud,不静默返回空/旧头。jsonl
+         * 游标无持久资源可释放,赋义是语义终结:W3 长驻 server 消费面以「关后拒读」
+         * 回收 tail 资源(R3 收口语义)。
+         */
         @Override
         void close();
     }

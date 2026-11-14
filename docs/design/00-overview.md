@@ -195,7 +195,7 @@ Kotlin 的 `sealed class` + `when` 确实更优雅，coroutines 的结构化并�
 
 ## 6. 非 target（明确不做）
 
-- **不做 Web UI**。headless runner + JSON-RPC（ACP 等价物）足够。
+- **不做远程/多租户 Web UI**。本地回环 Web UI 入 0.5 W4（无构建链单文件 vanilla JS，server 直接服务 .html，不引入 node 工具链——改判记录 [notes 0011](../../.agents/notes/0011-web-ui-non-goal-reversal.md)）；headless runner + JSON-RPC（ACP 等价物）对远程形态足够——「ACP 等价物」是形态类比依据，非控制面授权（T6）。
 - **不做 ACP/Codex/Claude Code subagent 桥接**。留 `SubagentProvider` 接口，不实现具体桥。
 - **不做 E2B 集成**。`SandboxProvider` 接口留一个 local 实现即可。
 - **不做 telemetry/OpenTelemetry**。`SessionTelemetry` 接口留空实现。

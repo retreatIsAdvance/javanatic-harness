@@ -85,7 +85,7 @@
 
 ### Out of Scope
 
-- Web UI / ACP / Codex/Claude Code subagent 桥 / E2B / SQLite / OTel / Workflow(Ralph) / 运行时热重载。
+- 远程/多租户 Web UI / ACP / Codex/Claude Code subagent 桥 / E2B / SQLite / OTel / Workflow(Ralph) / 运行时热重载。（本地回环 Web UI 入 0.5 W4，见 [notes 0011](../../.agents/notes/0011-web-ui-non-goal-reversal.md)）
 
 ## 与 dsh 的关键差异
 

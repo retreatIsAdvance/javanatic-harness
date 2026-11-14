@@ -83,6 +83,11 @@
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-workbench-tui</artifactId>
         </dependency>
+        <!-- it35 W3 serve 面(JSON-RPC wire + handler + 回环薄壳):CLI 真运行时消费 -->
+        <dependency>
+            <groupId>io.github.retreatisadvance</groupId>
+            <artifactId>harness-workbench-rpc</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-interaction-approval</artifactId>

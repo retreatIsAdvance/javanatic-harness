@@ -479,7 +479,8 @@ public final class JsonlPersistence implements SessionPersistence, SessionTail {
      * 重新打开 READ 通道读 position→EOF 即关——不持有长通道(跨平台无占用面)。
      * 无锁(不探针/不创建 {@code .writer.lock})、零写(不修复撕裂尾)、末行无
      * {@code '\n'} 终止 = 残片「尚不可用」留待下轮;交付事件 seq 与已交付计数
-     * 严格连续(与 readLoaded 同款 fail loud),空行跳过不占 seq。
+     * 严格连续(与 readLoaded 同款 fail loud),空行跳过不占 seq。close 赋义
+     * (停 2 契约):幂等语义终结,关后 header/nextEvents 抛 IllegalStateException。
      */
     private final class JsonlFollower implements SessionTail.Follower {
         private final Id<Session> id;
@@ -489,6 +490,8 @@ public final class JsonlPersistence implements SessionPersistence, SessionTail {
         private long position;
         /** 下一条应交付事件的 seq(= 已交付计数)。 */
         private long expectedSeq;
+        /** close 赋义(停 2 契约):语义终结——true 后 header/nextEvents fail loud;close 幂等。 */
+        private boolean closed;
 
         JsonlFollower(Id<Session> id, Path log, SessionHeader header) {
             this.id = id;
@@ -498,11 +501,17 @@ public final class JsonlPersistence implements SessionPersistence, SessionTail {
 
         @Override
         public SessionHeader header() {
+            if (closed) {
+                throw new IllegalStateException("follower closed for session " + id.value());
+            }
             return header;
         }
 
         @Override
         public synchronized List<SessionEvent> nextEvents() throws IOException {
+            if (closed) {
+                throw new IllegalStateException("follower closed for session " + id.value());
+            }
             if (!Files.isRegularFile(log)) {
                 return List.of(); // 尚无事件落盘(create 后未 append)
             }
@@ -556,8 +565,9 @@ public final class JsonlPersistence implements SessionPersistence, SessionTail {
         }
 
         @Override
-        public void close() {
-            // 无持久资源(通道每次调用即开即关);AutoCloseable 为 W3 长驻消费面预留
+        public synchronized void close() {
+            // 幂等语义终结(停 2 契约):无持久资源可释放,赋义 = 关后 header/nextEvents 拒读 fail loud
+            closed = true;
         }
     }
 

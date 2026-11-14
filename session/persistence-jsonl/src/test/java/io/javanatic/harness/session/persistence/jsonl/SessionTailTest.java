@@ -261,4 +261,57 @@ class SessionTailTest {
             }
         }
     }
+
+    /** close 赋义(停 2 契约):幂等——重复 close 不抛(strict-close 反模式防线,双释放路径先例同款)。 */
+    @Test
+    void closeIsIdempotent() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            loadAll(rt, root);
+            liveSession(rt).append(new TurnStart(1, 1));
+
+            try (Runtime rt2 = new Runtime()) {
+                loadAll(rt2, root);
+                SessionTail.Follower follower = open(rt2);
+                follower.close();
+                follower.close(); // 第二次 close 不抛
+            }
+        }
+    }
+
+    /** close 赋义(停 2 契约):close 后游标终结——nextEvents fail loud,不静默返回空。 */
+    @Test
+    void closeTerminatesCursorNextEventsFailsLoud() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            loadAll(rt, root);
+            liveSession(rt).append(new TurnStart(1, 1));
+
+            try (Runtime rt2 = new Runtime()) {
+                loadAll(rt2, root);
+                SessionTail.Follower follower = open(rt2);
+                assertThat(follower.nextEvents()).hasSize(1); // 关前正常
+                follower.close();
+                assertThatThrownBy(follower::nextEvents)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("closed");
+            }
+        }
+    }
+
+    /** close 赋义(停 2 契约):close 后 header 同样终结——对称面,不得悄悄回放旧头。 */
+    @Test
+    void closeTerminatesCursorHeaderFailsLoud() throws Exception {
+        try (Runtime rt = new Runtime()) {
+            loadAll(rt, root);
+            liveSession(rt).append(new TurnStart(1, 1));
+
+            try (Runtime rt2 = new Runtime()) {
+                loadAll(rt2, root);
+                SessionTail.Follower follower = open(rt2);
+                follower.close();
+                assertThatThrownBy(follower::header)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("closed");
+            }
+        }
+    }
 }

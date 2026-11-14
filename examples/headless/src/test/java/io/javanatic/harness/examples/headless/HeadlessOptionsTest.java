@@ -287,4 +287,75 @@ class HeadlessOptionsTest {
         assertThat(HeadlessMain.USAGE).contains("--session=", "--session-view=",
             "只读检视", "续跑写侧");
     }
+
+    /** it35 W3 --serve/--port:词表(缺省 8787)+ 显式端口 + 缺省空位。 */
+    @Test
+    void serveFlagParsesWithDefaultPort() {
+        HeadlessMain.RunnerOptions bare = HeadlessMain.parse(new String[] {"--serve"});
+        assertThat(bare.serve()).isTrue();
+        assertThat(bare.servePort()).isEmpty();
+        HeadlessMain.RunnerOptions withPort =
+            HeadlessMain.parse(new String[] {"--serve", "--port=9000"});
+        assertThat(withPort.serve()).isTrue();
+        assertThat(withPort.servePort()).hasValue(9000);
+        assertThat(HeadlessMain.DEFAULT_SERVE_PORT).isEqualTo(8787);
+    }
+
+    /** --port 词表:1-65535(port=0 是测试/取证面,CLI 不收)+ 需与 --serve 同用(--image 同款)。 */
+    @Test
+    void portFlagRejectsOutOfRangeAndRequiresServe() {
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--port=0"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--port");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--port=65536"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--port");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--port=-1"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--port");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--port=wat"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--port");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--port=9000"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--serve");
+    }
+
+    /** --serve 互斥矩阵:一次只做一件事(同 --workbench 口径);--follow 经 --workbench 配对传导拦截。 */
+    @Test
+    void serveFlagMutexMatrix() {
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"任务", "--serve"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("任务文本");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--resume=s1"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--resume");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--verify"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--verify");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--sessions"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--sessions");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--session=s1"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--session");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--session-view=turns"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            // 派生断言钉 serve 特有词面:该组合另被「--session-view 需与 --session 同用」影子
+            // 拦截,泛词面 --session-view 会让摘除 serve 互斥检查的突变漏红
+            .hasMessageContaining("--serve 与 --session-view 互斥");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--workbench"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--workbench");
+        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--follow"}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("--workbench");
+    }
+
+    /** --help 一眼钉死 serve 面:用法段 + flags 段 + 缺省端口 + 回环语义。 */
+    @Test
+    void usageListsServeContract() {
+        assertThat(HeadlessMain.USAGE).contains("--serve", "--port=", "8787", "127.0.0.1",
+            "无 key 可跑");
+    }
 }

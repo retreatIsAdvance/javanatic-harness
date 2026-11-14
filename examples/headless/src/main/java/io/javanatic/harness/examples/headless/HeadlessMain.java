@@ -47,6 +47,8 @@ import io.javanatic.harness.tools.ToolDefinition;
 import io.javanatic.harness.tools.ToolRegistry;
 import io.javanatic.harness.workbench.projection.SessionProjection;
 import io.javanatic.harness.workbench.projection.SessionViews;
+import io.javanatic.harness.workbench.rpc.RpcHttpServer;
+import io.javanatic.harness.workbench.rpc.WorkbenchRpc;
 import io.javanatic.harness.workbench.tui.TermIo;
 import io.javanatic.harness.workbench.tui.WorkbenchApp;
 import io.javanatic.harness.workbench.tui.WorkbenchSource;
@@ -78,6 +80,7 @@ import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -115,6 +118,9 @@ public final class HeadlessMain {
     /** 工作台轮询节拍（毫秒）：跟随态 tail poll 与端子输入读等待共用（检视态同节拍自刷新）。 */
     private static final int WORKBENCH_POLL_MILLIS = 100;
 
+    /** `--serve` 缺省端口（停 1 钉死 8787；`--port=` 覆盖）。 */
+    static final int DEFAULT_SERVE_PORT = 8787;
+
     /** `--help` 文本。 */
     static final String USAGE = """
         Javanatic Harness headless runner —— 一次性任务与交互模式(REPL)
@@ -135,6 +141,9 @@ public final class HeadlessMain {
                                                 (需真 TTY;无 key 可跑)
           jh --sessions[=<N>]                  列举会话(id/活动时间/事件数/写者状态/cwd;
                                                 无 key 可跑;续跑/检视用行内 id)
+          jh --serve [--port=<N>]              本地回环 JSON-RPC server(只读工作台面:
+                                                仅 127.0.0.1,缺省 8787;无 key 可跑;
+                                                Ctrl-C 退出)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1;
                                                 通过时 stdout 打印 07 §6 治理摘要)
           jh --version                         打印版本串(如 0.2.0;exit 0)
@@ -170,6 +179,10 @@ public final class HeadlessMain {
           --workbench               全屏只读工作台(--session 必配;与任务文本 / --resume /
                                     --verify / --sessions / --session-view 互斥;需真 TTY)
           --follow                  工作台跟随态:流式读面 live tail(--workbench 必配)
+          --serve                  本地回环 JSON-RPC server(只读工作台面;仅绑定 127.0.0.1;
+                                    无 key 可跑;与任务文本 / --resume / --verify / --sessions /
+                                    --session / --session-view / --workbench 互斥)
+          --port=<N>               server 端口(1-65535;缺省 8787;仅与 --serve 同用)
           --provider=<名>            厂商名(缺省 deepseek)
           --model=<名>               模型(缺省 deepseek-chat)
           --base-url=<url>           OpenAI 兼容端点(缺省 https://api.deepseek.com)
@@ -200,7 +213,7 @@ public final class HeadlessMain {
           1  --verify 违规
           2  用法错误 / 缺少 API key / --workbench 无真 TTY
           3  任务失败(厂商错误 / 守卫或预算超限 / --resume 或 --session 的会话不存在或
-             写者锁冲突;原因在 stderr)
+             写者锁冲突 / --serve 端口占用;原因在 stderr)
           4  任务被取消(REPL 路径不适用:退出码 0)
           5  等待人工答复(模型提问停轮;stdout = 提问文本,答复 = --resume=<id> "答复文本")
         契约:成功有结果 / 失败为空 / 等待答复有提问——失败的 stdout 为空,诊断(会话 id、事件
@@ -243,7 +256,7 @@ public final class HeadlessMain {
                          String resume, boolean docker, String image, Path workspace, String approval,
                          long budget, boolean help, boolean version, OptionalInt sessions,
                          OptionalInt approvalTimeout, String session, String sessionView,
-                         boolean workbench, boolean follow) {
+                         boolean workbench, boolean follow, boolean serve, OptionalInt servePort) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -337,6 +350,8 @@ public final class HeadlessMain {
         String sessionView = null;
         boolean workbench = false;
         boolean follow = false;
+        boolean serve = false;
+        OptionalInt servePort = OptionalInt.empty();
         for (String arg : args) {
             if ("--help".equals(arg) || "-h".equals(arg)) {
                 help = true;
@@ -386,6 +401,10 @@ public final class HeadlessMain {
                 workbench = true;
             } else if ("--follow".equals(arg)) {
                 follow = true;
+            } else if ("--serve".equals(arg)) {
+                serve = true;
+            } else if (arg.startsWith("--port=")) {
+                servePort = OptionalInt.of(portInRange(valueOf(arg)));
             } else if (arg.startsWith("--session-view=")) {
                 sessionView = valueOf(arg);
                 if (!SESSION_VIEWS.contains(sessionView)) {
@@ -421,6 +440,33 @@ public final class HeadlessMain {
         }
         if (follow && !workbench) {
             throw new IllegalArgumentException("--follow 需与 --workbench 同用（跟随态是工作台的一种模式）");
+        }
+        if (servePort.isPresent() && !serve) {
+            throw new IllegalArgumentException("--port 需与 --serve 同用（端口只对 server 有意义）");
+        }
+        if (serve) {
+            // server 是只读旁路:与"要跑什么"/其他旁路同用即为用法错误(不猜意图)
+            if (task != null) {
+                throw new IllegalArgumentException("--serve 与任务文本互斥（server 只读，不执行任务）");
+            }
+            if (resume != null) {
+                throw new IllegalArgumentException("--serve 与 --resume 互斥（服务与续跑请分开运行）");
+            }
+            if (verify) {
+                throw new IllegalArgumentException("--serve 与 --verify 互斥（一次只做一件事）");
+            }
+            if (sessions.isPresent()) {
+                throw new IllegalArgumentException("--serve 与 --sessions 互斥（一次只做一件事）");
+            }
+            if (session != null) {
+                throw new IllegalArgumentException("--serve 与 --session 互斥（服务与检视请分开运行）");
+            }
+            if (sessionView != null) {
+                throw new IllegalArgumentException("--serve 与 --session-view 互斥（服务面不带检视视图）");
+            }
+            if (workbench) {
+                throw new IllegalArgumentException("--serve 与 --workbench 互斥（一次只做一件事）");
+            }
         }
         if (workbench) {
             // 工作台是只读旁路:与"要跑什么"/其他旁路同用即为用法错误(不猜意图)
@@ -473,7 +519,7 @@ public final class HeadlessMain {
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
             apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, version,
-            sessions, approvalTimeout, session, sessionView, workbench, follow);
+            sessions, approvalTimeout, session, sessionView, workbench, follow, serve, servePort);
     }
 
     private static String valueOf(String flag) {
@@ -522,6 +568,20 @@ public final class HeadlessMain {
         }
         if (parsed < 0) {
             throw new IllegalArgumentException("--approval-timeout 必须是非负整数(秒),收到: " + value);
+        }
+        return parsed;
+    }
+
+    /** --port=<N> 契约:1-65535(port=0 是测试/取证面,CLI 不收)。 */
+    private static int portInRange(String value) {
+        int parsed;
+        try {
+            parsed = Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("--port 需为 1-65535 整数,收到: " + value, e);
+        }
+        if (parsed < 1 || parsed > 65535) {
+            throw new IllegalArgumentException("--port 需为 1-65535 整数,收到: " + value);
         }
         return parsed;
     }
@@ -616,6 +676,10 @@ public final class HeadlessMain {
             if (options.session() != null) {
                 // 只读检视旁路:不进 API key 检查、不建 agent、零写路径——呈现落盘投影
                 return runSessionView(rt.root(), options.session(), options.sessionView(), out);
+            }
+            if (options.serve()) {
+                // 只读旁路:不进 API key 检查、不建 agent——回环 server 消费投影/流式读面
+                return runServe(rt.root(), options.servePort().orElse(DEFAULT_SERVE_PORT), out, err);
             }
             String apiKey = options.resolvedApiKey();
             if (apiKey == null) {
@@ -1130,6 +1194,36 @@ public final class HeadlessMain {
             + "）；请在本机终端直接运行,勿重定向或管道化";
     }
 
+    /**
+     * --serve 本地回环 JSON-RPC server（只读工作台面,无 key 可跑）:boot 装配双 seam
+     * （SessionPersistence/SessionTail 由 persistence-jsonl 既有行提供）→ 回环监听 →
+     * stdout 地址行 → 阻塞至 SIGINT 首按（close + exit 0;再按 halt(130) 逃生门）。
+     * 端口占用 bind 失败是 CLI 失败面（stderr 指引,exit 3——写者锁冲突同族）;其余 IO
+     * 异常原样上抛。ephemeral（port=0）是测试/取证面,CLI parse 已拒收。
+     */
+    static int runServe(Scope root, int port, PrintStream out, PrintStream err) throws Exception {
+        RpcHttpServer server = new RpcHttpServer(new WorkbenchRpc(
+            root.require(SessionPersistence.KEY), root.require(SessionTail.KEY)));
+        try {
+            server.start(port);
+        } catch (IOException e) {
+            err.println("监听 127.0.0.1:" + port + " 失败（端口被占用）: " + e.getMessage()
+                + "；换 --port=<N> 或结束占用进程后重试");
+            return 3;
+        }
+        ServeShutdown shutdown = new ServeShutdown(server::close,
+            code -> java.lang.Runtime.getRuntime().halt(code));
+        Runnable restoreSigint = bindSigint(shutdown::onSignal);
+        try {
+            out.println("JSON-RPC server 127.0.0.1:" + server.address().getPort()
+                + "（只读工作台面；Ctrl-C 退出）");
+            shutdown.await();
+            return 0;
+        } finally {
+            restoreSigint.run();
+        }
+    }
+
     /** 未知 --resume id 的诊断 + 恢复指引（stderr;id 原样回显,可用 id 在 --sessions）。 */
     static String unknownSessionText(String sessionId) {
         return unknownSessionText(sessionId, "--resume=<id>");
@@ -1287,8 +1381,13 @@ public final class HeadlessMain {
 
     /** 绑定 SIGINT → 策略;返回还原器(恢复上一个 handler)。信号不可用(-Xrs 等)降级并告警。 */
     private static Runnable bindSigint(SigintPolicy policy) {
+        return bindSigint(policy::onSignal);
+    }
+
+    /** 绑定 SIGINT → 动作(简单面:--serve 停机裁决);返回还原器。信号不可用降级并告警。 */
+    private static Runnable bindSigint(Runnable onSignal) {
         try {
-            SignalHandler previous = Signal.handle(new Signal("INT"), signal -> policy.onSignal());
+            SignalHandler previous = Signal.handle(new Signal("INT"), signal -> onSignal.run());
             return () -> Signal.handle(new Signal("INT"), previous);
         } catch (IllegalArgumentException | UnsupportedOperationException e) {
             LOG.log(Level.WARNING, "SIGINT 处理不可用（Ctrl-C 将直杀进程）: {0}", e.getMessage());
@@ -1352,6 +1451,41 @@ public final class HeadlessMain {
         /** 行循环轮询:静止期的 Ctrl-C 请求退出。 */
         boolean exitRequested() {
             return exitRequested.get();
+        }
+    }
+
+    /**
+     * --serve 停机裁决(runServe 期间绑定;策略与 Signal 绑定分离,测试同步驱动本类)。
+     * 首按 Ctrl-C → close + 解除等待(exit 0);同一服务期间再按 → halt(130) 逃生门
+     * (close 未收敛——挂住的请求环等)。Signal Dispatcher 单线程访问。
+     */
+    static final class ServeShutdown {
+
+        private final Runnable close;
+        private final IntConsumer halt;
+        private final CountDownLatch stopped = new CountDownLatch(1);
+        private final AtomicBoolean closing = new AtomicBoolean();
+
+        ServeShutdown(Runnable close, IntConsumer halt) {
+            this.close = close;
+            this.halt = halt;
+        }
+
+        void onSignal() {
+            if (closing.getAndSet(true)) {
+                halt.accept(130); // 首按未收敛:强退
+                return;
+            }
+            try {
+                close.run();
+            } finally {
+                stopped.countDown();
+            }
+        }
+
+        /** 阻塞至首按关闭;解除后立即返回(InterruptedException 原样上抛)。 */
+        void await() throws InterruptedException {
+            stopped.await();
         }
     }
 
