@@ -1,0 +1,144 @@
+{
+  "root": "/Users/abel_yang/study/deepseek/javanatic-harness",
+  "layer": "full",
+  "base": "HEAD",
+  "module": null,
+  "started": "2026-11-14T09:10:59.729539+00:00",
+  "exit": 0,
+  "steps": [
+    {
+      "label": "git-root",
+      "command": [
+        "git",
+        "rev-parse",
+        "--show-toplevel"
+      ],
+      "exit": 0,
+      "log": "01-git-root.txt"
+    },
+    {
+      "label": "git-base",
+      "command": [
+        "git",
+        "rev-parse",
+        "--verify",
+        "--end-of-options",
+        "HEAD^{tree}"
+      ],
+      "exit": 0,
+      "log": "02-git-base.txt"
+    },
+    {
+      "label": "git-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "--revs-only",
+        "HEAD"
+      ],
+      "exit": 0,
+      "log": "03-git-head.txt"
+    },
+    {
+      "label": "diff-check-worktree",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "8ec863600ad3b3e61918e167bf550a1fad47464f",
+        "--"
+      ],
+      "exit": 0,
+      "log": "04-diff-check-worktree.txt"
+    },
+    {
+      "label": "paths-worktree",
+      "command": [
+        "git",
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "-z",
+        "8ec863600ad3b3e61918e167bf550a1fad47464f",
+        "--"
+      ],
+      "exit": 0,
+      "log": "05-paths-worktree.txt"
+    },
+    {
+      "label": "diff-check-index",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check",
+        "8ec863600ad3b3e61918e167bf550a1fad47464f",
+        "--"
+      ],
+      "exit": 0,
+      "log": "06-diff-check-index.txt"
+    },
+    {
+      "label": "paths-index",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only",
+        "--no-renames",
+        "-z",
+        "8ec863600ad3b3e61918e167bf550a1fad47464f",
+        "--"
+      ],
+      "exit": 0,
+      "log": "07-paths-index.txt"
+    },
+    {
+      "label": "paths-untracked",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "exit": 0,
+      "log": "08-paths-untracked.txt"
+    },
+    {
+      "label": "maven-version",
+      "command": [
+        "/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn",
+        "-v"
+      ],
+      "exit": 0,
+      "log": "09-maven-version.txt"
+    },
+    {
+      "label": "validate",
+      "command": [
+        "/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn",
+        "-B",
+        "-q",
+        "validate"
+      ],
+      "exit": 0,
+      "log": "10-validate.txt"
+    },
+    {
+      "label": "package",
+      "command": [
+        "/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn",
+        "-B",
+        "-q",
+        "package"
+      ],
+      "exit": 0,
+      "log": "11-package.txt"
+    }
+  ],
+  "base_tree": "8ec863600ad3b3e61918e167bf550a1fad47464f",
+  "head": "d6f3fd01bd0d648349be2180b7d0629a3f9d1ea6",
+  "changed_files": [],
+  "finished": "2026-11-14T09:15:06.601261+00:00"
+}
