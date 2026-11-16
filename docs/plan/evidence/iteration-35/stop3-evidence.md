@@ -1,6 +1,6 @@
 # it35 停 3 真机验收证据档（2026-11-14）
 
-必验清单六项逐项取证。状态：item 1–3 已取证、item 5（收口批）已闭环（S5 收口证据：verify-stop full 层 EXIT=0 + 183 XML = 1456/0/0/31 + keyless --verify 34/41/0 + consumer 候选腿失败项 0）、item 6（用户检视实录）已闭环（2026-11-14 用户完整轮）；item 4（CI）随 push 批。
+必验清单六项逐项取证。状态：item 1–3 已取证、item 5（收口批）已闭环（S5 收口证据：verify-stop full 层 EXIT=0 + 183 XML = 1456/0/0/31 + keyless --verify 34/41/0 + consumer 候选腿失败项 0）、item 6（用户检视实录）已闭环（2026-11-14 用户裁决：六项全过，三伪影记档见 S3）；item 4（CI）push 批授权在案（首轮红于 lsp 时序 flake，取证后重推；四腿核验与 run 号回填随批）。
 
 ## S1 jlink 构建与镜像面（item 1 前置）
 
@@ -29,6 +29,22 @@
   - `sessionViews` → 六组件全在场：header（`createdAt` / `id` / `manifest` / `parentSession` / `seedLength` / `version`）、`turns` 1 轮、`tools` 5 条、`usage`（`perTurn` / `total`）、`timeline` 1593 条、`messages` 14 条。
   - `sessionTail` `{lastSeq: -1}` → `events` 1593 条（seq 0..1592 连续）、`nextSeq: 1592`。
 - SIGINT 收口：serve 启动与 Ctrl-C 在另一终端执行未随实录；收口证据双面——用户贴回 `lsof -nP -iTCP:8787 -sTCP:LISTEN` **空输出**（端口已释放），我复核同刻实况（`lsof` 8787 零监听、`pgrep 'jh --serve'` 零进程）。serve 为用户按 runbook 所起所停：我停止后台 serve 后 8787 无其他监听者，三条 curl 命中即用户所起之 serve；收口后零残留。
+
+## S3-补 用户裁决实录（2026-11-14）——六项全过（CI 待）
+
+用户亲手修正轮裁决通过，字段级证据（与 S2 我跑面 + 上文实录互补）：
+
+- `workbench/sessionsList`（真实 home）→ 真实会话全字段：id / createdAt / lastActivity / eventCount / cwd / busy。
+- `workbench/sessionViews`（`session`+`view`）→ 子代会话 header + **完整 manifest**（组合行可见——CompositionManifest 全程随账）。
+- `workbench/sessionTail`（`session`+`lastSeq`+`max`）→ 信封级事件渲染（seq / time / type / recognized / detail）。
+- **B29 非回环**（用户面）→ curl `000`——LAN 接口连接层即拒，根本没监听（我跑面同面为 EXIT=7——连接拒绝的两种退出码表现，结论一致）。
+- SIGINT（JVM 定向）→ 干净关停。
+
+三伪影如实记档（均为执行伪影，非产品缺陷）：
+
+1. `user.home` 重定向致空会话根——用户旧习惯（隔离运行目录），修正后指向真实 home 即全字段实录。
+2. 参数名猜错 → `-32602 invalid params`——恰好成为**错误翻译层的活体证明**（负例真机工作）。
+3. SIGINT 打到 sh 包装壳——it18 已知坑原文，非产品缺陷：e2e 在进程内测信号处理，包装壳坑只影响 shell 拿 `$!` 的人；JVM 定向信号即干净关停。
 
 ## S4 现场探针补录（2026-11-14，对我跑面后台 serve 复证落盘）
 
