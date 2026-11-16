@@ -1,6 +1,6 @@
 # it35 停 3 真机验收证据档（2026-11-14）
 
-必验清单六项逐项取证。状态：item 1–3 已取证、item 5（收口批）已闭环（S5 收口证据：verify-stop full 层 EXIT=0 + 183 XML = 1456/0/0/31 + keyless --verify 34/41/0 + consumer 候选腿失败项 0）、item 6（用户检视实录）已闭环（2026-11-14 用户裁决：六项全过，三伪影记档见 S3）；item 4（CI）push 批授权在案（首轮红于 lsp 时序 flake，取证后重推；四腿核验与 run 号回填随批）。
+必验清单六项逐项取证。状态：item 1–3 已取证、item 5（收口批）已闭环（S5 收口证据：verify-stop full 层 EXIT=0 + 183 XML = 1456/0/0/31 + keyless --verify 34/41/0 + consumer 候选腿失败项 0）、item 6（用户检视实录）已闭环（2026-11-14 用户裁决：六项全过，三伪影记档见 S3）；item 4（CI）已闭环（2026-11-16 push 批落地 + CI run 43800071871 四腿全绿，见 S6）。
 
 ## S1 jlink 构建与镜像面（item 1 前置）
 
@@ -59,3 +59,14 @@
 - keyless `--verify` 命令 EXIT=0：[12-verify-keyless.txt](stop3-closeout/12-verify-keyless.txt)——`composition: 34 rows, 41 discovered, 0 unreferenced`（停 2 基线不变——零 bundle 行、零新配置键的预期面）。
 - consumer 候选腿命令 EXIT=0：[13-consumer-candidate.txt](stop3-closeout/13-consumer-candidate.txt)——候选 7 项 ok（工作树 install → 隔离仓 / 示例编译 / 运行类路径 / 治理自证运行 / 自证通过 / 自有工具可见 / 自有工具可执行）+ 四负例全按预期拒绝（坏版本 / 去显式版本 / 坏治理配置 / 生产档撞 AUTO 审批）；汇总**失败项：0**。
 - 同步面 grep 零残留（T2 改判 + 其余）：「67→68」仅存订正登记文本；「不做 Web UI」仅存决策记录 0011 与 T2 裁决行叙述，设计文档零残留。
+
+## S6 push 批 + CI 四腿（item 4 必验；2026-11-16）
+
+**闸**（用户执行条件 1）：单场跑 `mvn -B -q package` GATE_EXIT=0（2026-11-16 11:11，15 分钟负载 5.39 窗口；跑闸期间无并行构建/推送轮换）。
+
+**推送落地**：探活-即刻推送一体脚本（cap 4 轮、meta 全表每轮并入、结构判红——`BUILD FAILURE` 即停不轮换）一轮落地——钉 `140.82.113.3`（HTTP/1.1 + curloptResolve、stdin=/dev/null），pre-push 全量构建绿，`026c397..c900640 master -> master`（11 笔：it35 收口批 + S3-补随批）；gh api 实核 REMOTE=c9006400b3351ecf16d7eca0704c191b557a8ba0 == LOCAL。前序失败轮（钉 135.235.149.144 connect 75s 超时、112.3 钩子构建跑完后 transfer 段 curl 52 Empty reply + send-pack 断）均为网络翻烧饼；传输失败尾部出现的「Everything up-to-date」误导行致脚本误提前退出——修复为当场 gh api 实核不符继续轮换（pits 半句「推送脚本按结构判红，不按输出词面」同源）。
+
+**CI run `43800071871`（2026-11-16T03:45Z 起）四腿全绿**：windows 9m17s / windows-arm 9m33s / macos 6m2s / build 7m11s；release-attach skipped（非 tag 常态）。用户侦察跑预期「Windows 双腿首跑 `HeadlessServeTest` 端口夹具（`SO_REUSEADDR=false` Windows 语义）与 rpc 模块可能首红」**未发生**——双腿 `Build and test` 一步首跑即绿。
+
+- 步级取证（jobs API 免鉴权端点；日志 zip 需 admin 权限 403，按 2026-09-29 先例用步级成败）：windows（job 133077909155）与 windows-arm（job 133077909241）各 12 步全 success——含 Build and test / Pre-flight sandbox probe（windows-acl）/ Assert the windows-acl e2e leg really ran / Smoke jlink image / Archive smoke；build（job 133077909492）15 步全 success——含 bwrap + landlock 双探针 / Archive smoke in a clean container / Verify external consumer sample（candidate 腿）；macos（job 133077909394）9 步全 success。
+- lsp flake 挂账观察：本 run 四腿绿、两用例未再现——观察账保持，不触发 it29 预算手术（current-state 挂账行已补记）。

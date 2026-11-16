@@ -1,4 +1,4 @@
-# 迭代 35 — W3 JSON-RPC server（状态：停 3 已验收（2026-11-14 证据档 [stop3-evidence.md](evidence/iteration-35/stop3-evidence.md)）——必验六项本地五项全过，CI 四腿随 push 批；四确认已裁、T1–T6 全批；T3 两处事实修正 / T6 论据补强；三条停 1 设计点登记）
+# 迭代 35 — W3 JSON-RPC server（状态：停 3 已验收 + 关账（2026-11-16 证据档 [stop3-evidence.md](evidence/iteration-35/stop3-evidence.md)：必验六项全过 + push 批 11 笔落地 + CI run 43800071871 四腿全绿——W3 收官）；四确认已裁、T1–T6 全批；T3 两处事实修正 / T6 论据补强；三条停 1 设计点登记）
 
 基线：it34 已关账（0.5 W2 TUI 工作台落地），master `026c397`，工作版本 `0.5.0-SNAPSHOT`。0.5 路线（[总体计划](../design/README.md#phased-evolution-plan)）：W1 事件投影与查询（it33）→ W2 TUI 工作台（it34）→ **W3 JSON-RPC server（B29 预登记：仅 127.0.0.1 回环）** → W4 本地 Web UI（无构建链单文件 vanilla JS）。
 
@@ -49,7 +49,7 @@
 |---|---|---|
 | 停 1：承载契约 + wire + 绑定面 | `workbench/rpc` 契约（方法面三件 / 错误分档 / JSON-RPC 帧 / 响应预算）+ `jdk.httpserver` 绑定面（恒 127.0.0.1 构造面）+ B29 硬线校验（响应预算 B 行登记，四件套）+ 停 1 设计点三条（游标机制 / 端口占用失败面 / Follower 生命周期）钉死 | 已放行（2026-11-13 裁决归档 [stop1-verdict.md](evidence/iteration-35/stop1-verdict.md)；提交 `359c10c`） |
 | 停 2：消费面 + CLI + 装配面 | 五视图 / tail / 清单复用接线 + `Follower.close()` 赋义 + `--serve`（HeadlessOptions 词表 / 互斥 / usage）+ headless 依赖 + dist/jh moditect 两行（含 jdk.httpserver 回镜像）+ 同步面（02/00/README/AGENTS/current-state/boundary-register/notes 0011）；携带五项：--serve 接线（互斥矩阵 + --help + 12 §6）、B29 转正、B35 登记、moditect 清单 + 四件套自问、Follower.close 赋义 | 已放行（2026-11-14 裁决归档 [stop2-review-verdict.md](evidence/iteration-35/stop2-review-verdict.md)；packet [stop2-review-packet.md](evidence/iteration-35/stop2-review-packet.md)，提交 `bb711c7`） |
-| 停 3：真机验收 + 收口 | jlink 镜像 `--serve` 实录（curl 三方法 + keyless 面）+ **真 jsonl 后端三方法 curl 实测（必验——停 1 放行附条件升格）+ 用户检视实录（用户跑）** + B29 硬线证据（监听地址实录 + 非回环访问拒绝）+ CI 四腿 + 验收清单全勾 + 收口批 | 已验收（2026-11-14 [stop3-evidence.md](evidence/iteration-35/stop3-evidence.md)：必验六项本地五项全过，CI 四腿随 push 批） |
+| 停 3：真机验收 + 收口 | jlink 镜像 `--serve` 实录（curl 三方法 + keyless 面）+ **真 jsonl 后端三方法 curl 实测（必验——停 1 放行附条件升格）+ 用户检视实录（用户跑）** + B29 硬线证据（监听地址实录 + 非回环访问拒绝）+ CI 四腿 + 验收清单全勾 + 收口批 | 已验收 + 关账（2026-11-16 [stop3-evidence.md](evidence/iteration-35/stop3-evidence.md)：必验六项全过——push 批 11 笔落地 + CI run 43800071871 四腿全绿） |
 
 停 1/停 2 出包按 review packet 仪式（首行自问「新增模块 / base 加行」——本迭代新增模块 `workbench/rpc`、零 base 行（headless 直依赖，it34 tui 先例）；四件套中「META-INF/services 双通道」不适用（无 Plugin），其余照勾）。
 
@@ -60,5 +60,5 @@
 - [x] 停 3 真机验收：jlink `--serve` curl 三方法闭环 + keyless 面 + **真 jsonl 后端三方法 curl 实测（必验——停 1 放行附条件升格）+ 用户检视实录（用户跑）** + B29 硬线证据（[stop3-evidence.md](evidence/iteration-35/stop3-evidence.md) S1–S4：我跑面 + 用户完整轮实录 + B29 非回环 EXIT=7 + 探针补录）
 - [x] validate EXIT=0 + 全量 package EXIT=0（门禁）（[stop3-closeout](evidence/iteration-35/stop3-closeout/summary.txt)：verify-stop full 层 EXIT=0；surefire XML 求和 183 XML = 1456/0/0/31，mtime 窗口 2026-11-14 17:11–17:16——全盘 185 减 2 残留旧 XML：AskVisibilityProbe（Nov 6，类已不存在）与 IZProbeTest（Oct 13，it34 停 3 复审点名））
 - [x] keyless `--verify` 计数不变（34/41/0——零 bundle 行、零新配置键的预期面）（[12-verify-keyless.txt](evidence/iteration-35/stop3-closeout/12-verify-keyless.txt) EXIT=0）
-- [ ] CI 四腿全绿（push 授权后）+ run 号回填
+- [x] CI 四腿全绿 + run 号回填（2026-11-16 push 批 `026c397..c900640` 11 笔落地，钉 140.82.113.3 一体脚本一轮过；run `43800071871`：windows 9m17s / windows-arm 9m33s / macos 6m2s / build 7m11s 全绿——Windows 双腿 rpc 模块首跑即绿，用户预期端口夹具首红未发生；release-attach skipped 属非 tag 常态；步级取证见 [stop3-evidence.md](evidence/iteration-35/stop3-evidence.md) S6）
 - [x] 同步面 grep 零旧措辞残留（T2 改判 + 其余）（「67→68」仅存订正登记文本；「不做 Web UI」仅存决策记录 0011 与 T2 裁决行叙述，设计文档零残留）
