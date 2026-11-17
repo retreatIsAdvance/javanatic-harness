@@ -1,0 +1,13 @@
+# SIGINT 复验轮（python subprocess restore_signals=True 起 serve）
+wrapper PID=68996
+banner: JSON-RPC server 127.0.0.1:8787（只读工作台面；Ctrl-C 退出）
+JVM PID=68998（pgrep -P 68996）
+RPC dump 行数=48 | CLI --dump 行数=48
+逐字节同源: False
+RPC dump disabled 注解行数=7
+RPC dump masked(****)行数=1
+kill -INT 68998（JVM 定向；SIGINT 已还原 SIG_DFL 起）
+wrapper exit=0（耗时 0.02s）
+JVM 残留: 无
+端口释放: lsof EXIT=1（1 = 0 行 = 已释放）
+serve2.log 尾行: UI: http://127.0.0.1:8787/（浏览器打开）

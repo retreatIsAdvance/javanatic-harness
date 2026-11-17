@@ -1,0 +1,152 @@
+# it36 停 3 我跑面探针（2026-11-17 14:10:03 +0800）
+# 命令均自仓库根 /Users/abel_yang/study/deepseek/javanatic-harness
+
+## 起 serve：env -u DEEPSEEK_API_KEY dist/jh/target/jlink-image/bin/jh --serve &
+SERVE_PID=60823
+
+## stdout banner（/tmp/it36-s3-serve.log 全文）
+JSON-RPC server 127.0.0.1:8787（只读工作台面；Ctrl-C 退出）
+UI: http://127.0.0.1:8787/（浏览器打开）
+
+## 进程状态：lsof -nP -iTCP:8787 -sTCP:LISTEN
+COMMAND   PID      USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+java    60828 abel_yang    7u  IPv6 0x13aac1eb17f51bc9      0t0  TCP 127.0.0.1:8787 (LISTEN)
+
+## B29a：LAN IP curl http://10.0.33.99:8787/
+curl: (7) Failed to connect to 10.0.33.99 port 8787 after 1 ms: Couldn't connect to server
+B29a_EXIT=7
+
+## B29b：IPv6 回环 curl http://[::1]:8787/
+curl: (7) Failed to connect to ::1 port 8787 after 0 ms: Couldn't connect to server
+B29b_EXIT=7
+
+## GET / 响应头：curl -sS -D - -o /tmp/it36-s3-get-root.html http://127.0.0.1:8787/
+HTTP/1.1 200 OK
+Date: Tue, 17 Nov 2026 06:10:04 GMT
+Content-type: text/html; charset=utf-8
+Content-length: 19307
+Cache-control: no-store
+
+GET_ROOT_EXIT=0
+body 行数: 441
+标记 grep: 1
+
+## HEAD / ：curl -sS -I http://127.0.0.1:8787/
+HTTP/1.1 200 OK
+Date: Tue, 17 Nov 2026 06:10:04 GMT
+Content-type: text/html; charset=utf-8
+Cache-control: no-store
+
+HEAD_ROOT_EXIT=0
+
+## GET /favicon.ico（应 404）
+HTTP 404
+## GET /index.html（应 404）
+HTTP 404
+## PUT /（应 405 + Allow: GET, POST）
+HTTP/1.1 405 Method Not Allowed
+Date: Tue, 17 Nov 2026 06:10:04 GMT
+Allow: GET, POST
+Content-length: 0
+
+PUT_EXIT=0
+## POST /nope（应 404）
+HTTP 404
+
+## 方法 1：workbench/sessionsList（max=5）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"workbench/sessionsList","params":{"max":5}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+total = 82 | sessions returned = 5
+   headless-1794139537162-5124 events= 1593 busy= False
+   child-del-1794139540565-516f562f events= 379 busy= False
+   child-del-1794139540565-fc83f18d events= 352 busy= False
+
+## 方法 2：workbench/sessionViews（session=headless-1789702472876-c2dd）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":2,"method":"workbench/sessionViews","params":{"session":"headless-1789702472876-c2dd"}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+六组件: ['header', 'messages', 'timeline', 'tools', 'turns', 'usage']
+header: {"version": 0, "id": "headless-1789702472876-c2dd", "createdAt": 1789702472892, "parentSession": null, "seedLength": 0, "manifest": {"rows": [{"plugin": "session-store", "config": {}}, {"plugin": "persistence-jsonl", "config": {"root": "/Users/abel_yang/.harness/sessions"}}, {"plugin": "agents", "config": {}}, {"plugin": "loop-guard", "config": {}}, {"plugin": "system-prompt", "config": {}}, {"plugin": "llm", "config": {}}, {"plugin": "llm-openai-compat", "config": {"baseUrl": "https://api.deepseek.com", "apiKeyEnv": "DEEPSEEK_API_KEY", "name": "deepseek"}}, {"plugin": "approval-auto", "config": {}}, {"plugin": "tools", "config": {}}, {"plugin": "plan", "config": {"section": "Plan mode is active: research and plan only, do not execute yet. Investigate\nwith read-only tools (fs_read, fs_list; shell for inspection only) and think\nthe task through. When the plan is complete, present it with exit_plan_mode\nas markdown starting with a # heading; on approval, carry it out step by step.\nFile-effect restriction is enforced by the sandbox layer (read-only while\nplanning); this section states the discipline, the sandbox guarantees it.\n"}}, {"plugin": "sandbox-local", "config": {}}, {"plugin": "sandbox-policy", "config": {"mode": "workspace-write", "workspace": "/Users/abel_yang/jh-baseline/case09"}}, {"plugin": "fs-local", "config": {"root": "/Users/abel_yang/jh-baseline/case09"}}, {"plugin": "fs-tool", "config": {}}, {"plugin": "shell-bash-local", "config": {}}, {"plugin": "shell-tool", "config": {"workspace": "/Users/abel_yang/jh-baseline/case09", "timeoutSeconds": 60}}, {"plugin": "todo", "config": {"allowParallelInProgress": false}}, {"plugin": "commands", "config": {}}, {"plugin": "presets", "config": {}}, {"plugin": "agent-loop", "config": {}}]}}
+timeline len = 10006 | turns = 1 | messages = 100 | tools = 40
+usage.total: {"inputTokens": 847205, "outputTokens": 11004, "reasoningTokens": 0}
+timeline[0]: {"seq": 0, "time": 1789702472910, "type": "turn/start", "recognized": true, "detail": {"kind": "turn", "turn": 1, "reason": null}}
+timeline[-1].seq: 10005
+
+（views 末 seq = 10005，供 tail 游标矩阵）
+
+## 方法 3a：workbench/sessionTail（lastSeq=-1 全量）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":3,"method":"workbench/sessionTail","params":{"session":"headless-1789702472876-c2dd","lastSeq":-1}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+events len = 10006 | nextSeq = 10005
+events[0]: {"seq": 0, "time": 1789702472910, "type": "turn/start", "recognized": true, "detail": {"kind": "turn", "turn": 1, "reason": null}}
+
+## 方法 3b：workbench/sessionTail（lastSeq=10005 零增量）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":4,"method":"workbench/sessionTail","params":{"session":"headless-1789702472876-c2dd","lastSeq":10005}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+events len = 0 | nextSeq = 10005
+
+## 方法 4：workbench/compositionDump（无参）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":5,"method":"workbench/compositionDump"}' http://127.0.0.1:8787/
+RPC_EXIT=0
+dump 行数 = 48
+首行: session-store
+禁用注解行数 = 0
+masked 行数 = 1
+
+## 方法 5a：workbench/verifyComposition（合法最小 profile）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":6,"method":"workbench/verifyComposition","params":{"yaml":"name: probe-ok\npolicy: standard\nbundles: [base]\nrows: []\n"}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+{"jsonrpc": "2.0", "id": 6, "result": {"ok": true}}
+
+## 方法 5b：workbench/verifyComposition（坏 YAML——未知 bundle）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":7,"method":"workbench/verifyComposition","params":{"yaml":"name: probe-bad\npolicy: standard\nbundles: [no-such-bundle]\nrows: []\n"}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+ok = False | violations = 1
+  - 组合错误: IllegalStateException: profile references unknown bundle: no-such-bundle
+
+## 方法 5c：workbench/verifyComposition（语法破坏 YAML）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":8,"method":"workbench/verifyComposition","params":{"yaml":"name: [unclosed\n"}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+ok = False | violations = 1
+  - 组合错误: ParserException: while parsing a flow sequence
+ in 'reader', line 1, column 7:
+    name: [unclosed
+          ^
+expected ',' or ']', but got <stream end>
+ in 'reader', line 2, column 1:
+
+    ^
+
+
+## 错误码：-32601 未知方法（id 回显）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":99,"method":"workbench/nope"}' http://127.0.0.1:8787/
+RPC_EXIT=0
+{"jsonrpc": "2.0", "id": 99, "error": {"code": -32601, "message": "method not found"}}
+
+## 错误码：-32001 会话不存在（data.session 回显）
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":100,"method":"workbench/sessionViews","params":{"session":"no-such-session"}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+{"jsonrpc": "2.0", "id": 100, "error": {"code": -32001, "message": "session not found", "data": {"session": "no-such-session"}}}
+
+## 错误码：-32602 tail 游标超前
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":101,"method":"workbench/sessionTail","params":{"session":"headless-1789702472876-c2dd","lastSeq":999999}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+{"jsonrpc": "2.0", "id": 101, "error": {"code": -32602, "message": "invalid params"}}
+
+## 错误码：-32602 verifyComposition 缺 yaml
+$ curl -sS -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":102,"method":"workbench/verifyComposition","params":{}}' http://127.0.0.1:8787/
+RPC_EXIT=0
+{"jsonrpc": "2.0", "id": 102, "error": {"code": -32602, "message": "invalid params"}}
+
+## 零写面旁证
+jh-verify-composition 残留: 0
+~/.harness/profiles mtime 最新 3:
+total 0
+drwxr-xr-x@ 3 abel_yang  staff  96 Nov  8 19:58 deleg-mil
+drwxr-xr-x@ 3 abel_yang  staff  96 Oct 20 08:25 mcp-runbook
+
+## SIGINT：kill -INT 60823（JVM 定向，非包装壳）
+SERVE_EXIT=158
+端口释放复核：lsof -nP -iTCP:8787 -sTCP:LISTEN
+LSOF_AFTER_EXIT=1（1 = 0 行 = 已释放）
+
+# 探针完（2026-11-17 14:14:35 +0800）

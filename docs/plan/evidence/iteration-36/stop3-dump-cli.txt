@@ -1,0 +1,48 @@
+session-store
+persistence-jsonl {root=/Users/abel_yang/.harness/sessions}
+agents
+loop-guard
+system-prompt
+llm
+llm-openai-compat {name=deepseek, baseUrl=${env:DEEPSEEK_BASE_URL:-https://api.deepseek.com}}  (disabled: ${env:DEEPSEEK_API_KEY} == null)
+approval-auto
+approval-ask  (disabled: true)
+approval-deny  (disabled: true)
+tools
+plan {section=Plan mode is active: research and plan only, do not execute yet. Investigate
+with read-only tools (fs_read, fs_list, fs_search; shell for inspection only) and think
+the task through. Use ask_user when a plan-blocking decision belongs to the user.
+When the plan is complete, present it with exit_plan_mode
+as markdown starting with a # heading; on approval, carry it out step by step.
+File-effect restriction is enforced by the sandbox layer (read-only while
+planning); this section states the discipline, the sandbox guarantees it.
+}
+sandbox-local
+sandbox-policy {mode=workspace-write, workspace=/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-headless11449529413299547223}
+fs-local {root=/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-headless11449529413299547223}
+fs-tool
+shell-local
+shell-docker  (disabled: true)
+shell-tool {workspace=/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-headless11449529413299547223, timeoutSeconds=60}
+skill
+skill-local {cwd=/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-headless11449529413299547223}
+skill-tool
+mcp-registry
+mcp-stdio {servers=[]}
+mcp-http {servers=[]}
+mcp-tool {maxResultBytes=262144}
+web-fetch-http {maxBodyBytes=2097152, timeoutSeconds=30}
+web-search-deepseek {maxUses=5, baseUrl=https://api.deepseek.com/anthropic/v1, maxTokens=****, model=deepseek-v4-flash, timeoutSeconds=30, apiKeyEnv=****}  (disabled: ${env:DEEPSEEK_API_KEY} == null)
+web-tool {maxSourceChars=524288, maxOutputBytes=262144, maxResults=8}
+lsp-jdtls  (disabled: true)
+lsp-tool
+jobs-local
+jobs-tool
+delegation-local
+delegation-tool
+todo {allowParallelInProgress=false}
+ask-user
+commands
+presets
+compaction  (disabled: true)
+agent-loop {cwd=/var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/jh-headless11449529413299547223}
