@@ -1,4 +1,4 @@
-# 迭代 36 — W4 本地 Web UI（状态：四确认已裁、T1–T5 全批（2026-11-17）；停 1 出包待放行）
+# 迭代 36 — W4 本地 Web UI（状态：四确认已裁、T1–T5 全批（2026-11-17）；停 1 通过并关闭，停 2 进行中）
 
 基线：it35 已关账（0.5 W3 JSON-RPC server 收官，master `5e37062`），工作版本 `0.5.0-SNAPSHOT`。0.5 路线（[总体计划](../design/README.md#phased-evolution-plan)）：W1 事件投影与查询（it33）→ W2 TUI 工作台（it34）→ W3 JSON-RPC server（it35）→ **W4 本地 Web UI（最后一站）**。改判主体已在 it35 T2 执行完毕（[notes 0011](../../.agents/notes/0011-web-ui-non-goal-reversal.md) + [00 §6](../design/00-overview.md#6-非-target明确不做) L198 改写 + B29 转正 + README L88 同步）——W4 四确认只需验证并引用，不重裁改判本体。
 
@@ -46,7 +46,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1：静态服务 seam + 路由契约 + dump 读面 | 承载契约（GET/POST 分派、405/404 面、content-type、缓存头）+ 单文件资源加载 + 静态服务纯函数 + B29 硬线不变 + dump 读面形态（T3 拟案批后）+ 停 1 设计点三条钉死 | S2/S3 完成，出包待放行（聚焦 85/85 + validate/package EXIT=0 + M1–M5 必红复绿 + keyless 34/41/0 不变；[packet](evidence/iteration-36/stop1-review-packet.md)） |
+| 停 1：静态服务 seam + 路由契约 + dump 读面 | 承载契约（GET/POST 分派、405/404 面、content-type、缓存头）+ 单文件资源加载 + 静态服务纯函数 + B29 硬线不变 + dump 读面形态（T3 拟案批后）+ 停 1 设计点三条钉死 | 通过并关闭（2026-11-17 放行；[verdict](evidence/iteration-36/stop1-verdict.md)；备注两条已处置：计数条孤儿 XML 半句 + 停 2/3 突变落日志） |
 | 停 2：UI 单文件 + 组合编辑器 | 单文件 .html（清单/五视图/tail 轮询 vanilla JS）+ 组合编辑器（dump 展示 / 编辑 / 保存前 verify 干跑接线）+ stdout 提示行 | 待开工 |
 | 停 3：装配/同步面 + 真机验收 + 收口 | jlink 镜像（--list-modules 仍 69 + 资源进镜像取证）+ `--serve` 真机实录（浏览器打开 / 五视图 / tail 轮询 / 组合校验链——我跑面 + **用户检视实录（用户跑）**）+ B29 硬线复验 + CI 四腿 + 验收清单全勾 + 同步面（README L114/L123 更新 + grep 零残留复核）+ 收口批 | 待开工 |
 
@@ -54,7 +54,7 @@
 
 ## 验收清单（骨架，随停点细化）
 
-- [ ] 停 1 评审放行（packet + 裁决归档）
+- [x] 停 1 评审放行（packet + 裁决归档，2026-11-17）
 - [ ] 停 2 评审放行（packet + 裁决归档）
 - [ ] 停 3 真机验收：jlink `--serve` → 浏览器打开 `http://127.0.0.1:8787/` 见 UI → 会话清单 / 五视图 / tail 轮询闭环 + 组合编辑器校验链（坏组合 → verify 违规清单展示 → 好组合 → 校验通过）+ **用户检视实录（用户跑）** + B29 硬线复验（监听地址实录 + 非回环访问拒绝）
 - [ ] validate EXIT=0 + 全量 package EXIT=0（门禁）
