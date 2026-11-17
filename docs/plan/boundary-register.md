@@ -1,6 +1,6 @@
 # 边界登记表
 
-> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-11-14（it35 W3 停 2：B29 转正 + B35 新增）。
+> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-11-17（it38 W5 预登记：B36 Host/Origin 信任围栏准入条件，用户裁定）。
 >
 > 编号消歧：本表原 B4「MCP 消费结果预算」现为 `B-MCP-RESULT`；冻结历史中的旧编号仍按本映射解读。图生成器挂账保留 [it26 提案 B4](evidence/iteration-26/roadmap-diff-proposal.md#b4-capability-graph-机械化建议挂账)，与本表预算项无关。
 
@@ -72,6 +72,12 @@
 | # | 边界 | 规则 | 落地与证据 |
 |---|---|---|---|
 | B34 | core `Session.create` 空 seed 边缘 | 空事件列表 seed 触潜在 IndexOutOfBoundsException（`log.get(-1)` 形态）——**第二次现形**（首现 it30 停 2 工作日志，当时以 null-seed 绕过）。投影层 `messages()` 的 `isEmpty` 短路是**正确防御**，不视作 core 修复。**挂账不阻塞 it33**；重访条件：搭下一次触 core/session 的批或独立小修——core 修复须自带 fail-loud 测试（core/session 是稳定面） | `core/session`；`workbench/projection`（防御已实施，M5 实证） | 挂账（it33 停 1 评审裁决）；[停 1 证据](evidence/iteration-33/stop1-evidence.md) |
+
+## W5 写面准入预登记（2026-11-17 用户裁定）
+
+| # | 边界 | 规则 | 落地与证据 |
+|---|---|---|---|
+| B36 | Host/Origin 信任围栏 | **W5 写面准入条件（非 T 项候选）**：Host 头白名单 `127.0.0.1:<port>` / `localhost:<port>`（port = 实际绑定端口）+ Origin 校验拒绝跨站（Origin 存在即须同源）；**突变必红**。依据：B29 回环恒绑防网络面（远程主机连不进来），不防浏览器面——SOP 只挡读响应不挡发请求，恶意网页可从用户浏览器向回环端口发 POST；读面时代风险低，**写面一开 = 用户访问的任何网站都能驱动其 agent**。围栏是信任层非 auth 层（dsh api-request-trust 先例同口径），B29 单用户假设不变。形状输入：纯函数围栏 + dispatch 头部守卫（先于路由）；W4 T1 路由契约不变——围栏是横切前置条件，显式记契约增量不静默 | 预登记（it38 准入条件，[iteration-38](iteration-38.md)）；侦察出处 [recon-chat.md](evidence/iteration-38/recon-chat.md) Host 围栏节（基线 5badb15009）；**读面防御性回补 = it37 评估项**（0.5.0 候选携带，[iteration-37](iteration-37.md)）；实施证据待 it38 |
 
 ## 维护规则
 
