@@ -24,12 +24,16 @@ class WorkbenchRpcTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    /** 启动期注入的组合 dump 快照(String;模块图纪律——rpc 不依赖 bundle/base)。 */
+    private static final String DUMP_SNAPSHOT =
+        "approval-auto\nlsp-jdtls  (disabled: true)";
+
     private final RpcFixtures.FakePersistence persistence = new RpcFixtures.FakePersistence();
     private final RpcFixtures.FakeTail tail = new RpcFixtures.FakeTail();
 
     /** handler + wire 整链:请求体 → 响应体。 */
     private String call(String body, long maxResponseBytes) {
-        WorkbenchRpc rpc = new WorkbenchRpc(persistence, tail, maxResponseBytes);
+        WorkbenchRpc rpc = new WorkbenchRpc(persistence, tail, DUMP_SNAPSHOT, maxResponseBytes);
         return new JsonRpcWire().handle(body, rpc);
     }
 
@@ -324,6 +328,36 @@ class WorkbenchRpcTest {
 
         assertThat(response.get("result")).isNotNull();
         assertThat(response.get("error")).isNull();
+    }
+
+    // ────────── it36 停 1 compositionDump 读面(注入快照) ──────────
+
+    @Test
+    void compositionDumpReturnsInjectedSnapshot() throws Exception {
+        JsonNode result = parse(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/compositionDump\",\"id\":1}"))
+            .get("result");
+
+        assertThat(result.get("dump").asText()).isEqualTo(DUMP_SNAPSHOT);
+    }
+
+    @Test
+    void compositionDumpIgnoresParams() throws Exception {
+        JsonNode result = parse(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/compositionDump\","
+                + "\"params\":{\"session\":\"s1\"},\"id\":1}"))
+            .get("result");
+
+        assertThat(result.get("dump").asText()).isEqualTo(DUMP_SNAPSHOT);
+    }
+
+    @Test
+    void compositionDumpOversizedYieldsResponseTooLarge() throws Exception {
+        WorkbenchRpc rpc = new WorkbenchRpc(persistence, tail, "x".repeat(128), 64);
+        String out = new JsonRpcWire().handle(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/compositionDump\",\"id\":1}", rpc);
+
+        assertThat(errorCode(out)).isEqualTo("-32004");
     }
 
     // ────────── -32601 method not found(handler 是唯一生产者) ──────────

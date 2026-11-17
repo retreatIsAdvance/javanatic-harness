@@ -18,12 +18,16 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 
 /**
- * workbench/rpc 方法 handler(停 1-S2)：三方法 face 的派发与 seam 消费。
- * 构造器注入 {@link SessionPersistence} + {@link SessionTail} + 响应预算;
- * 域错误抛 {@link RpcException}(wire 层原样翻译),seam 契约异常按分档
- * 翻译(-32001/-32002/-32003,意外 IOException 兜底 -32603)。每请求
- * Follower 开→读→关闭环(close 今天空操作,停 2 赋义时即成真释放);
- * 并发请求无共享态。
+ * workbench/rpc 方法 handler：四方法 face 的派发与 seam 消费(it36 停 1
+ * 增 compositionDump 读面)。构造器注入 {@link SessionPersistence} +
+ * {@link SessionTail} + 组合 dump 快照 + 响应预算;域错误抛
+ * {@link RpcException}(wire 层原样翻译),seam 契约异常按分档翻译
+ * (-32001/-32002/-32003,意外 IOException 兜底 -32603)。每请求
+ * Follower 开→读→关闭环;并发请求无共享态。
+ *
+ * <p>模块图纪律:本模块不依赖 bundle/base——dump 文本由装配面
+ * (HeadlessMain)启动期算好作为 String 快照注入(组合启动后不变,
+ * 热重载不做 ⇒ 快照是正确形状)。
  */
 public final class WorkbenchRpc implements JsonRpcWire.Handler {
 
@@ -33,23 +37,28 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
     static final String METHOD_SESSIONS_LIST = "workbench/sessionsList";
     static final String METHOD_SESSION_VIEWS = "workbench/sessionViews";
     static final String METHOD_SESSION_TAIL = "workbench/sessionTail";
+    static final String METHOD_COMPOSITION_DUMP = "workbench/compositionDump";
 
     private static final int DEFAULT_SESSIONS_MAX = 20;
 
     private final SessionPersistence persistence;
     private final SessionTail tail;
+    private final String compositionDump;
     private final long maxResponseBytes;
 
-    public WorkbenchRpc(SessionPersistence persistence, SessionTail tail) {
-        this(persistence, tail, DEFAULT_MAX_RESPONSE_BYTES);
+    public WorkbenchRpc(SessionPersistence persistence, SessionTail tail, String compositionDump) {
+        this(persistence, tail, compositionDump, DEFAULT_MAX_RESPONSE_BYTES);
     }
 
     /**
+     * @param compositionDump 启动期组合 dump 快照(AppBoot.dump(compose(boot)) 口径)
      * @param maxResponseBytes 序列化响应字节上限(须为正;超出 → -32004,不静默截断)
      */
-    public WorkbenchRpc(SessionPersistence persistence, SessionTail tail, long maxResponseBytes) {
+    public WorkbenchRpc(SessionPersistence persistence, SessionTail tail,
+                        String compositionDump, long maxResponseBytes) {
         this.persistence = Objects.requireNonNull(persistence, "persistence");
         this.tail = Objects.requireNonNull(tail, "tail");
+        this.compositionDump = Objects.requireNonNull(compositionDump, "compositionDump");
         if (maxResponseBytes <= 0) {
             throw new IllegalArgumentException("maxResponseBytes must be positive");
         }
@@ -62,12 +71,20 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
             case METHOD_SESSIONS_LIST -> sessionsList(params);
             case METHOD_SESSION_VIEWS -> sessionViews(params);
             case METHOD_SESSION_TAIL -> sessionTail(params);
+            case METHOD_COMPOSITION_DUMP -> compositionDump();
             default -> throw new RpcException(-32601, "method not found");
         };
         if (RpcJson.sizeOf(result) > maxResponseBytes) {
             throw new RpcException(-32004, "response too large");
         }
         return result;
+    }
+
+    /** 无参读面:返回注入快照(params 忽略);预算约束在 call() 统一施加。 */
+    private JsonNode compositionDump() {
+        ObjectNode out = RpcJson.node();
+        out.put("dump", compositionDump);
+        return out;
     }
 
     private JsonNode sessionsList(JsonNode params) {

@@ -12,13 +12,17 @@ import java.util.concurrent.Executors;
 
 /**
  * W3 绑定面薄壳(B29 硬线):jdk.httpserver 恒绑 127.0.0.1 回环,构造面
- * 不收 bind 地址——编译期形状即「无 --host」;POST / → wire 派发,虚拟
- * 线程 per task;close() 停止(R3 收口)。
+ * 不收 bind 地址——编译期形状即「无 --host」;虚拟线程 per task;
+ * close() 停止(R3 收口)。
+ *
+ * <p>W4 路由重钉(it36 停 1,T1 精度):仅精确路径 {@code /} 的 GET/HEAD
+ * 服务单文件 UI({@link WorkbenchUi},text/html + no-store),其余一切
+ * GET/HEAD 404——不泛化成目录服务;POST {@code /} → wire 派发,POST 非
+ * {@code /} 404;其余方法 405(Allow: GET, POST)。
  *
  * <p>协议语义(JSON-RPC 帧、错误分档)全部归 {@link JsonRpcWire};本类只做
- * transport 守卫:非 POST → 405(Allow: POST)、POST 非 / → 404、响应
- * Content-Type application/json。bind 失败(端口占用)IOException 上抛,
- * 不翻译不吞(CLI 停 2 映射 exit 3)。
+ * transport 守卫。bind 失败(端口占用)IOException 上抛,不翻译不吞
+ * (CLI 停 2 映射 exit 3)。
  */
 public final class RpcHttpServer implements AutoCloseable {
 
@@ -26,6 +30,7 @@ public final class RpcHttpServer implements AutoCloseable {
 
     private final JsonRpcWire wire = new JsonRpcWire();
     private final JsonRpcWire.Handler handler;
+    private final WorkbenchUi ui = new WorkbenchUi();
     private HttpServer server;
     private ExecutorService executor;
 
@@ -54,13 +59,29 @@ public final class RpcHttpServer implements AutoCloseable {
     }
 
     private void dispatch(HttpExchange exchange) throws IOException {
-        if (!"POST".equals(exchange.getRequestMethod())) {
-            exchange.getResponseHeaders().set("Allow", "POST");
+        String method = exchange.getRequestMethod();
+        boolean root = "/".equals(exchange.getRequestURI().getPath());
+        if ("GET".equals(method) || "HEAD".equals(method)) {
+            if (!root) {
+                exchange.sendResponseHeaders(404, -1);
+                exchange.close();
+                return;
+            }
+            byte[] page = ui.html();
+            exchange.getResponseHeaders().set("Content-Type", WorkbenchUi.CONTENT_TYPE);
+            exchange.getResponseHeaders().set("Cache-Control", "no-store");
+            exchange.sendResponseHeaders(200, page.length);
+            exchange.getResponseBody().write(page);
+            exchange.close();
+            return;
+        }
+        if (!"POST".equals(method)) {
+            exchange.getResponseHeaders().set("Allow", "GET, POST");
             exchange.sendResponseHeaders(405, -1);
             exchange.close();
             return;
         }
-        if (!"/".equals(exchange.getRequestURI().getPath())) {
+        if (!root) {
             exchange.sendResponseHeaders(404, -1);
             exchange.close();
             return;

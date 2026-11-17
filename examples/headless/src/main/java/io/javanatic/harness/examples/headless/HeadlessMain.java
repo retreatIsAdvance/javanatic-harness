@@ -144,6 +144,8 @@ public final class HeadlessMain {
           jh --serve [--port=<N>]              本地回环 JSON-RPC server(只读工作台面:
                                                 仅 127.0.0.1,缺省 8787;无 key 可跑;
                                                 Ctrl-C 退出)
+          jh --dump                            打印组合 dump(组合期行序,含禁用行注解、
+                                                敏感配置脱敏;无 key 可跑)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1;
                                                 通过时 stdout 打印 07 §6 治理摘要)
           jh --version                         打印版本串(如 0.2.0;exit 0)
@@ -183,6 +185,9 @@ public final class HeadlessMain {
                                     无 key 可跑;与任务文本 / --resume / --verify / --sessions /
                                     --session / --session-view / --workbench 互斥)
           --port=<N>               server 端口(1-65535;缺省 8787;仅与 --serve 同用)
+          --dump                   打印组合 dump(一行一插件:组合期行序,含禁用行注解、
+                                     敏感配置脱敏;无 key 可跑;与任务文本 / --resume / --verify /
+                                     --sessions / --session / --session-view / --workbench / --serve 互斥)
           --provider=<名>            厂商名(缺省 deepseek)
           --model=<名>               模型(缺省 deepseek-chat)
           --base-url=<url>           OpenAI 兼容端点(缺省 https://api.deepseek.com)
@@ -209,7 +214,7 @@ public final class HeadlessMain {
           stderr         成功时另打一行轮末统计,与 REPL 同形:
                          stats: turn=… steps=… tokens_in=… tokens_out=… elapsed=…s
         退出码:
-          0  任务完成(或 --verify 通过 / --sessions 成功 / --help / --version)
+          0  任务完成(或 --verify 通过 / --sessions 成功 / --dump 成功 / --help / --version)
           1  --verify 违规
           2  用法错误 / 缺少 API key / --workbench 无真 TTY
           3  任务失败(厂商错误 / 守卫或预算超限 / --resume 或 --session 的会话不存在或
@@ -256,7 +261,8 @@ public final class HeadlessMain {
                          String resume, boolean docker, String image, Path workspace, String approval,
                          long budget, boolean help, boolean version, OptionalInt sessions,
                          OptionalInt approvalTimeout, String session, String sessionView,
-                         boolean workbench, boolean follow, boolean serve, OptionalInt servePort) {
+                         boolean workbench, boolean follow, boolean serve, OptionalInt servePort,
+                         boolean dump) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -352,6 +358,7 @@ public final class HeadlessMain {
         boolean follow = false;
         boolean serve = false;
         OptionalInt servePort = OptionalInt.empty();
+        boolean dump = false;
         for (String arg : args) {
             if ("--help".equals(arg) || "-h".equals(arg)) {
                 help = true;
@@ -403,6 +410,8 @@ public final class HeadlessMain {
                 follow = true;
             } else if ("--serve".equals(arg)) {
                 serve = true;
+            } else if ("--dump".equals(arg)) {
+                dump = true;
             } else if (arg.startsWith("--port=")) {
                 servePort = OptionalInt.of(portInRange(valueOf(arg)));
             } else if (arg.startsWith("--session-view=")) {
@@ -436,6 +445,33 @@ public final class HeadlessMain {
             }
             if (verify) {
                 throw new IllegalArgumentException("--sessions 与 --verify 互斥（一次只做一件事）");
+            }
+        }
+        if (dump) {
+            // dump 是只读旁路:与"要跑什么"/其他旁路同用即为用法错误(不猜意图)
+            if (task != null) {
+                throw new IllegalArgumentException("--dump 与任务文本互斥（dump 不执行任务）");
+            }
+            if (resume != null) {
+                throw new IllegalArgumentException("--dump 与 --resume 互斥（dump 与续跑请分开运行）");
+            }
+            if (verify) {
+                throw new IllegalArgumentException("--dump 与 --verify 互斥（一次只做一件事）");
+            }
+            if (sessions.isPresent()) {
+                throw new IllegalArgumentException("--dump 与 --sessions 互斥（一次只做一件事）");
+            }
+            if (session != null) {
+                throw new IllegalArgumentException("--dump 与 --session 互斥（dump 与检视请分开运行）");
+            }
+            if (sessionView != null) {
+                throw new IllegalArgumentException("--dump 与 --session-view 互斥（一次只做一件事）");
+            }
+            if (workbench) {
+                throw new IllegalArgumentException("--dump 与 --workbench 互斥（一次只做一件事）");
+            }
+            if (serve) {
+                throw new IllegalArgumentException("--dump 与 --serve 互斥（一次只做一件事）");
             }
         }
         if (follow && !workbench) {
@@ -519,7 +555,7 @@ public final class HeadlessMain {
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
             apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, version,
-            sessions, approvalTimeout, session, sessionView, workbench, follow, serve, servePort);
+            sessions, approvalTimeout, session, sessionView, workbench, follow, serve, servePort, dump);
     }
 
     private static String valueOf(String flag) {
@@ -664,6 +700,12 @@ public final class HeadlessMain {
                 governanceSummary(booted, options, rt.root()).forEach(out::println);
                 return 0;
             }
+            if (options.dump()) {
+                // 只读旁路:不进 API key 检查、不建 agent——组合期行序的忠实投影
+                // (含禁用行注解、masked 脱敏;compose 重算与 boot 内部同源确定性)
+                out.print(AppBoot.dump(AppBoot.compose(boot)));
+                return 0;
+            }
             if (options.sessions().isPresent()) {
                 // 只读旁路:不进 API key 检查、不建 agent——列举的是落盘事实
                 sessionListing(rt.root(), options.sessions().getAsInt()).forEach(out::println);
@@ -678,8 +720,10 @@ public final class HeadlessMain {
                 return runSessionView(rt.root(), options.session(), options.sessionView(), out);
             }
             if (options.serve()) {
-                // 只读旁路:不进 API key 检查、不建 agent——回环 server 消费投影/流式读面
-                return runServe(rt.root(), options.servePort().orElse(DEFAULT_SERVE_PORT), out, err);
+                // 只读旁路:不进 API key 检查、不建 agent——回环 server 消费投影/流式读面;
+                // dump 快照启动期算好注入(workbench/rpc 不依赖 bundle/base)
+                return runServe(rt.root(), options.servePort().orElse(DEFAULT_SERVE_PORT),
+                    AppBoot.dump(AppBoot.compose(boot)), out, err);
             }
             String apiKey = options.resolvedApiKey();
             if (apiKey == null) {
@@ -1200,10 +1244,13 @@ public final class HeadlessMain {
      * stdout 地址行 → 阻塞至 SIGINT 首按（close + exit 0;再按 halt(130) 逃生门）。
      * 端口占用 bind 失败是 CLI 失败面（stderr 指引,exit 3——写者锁冲突同族）;其余 IO
      * 异常原样上抛。ephemeral（port=0）是测试/取证面,CLI parse 已拒收。
+     *
+     * @param compositionDump 启动期组合 dump 快照（run() 算好注入;compositionDump 读面）
      */
-    static int runServe(Scope root, int port, PrintStream out, PrintStream err) throws Exception {
+    static int runServe(Scope root, int port, String compositionDump, PrintStream out, PrintStream err)
+            throws Exception {
         RpcHttpServer server = new RpcHttpServer(new WorkbenchRpc(
-            root.require(SessionPersistence.KEY), root.require(SessionTail.KEY)));
+            root.require(SessionPersistence.KEY), root.require(SessionTail.KEY), compositionDump));
         try {
             server.start(port);
         } catch (IOException e) {

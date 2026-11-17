@@ -87,7 +87,7 @@ class HeadlessServeTest {
             AtomicInteger exit = new AtomicInteger(Integer.MIN_VALUE);
             Thread serving = Thread.ofVirtual().start(() -> {
                 try {
-                    exit.set(HeadlessMain.runServe(rt.root(), 0, out, err));
+                    exit.set(HeadlessMain.runServe(rt.root(), 0, "dump-snapshot-line", out, err));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -98,6 +98,11 @@ class HeadlessServeTest {
                 rpc("workbench/sessionsList", "{}", port), HttpResponse.BodyHandlers.ofString());
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.body()).contains("\"result\"").contains("\"s1\"");
+            // it36 停 1:compositionDump 返回 runServe 注入的启动期快照
+            HttpResponse<String> dumpResponse = client.send(
+                rpc("workbench/compositionDump", "{}", port), HttpResponse.BodyHandlers.ofString());
+            assertThat(dumpResponse.statusCode()).isEqualTo(200);
+            assertThat(dumpResponse.body()).contains("dump-snapshot-line");
 
             Signal.raise(new Signal("INT")); // 首按 Ctrl-C:server close + 解除等待
             serving.join(TimeUnit.SECONDS.toMillis(20));

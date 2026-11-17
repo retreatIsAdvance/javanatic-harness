@@ -65,18 +65,19 @@ class RpcHttpServerTest {
         }
     }
 
-    // ────────── T13 HTTP 守卫 ──────────
+    // ────────── T13 HTTP 守卫(it36 停 1 重钉:GET / 405→200,Allow 词表 GET, POST) ──────────
 
     @Test
-    void nonPostYields405WithAllowHeader() throws Exception {
+    void unsupportedMethodYields405WithAllowGetPost() throws Exception {
         RpcHttpServer server = new RpcHttpServer((method, params) -> null);
         server.start(0);
         try {
-            HttpRequest req = HttpRequest.newBuilder(uri(server, "/")).GET().build();
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/"))
+                .PUT(HttpRequest.BodyPublishers.ofString("{}")).build();
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
 
             assertThat(res.statusCode()).isEqualTo(405);
-            assertThat(res.headers().firstValue("Allow")).hasValue("POST");
+            assertThat(res.headers().firstValue("Allow")).hasValue("GET, POST");
         } finally {
             server.close();
         }
@@ -97,6 +98,72 @@ class RpcHttpServerTest {
         }
     }
 
+    // ────────── it36 停 1 静态服务面(T1 精度:仅精确 / 的 GET/HEAD) ──────────
+
+    @Test
+    void getRootServesUiHtmlWithNoStore() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/")).GET().build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+            assertThat(res.statusCode()).isEqualTo(200);
+            assertThat(res.headers().firstValue("Content-Type"))
+                .hasValue("text/html; charset=utf-8");
+            assertThat(res.headers().firstValue("Cache-Control")).hasValue("no-store");
+            assertThat(res.body()).contains("javanatic-workbench-ui");
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void getFaviconYields404() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/favicon.ico")).GET().build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+            assertThat(res.statusCode()).isEqualTo(404);
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void getIndexHtmlYields404() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/index.html")).GET().build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+            assertThat(res.statusCode()).isEqualTo(404);
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void headRootYields200WithoutBody() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/"))
+                .method("HEAD", HttpRequest.BodyPublishers.noBody()).build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+            assertThat(res.statusCode()).isEqualTo(200);
+            assertThat(res.headers().firstValue("Content-Type"))
+                .hasValue("text/html; charset=utf-8");
+            assertThat(res.body()).isEmpty();
+        } finally {
+            server.close();
+        }
+    }
+
     // ────────── T13 端到端三方法闭环 ──────────
 
     @Test
@@ -107,7 +174,7 @@ class RpcHttpServerTest {
         persistence.total = 1;
         persistence.sessions.put("s1", loaded(richEvents()));
         tail.sessions.put("s1", tailEvents());
-        RpcHttpServer server = new RpcHttpServer(new WorkbenchRpc(persistence, tail));
+        RpcHttpServer server = new RpcHttpServer(new WorkbenchRpc(persistence, tail, ""));
         server.start(0);
         try {
             HttpResponse<String> res = post(server,
@@ -144,7 +211,7 @@ class RpcHttpServerTest {
         RpcFixtures.FakeTail tail = new RpcFixtures.FakeTail();
         tail.sessions.put("s1", tailEvents());
         RpcHttpServer server = new RpcHttpServer(
-            new WorkbenchRpc(new RpcFixtures.FakePersistence(), tail));
+            new WorkbenchRpc(new RpcFixtures.FakePersistence(), tail, ""));
         server.start(0);
         ExecutorService pool = Executors.newFixedThreadPool(8);
         try {
