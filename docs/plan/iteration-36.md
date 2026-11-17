@@ -24,11 +24,11 @@
 | T4 | **资源形态与模块归属** | **批（附观察项）**：单文件 .html 放 `workbench/rpc` 模块资源（零新模块、零 moditect 改动——镜像模块数 69 不变）；server 从 classpath 加载 + 内存缓存；静态服务抽纯函数可单测。否决外部文件路径（交付完整性优先）。UI 逻辑测试面 = 无浏览器测试、JS 零单测（登记缺口）：HTTP 契约测试 + 停 3 真机验收实录 + JS 极简。**先验校验路径（--verify 干跑）是 server 侧可测的**——编辑器最重要的逻辑面在可测侧。**观察项：单文件软预算 ~800 行**，超了触发「是否该重新议形态」的四确认重访（非硬错） | [iteration-30.md](iteration-30.md) L7④「无构建链单文件 vanilla JS」；it35 停 3 `--list-modules` 实录（基线 69） |
 | T5 | **CLI/交付面** | **批**：`--serve` 复用零新参数（零新 flag 是对的克制）；启动 stdout 提示行补 UI 地址（`http://127.0.0.1:8787/`）；零 bundle 行、零新配置键（`--verify` 计数 34/41/0 不变） | it35 停 2 设计定稿 stdout 一行惯例；it34 tui / it35 rpc 装配先例 |
 
-## 停 1 设计点（裁决登记，不停裁——停 1 钉死）
+## 停 1 设计点（已钉死——[stop1-seam-design.md](evidence/iteration-36/stop1-seam-design.md)）
 
-1. **dump 读面形态**（T3 拟案批后）：CLI `jh --dump`（keyless 只读，与 `--serve`/`--verify` 互斥矩阵并入）vs server 读方法 vs 两者——倾向两者（CLI 给脚本面、server 给 UI 面），停 1 钉。
-2. **路由分派契约细节**（T1 批后）：GET "/" 服务 .html 的 content-type / 缓存头（无缓存 vs no-store——单用户回环面，no-store 最直白）；HEAD 语义；非 "/" 404 与 POST 非 "/" 404 的同面处理；405 Allow 头词表。
-3. **组合编辑「保存前校验」接线**：UI 把编辑内容 POST 给哪个面做 verify 干跑——新增 server 方法（如 `workbench/verifyComposition`，把内容写入临时 profile 干跑 AppBoot verify 断言）vs 复用 CLI 子进程——倾向 server 方法（零子进程、同步响应；写面 = 临时文件非用户落盘，不违反零写面划界）。干跑对象 = 编辑内容（不触碰用户已落盘的 profile）。
+1. **dump 读面形态**：**两者**——CLI `jh --dump`（keyless 只读旁路，post-boot 与 --verify 同段，互斥矩阵并入）+ server 方法 `workbench/compositionDump`（注入启动期 String 快照——workbench/rpc 不依赖 bundle/base）。dump 文本口径 = `AppBoot.dump(AppBoot.compose(boot))`（组合期行序含禁用行注解、masked 脱敏；非 resolve 后启用行）。
+2. **路由分派契约细节**：GET/HEAD 精确 `/` → 200 + `text/html; charset=utf-8` + `Cache-Control: no-store`（HEAD 由 jdk.httpserver 抑制 body）；其余一切 GET 404；POST `/` → JSON-RPC；POST 非 `/` 404；其余方法 405 + `Allow: GET, POST`。静态 seam = `WorkbenchUi`（classpath 加载一次 + 内存缓存 + 缺失 fail loud）。
+3. **组合编辑「保存前校验」接线**（停 2 实现，契约预告）：server 方法 `workbench/verifyComposition`（params `{yaml}`）→ 写**临时 profile** 干跑 AppBoot verify 断言 → `{ok, violations[]}`；干跑对象 = 编辑内容，不触碰用户已落盘 profile（零 server 写面承诺不破）；UI 侧 blob 下载落盘不经 server。
 
 ## 锚点
 
