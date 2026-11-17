@@ -1,6 +1,8 @@
-# 迭代 36 — W4 本地 Web UI（状态：四确认讨论稿——待评审；不停裁不动代码）
+# 迭代 36 — W4 本地 Web UI（状态：四确认已裁、T1–T5 全批（2026-11-17）；停 1 进行中）
 
 基线：it35 已关账（0.5 W3 JSON-RPC server 收官，master `5e37062`），工作版本 `0.5.0-SNAPSHOT`。0.5 路线（[总体计划](../design/README.md#phased-evolution-plan)）：W1 事件投影与查询（it33）→ W2 TUI 工作台（it34）→ W3 JSON-RPC server（it35）→ **W4 本地 Web UI（最后一站）**。改判主体已在 it35 T2 执行完毕（[notes 0011](../../.agents/notes/0011-web-ui-non-goal-reversal.md) + [00 §6](../design/00-overview.md#6-非-target明确不做) L198 改写 + B29 转正 + README L88 同步）——W4 四确认只需验证并引用，不重裁改判本体。
+
+**裁决记录（2026-11-17）**：W4 四确认讨论稿评审通过——**四确认通过、T1–T5 全批**。核验：T1 前提（`RpcHttpServer` POST-only、GET→405）与 T3 前提（`AppBoot.dump:138` 在位、it27 脱敏版）均实读属实；README 状态行滞后进同步面正确。三处附加裁决：①**T1 精度**——仅精确路径 `/` 的 GET 服务 UI，其余一切 GET（含 `/favicon.ico`）维持 404，不把静态服务泛化成目录服务；405→200 契约变化在 pre-release 面内，停 1 重钉 dispatch 测试。②**T3 UX 增强（非要求）**——下载用 blob 链接 + `download` 属性：浏览器端落盘、不经 server，零写面承诺不破。③**T4 观察项**——单文件设软预算（~800 行），超了不是硬错而是触发「是否该重新议形态」的四确认重访，防止单文件静默膨胀。T4 测试面论据补强：先验校验路径（--verify 干跑）是 server 侧可测的——编辑器最重要的逻辑面在可测侧，JS 壳薄到不测可接受。停 3 照例含用户检视实录（浏览器交互以 curl 面 + UI DOM 断言代验，编辑器闭环用户亲手走）。
 
 ## 四确认（草案）
 
@@ -12,15 +14,15 @@
 
 - **不做**：远程/多租户 Web UI（0011 边界：B29 硬线对 UI 同成立——仅 127.0.0.1、单用户、无 TLS）；会话控制写侧（任务提交/审批/答复/取消——T6 维持 v1 只读，见待裁 T3）；server 写面（组合编辑落盘由用户手动——见待裁 T3）；jobs 运行中任务面（W4/W5 面归属见待裁 T2）；SSE/WebSocket 推送（v1 轮询面）；动态配置热重载（README L123 已钉：新会话换组合）；认证/多用户；浏览器自动化测试与 node 工具链（测试面 = HTTP 契约测试 + 真机验收实录）。
 
-## 待裁（四确认一并裁定）
+## 待裁（已裁——2026-11-17 T1–T5 全批，附加裁决见首部裁决记录）
 
-| # | 待裁项 | 拟案 | 依据 |
+| # | 待裁项 | 裁决（拟案获批） | 依据 |
 |---|---|---|---|
-| T1 | **静态服务路由形态** | 拟案 A："/" 上按方法分派——GET/HEAD → 服务 .html，POST → JSON-RPC；其余方法 405（Allow: GET, POST）；非 "/" 路径 404（单文件约束，无资产子路径）。浏览器打开 `http://127.0.0.1:8787/` 即 UI。代价：dispatch 承载契约变化（GET 405→200），既有测试改动，停 1 重新钉契约。否决 B（独立 context 如 `/ui`）：入口路径要记、与「server 直接服务 .html」的预登记语境不符、"/" 契约反而裂成两处 | [iteration-30.md](iteration-30.md) L7④「server 直接服务 .html」；`RpcHttpServer` 现状（dispatch 仅 POST "/"） |
-| T2 | **jobs 任务面归属**（it34 挂「W4/W5 面」） | W4 首版**不做**，挂到 W5 或另站：jobs 是 0.4 后台任务域，W4 是会话读侧消费面，混入稀释首版；重访条件 = 用户点名 jobs 视图 | [iteration-34.md](iteration-34.md) L12「运行中任务（W4/W5 面）」 |
-| T3 | **组合编辑器入首版 + 写面划界** | **入首版**（预登记已点名）。范围：读面 = dump 只读暴露（复用 `AppBoot.dump` 纯函数，形态停 1 钉：CLI flag / server 读方法 / 两者）；编辑 = 文本域编辑组合行；校验 = 保存前 `--verify` 干跑（违规清单逐项展示，复用 VerifyFailedException 面）；**落盘由用户手动（v1 零 server 写面）**——B29 只读品格延续、显式＞隐式。写面划界：组合配置写 ≠ 会话控制写——T6「控制面/写侧」指任务提交/审批/答复/取消，组合编辑不在其列，**T6 不重访**（除非 W4 点名单项控制动作）；动态配置投影（it35 T4 推迟面）以 dump 读面形态被点名实体化——T4 重访条件满足，范围 = 组合读面 only，运行中热重载维持不做 | [iteration-30.md](iteration-30.md) L7④「组合编辑器复用 dump/`--verify` 干跑做『启动前校验』」；[iteration-35.md](iteration-35.md) T4/T6 重访条件；[07](../design/07-profile-bundle.md) L224（dump 纯函数现状：masked 递归脱敏，无 CLI 读面） |
-| T4 | **资源形态与模块归属** | 单文件 .html 放 `workbench/rpc` 模块资源（零新模块、零 moditect 改动——镜像模块数 69 不变）；server 从 classpath 加载 + 内存缓存；静态服务抽纯函数（path → bytes + content-type）可单测。否决外部文件路径（交付完整性优先：用户只拿 jh 二进制；热改需求 = 开发者改源重建，非首版目标）。UI 逻辑测试面 = **无浏览器测试、JS 零单测**（无 node 工具链的登记缺口）：验证 = HTTP 契约测试（GET 200 + content-type + 内容断言）+ 停 3 真机验收实录（用户检视）+ JS 保持极简（纯消费 JSON-RPC 结果直绘，渲染逻辑最小化） | [iteration-30.md](iteration-30.md) L7④「无构建链单文件 vanilla JS」；it35 停 3 `--list-modules` 实录（基线 69） |
-| T5 | **CLI/交付面** | `--serve` 复用零新参数；启动 stdout 提示行补 UI 地址（`http://127.0.0.1:8787/`）；零 bundle 行、零新配置键（静态资源非插件面，`--verify` 计数 34/41/0 不变） | it35 停 2 设计定稿 stdout 一行惯例；it34 tui / it35 rpc 装配先例 |
+| T1 | **静态服务路由形态** | **批 A（附精度）**："/" 上按方法分派——**仅精确路径 `/` 的 GET/HEAD** 服务 .html，其余一切 GET（含 `/favicon.ico`）维持 404——不泛化成目录服务；POST → JSON-RPC；其余方法 405（Allow: GET, POST）；POST 非 "/" 路径 404。405→200 契约变化在 pre-release 面内，停 1 重钉 dispatch 测试。否决 B（独立 context 如 `/ui`）：无收益的路径命名空间 | [iteration-30.md](iteration-30.md) L7④「server 直接服务 .html」；`RpcHttpServer` 现状（dispatch 仅 POST "/"） |
+| T2 | **jobs 任务面归属**（it34 挂「W4/W5 面」） | **批延后**：W4 首版不做，W5/另站再议——jobs 是后台任务域，与「观察 + 配置准备」首版主题不同轴；重访条件 = 用户点名 jobs 视图 | [iteration-34.md](iteration-34.md) L12「运行中任务（W4/W5 面）」 |
+| T3 | **组合编辑器入首版 + 写面划界** | **批入首版 + 写面划界**：读面 = dump 只读暴露（复用 `AppBoot.dump` 纯函数，形态停 1 钉：CLI flag / server 读方法 / 两者）；编辑 = 文本域编辑组合行；校验 = 保存前 `--verify` 干跑（违规清单逐项展示）；**落盘由用户手动（v1 零 server 写面）**——「server 保持零写路径」的 W1–W3 不变量在 W4 完整存续。**附 UX 增强（非要求）：下载用 blob 链接 + `download` 属性**——浏览器端落盘、不经 server。写面划界：组合配置写 ≠ 会话控制写，**T6 不重访**；动态配置投影以 dump 读面形态点名实体化（T4 重访条件满足，范围 = 组合读面 only，热重载维持不做） | [iteration-30.md](iteration-30.md) L7④「组合编辑器复用 dump/`--verify` 干跑做『启动前校验』」；[iteration-35.md](iteration-35.md) T4/T6 重访条件；[07](../design/07-profile-bundle.md) L224（dump 纯函数现状：masked 递归脱敏，无 CLI 读面） |
+| T4 | **资源形态与模块归属** | **批（附观察项）**：单文件 .html 放 `workbench/rpc` 模块资源（零新模块、零 moditect 改动——镜像模块数 69 不变）；server 从 classpath 加载 + 内存缓存；静态服务抽纯函数可单测。否决外部文件路径（交付完整性优先）。UI 逻辑测试面 = 无浏览器测试、JS 零单测（登记缺口）：HTTP 契约测试 + 停 3 真机验收实录 + JS 极简。**先验校验路径（--verify 干跑）是 server 侧可测的**——编辑器最重要的逻辑面在可测侧。**观察项：单文件软预算 ~800 行**，超了触发「是否该重新议形态」的四确认重访（非硬错） | [iteration-30.md](iteration-30.md) L7④「无构建链单文件 vanilla JS」；it35 停 3 `--list-modules` 实录（基线 69） |
+| T5 | **CLI/交付面** | **批**：`--serve` 复用零新参数（零新 flag 是对的克制）；启动 stdout 提示行补 UI 地址（`http://127.0.0.1:8787/`）；零 bundle 行、零新配置键（`--verify` 计数 34/41/0 不变） | it35 停 2 设计定稿 stdout 一行惯例；it34 tui / it35 rpc 装配先例 |
 
 ## 停 1 设计点（裁决登记，不停裁——停 1 钉死）
 
@@ -44,7 +46,7 @@
 
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
-| 停 1：静态服务 seam + 路由契约 + dump 读面 | 承载契约（GET/POST 分派、405/404 面、content-type、缓存头）+ 单文件资源加载 + 静态服务纯函数 + B29 硬线不变 + dump 读面形态（T3 拟案批后）+ 停 1 设计点三条钉死 | 待开工 |
+| 停 1：静态服务 seam + 路由契约 + dump 读面 | 承载契约（GET/POST 分派、405/404 面、content-type、缓存头）+ 单文件资源加载 + 静态服务纯函数 + B29 硬线不变 + dump 读面形态（T3 拟案批后）+ 停 1 设计点三条钉死 | 进行中 |
 | 停 2：UI 单文件 + 组合编辑器 | 单文件 .html（清单/五视图/tail 轮询 vanilla JS）+ 组合编辑器（dump 展示 / 编辑 / 保存前 verify 干跑接线）+ stdout 提示行 | 待开工 |
 | 停 3：装配/同步面 + 真机验收 + 收口 | jlink 镜像（--list-modules 仍 69 + 资源进镜像取证）+ `--serve` 真机实录（浏览器打开 / 五视图 / tail 轮询 / 组合校验链——我跑面 + **用户检视实录（用户跑）**）+ B29 硬线复验 + CI 四腿 + 验收清单全勾 + 同步面（README L114/L123 更新 + grep 零残留复核）+ 收口批 | 待开工 |
 
