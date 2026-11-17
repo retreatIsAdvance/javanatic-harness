@@ -1,0 +1,3 @@
+COMMAND=git diff --check 419e4f672816b85636b24a01cc084902986d54d5 --
+
+EXIT=0

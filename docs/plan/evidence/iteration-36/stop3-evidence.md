@@ -48,12 +48,66 @@ serve 为我跑面自起（keyless，缺省 8787；用户检视轮另起独立 s
 
 **复验轮（假设检验）**：python `subprocess.Popen`（缺省 `restore_signals=True` → 子进程 SIGINT 还原 SIG_DFL）起 serve → JVM 定向 `kill -INT` → **wrapper exit=0（0.02s）、JVM 零残留、lsof 8787 零行**。首按干净关停契约真机成立；用户交互终端起 serve 天然 SIGINT=SIG_DFL，不受此伪影影响（runbook 已注）。
 
+**精确图景固化（停 3 用户裁决③）**：非交互定向信号须打 **JVM pid**（包装壳 pid 不生效）；进程组发送/交互终端不受影响——交互终端 Ctrl-C 发的是前台**进程组**，壳与 JVM 同组同收，真用户路径天然正确。用户检视轮独立复现同图景（见 S2）。
+
 ### 5. dump 同源比对观察项（登记待裁决，不改码）
 
-RPC compositionDump 与 CLI --dump 逐行比对（[stop3-dump-rpc.txt](stop3-dump-rpc.txt) vs [stop3-dump-cli.txt](stop3-dump-cli.txt)）：**48 行行序、禁用注解（7）、脱敏（1）全同**；差异仅两类——① 临时 workspace 目录名每进程不同（预期）；② **行内 config 键序跨 JVM 不稳定**（如 `{name=…, baseUrl=…}` vs `{baseUrl=…, name=…}`）——既有 compose 路径 HashMap 迭代序所致（it27 dump 以来既有行为，非 it36 引入）。停 1 契约钉的是「组合期**行序**」，行序稳定 ⇒ 契约未违反；键序是否要钉（LinkedHashMap 化）留用户裁决，本停不动码。
+RPC compositionDump 与 CLI --dump 逐行比对（[stop3-dump-rpc.txt](stop3-dump-rpc.txt) vs [stop3-dump-cli.txt](stop3-dump-cli.txt)）：**48 行行序、禁用注解（7）、脱敏（1）全同**；差异仅两类——① 临时 workspace 目录名每进程不同（预期）；② **行内 config 键序跨 JVM 不稳定**（如 `{name=…, baseUrl=…}` vs `{baseUrl=…, name=…}`）——既有 compose 路径 HashMap 迭代序所致（it27 dump 以来既有行为，非 it36 引入）。停 1 契约钉的是「组合期**行序**」，行序稳定 ⇒ 契约未违反。**用户裁决（检视轮②）：挂账不入本停**——确定性润色（LinkedHashMap 化）搭 B4 生成器家族或下次触 dump 码的批，不值得专批。
+
+## S2 用户检视实录（2026-11-17，通过）——[stop3-user-round.txt](stop3-user-round.txt)
+
+serve 由用户亲手起（交互终端），真浏览器 Chrome 执验，全程用户本会话亲手（it35「用户验证实录须亲手全链」纪律延续）。
+
+- **DOM 七断言 7/7 PASS**（runbook 提供的断言脚本真浏览器执行）：标题/两页签/清单非空（50 条）/五视图/编辑器骨架/三按钮/错误条隐藏。
+- **手动观察四项全 ✓**：详情 header、五视图切换 + 时间线大量事件、tail 空闲会话零错误条（零增量是预期）、页签切换停 tail。
+- **编辑器干跑闭环逐字命中**：载入 dump → 改坏 `no-such-bundle` → 红框违规清单 → 修好 → 绿框指引。dump 显示「49 行」= 48 行内容 + 末行换行渲染的空行（AppBoot.dump 每行尾 `\n`，与 S1 的 48 行口径同源，非差异）。
+- **下载链拦截法全路径验证**：blob（application/yaml）→ 动态锚 download=profile.yml + blob: URL → 内容 = 编辑器 YAML——零 server 写面承诺在下载路径成立。
+- **SIGINT**：JVM 定向 INT → exit 0 + 端口释放；用户独立复现 S1 包装壳伪影并给出精确图景（交互终端发进程组，真用户不受影响）——已固化入 S1 §4（裁决③）。
+- **用户两个自动化伪影如实记**（执行伪影非产品缺陷）：① 编辑器首轮断言 800ms 等待太短（干跑全量组合装配 1–2s），加长后全中；② 下载属性断言问错形状（download-profile 是 BUTTON，blob 锚动态创建——拦截法才是对的验法）。
+- **裁决①（131→130）**：用户接受并认账——其 131 为无 mtime 过滤朴素求和，正撞计数坑第三变体（孤儿 XML）；stop2 证据档原值正确。计数坑家族一周内两次活捉（我 S2 一次、用户检视轮一次）——AGENTS.md 计数条 mtime 半句的实战价值双证。
 
 ### 6. 归档与测量面备注
 
 - 归档四件：stop3-my-round-probes.txt（探针全录）/ stop3-sigint-retest.txt（复验轮）/ stop3-dump-rpc.txt / stop3-dump-cli.txt。
 - probes 入档时按门禁（.githooks/pre-commit = git diff --cached --check）剥除行尾空白 **1 处**（L116，snakeyaml 错误摘录内的纯空格行）——JSON 载荷行与命令原文逐字节未动（it35 同源纪律）。
 - 日志台账（/tmp）：it36-s3-{build-start.ts, image-build, list-modules, verify-keyless, probes(.sh/.txt), serve, serve2, serve3, sigint-retest(.py/.txt), dump-cli, dump-rpc, jstack, get-root.html}。
+## S3 收口（2026-11-17，用户检视轮通过后授权）
+
+### 1. 新鲜全量门禁（verify-stop full 层）
+
+```
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+export MVN="$HOME/Documents/apache-maven-3.10.0/bin/mvn"
+date +%s > /tmp/it36-s3-full-start.ts        # 窗口起点 2026-11-17T14:36:05（本地）
+bash integration/verify-stop.sh full --log-dir docs/plan/evidence/iteration-36/stop3-closeout
+VERIFY_STOP_EXIT=0
+```
+
+[stop3-closeout/summary.txt](stop3-closeout/summary.txt)：11 步全 EXIT=0（含 10-validate `mvn -B -q validate` 与 11-package `mvn -B -q package`）；head=`53f16f0`；changed_files=[]（门禁跑时工作树仅文档/证据改动，源码零变化）。
+
+### 2. 计数定论（全量测量面，mtime 窗口过滤）
+
+surefire XML 求和（`**/target/surefire-reports/TEST-*.xml` + failsafe，mtime ≥ 窗口起点）：**186 XML = 1486 tests / 0 failures / 0 errors / 31 skipped**。窗口外陈旧 XML 2 件不计：`skill/tool IZProbeTest`（2026-10-13）与 `examples/headless AskVisibilityProbe`（2026-11-06）——后者即计数坑第三变体本尊（AGENTS.md 计数条已登记）。对比 it35 收口同口径 183 XML = 1456/0/0/31：+3 XML +30 tests 为 it36 停 1/停 2 新增（headless --dump/静态分派 + rpc 第五方法/资源守卫），同测量面可比。
+
+### 3. 收口新鲜复证（full 门禁重建镜像后）
+
+- keyless `--verify` EXIT=0，**34 rows / 41 discovered / 0 unreferenced 不变**（[stop3-closeout-verify-keyless.txt](stop3-closeout-verify-keyless.txt)）。
+- 镜像 `bin/java --list-modules` EXIT=0，**69 行不变**；**ui.html 终值 441 行**（`wc -l`，软预算 ~800 的 55%——停 2 放行附言「停 3 报终值」兑现，[stop3-closeout-image.txt](stop3-closeout-image.txt)）。
+
+### 4. 同步面（一次改终态）
+
+- 根 README：workbench/ 行补 rpc（it35）+ Web UI（it36）；0.5 表行「计划」→「W1–W4 已关账，0.5.0 发布另议」；规划原则「0.5 尚未开工」句订正。
+- docs/design/README：状态基准段 2026-11-11→2026-11-17、W2/W3/W4「仍为计划」→ 四站全通；0.5 表行逐站点名 it33–it36 交付形态。
+- docs/plan/current-state：日期行 / 版本段挂账句 / 工作台能力行（补 it35 rpc + it36 Web UI + --dump）/ it36 条目改关账终态（CI run 号留 push 批回填）/ 裁决②键序挂账登记入另批挂账区。
+- AGENTS.md 现状段：it36 W4「进行中」→「已验收 + 关账」终态。
+- iteration-36.md：标题/停 3 行/验收清单勾选（CI 项留 push 批）；锚点 L43 注「已随收口批更新」。
+- plan/README.md：无 0.5 状态行，无需改。
+
+### 5. grep 零残留取证（[stop3-sync-grep.txt](stop3-sync-grep.txt)）
+
+- 「不做 Web UI / 不做本地 Web UI」规范面：**零命中**（GREP2_EXIT=1；it35 T2 改判后 W4 复核成立）。
+- 旧状态措辞（仍为计划 / 0.5 尚未开工 / 0.5（计划）等）：现状入口零残留；3 处命中均为引文非状态——current-state L10「当前进行中」为节名引用、iteration-36 L43 历史锚点引文（已注更新）、iteration-36 L64 验收行自引 grep 词表。
+
+### 6. 收口批
+
+本证据档 S3 段 + 归档三件（closeout-verify-keyless / closeout-image / sync-grep）+ stop3-closeout/ 门禁日志 + stop3-user-round.txt + 同步面五文件（README / AGENTS / design/README / current-state / iteration-36）随收口批提交（不 push）。门禁日志入档按门禁剥行尾空白（11-package.txt 5 处 jqwik 时间戳行尾 `= ` 空格；命令行与载荷行逐字节未动，it35 同源纪律）。**W4 关账 = 0.5「个人工作台」四站全通**；CI 四腿与 run 号随 push 批回填（待用户点名授权）；0.5.0 发布另议。

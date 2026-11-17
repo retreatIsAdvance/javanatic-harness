@@ -1,0 +1,4 @@
+COMMAND=git ls-files --others --exclude-standard -z
+b'docs/plan/evidence/iteration-36/stop3-closeout/01-git-root.txt\x00docs/plan/evidence/iteration-36/stop3-closeout/02-git-base.txt\x00docs/plan/evidence/iteration-36/stop3-closeout/03-git-head.txt\x00docs/plan/evidence/iteration-36/stop3-closeout/04-diff-check-worktree.txt\x00docs/plan/evidence/iteration-36/stop3-closeout/05-paths-worktree.txt\x00docs/plan/evidence/iteration-36/stop3-closeout/06-diff-check-index.txt\x00docs/plan/evidence/iteration-36/stop3-closeout/07-paths-index.txt\x00docs/plan/evidence/iteration-36/stop3-closeout/08-paths-untracked.txt\x00docs/plan/evidence/iteration-36/stop3-closeout/summary.txt\x00'
+
+EXIT=0

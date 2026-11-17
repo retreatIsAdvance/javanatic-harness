@@ -117,7 +117,7 @@ session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端�
 interaction/        审批三模式（auto/ask/deny，it7）+ 命令面（registry/slash 解析/事件对，it14）
 dist/               jlink 运行时镜像编排：产出 bin/jh（解出即用，无需手拼 module-path，it13）
 bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可运行示例（agent-spine / headless）
-workbench/           工作台（it33 / it34 W2）：projection 纯库——会话日志只读投影五视图（零写路径）；tui 纯库——全屏工作台渲染与端子薄壳（JLine 4）
+workbench/           工作台（it33–it36，0.5 W1–W4）：projection 纯库——会话日志只读投影五视图（零写路径）；tui 纯库——全屏工作台渲染与端子薄壳（JLine 4）；rpc 纯库——本地回环 JSON-RPC server（仅 127.0.0.1）+ 单文件本地 Web UI（会话清单/五视图/tail 轮询 + 组合编辑器，零 server 写面）
 ```
 
 ## 实现路线（垂直切片）
@@ -146,9 +146,9 @@ workbench/           工作台（it33 / it34 W2）：projection 纯库——会�
 | 17–25 ✅ | **0.2.0** 已发布：可靠单 Agent CLI、取消/恢复/资源边界、工作区与会话易用性、外部 Java 接入、Linux 归档 + Landlock、Windows 本机隔离 + pwsh；Maven Central + GitHub Release（四平台归档） | — |
 | 0.3 系列 ✅ | **0.3.0** 已发布：工具生态四站（Skills / MCP / Web / LSP）；Maven Central + GitHub Release（四平台归档） | [总体计划](docs/design/README.md#phased-evolution-plan) |
 | 0.4 系列 ✅ | **0.4.0** 已发布：可管理后台任务 + 受控委派（it30/it31）＋委派策略指引（it32）；Maven Central + GitHub Release（四平台归档） | [总体计划](docs/design/README.md#phased-evolution-plan) |
-| 0.5（计划） | 个人工作台：事件投影与查询 → TUI 工作台 → JSON-RPC server（仅 127.0.0.1 回环）+ 本地 Web UI | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 0.5（W1–W4 已关账） | 个人工作台四站全通：事件投影与查询（it33）→ TUI 工作台（it34）→ JSON-RPC server（仅 127.0.0.1 回环，it35）+ 本地 Web UI（it36）；0.5.0 发布另议 | [总体计划](docs/design/README.md#phased-evolution-plan) |
 
-**规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。0.5 尚未开工；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。能力落地不等于版本就绪，发布另设验收。
+**规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。0.5 四站已关账（it33–it36）；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。能力落地不等于版本就绪，发布另设验收（0.5.0 另议）。
 
 **平台支持面（0.2.0）**：macOS、Linux 与 Windows 三平台可用（含同机沙箱）——沙箱是平台候选链，取宿主上第一个可用后端：
 

@@ -1,0 +1,8 @@
+$ grep -rn "仍为计划\|0.5 尚未开工\|W4 进行中\|it36.*进行中\|0.5（计划）" README.md AGENTS.md docs/design/README.md docs/plan/current-state.md docs/plan/README.md docs/plan/iteration-36.md docs/design/00-overview.md
+docs/plan/current-state.md:10:- 0.3 目标：工具生态（Skills / MCP / Web / LSP 四站，it26–it29，0.3.0 已发布）。0.4 目标：可管理的后台任务与受控委派——it30 已关账（2026-11-05）、**it31 受控委派已收口（2026-11-09）**（delegation 三角色落地：六态联合问败分界、影子封禁防递归、预算随载荷入账、双臂验收过——H 对父上下文降 61.6% 决定性达成，token 判据修正 ADR 0010、边界发现 ≥~40k 才有收益）；**it32 发布工程已关账（2026-11-10）**：委派策略指引入 delegate 族工具描述（判据源 [ADR 0010](../../.agents/notes/0010-dual-arm-token-criterion.md)）、release notes 定稿、rc 排练 + deploy + 两处 Publish + repo1 抽检全链闭环（[证据](evidence/release-0.4.0/publish-0.4.0.txt)）、retention 裁决落 B33（v1 不自动清理 + 两条重访条件）。**0.4 两站齐；0.4.0 已发布（2026-11-10 上线 Central）。** 挂账：0.5 工作台四站全通（W1 = it33 / W2 = it34 / W3 = it35 / W4 = it36 均已关账，见「当前进行中」）；0.5.0 发布另议。
+docs/plan/iteration-36.md:43:- [design/README](../design/README.md) L114/L123：状态基准行过时（it34/it35 已关账仍写「仍为计划」）——W4 同步面必改（已随收口批更新为 W1–W4 全关账）。
+docs/plan/iteration-36.md:64:- [x] 同步面 grep 零旧措辞残留（「不做 Web UI」规范面零残留复核——it35 T2 已执行，W4 复核取证）+ design/README L114/L123 状态基准行更新——grep「不做 Web UI」零命中；「仍为计划 / 0.5 尚未开工 / 0.5（计划）」现状入口零残留（两处命中均为历史引文：iteration-36 锚点行已注「已随收口批更新」、current-state「当前进行中」为节名引用）；根 README / design/README / current-state / AGENTS 同步落盘（plan README 无 0.5 状态行，无需改）
+GREP_EXIT=0
+
+$ grep -rn "不做 Web UI\|不做本地 Web UI" README.md AGENTS.md docs/design/ docs/plan/current-state.md docs/plan/boundary-register.md
+GREP2_EXIT=1

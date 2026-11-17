@@ -1,4 +1,4 @@
-# 迭代 36 — W4 本地 Web UI（状态：四确认已裁、T1–T5 全批（2026-11-17）；停 1/停 2 通过并关闭，停 3 进行中——0.5 终停）
+# 迭代 36 — W4 本地 Web UI（状态：已关账（2026-11-17）——四确认 T1–T5 全批、三停全部通过；W4 收官 = 0.5「个人工作台」四站全通；CI 四腿与 run 号随 push 批回填）
 
 基线：it35 已关账（0.5 W3 JSON-RPC server 收官，master `5e37062`），工作版本 `0.5.0-SNAPSHOT`。0.5 路线（[总体计划](../design/README.md#phased-evolution-plan)）：W1 事件投影与查询（it33）→ W2 TUI 工作台（it34）→ W3 JSON-RPC server（it35）→ **W4 本地 Web UI（最后一站）**。改判主体已在 it35 T2 执行完毕（[notes 0011](../../.agents/notes/0011-web-ui-non-goal-reversal.md) + [00 §6](../design/00-overview.md#6-非-target明确不做) L198 改写 + B29 转正 + README L88 同步）——W4 四确认只需验证并引用，不重裁改判本体。
 
@@ -40,7 +40,7 @@
 - [iteration-35.md](iteration-35.md) T4/T6：动态配置投影推迟（重访条件如上）；控制面 v1 只读（重访条件 = W4 UI 点名单项控制动作需求——T3 划界：组合编辑不触发）。
 - [boundary-register.md](boundary-register.md) B29：仅 127.0.0.1 回环、单用户、无远程暴露、无 TLS——UI 面同硬线；引向 notes 0011。
 - [07](../design/07-profile-bundle.md) L22（命名组合存 `~/.harness/profiles/<name>/`——编辑对象）/ L224（dump 纯函数现状：masked 递归脱敏、行序保留，无 CLI 读面）。
-- [design/README](../design/README.md) L114/L123：状态基准行过时（it34/it35 已关账仍写「仍为计划」）——W4 同步面必改。
+- [design/README](../design/README.md) L114/L123：状态基准行过时（it34/it35 已关账仍写「仍为计划」）——W4 同步面必改（已随收口批更新为 W1–W4 全关账）。
 
 ## 审查停点（草案，3 停）
 
@@ -48,7 +48,7 @@
 |---|---|---|
 | 停 1：静态服务 seam + 路由契约 + dump 读面 | 承载契约（GET/POST 分派、405/404 面、content-type、缓存头）+ 单文件资源加载 + 静态服务纯函数 + B29 硬线不变 + dump 读面形态（T3 拟案批后）+ 停 1 设计点三条钉死 | 通过并关闭（2026-11-17 放行；[verdict](evidence/iteration-36/stop1-verdict.md)；备注两条已处置：计数条孤儿 XML 半句 + 停 2/3 突变落日志） |
 | 停 2：UI 单文件 + 组合编辑器 | 单文件 .html（清单/五视图/tail 轮询 vanilla JS）+ 组合编辑器（dump 展示 / 编辑 / 保存前 verify 干跑接线）+ stdout 提示行 | 通过并关闭（2026-11-17 放行；[verdict](evidence/iteration-36/stop2-verdict.md)；三项抽查坐实：零 innerHTML XSS 纪律 / 第五方法异常阶梯 / 软预算 441/800；过程三亮点点名；计数面差异 131 vs 130 登记待 S1 定论） |
-| 停 3：装配/同步面 + 真机验收 + 收口 | jlink 镜像（--list-modules 仍 69 + 资源进镜像取证）+ `--serve` 真机实录（浏览器打开 / 五视图 / tail 轮询 / 组合校验链——我跑面 + **用户检视实录（用户跑）**）+ B29 硬线复验 + CI 四腿 + 验收清单全勾 + 同步面（README L114/L123 更新 + grep 零残留复核）+ 收口批 | 进行中（放行清单五项：我跑面 curl 五方法 + B29 / 用户检视实录（DOM 断言我提供 + 编辑器干跑闭环 + SIGINT）/ README 现状卡同步 / CI 四腿 / 收口 = W4 关账 = 0.5 四站全通） |
+| 停 3：装配/同步面 + 真机验收 + 收口 | jlink 镜像（--list-modules 仍 69 + 资源进镜像取证）+ `--serve` 真机实录（浏览器打开 / 五视图 / tail 轮询 / 组合校验链——我跑面 + **用户检视实录（用户跑）**）+ B29 硬线复验 + CI 四腿 + 验收清单全勾 + 同步面（README L114/L123 更新 + grep 零残留复核）+ 收口批 | 已验收 + 关账（2026-11-17：我跑面 curl 五方法 + B29 双拒 ✓ / 用户检视轮通过——DOM 7/7 + 编辑器干跑闭环 + 下载拦截法 + SIGINT 复现（[实录](evidence/iteration-36/stop3-user-round.txt)）/ 三项裁决落账（计数 130 定论 / 键序挂账 / SIGINT 精确图景）/ 收口门禁 full EXIT=0 + 186 XML = 1486/0/0/31 + 34/41/0 + 镜像 69 + ui.html 441（[证据](evidence/iteration-36/stop3-evidence.md)）；CI 四腿与 run 号随 push 批回填） |
 
 停 1/停 2 出包按 review packet 仪式（本迭代零新增模块、零 base 行——资源进 workbench/rpc；四件套中「META-INF/services 双通道」不适用（无 Plugin），其余照勾）。
 
@@ -56,11 +56,11 @@
 
 - [x] 停 1 评审放行（packet + 裁决归档，2026-11-17）
 - [x] 停 2 评审放行（packet + 裁决归档，2026-11-17）
-- [ ] 停 3 真机验收：jlink `--serve` → 浏览器打开 `http://127.0.0.1:8787/` 见 UI → 会话清单 / 五视图 / tail 轮询闭环 + 组合编辑器校验链（坏组合 → verify 违规清单展示 → 好组合 → 校验通过）+ **用户检视实录（用户跑）** + B29 硬线复验（监听地址实录 + 非回环访问拒绝）
-- [ ] validate EXIT=0 + 全量 package EXIT=0（门禁）
-- [ ] keyless `--verify` 计数不变（34/41/0——零 bundle 行、零新配置键；dump 读面与静态资源不增行）
-- [ ] jlink 镜像 `--list-modules` 实录仍 69（零新模块）+ 单文件 .html 随镜像资源取证
-- [ ] CI 四腿全绿 + run 号回填
-- [ ] 同步面 grep 零旧措辞残留（「不做 Web UI」规范面零残留复核——it35 T2 已执行，W4 复核取证）+ design/README L114/L123 状态基准行更新
+- [x] 停 3 真机验收：jlink `--serve` → 浏览器打开 `http://127.0.0.1:8787/` 见 UI → 会话清单 / 五视图 / tail 轮询闭环 + 组合编辑器校验链（坏组合 → verify 违规清单展示 → 好组合 → 校验通过）+ **用户检视实录（用户跑）** + B29 硬线复验（监听地址实录 + 非回环访问拒绝）——我跑面 [stop3-my-round-probes.txt](evidence/iteration-36/stop3-my-round-probes.txt) + 用户检视轮通过 [stop3-user-round.txt](evidence/iteration-36/stop3-user-round.txt)（DOM 7/7 PASS + 干跑闭环红/绿框 + 下载拦截法 + SIGINT exit 0；[汇总](evidence/iteration-36/stop3-evidence.md)）
+- [x] validate EXIT=0 + 全量 package EXIT=0（门禁）——verify-stop full 层 VERIFY_STOP_EXIT=0（[stop3-closeout/](evidence/iteration-36/stop3-closeout/summary.txt)：10-validate / 11-package 双 EXIT=0）；surefire XML mtime 窗口求和 186 XML = 1486/0/0/31（窗口外 2 孤儿 XML 不计：IZProbeTest 10-13 / AskVisibilityProbe 11-06）
+- [x] keyless `--verify` 计数不变（34/41/0——零 bundle 行、零新配置键；dump 读面与静态资源不增行）——收口新鲜重跑 EXIT=0（S1 镜像构建后首证 + S3 全量门禁重建后复证）
+- [x] jlink 镜像 `--list-modules` 实录仍 69（零新模块）+ 单文件 .html 随镜像资源取证——S1 取证 + S3 复证 69；ui.html 终值 441 行（软预算 ~800 的 55%，停 2 放行附言「停 3 报终值」兑现）
+- [ ] CI 四腿全绿 + run 号回填（随 push 批——待用户点名授权）
+- [x] 同步面 grep 零旧措辞残留（「不做 Web UI」规范面零残留复核——it35 T2 已执行，W4 复核取证）+ design/README L114/L123 状态基准行更新——grep「不做 Web UI」零命中；「仍为计划 / 0.5 尚未开工 / 0.5（计划）」现状入口零残留（两处命中均为历史引文：iteration-36 锚点行已注「已随收口批更新」、current-state「当前进行中」为节名引用）；根 README / design/README / current-state / AGENTS 同步落盘（plan README 无 0.5 状态行，无需改）
 
 随 W4 开工的既有裁决（无需重裁）：it35 停 2 已完成的 Follower.close 赋义；lsp flake 观察账（CI 再现才动，与本迭代无关）；it34 open ledger（B34、TwoHostLostProbe 硬化、CI 工作流维护——另裁，不入 W4）。

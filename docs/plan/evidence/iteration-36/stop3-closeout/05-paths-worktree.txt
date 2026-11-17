@@ -1,0 +1,4 @@
+COMMAND=git diff --name-only --no-renames -z 419e4f672816b85636b24a01cc084902986d54d5 --
+b''
+
+EXIT=0
