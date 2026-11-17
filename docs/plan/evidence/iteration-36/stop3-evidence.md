@@ -111,3 +111,7 @@ surefire XML 求和（`**/target/surefire-reports/TEST-*.xml` + failsafe，mtime
 ### 6. 收口批
 
 本证据档 S3 段 + 归档三件（closeout-verify-keyless / closeout-image / sync-grep）+ stop3-closeout/ 门禁日志 + stop3-user-round.txt + 同步面五文件（README / AGENTS / design/README / current-state / iteration-36）随收口批提交（不 push）。门禁日志入档按门禁剥行尾空白（11-package.txt 5 处 jqwik 时间戳行尾 `= ` 空格；命令行与载荷行逐字节未动，it35 同源纪律）。**W4 关账 = 0.5「个人工作台」四站全通**；CI 四腿与 run 号随 push 批回填（待用户点名授权）；0.5.0 发布另议。
+
+## S4 push 批 + CI 四腿 + run 号回填（2026-11-17）
+
+见 [stop4-push-ci.md](stop4-push-ci.md)：push 批 10 笔 `5e37062..69a9a68` 落地（四回合波折如实记档，gh api 远端实核为准）；CI run 44043766139 四腿全绿（Windows 双腿首跑即绿）；run 号回填 iteration-36 / current-state / AGENTS，it36 验收全勾关账终态。
