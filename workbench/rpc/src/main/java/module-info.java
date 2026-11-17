@@ -1,9 +1,10 @@
 /**
  * harness-workbench-rpc — 0.5 工作台 W3:本地回环 JSON-RPC server。
  * 纯消费 W1 投影(五视图)+ W2 tail seam(SessionTail 四契约)+ 会话清单
- * (SessionPersistence.Catalog);方法面 v1 四件 = sessionsList /
- * sessionViews / sessionTail / compositionDump(it36 W4 增:启动期
- * String 快照注入,本模块不依赖 bundle/base)。W4 静态服务面:仅精确
+ * (SessionPersistence.Catalog);方法面 v1 五件 = sessionsList /
+ * sessionViews / sessionTail / compositionDump / verifyComposition
+ * (it36 W4 增:dump 启动期 String 快照注入、verify 经 CompositionVerifier
+ * 函数接口注入——本模块不依赖 bundle/base)。W4 静态服务面:仅精确
  * "/" 的 GET/HEAD 服务单文件 ui.html(WorkbenchUi classpath 加载,
  * 资源随模块 jar 进镜像)。JSON-RPC 2.0 请求-响应 only(v1 无 batch /
  * 通知);jdk.httpserver 恒绑 127.0.0.1 回环(B29 硬线);零 Plugin、零新

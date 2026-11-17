@@ -66,6 +66,15 @@ final class RpcJson {
         return session.asText();
     }
 
+    /** "yaml":必填非空字符串(组合编辑内容);缺失/空串/型错 → -32602(it36 停 2)。 */
+    static String yaml(JsonNode params) {
+        JsonNode yaml = params.get("yaml");
+        if (yaml == null || !yaml.isTextual() || yaml.asText().isEmpty()) {
+            throw new RpcException(-32602, "invalid params");
+        }
+        return yaml.asText();
+    }
+
     /** "lastSeq":必填整数且 >= -1(-1 = 从头);缺失/型错/< -1 → -32602。 */
     static long lastSeq(JsonNode params) {
         JsonNode lastSeq = params.get("lastSeq");

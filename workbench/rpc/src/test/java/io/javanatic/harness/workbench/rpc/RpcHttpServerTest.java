@@ -164,17 +164,18 @@ class RpcHttpServerTest {
         }
     }
 
-    // ────────── T13 端到端三方法闭环 ──────────
+    // ────────── T13 端到端五方法闭环(it36 停 2 增 compositionDump/verifyComposition) ──────────
 
     @Test
-    void e2eRoundTripsThreeMethodsOverHttpWithJsonContentType() throws Exception {
+    void e2eRoundTripsFiveMethodsOverHttpWithJsonContentType() throws Exception {
         RpcFixtures.FakePersistence persistence = new RpcFixtures.FakePersistence();
         RpcFixtures.FakeTail tail = new RpcFixtures.FakeTail();
         persistence.catalog = List.of(summary("s1", 2L, Optional.empty(), false));
         persistence.total = 1;
         persistence.sessions.put("s1", loaded(richEvents()));
         tail.sessions.put("s1", tailEvents());
-        RpcHttpServer server = new RpcHttpServer(new WorkbenchRpc(persistence, tail, ""));
+        RpcHttpServer server = new RpcHttpServer(new WorkbenchRpc(persistence, tail,
+            "approval-auto\n", yaml -> yaml.contains("bad") ? List.of("违规: " + yaml) : List.of()));
         server.start(0);
         try {
             HttpResponse<String> res = post(server,
@@ -199,6 +200,24 @@ class RpcHttpServerTest {
             assertThat(tailResult.get("nextSeq").asInt()).isEqualTo(2);
             assertThat(tailResult.get("events")).hasSize(3);
             assertThat(tail.closed).isTrue();
+
+            res = post(server,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/compositionDump\",\"id\":4}");
+            JsonNode dump = MAPPER.readTree(res.body()).get("result");
+            assertThat(dump.get("dump").asText()).isEqualTo("approval-auto\n");
+
+            res = post(server,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\","
+                    + "\"params\":{\"yaml\":\"name: good\"},\"id\":5}");
+            JsonNode ok = MAPPER.readTree(res.body()).get("result");
+            assertThat(ok.get("ok").asBoolean()).isTrue();
+
+            res = post(server,
+                "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\","
+                    + "\"params\":{\"yaml\":\"bad\"},\"id\":6}");
+            JsonNode bad = MAPPER.readTree(res.body()).get("result");
+            assertThat(bad.get("ok").asBoolean()).isFalse();
+            assertThat(bad.get("violations").get(0).asText()).isEqualTo("违规: bad");
         } finally {
             server.close();
         }
@@ -211,7 +230,7 @@ class RpcHttpServerTest {
         RpcFixtures.FakeTail tail = new RpcFixtures.FakeTail();
         tail.sessions.put("s1", tailEvents());
         RpcHttpServer server = new RpcHttpServer(
-            new WorkbenchRpc(new RpcFixtures.FakePersistence(), tail, ""));
+            new WorkbenchRpc(new RpcFixtures.FakePersistence(), tail, "", yaml -> List.of()));
         server.start(0);
         ExecutorService pool = Executors.newFixedThreadPool(8);
         try {

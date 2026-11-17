@@ -142,7 +142,7 @@ JPMS 模块名用完整 `io.javanatic.harness.*`（**无缩写**，包名与模�
 |---|---|---|
 | `harness-workbench-projection` | 纯库（非 capability 三角） | 会话日志只读投影（五视图：turns/tools/usage/timeline/messages）：`List<SessionEvent>` → 结构化视图 record 的纯函数（`SessionProjection`）；无 Provider/Consumer、无插件装载、零写路径，只消费 `SessionPersistence.Loaded`。文本渲染归消费方（headless 的 `--session-view` CLI 与 workbench/tui 全屏五视图）|
 | `harness-workbench-tui` | 纯库（非 capability 三角，it34 W2） | 全屏 TUI 工作台：渲染纯函数（五视图帧）+ 按键解析 + 端子薄壳（`TermIo`，JLine 4 唯一触点）；source/input/output 三 seam 全注入，headless 可测；纯消费投影（`SessionViews`）与 tail 流式读面（`WorkbenchSource` 快照约定）。依赖 `org.jline`（terminal + terminal-ffm + native 三坐标，BSD-3-Clause；native 不可排除——`org.jline.terminal` 模块描述符硬 requires，jlink 全图解析缺之即败）|
-| `harness-workbench-rpc` | 纯库（非 capability 三角，it35 W3） | 本地回环 JSON-RPC server 三层：`JsonRpcWire` 纯函数（翻译点唯一）/ `WorkbenchRpc` handler（构造注入 `SessionPersistence` + `SessionTail`，三方法 = 会话清单 / 五视图快照 / tail 增量；响应预算 8 MiB 缺省注入，超限 -32004）/ `RpcHttpServer` jdk.httpserver 薄壳（loopback 恒绑、ephemeral 测试面）；纯消费 W1 投影 + W2 tail 读面。**Jackson 边界** |
+| `harness-workbench-rpc` | 纯库（非 capability 三角，it35 W3） | 本地回环 JSON-RPC server 三层：`JsonRpcWire` 纯函数（翻译点唯一）/ `WorkbenchRpc` handler（构造注入 `SessionPersistence` + `SessionTail` + 组合 dump 快照 + `CompositionVerifier` 干跑 seam，五方法 = 会话清单 / 五视图快照 / tail 增量 / compositionDump 读面 / verifyComposition 干跑校验（it36 W4）；响应预算 8 MiB 缺省注入，超限 -32004）/ `RpcHttpServer` jdk.httpserver 薄壳（loopback 恒绑、ephemeral 测试面；it36 W4 增精确 `/` GET/HEAD 服务单文件 ui.html——`WorkbenchUi` classpath 加载，其余 GET 404）；纯消费 W1 投影 + W2 tail 读面，不依赖 bundle/base（dump/verify 经装配面注入）。**Jackson 边界** |
 
 ### Bundle 层（组合发行）
 

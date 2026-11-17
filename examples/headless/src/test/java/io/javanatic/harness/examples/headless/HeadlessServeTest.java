@@ -1,5 +1,7 @@
 package io.javanatic.harness.examples.headless;
 
+import io.javanatic.harness.boot.AppBoot;
+import io.javanatic.harness.boot.Policy;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.session.CreateOptions;
@@ -85,9 +87,14 @@ class HeadlessServeTest {
             ByteArrayOutputStream errBuf = new ByteArrayOutputStream();
             PrintStream err = new PrintStream(errBuf, true, StandardCharsets.UTF_8);
             AtomicInteger exit = new AtomicInteger(Integer.MIN_VALUE);
+            // it36 停 2:干跑校验复用启动期 overlays/policy(真 AppBoot 装配面)
+            AppBoot.BootOptions serverBoot = new AppBoot.BootOptions(
+                HeadlessMain.resolveProfile(null),
+                HeadlessMain.buildOverlays(HeadlessMain.parse(new String[] {}), workspace, sessions),
+                true, Policy.STANDARD);
             Thread serving = Thread.ofVirtual().start(() -> {
                 try {
-                    exit.set(HeadlessMain.runServe(rt.root(), 0, "dump-snapshot-line", out, err));
+                    exit.set(HeadlessMain.runServe(rt.root(), 0, "dump-snapshot-line", serverBoot, out, err));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -103,13 +110,27 @@ class HeadlessServeTest {
                 rpc("workbench/compositionDump", "{}", port), HttpResponse.BodyHandlers.ofString());
             assertThat(dumpResponse.statusCode()).isEqualTo(200);
             assertThat(dumpResponse.body()).contains("dump-snapshot-line");
+            // it36 停 2:verifyComposition 干跑接线(好组合 ok / 坏组合违规清单)
+            HttpResponse<String> okResponse = client.send(
+                rpc("workbench/verifyComposition",
+                    "{\"yaml\":\"name: headless\\npolicy: standard\\nbundles: [base]\\nrows: []\\n\"}", port),
+                HttpResponse.BodyHandlers.ofString());
+            assertThat(okResponse.statusCode()).isEqualTo(200);
+            assertThat(okResponse.body()).contains("\"ok\":true");
+            HttpResponse<String> badResponse = client.send(
+                rpc("workbench/verifyComposition", "{\"yaml\":\"name: [unclosed\"}", port),
+                HttpResponse.BodyHandlers.ofString());
+            assertThat(badResponse.statusCode()).isEqualTo(200);
+            assertThat(badResponse.body()).contains("\"ok\":false").contains("violations");
 
             Signal.raise(new Signal("INT")); // 首按 Ctrl-C:server close + 解除等待
             serving.join(TimeUnit.SECONDS.toMillis(20));
             assertThat(serving.isAlive()).isFalse();
             assertThat(exit).hasValue(0);
             assertThat(outBuf.toString(StandardCharsets.UTF_8))
-                .contains("JSON-RPC server 127.0.0.1:" + port);
+                .contains("JSON-RPC server 127.0.0.1:" + port)
+                // it36 停 2 T5:stdout 补 UI 地址提示行(实际端口)
+                .contains("UI: http://127.0.0.1:" + port + "/");
             // close 收口:端口已释放,再连被拒(connect refused)
             assertThatThrownBy(() -> client.send(
                 rpc("workbench/sessionsList", "{}", port), HttpResponse.BodyHandlers.ofString()))

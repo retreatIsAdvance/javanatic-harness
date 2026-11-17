@@ -182,7 +182,8 @@ public final class HeadlessMain {
                                     --verify / --sessions / --session-view 互斥;需真 TTY)
           --follow                  工作台跟随态:流式读面 live tail(--workbench 必配)
           --serve                  本地回环 JSON-RPC server(只读工作台面;仅绑定 127.0.0.1;
-                                    无 key 可跑;与任务文本 / --resume / --verify / --sessions /
+                                    无 key 可跑;stdout 报地址行 + UI 地址行,GET / 服务单文件
+                                    浏览器 UI;与任务文本 / --resume / --verify / --sessions /
                                     --session / --session-view / --workbench 互斥)
           --port=<N>               server 端口(1-65535;缺省 8787;仅与 --serve 同用)
           --dump                   打印组合 dump(一行一插件:组合期行序,含禁用行注解、
@@ -721,9 +722,10 @@ public final class HeadlessMain {
             }
             if (options.serve()) {
                 // 只读旁路:不进 API key 检查、不建 agent——回环 server 消费投影/流式读面;
-                // dump 快照启动期算好注入(workbench/rpc 不依赖 bundle/base)
+                // dump 快照启动期算好注入(workbench/rpc 不依赖 bundle/base);
+                // it36 停 2:boot 选项传入——干跑校验复用启动期 overlays/policy
                 return runServe(rt.root(), options.servePort().orElse(DEFAULT_SERVE_PORT),
-                    AppBoot.dump(AppBoot.compose(boot)), out, err);
+                    AppBoot.dump(AppBoot.compose(boot)), boot, out, err);
             }
             String apiKey = options.resolvedApiKey();
             if (apiKey == null) {
@@ -1241,16 +1243,18 @@ public final class HeadlessMain {
     /**
      * --serve 本地回环 JSON-RPC server（只读工作台面,无 key 可跑）:boot 装配双 seam
      * （SessionPersistence/SessionTail 由 persistence-jsonl 既有行提供）→ 回环监听 →
-     * stdout 地址行 → 阻塞至 SIGINT 首按（close + exit 0;再按 halt(130) 逃生门）。
-     * 端口占用 bind 失败是 CLI 失败面（stderr 指引,exit 3——写者锁冲突同族）;其余 IO
-     * 异常原样上抛。ephemeral（port=0）是测试/取证面,CLI parse 已拒收。
+     * stdout 地址行 + UI 地址提示行（it36 停 2 T5）→ 阻塞至 SIGINT 首按（close + exit 0;
+     * 再按 halt(130) 逃生门）。端口占用 bind 失败是 CLI 失败面（stderr 指引,exit 3——
+     * 写者锁冲突同族）;其余 IO 异常原样上抛。ephemeral（port=0）是测试/取证面,CLI parse 已拒收。
      *
      * @param compositionDump 启动期组合 dump 快照（run() 算好注入;compositionDump 读面）
+     * @param serverBoot 启动期装配选项（it36 停 2:verifyComposition 干跑复用其 overlays/policy）
      */
-    static int runServe(Scope root, int port, String compositionDump, PrintStream out, PrintStream err)
-            throws Exception {
+    static int runServe(Scope root, int port, String compositionDump, AppBoot.BootOptions serverBoot,
+                        PrintStream out, PrintStream err) throws Exception {
         RpcHttpServer server = new RpcHttpServer(new WorkbenchRpc(
-            root.require(SessionPersistence.KEY), root.require(SessionTail.KEY), compositionDump));
+            root.require(SessionPersistence.KEY), root.require(SessionTail.KEY), compositionDump,
+            yaml -> dryRunVerify(yaml, serverBoot)));
         try {
             server.start(port);
         } catch (IOException e) {
@@ -1264,10 +1268,53 @@ public final class HeadlessMain {
         try {
             out.println("JSON-RPC server 127.0.0.1:" + server.address().getPort()
                 + "（只读工作台面；Ctrl-C 退出）");
+            out.println("UI: http://127.0.0.1:" + server.address().getPort() + "/（浏览器打开）");
             shutdown.await();
             return 0;
         } finally {
             restoreSigint.run();
+        }
+    }
+
+    /**
+     * it36 停 2 组合编辑干跑（verifyComposition 装配面）:编辑内容写临时 profile,
+     * 以启动期同 overlays/policy 跑 AppBoot verify 断言——语义 =「把这份内容存为
+     * profile、以 server 启动时同样的参数跑 jh --verify,会不会过」。组合级失败
+     * （策略违规/坏 YAML/未知 bundle/双向校验/workspace 漂移）一律归一为违规清单
+     * （编辑器 UX 逐项展示,fail-loud 直接变 UX）;仅基础设施 IO 失败（临时文件写失败）
+     * 原样上抛（rpc 翻译 -32603）。零用户数据写面:不触碰已落盘 profile;临时文件
+     * finally 删除（零残留）;干跑 Runtime 即开即关（每请求独立,无共享态）。
+     *
+     * @param yaml 编辑内容（完整 profile YAML）
+     * @param serverBoot serve 启动期装配选项（overlays/policy 复用面）
+     * @return 违规清单;空 = 通过
+     * @throws IOException 基础设施失败（临时文件写失败等）
+     */
+    static List<String> dryRunVerify(String yaml, AppBoot.BootOptions serverBoot) throws IOException {
+        Path temp = Files.createTempFile("jh-verify-composition", ".yml");
+        try {
+            Files.writeString(temp, yaml, StandardCharsets.UTF_8);
+            AppBoot.BootOptions dry = new AppBoot.BootOptions(
+                temp, serverBoot.overlays(), true, serverBoot.verifyPolicy());
+            AppBoot.Booted booted;
+            try {
+                booted = AppBoot.bootReported(dry);
+            } catch (AppBoot.VerifyFailedException e) {
+                return e.violations();
+            } catch (RuntimeException e) {
+                // 组合级失败归一:IllegalStateException(未知 bundle/双向校验/workspace 漂移)
+                // + snakeyaml MarkedYAMLException(坏 YAML,RuntimeException 而非 IOException)
+                // + 插件装载失败——干跑语义下一律是「这份组合不能用」,进违规清单不抛
+                return List.of("组合错误: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            } catch (IOException e) {
+                return List.of("profile 解析失败: " + e.getMessage());
+            }
+            try (Runtime dryRuntime = booted.runtime()) {
+                // 干跑只取断言面:装配成功 = 通过;runtime 即关(零资源残留)
+            }
+            return List.of();
+        } finally {
+            Files.deleteIfExists(temp);
         }
     }
 

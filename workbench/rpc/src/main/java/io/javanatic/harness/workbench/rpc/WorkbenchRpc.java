@@ -18,47 +18,70 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 
 /**
- * workbench/rpc 方法 handler：四方法 face 的派发与 seam 消费(it36 停 1
- * 增 compositionDump 读面)。构造器注入 {@link SessionPersistence} +
- * {@link SessionTail} + 组合 dump 快照 + 响应预算;域错误抛
+ * workbench/rpc 方法 handler：五方法 face 的派发与 seam 消费(it36 停 1
+ * 增 compositionDump 读面、停 2 增 verifyComposition 干跑校验)。构造器注入
+ * {@link SessionPersistence} + {@link SessionTail} + 组合 dump 快照 +
+ * {@link CompositionVerifier} + 响应预算;域错误抛
  * {@link RpcException}(wire 层原样翻译),seam 契约异常按分档翻译
  * (-32001/-32002/-32003,意外 IOException 兜底 -32603)。每请求
  * Follower 开→读→关闭环;并发请求无共享态。
  *
  * <p>模块图纪律:本模块不依赖 bundle/base——dump 文本由装配面
  * (HeadlessMain)启动期算好作为 String 快照注入(组合启动后不变,
- * 热重载不做 ⇒ 快照是正确形状)。
+ * 热重载不做 ⇒ 快照是正确形状);verify 能力经 {@link CompositionVerifier}
+ * 函数接口注入(组合级失败由装配面翻译为违规清单,rpc 面只见 List)。
  */
 public final class WorkbenchRpc implements JsonRpcWire.Handler {
 
     /** 缺省响应预算(8 MiB,mcp T7 同族)。 */
     public static final long DEFAULT_MAX_RESPONSE_BYTES = 8L * 1024 * 1024;
 
+    /**
+     * 组合编辑干跑校验 seam(it36 停 2;实现归装配面——workbench/rpc 不依赖
+     * bundle/base)。空列表 = 通过;非空 = 违规清单(逐项人读文本)。组合级失败
+     * (YAML 解析/未知 bundle/双向校验/workspace 漂移/策略违规)一律由实现
+     * 翻译为违规项;仅基础设施 IO 失败上抛(handler 翻译 -32603)。
+     */
+    @FunctionalInterface
+    public interface CompositionVerifier {
+        /**
+         * @param yaml 编辑内容(完整 profile YAML;非空,参数校验在 handler)
+         * @return 违规清单;空 = 通过
+         * @throws IOException 基础设施失败(临时文件写失败等)
+         */
+        List<String> verify(String yaml) throws IOException;
+    }
+
     static final String METHOD_SESSIONS_LIST = "workbench/sessionsList";
     static final String METHOD_SESSION_VIEWS = "workbench/sessionViews";
     static final String METHOD_SESSION_TAIL = "workbench/sessionTail";
     static final String METHOD_COMPOSITION_DUMP = "workbench/compositionDump";
+    static final String METHOD_VERIFY_COMPOSITION = "workbench/verifyComposition";
 
     private static final int DEFAULT_SESSIONS_MAX = 20;
 
     private final SessionPersistence persistence;
     private final SessionTail tail;
     private final String compositionDump;
+    private final CompositionVerifier verifier;
     private final long maxResponseBytes;
 
-    public WorkbenchRpc(SessionPersistence persistence, SessionTail tail, String compositionDump) {
-        this(persistence, tail, compositionDump, DEFAULT_MAX_RESPONSE_BYTES);
+    public WorkbenchRpc(SessionPersistence persistence, SessionTail tail,
+                        String compositionDump, CompositionVerifier verifier) {
+        this(persistence, tail, compositionDump, verifier, DEFAULT_MAX_RESPONSE_BYTES);
     }
 
     /**
      * @param compositionDump 启动期组合 dump 快照(AppBoot.dump(compose(boot)) 口径)
+     * @param verifier 组合编辑干跑校验 seam(装配面注入)
      * @param maxResponseBytes 序列化响应字节上限(须为正;超出 → -32004,不静默截断)
      */
     public WorkbenchRpc(SessionPersistence persistence, SessionTail tail,
-                        String compositionDump, long maxResponseBytes) {
+                        String compositionDump, CompositionVerifier verifier, long maxResponseBytes) {
         this.persistence = Objects.requireNonNull(persistence, "persistence");
         this.tail = Objects.requireNonNull(tail, "tail");
         this.compositionDump = Objects.requireNonNull(compositionDump, "compositionDump");
+        this.verifier = Objects.requireNonNull(verifier, "verifier");
         if (maxResponseBytes <= 0) {
             throw new IllegalArgumentException("maxResponseBytes must be positive");
         }
@@ -72,6 +95,7 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
             case METHOD_SESSION_VIEWS -> sessionViews(params);
             case METHOD_SESSION_TAIL -> sessionTail(params);
             case METHOD_COMPOSITION_DUMP -> compositionDump();
+            case METHOD_VERIFY_COMPOSITION -> verifyComposition(params);
             default -> throw new RpcException(-32601, "method not found");
         };
         if (RpcJson.sizeOf(result) > maxResponseBytes) {
@@ -84,6 +108,28 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
     private JsonNode compositionDump() {
         ObjectNode out = RpcJson.node();
         out.put("dump", compositionDump);
+        return out;
+    }
+
+    /**
+     * 组合编辑干跑校验(it36 停 2):yaml 必填非空 → seam 干跑 →
+     * {ok:true} 或 {ok:false,violations:[...]}。零用户数据写面——
+     * 干跑对象是临时 profile(装配面),不触碰已落盘 profile。
+     */
+    private JsonNode verifyComposition(JsonNode params) {
+        String yaml = RpcJson.yaml(params);
+        List<String> violations;
+        try {
+            violations = verifier.verify(yaml);
+        } catch (IOException e) {
+            throw new RpcException(-32603, "Internal error");
+        }
+        ObjectNode out = RpcJson.node();
+        out.put("ok", violations.isEmpty());
+        if (!violations.isEmpty()) {
+            ArrayNode items = out.putArray("violations");
+            violations.forEach(items::add);
+        }
         return out;
     }
 

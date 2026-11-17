@@ -2,11 +2,441 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Javanatic Workbench</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2430; --muted: #6b7684;
+  --line: #dde3ea; --accent: #2456a6; --ok: #1e7d3c; --bad: #b3261e;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.55 -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+}
+header {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+}
+header h1 { margin: 0; font-size: 18px; }
+header .sub { color: var(--muted); font-size: 12px; }
+nav { display: flex; gap: 8px; padding: 10px 20px 0; }
+nav button {
+  border: 1px solid var(--line); border-bottom: none; background: var(--panel);
+  padding: 8px 18px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 14px;
+}
+nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+main { padding: 16px 20px 40px; }
+section.tab { display: none; }
+section.tab.active { display: block; }
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 14px;
+}
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+button.action {
+  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+button.ghost {
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+#error-bar {
+  display: none; margin: 0 0 12px; padding: 8px 14px; border-radius: 8px;
+  background: #fdecea; color: var(--bad); border: 1px solid #f5c6c0; white-space: pre-wrap;
+}
+#session-list { list-style: none; margin: 10px 0 0; padding: 0; }
+#session-list li {
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+  margin-bottom: 6px; cursor: pointer; display: flex; gap: 12px; flex-wrap: wrap;
+}
+#session-list li:hover { border-color: var(--accent); }
+#session-list li.selected { border-color: var(--accent); background: #eef3fb; }
+#session-list .sid { font-family: ui-monospace, Menlo, Consolas, monospace; }
+#session-list .meta { color: var(--muted); font-size: 12px; }
+.badge { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: #fdecea; color: var(--bad); }
+.badge.idle { background: #e8f2ea; color: var(--ok); }
+#session-detail { display: none; }
+#detail-header { color: var(--muted); font-size: 12px; margin-bottom: 8px; word-break: break-all; }
+.viewtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.viewtabs button {
+  border: 1px solid var(--line); background: var(--panel); padding: 4px 12px;
+  border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.viewtabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.view { display: none; overflow-x: auto; }
+.view.active { display: block; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; vertical-align: top; }
+th { background: #f0f3f7; white-space: nowrap; }
+td { word-break: break-word; }
+.empty { color: var(--muted); padding: 10px 0; }
+label.toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; cursor: pointer; }
+#composition-editor {
+  width: 100%; min-height: 320px; resize: vertical; margin-top: 10px;
+  font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+}
+#verify-result { margin-top: 10px; white-space: pre-wrap; display: none; padding: 8px 14px; border-radius: 8px; }
+#verify-result.ok { display: block; background: #e8f2ea; color: var(--ok); border: 1px solid #bcd9c2; }
+#verify-result.bad { display: block; background: #fdecea; color: var(--bad); border: 1px solid #f5c6c0; }
+.hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+pre.dump {
+  background: #f0f3f7; border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px; font-size: 12px; overflow-x: auto; display: none; margin: 10px 0 0;
+}
+</style>
 </head>
 <body>
 <!-- javanatic-workbench-ui -->
-<h1>Javanatic Workbench</h1>
-<p>W4 UI——功能面停 2 落地（会话清单 / 五视图 / tail 轮询 / 组合编辑器）。</p>
+<header>
+  <h1>Javanatic Workbench</h1>
+  <span class="sub">本地回环只读工作台（127.0.0.1 · 单用户 · W4）——会话观察 + 组合编辑准备</span>
+</header>
+<nav>
+  <button id="tab-sessions" class="active" type="button">会话</button>
+  <button id="tab-composition" type="button">组合编辑器</button>
+</nav>
+<main>
+  <div id="error-bar" role="alert"></div>
+
+  <section id="pane-sessions" class="tab active">
+    <div class="panel">
+      <div class="row">
+        <button id="refresh-sessions" class="action" type="button">刷新清单</button>
+        <span class="hint">workbench/sessionsList（max=50）——落盘事实，只读</span>
+      </div>
+      <ul id="session-list"></ul>
+      <div id="sessions-empty" class="empty">暂无会话——点「刷新清单」加载。</div>
+    </div>
+    <div id="session-detail" class="panel">
+      <div id="detail-header"></div>
+      <div class="row" style="margin-bottom:8px">
+        <label class="toggle"><input type="checkbox" id="tail-toggle"> tail 跟随（2s 轮询增量）</label>
+        <span class="hint">workbench/sessionTail——游标 = nextSeq</span>
+      </div>
+      <div class="viewtabs">
+        <button id="view-turns" type="button">轮次</button>
+        <button id="view-tools" type="button">工具</button>
+        <button id="view-usage" type="button">用量</button>
+        <button id="view-timeline" type="button" class="active">时间线</button>
+        <button id="view-messages" type="button">消息</button>
+      </div>
+      <div id="viewbody-turns" class="view"></div>
+      <div id="viewbody-tools" class="view"></div>
+      <div id="viewbody-usage" class="view"></div>
+      <div id="viewbody-timeline" class="view active"></div>
+      <div id="viewbody-messages" class="view"></div>
+    </div>
+  </section>
+
+  <section id="pane-composition" class="tab">
+    <div class="panel">
+      <div class="row">
+        <button id="load-dump" class="ghost" type="button">载入当前组合 dump（对照）</button>
+        <button id="verify-composition" class="action" type="button">保存前校验</button>
+        <button id="download-profile" class="ghost" type="button">下载 profile.yml</button>
+      </div>
+      <pre id="dump-view" class="dump"></pre>
+      <textarea id="composition-editor" spellcheck="false"
+        placeholder="在此编辑完整 profile YAML（name / policy / bundles / rows）"></textarea>
+      <div id="verify-result" role="status"></div>
+      <div class="hint">
+        编辑对象是完整 profile YAML；dump 是组合期行序投影（含禁用行注解、脱敏），供对照。
+        校验 = 临时 profile 干跑 --verify（不触碰已落盘 profile）；下载经浏览器 Blob 落盘、不经 server——
+        保存到 ~/.harness/profiles/&lt;name&gt;/profile.yml 由你手动完成，新会话生效（无热重载）。
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+"use strict";
+// ────────── RPC helper：同源 POST "/"，JSON-RPC 2.0（零 CORS） ──────────
+let rpcId = 0;
+async function rpc(method, params) {
+  const body = { jsonrpc: "2.0", id: ++rpcId, method };
+  if (params !== undefined) { body.params = params; }
+  const res = await fetch("/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json();
+  if (json.error) {
+    const err = new Error(json.error.message + "（code " + json.error.code + "）");
+    err.code = json.error.code;
+    throw err;
+  }
+  return json.result;
+}
+
+// ────────── DOM helper：动态内容一律 textContent/createElement（零注入面） ──────────
+function el(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined && text !== null) { node.textContent = String(text); }
+  if (className) { node.className = className; }
+  return node;
+}
+function clear(node) { while (node.firstChild) { node.removeChild(node.firstChild); } }
+function showError(message) {
+  const bar = document.getElementById("error-bar");
+  bar.textContent = message;
+  bar.style.display = "block";
+}
+function clearError() { document.getElementById("error-bar").style.display = "none"; }
+function fmtTime(millis) {
+  if (!millis) { return "—"; }
+  return new Date(millis).toLocaleString();
+}
+function text(value) { return value === undefined || value === null ? "—" : String(value); }
+
+// 通用表格渲染：rows = 对象数组，columns = [键, 表头][]
+function renderTable(container, rows, columns) {
+  clear(container);
+  if (!rows || rows.length === 0) {
+    container.appendChild(el("div", "（空）", "empty"));
+    return;
+  }
+  const table = el("table");
+  const thead = el("thead");
+  const headRow = el("tr");
+  columns.forEach(([, label]) => headRow.appendChild(el("th", label)));
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+  const tbody = el("tbody");
+  rows.forEach(row => {
+    const tr = el("tr");
+    columns.forEach(([key]) => {
+      const value = row[key];
+      tr.appendChild(el("td", typeof value === "object" && value !== null
+        ? JSON.stringify(value) : text(value)));
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+// ────────── 页签 ──────────
+function switchTab(name) {
+  document.getElementById("tab-sessions").classList.toggle("active", name === "sessions");
+  document.getElementById("tab-composition").classList.toggle("active", name === "composition");
+  document.getElementById("pane-sessions").classList.toggle("active", name === "sessions");
+  document.getElementById("pane-composition").classList.toggle("active", name === "composition");
+  if (name !== "sessions") { stopTail(); }
+}
+document.getElementById("tab-sessions").addEventListener("click", () => switchTab("sessions"));
+document.getElementById("tab-composition").addEventListener("click", () => switchTab("composition"));
+
+// ────────── 会话清单 ──────────
+async function loadSessions() {
+  clearError();
+  try {
+    const result = await rpc("workbench/sessionsList", { max: 50 });
+    const list = document.getElementById("session-list");
+    clear(list);
+    const empty = document.getElementById("sessions-empty");
+    const sessions = result.sessions || [];
+    empty.style.display = sessions.length === 0 ? "block" : "none";
+    if (sessions.length === 0) { empty.textContent = "暂无会话（total=" + text(result.total) + "）。"; }
+    sessions.forEach(summary => {
+      const li = el("li");
+      li.appendChild(el("span", summary.id, "sid"));
+      li.appendChild(el("span", "事件 " + text(summary.eventCount)
+        + " · 创建 " + fmtTime(summary.createdAt)
+        + " · 最近 " + fmtTime(summary.lastActivityMillis), "meta"));
+      li.appendChild(el("span", summary.busy ? "写者占用" : "空闲",
+        summary.busy ? "badge" : "badge idle"));
+      li.addEventListener("click", () => selectSession(summary.id, li));
+      list.appendChild(li);
+    });
+  } catch (e) { showError("会话清单加载失败: " + e.message); }
+}
+document.getElementById("refresh-sessions").addEventListener("click", loadSessions);
+
+// ────────── 单会话五视图 ──────────
+const state = { session: null, views: null, lastSeq: -1, timer: null };
+const VIEW_NAMES = ["turns", "tools", "usage", "timeline", "messages"];
+
+async function selectSession(id, li) {
+  stopTail();
+  document.getElementById("tail-toggle").checked = false;
+  clearError();
+  state.session = id;
+  state.lastSeq = -1;
+  document.querySelectorAll("#session-list li").forEach(n => n.classList.remove("selected"));
+  if (li) { li.classList.add("selected"); }
+  try {
+    const views = await rpc("workbench/sessionViews", { session: id });
+    state.views = views;
+    document.getElementById("session-detail").style.display = "block";
+    const h = views.header || {};
+    document.getElementById("detail-header").textContent =
+      "会话 " + text(h.id) + " · 创建 " + fmtTime(h.createdAt)
+      + " · 版本 " + text(h.version) + " · seed " + text(h.seedLength);
+    renderViews(views);
+    switchView("timeline");
+  } catch (e) { showError("会话视图加载失败: " + e.message); }
+}
+
+function renderViews(views) {
+  renderTable(document.getElementById("viewbody-turns"), views.turns,
+    [["turn", "轮"], ["open", "进行中"], ["startTime", "开始"], ["endTime", "结束"],
+     ["endReason", "收尾"], ["steps", "步数"], ["toolCalls", "工具调用"]]);
+  const toolRows = [];
+  (views.tools || []).forEach(step => {
+    (step.pairs || []).forEach(pair => toolRows.push({
+      turn: step.turn, step: step.step, name: pair.name,
+      arguments: pair.arguments, isError: pair.isError,
+      durationMillis: pair.durationMillis
+    }));
+    (step.orphans || []).forEach(orphan => toolRows.push({
+      turn: step.turn, step: step.step, name: "(孤儿调用)",
+      arguments: orphan.arguments, isError: "—", durationMillis: "—"
+    }));
+  });
+  renderTable(document.getElementById("viewbody-tools"), toolRows,
+    [["turn", "轮"], ["step", "步"], ["name", "工具"], ["arguments", "参数"],
+     ["isError", "错误"], ["durationMillis", "耗时(ms)"]]);
+  renderUsage(views.usage);
+  renderTable(document.getElementById("viewbody-timeline"), views.timeline,
+    [["seq", "seq"], ["time", "时间"], ["type", "事件"], ["recognized", "识别"], ["detail", "详情"]]);
+  const messageRows = (views.messages || []).map(m => ({
+    kind: m.kind,
+    source: m.source ? JSON.stringify(m.source) : "—",
+    blocks: (m.blocks || []).map(b => b.type).join(", ")
+  }));
+  renderTable(document.getElementById("viewbody-messages"), messageRows,
+    [["kind", "角色"], ["source", "来源"], ["blocks", "块类型"]]);
+}
+
+function renderUsage(usage) {
+  const container = document.getElementById("viewbody-usage");
+  clear(container);
+  if (!usage) { container.appendChild(el("div", "（空）", "empty")); return; }
+  const total = usage.total || {};
+  container.appendChild(el("div", "总计：输入 " + text(total.inputTokens)
+    + " · 输出 " + text(total.outputTokens) + " · 推理 " + text(total.reasoningTokens)));
+  const rows = (usage.perTurn || []).map(item => ({
+    turn: item.turn,
+    inputTokens: item.usage ? item.usage.inputTokens : "—",
+    outputTokens: item.usage ? item.usage.outputTokens : "—",
+    reasoningTokens: item.usage ? item.usage.reasoningTokens : "—"
+  }));
+  renderTable(container, rows,
+    [["turn", "轮"], ["inputTokens", "输入"], ["outputTokens", "输出"], ["reasoningTokens", "推理"]]);
+}
+
+function switchView(name) {
+  VIEW_NAMES.forEach(v => {
+    document.getElementById("view-" + v).classList.toggle("active", v === name);
+    document.getElementById("viewbody-" + v).classList.toggle("active", v === name);
+  });
+}
+VIEW_NAMES.forEach(v =>
+  document.getElementById("view-" + v).addEventListener("click", () => switchView(v)));
+
+// ────────── tail 轮询（2s；游标 = nextSeq；错误即停） ──────────
+function stopTail() {
+  if (state.timer !== null) { clearInterval(state.timer); state.timer = null; }
+}
+async function tailOnce() {
+  if (!state.session) { return; }
+  try {
+    const result = await rpc("workbench/sessionTail",
+      { session: state.session, lastSeq: state.lastSeq });
+    state.lastSeq = result.nextSeq;
+    const events = result.events || [];
+    if (events.length > 0) {
+      const body = document.getElementById("viewbody-timeline");
+      const table = body.querySelector("table");
+      if (table) {
+        const tbody = table.querySelector("tbody");
+        events.forEach(entry => {
+          const tr = el("tr");
+          [entry.seq, entry.time, entry.type, entry.recognized, entry.detail].forEach(value =>
+            tr.appendChild(el("td", typeof value === "object" && value !== null
+              ? JSON.stringify(value) : text(value))));
+          tbody.appendChild(tr);
+        });
+      } else {
+        renderTable(body, events,
+          [["seq", "seq"], ["time", "时间"], ["type", "事件"], ["recognized", "识别"], ["detail", "详情"]]);
+      }
+      switchView("timeline");
+    }
+  } catch (e) {
+    stopTail();
+    document.getElementById("tail-toggle").checked = false;
+    showError("tail 轮询已停止: " + e.message);
+  }
+}
+document.getElementById("tail-toggle").addEventListener("change", event => {
+  clearError();
+  if (event.target.checked) {
+    if (!state.session) {
+      event.target.checked = false;
+      showError("先选择一个会话再开启 tail 跟随。");
+      return;
+    }
+    state.timer = setInterval(tailOnce, 2000);
+    tailOnce();
+  } else {
+    stopTail();
+  }
+});
+
+// ────────── 组合编辑器 ──────────
+const PROFILE_SKELETON = "name: my-profile\npolicy: standard\nbundles: [base]\nrows: []\n";
+document.getElementById("composition-editor").value = PROFILE_SKELETON;
+
+document.getElementById("load-dump").addEventListener("click", async () => {
+  clearError();
+  try {
+    const result = await rpc("workbench/compositionDump");
+    const view = document.getElementById("dump-view");
+    view.textContent = result.dump;
+    view.style.display = "block";
+  } catch (e) { showError("组合 dump 加载失败: " + e.message); }
+});
+
+document.getElementById("verify-composition").addEventListener("click", async () => {
+  clearError();
+  const box = document.getElementById("verify-result");
+  box.className = "";
+  box.style.display = "none";
+  const yaml = document.getElementById("composition-editor").value;
+  try {
+    const result = await rpc("workbench/verifyComposition", { yaml });
+    if (result.ok) {
+      box.textContent = "校验通过——可下载后手动保存到 ~/.harness/profiles/<name>/profile.yml";
+      box.className = "ok";
+    } else {
+      box.textContent = "校验未通过（" + (result.violations || []).length + " 项违规）：\n"
+        + (result.violations || []).map((v, i) => (i + 1) + ". " + v).join("\n");
+      box.className = "bad";
+    }
+  } catch (e) { showError("校验请求失败: " + e.message); }
+});
+
+// T3 增强：Blob + download 属性——浏览器端落盘，不经 server（零写面承诺）
+document.getElementById("download-profile").addEventListener("click", () => {
+  clearError();
+  const yaml = document.getElementById("composition-editor").value;
+  const blob = new Blob([yaml], { type: "application/yaml" });
+  const url = URL.createObjectURL(blob);
+  const link = el("a");
+  link.href = url;
+  link.download = "profile.yml";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+});
+
+// 首屏加载会话清单
+loadSessions();
+</script>
 </body>
 </html>

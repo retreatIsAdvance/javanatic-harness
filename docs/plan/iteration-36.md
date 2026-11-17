@@ -1,4 +1,4 @@
-# 迭代 36 — W4 本地 Web UI（状态：四确认已裁、T1–T5 全批（2026-11-17）；停 1 通过并关闭，停 2 进行中）
+# 迭代 36 — W4 本地 Web UI（状态：四确认已裁、T1–T5 全批（2026-11-17）；停 1 通过并关闭，停 2 出包待放行）
 
 基线：it35 已关账（0.5 W3 JSON-RPC server 收官，master `5e37062`），工作版本 `0.5.0-SNAPSHOT`。0.5 路线（[总体计划](../design/README.md#phased-evolution-plan)）：W1 事件投影与查询（it33）→ W2 TUI 工作台（it34）→ W3 JSON-RPC server（it35）→ **W4 本地 Web UI（最后一站）**。改判主体已在 it35 T2 执行完毕（[notes 0011](../../.agents/notes/0011-web-ui-non-goal-reversal.md) + [00 §6](../design/00-overview.md#6-非-target明确不做) L198 改写 + B29 转正 + README L88 同步）——W4 四确认只需验证并引用，不重裁改判本体。
 
@@ -47,7 +47,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1：静态服务 seam + 路由契约 + dump 读面 | 承载契约（GET/POST 分派、405/404 面、content-type、缓存头）+ 单文件资源加载 + 静态服务纯函数 + B29 硬线不变 + dump 读面形态（T3 拟案批后）+ 停 1 设计点三条钉死 | 通过并关闭（2026-11-17 放行；[verdict](evidence/iteration-36/stop1-verdict.md)；备注两条已处置：计数条孤儿 XML 半句 + 停 2/3 突变落日志） |
-| 停 2：UI 单文件 + 组合编辑器 | 单文件 .html（清单/五视图/tail 轮询 vanilla JS）+ 组合编辑器（dump 展示 / 编辑 / 保存前 verify 干跑接线）+ stdout 提示行 | 设计定稿（[stop2-ui-design.md](evidence/iteration-36/stop2-ui-design.md)：verifyComposition seam + 干跑语义 + UI 功能面 + 软预算起计 + 突变落日志门槛）；S1 待开工 |
+| 停 2：UI 单文件 + 组合编辑器 | 单文件 .html（清单/五视图/tail 轮询 vanilla JS）+ 组合编辑器（dump 展示 / 编辑 / 保存前 verify 干跑接线）+ stdout 提示行 | 出包待放行（[packet](evidence/iteration-36/stop2-review-packet.md) + [证据](evidence/iteration-36/stop2-tdd-evidence.md)；S1–S3 全绿：rpc 63 + headless 130、全量 1486/0/0、M1–M5 落日志闭环、keyless 34/41/0、镜像 69 + 资源进镜像实证；ui.html **441 行** < 软预算 ~800） |
 | 停 3：装配/同步面 + 真机验收 + 收口 | jlink 镜像（--list-modules 仍 69 + 资源进镜像取证）+ `--serve` 真机实录（浏览器打开 / 五视图 / tail 轮询 / 组合校验链——我跑面 + **用户检视实录（用户跑）**）+ B29 硬线复验 + CI 四腿 + 验收清单全勾 + 同步面（README L114/L123 更新 + grep 零残留复核）+ 收口批 | 待开工 |
 
 停 1/停 2 出包按 review packet 仪式（本迭代零新增模块、零 base 行——资源进 workbench/rpc；四件套中「META-INF/services 双通道」不适用（无 Plugin），其余照勾）。

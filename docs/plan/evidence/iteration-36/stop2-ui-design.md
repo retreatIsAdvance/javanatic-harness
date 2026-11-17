@@ -50,7 +50,7 @@ static List<String> dryRunVerify(String yaml, AppBoot.BootOptions serverBoot) th
 1. `Files.createTempFile("jh-verify-composition", ".yml")` 写入编辑内容（UTF-8）；**finally 删除**（零残留——测试钉 temp 目录前后计数）。
 2. `new AppBoot.BootOptions(temp, serverBoot.overlays(), true, serverBoot.verifyPolicy())` → `AppBoot.bootReported(...)`。
 3. 干跑 Runtime **try-with-resources 关闭**（bootReported 加载插件 ⇒ 有资源要收；与 --verify 同 JVM 插件加载幂等）。
-4. 异常归一：`VerifyFailedException` → `e.violations()`；`IllegalStateException`（未知 bundle / 双向校验 / workspace 漂移）→ 单项 `"组合错误: " + msg`；profile 解析 `IOException` → 单项 `"profile 解析失败: " + msg`。临时文件写失败（基础设施）原样上抛 → rpc 翻译 -32603。
+4. 异常归一：`VerifyFailedException` → `e.violations()`；`RuntimeException`（未知 bundle / 双向校验 / workspace 漂移的 `IllegalStateException` + **坏 YAML 的 snakeyaml `MarkedYAMLException`**——TDD 红实测：它是 RuntimeException 而非 IOException，窄 catch 会漏给 wire 兜底 -32603）→ 单项 `"组合错误: <异常类名>: " + msg`；声明型 `IOException` → 单项 `"profile 解析失败: " + msg`。临时文件写失败（基础设施）原样上抛 → rpc 翻译 -32603。
 5. 通过 → `List.of()`。
 
 ### 2.2 干跑语义（钉死）

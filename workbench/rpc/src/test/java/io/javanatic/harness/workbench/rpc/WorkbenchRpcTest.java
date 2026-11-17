@@ -31,9 +31,27 @@ class WorkbenchRpcTest {
     private final RpcFixtures.FakePersistence persistence = new RpcFixtures.FakePersistence();
     private final RpcFixtures.FakeTail tail = new RpcFixtures.FakeTail();
 
+    /** 干跑校验 seam 替身:可配违规清单 / IO 故障;记录收到的编辑内容。 */
+    private static final class FakeVerifier implements WorkbenchRpc.CompositionVerifier {
+        List<String> violations = List.of();
+        IOException ioFailure;
+        String lastYaml;
+
+        @Override
+        public List<String> verify(String yaml) throws IOException {
+            lastYaml = yaml;
+            if (ioFailure != null) {
+                throw ioFailure;
+            }
+            return violations;
+        }
+    }
+
+    private final FakeVerifier verifier = new FakeVerifier();
+
     /** handler + wire 整链:请求体 → 响应体。 */
     private String call(String body, long maxResponseBytes) {
-        WorkbenchRpc rpc = new WorkbenchRpc(persistence, tail, DUMP_SNAPSHOT, maxResponseBytes);
+        WorkbenchRpc rpc = new WorkbenchRpc(persistence, tail, DUMP_SNAPSHOT, verifier, maxResponseBytes);
         return new JsonRpcWire().handle(body, rpc);
     }
 
@@ -353,11 +371,84 @@ class WorkbenchRpcTest {
 
     @Test
     void compositionDumpOversizedYieldsResponseTooLarge() throws Exception {
-        WorkbenchRpc rpc = new WorkbenchRpc(persistence, tail, "x".repeat(128), 64);
+        WorkbenchRpc rpc = new WorkbenchRpc(persistence, tail, "x".repeat(128), verifier, 64);
         String out = new JsonRpcWire().handle(
             "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/compositionDump\",\"id\":1}", rpc);
 
         assertThat(errorCode(out)).isEqualTo("-32004");
+    }
+
+    // ────────── it36 停 2 verifyComposition 干跑校验(注入 seam) ──────────
+
+    @Test
+    void verifyCompositionOkWhenNoViolations() throws Exception {
+        JsonNode result = parse(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\","
+                + "\"params\":{\"yaml\":\"name: x\\npolicy: standard\\nbundles: [base]\\nrows: []\\n\"},\"id\":1}"))
+            .get("result");
+
+        assertThat(result.get("ok").asBoolean()).isTrue();
+        assertThat(result.get("violations")).isNull();
+        assertThat(verifier.lastYaml).startsWith("name: x");
+    }
+
+    @Test
+    void verifyCompositionPassesViolationsThroughInOrder() throws Exception {
+        verifier.violations = List.of("违规一", "违规二");
+
+        JsonNode result = parse(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\","
+                + "\"params\":{\"yaml\":\"bad\"},\"id\":1}"))
+            .get("result");
+
+        assertThat(result.get("ok").asBoolean()).isFalse();
+        assertThat(result.get("violations")).hasSize(2);
+        assertThat(result.get("violations").get(0).asText()).isEqualTo("违规一");
+        assertThat(result.get("violations").get(1).asText()).isEqualTo("违规二");
+    }
+
+    @Test
+    void verifyCompositionMissingYamlYieldsInvalidParams() throws Exception {
+        assertThat(errorCode(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\",\"id\":1}")))
+            .isEqualTo("-32602");
+    }
+
+    @Test
+    void verifyCompositionEmptyYamlYieldsInvalidParams() throws Exception {
+        assertThat(errorCode(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\","
+                + "\"params\":{\"yaml\":\"\"},\"id\":1}")))
+            .isEqualTo("-32602");
+    }
+
+    @Test
+    void verifyCompositionNonStringYamlYieldsInvalidParams() throws Exception {
+        assertThat(errorCode(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\","
+                + "\"params\":{\"yaml\":42},\"id\":1}")))
+            .isEqualTo("-32602");
+    }
+
+    @Test
+    void verifyCompositionVerifierIoFailureYieldsInternalError() throws Exception {
+        verifier.ioFailure = new IOException("temp file write failed");
+
+        assertThat(errorCode(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\","
+                + "\"params\":{\"yaml\":\"name: x\"},\"id\":1}")))
+            .isEqualTo("-32603");
+    }
+
+    @Test
+    void verifyCompositionOversizedYieldsResponseTooLarge() throws Exception {
+        verifier.violations = List.of("x".repeat(128));
+
+        assertThat(errorCode(call(
+            "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/verifyComposition\","
+                + "\"params\":{\"yaml\":\"name: x\"},\"id\":1}",
+            64)))
+            .isEqualTo("-32004");
     }
 
     // ────────── -32601 method not found(handler 是唯一生产者) ──────────
