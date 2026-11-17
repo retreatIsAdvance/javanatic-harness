@@ -28,7 +28,7 @@
 
 1. **dump 读面形态**：**两者**——CLI `jh --dump`（keyless 只读旁路，post-boot 与 --verify 同段，互斥矩阵并入）+ server 方法 `workbench/compositionDump`（注入启动期 String 快照——workbench/rpc 不依赖 bundle/base）。dump 文本口径 = `AppBoot.dump(AppBoot.compose(boot))`（组合期行序含禁用行注解、masked 脱敏；非 resolve 后启用行）。
 2. **路由分派契约细节**：GET/HEAD 精确 `/` → 200 + `text/html; charset=utf-8` + `Cache-Control: no-store`（HEAD 由 jdk.httpserver 抑制 body）；其余一切 GET 404；POST `/` → JSON-RPC；POST 非 `/` 404；其余方法 405 + `Allow: GET, POST`。静态 seam = `WorkbenchUi`（classpath 加载一次 + 内存缓存 + 缺失 fail loud）。
-3. **组合编辑「保存前校验」接线**（停 2 实现，契约预告）：server 方法 `workbench/verifyComposition`（params `{yaml}`）→ 写**临时 profile** 干跑 AppBoot verify 断言 → `{ok, violations[]}`；干跑对象 = 编辑内容，不触碰用户已落盘 profile（零 server 写面承诺不破）；UI 侧 blob 下载落盘不经 server。
+3. **组合编辑「保存前校验」接线**（停 2 实现，契约预告；**停 2 已钉死**——[stop2-ui-design.md](evidence/iteration-36/stop2-ui-design.md) §1/§2：CompositionVerifier 函数接口注入 + 干跑语义 = 同启动 overlays/policy 的 --verify）：server 方法 `workbench/verifyComposition`（params `{yaml}`）→ 写**临时 profile** 干跑 AppBoot verify 断言 → `{ok, violations[]}`；干跑对象 = 编辑内容，不触碰用户已落盘 profile（零 server 写面承诺不破）；UI 侧 blob 下载落盘不经 server。
 
 ## 锚点
 
@@ -47,7 +47,7 @@
 | 停点 | 覆盖锚点/类 | 状态 |
 |---|---|---|
 | 停 1：静态服务 seam + 路由契约 + dump 读面 | 承载契约（GET/POST 分派、405/404 面、content-type、缓存头）+ 单文件资源加载 + 静态服务纯函数 + B29 硬线不变 + dump 读面形态（T3 拟案批后）+ 停 1 设计点三条钉死 | 通过并关闭（2026-11-17 放行；[verdict](evidence/iteration-36/stop1-verdict.md)；备注两条已处置：计数条孤儿 XML 半句 + 停 2/3 突变落日志） |
-| 停 2：UI 单文件 + 组合编辑器 | 单文件 .html（清单/五视图/tail 轮询 vanilla JS）+ 组合编辑器（dump 展示 / 编辑 / 保存前 verify 干跑接线）+ stdout 提示行 | 待开工 |
+| 停 2：UI 单文件 + 组合编辑器 | 单文件 .html（清单/五视图/tail 轮询 vanilla JS）+ 组合编辑器（dump 展示 / 编辑 / 保存前 verify 干跑接线）+ stdout 提示行 | 设计定稿（[stop2-ui-design.md](evidence/iteration-36/stop2-ui-design.md)：verifyComposition seam + 干跑语义 + UI 功能面 + 软预算起计 + 突变落日志门槛）；S1 待开工 |
 | 停 3：装配/同步面 + 真机验收 + 收口 | jlink 镜像（--list-modules 仍 69 + 资源进镜像取证）+ `--serve` 真机实录（浏览器打开 / 五视图 / tail 轮询 / 组合校验链——我跑面 + **用户检视实录（用户跑）**）+ B29 硬线复验 + CI 四腿 + 验收清单全勾 + 同步面（README L114/L123 更新 + grep 零残留复核）+ 收口批 | 待开工 |
 
 停 1/停 2 出包按 review packet 仪式（本迭代零新增模块、零 base 行——资源进 workbench/rpc；四件套中「META-INF/services 双通道」不适用（无 Plugin），其余照勾）。
