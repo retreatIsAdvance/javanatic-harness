@@ -1,0 +1,67 @@
+it37 rc 排练实录：v0.5.0-rc1 全链（2026-11-18）
+
+一、翻转与全绿
+版本翻转 5d628e9（reactor 76 POM versions:set + 非反应器 integration/consumer-sample 手动同步 pom + README）；
+坐标机械复测 71 = reactor 76 − examples 3 − dist 2（0.4.0 的 67 + workbench 4：aggregator pom-only +
+projection/rpc/tui 三叶 jar 四件套）；grep 0.5.0-SNAPSHOT POM 77→0；全量 package EXIT=0
+（187 surefire XML = 1521/0/0/31）；keyless --verify 34/41/0；--version 0.5.0。详见 flip-evidence.txt。
+notes 定稿 d321d06（release-notes-0.5.0.md：零写面治理叙事 + 四站 Highlights + B36/B37 围栏节 +
+升级必读纯增量枚举 + JLine 三坐标 native 不可排除如实 + 已知边界）。
+围栏 febf51e（B36 读面信任围栏 + B37 Content-Type 闸）在翻转 5d628e9 之前——0.5.0 发布的是带围栏形态
+（用户授权不变量：「围栏代码进版本树后再翻转」）。
+发布就绪树 = d321d06（e831117 裁决归档 → febf51e 围栏 → db96699 放行归档 → 5d628e9 翻转 → d321d06 notes）。
+
+二、rc 全链
+本地 tag v0.5.0-rc1 → d321d06（lightweight，object.type=commit）。
+
+rc tag push（/tmp/it37-rc-tag-push.sh，探活-即刻推送一体）：
+首跑 3/3 轮全红于 pre-push 钩子全量构建——shell/local LocalShellExecutorTest.cancelKillsProcessTreeIncludingGrandchildren:107
+（「Expecting value to be true but was false」，cancel 后 2000ms 内孙进程 sleep 未被杀）。
+根因（systematic-debugging 定论，非产品回归非随机 flake）：本机 master CI watch（bcd2z8o1t）轮询环
+literal `sleep 30` + 每 30s  spawned 真 sleep 30 子进程；该测试 awaitSleepPid 做无过滤全局进程扫
+（ProcessHandle.allProcesses().filter(commandLine contains "sleep 30").findFirst()），取到 watch 的 sleep
+而非测试自身孙进程 → cancel 杀错树 → 断言查 watch 的仍活 sleep → false。3/3 一致因 watch 全程在跑。
+处置：watch 退出（master run 完成）→ 污染源清 → 重试 rc tag push → pre-push 全量绿（shell-local 复绿）→
+tag 一次落地。独立实核 gh api git/ref/tags/v0.5.0-rc1 .object.sha == d321d06（不信任脚本 exit 0）。
+教训入册：CI watch 轮询勿用 sleep 30（改 sleep 20，避确定性弄红本机 pre-push）。
+不动测试代码——本机病理不驱动产品/测试改动；awaitSleepPid 全局扫无父进程/新近过滤是潜在隔离弱点，记观察。
+
+tag run 44228781902 五绿（build / macos / windows / windows-arm + release-attach），attempt 1，
+head_sha=d321d06b0da9f1818478cd69419c50449544c8d5（独立 gh api 实核，windows 腿独立 runner 未现 flake）。
+draft Release id 449484005「javanatic-harness 0.5.0-rc1」，draft=true，prerelease=false，8 归档全 state=uploaded：
+  javanatic-harness-0.5.0-linux-amd64.tar.gz (42428203) / .zip (42477941)
+  javanatic-harness-0.5.0-macos-aarch64.tar.gz (36801843) / .zip (36851538)
+  javanatic-harness-0.5.0-windows-aarch64.tar.gz (35586029) / .zip (35635477)
+  javanatic-harness-0.5.0-windows-amd64.tar.gz (37599604) / .zip (37861721)
+归档名携树版本 0.5.0（附到 0.5.0-rc1 draft，0.4.0 同款）；正文 = 占位文本「Automated draft: CI attached
+the platform archives; add release notes before publishing.」（release-attach 按 tag 版本查
+release-notes-0.5.0-rc1.md 不存在则占位——0.3.0/0.4.0 rc 同款属预期；正稿在 v0.5.0 时自动取 0.5.0 notes）。
+注：draft 的 releases/tags/{tag} 端点返回 404（draft 内部态 untagged-<hash>，发布前不解析 by-tag）——
+以 releases 列表 / releases/{id} 端点实核（本次 id 449484005 取到 8 归档）。
+
+master run 44226672669（head_sha=d321d06）：attempt 1 windows 腿红——mcp/stdio McpStdioRecoveryTest
+4 errors（listChangedNotificationRefreshesCatalogGeneration / malformedRefreshCascadesAndReconnects /
+crashAfterHandshakeReconnectsWithFreshProcess / overCapFrameCascadesAndReconnects），
+均「McpConnectionException: mcp server 'alpha' closed stdout (process exited)」at JsonRpcPeer.readLoop:240，
+各 ~0.03s 快速 ERROR（夹具子进程 spawn 后即退）；build/macos/windows-arm 绿。
+定性 = flake（windows runner 子进程 spawn 抖动）：夹具走单文件源码启动（Fixtures.server →
+javaBin()=java.home/bin/java.exe + fixtureSource()=test-classes 资源 /mcp-fixture/FixtureServer.java，
+零项目版本依赖）；it37 未触 mcp/stdio（围栏在 workbench/rpc，翻转仅 POM 版本）——不可能回归。
+处置：gh run rerun --failed → attempt 2 四腿全绿（独立 gh api .../attempts/2/jobs 实核：
+build/macos/windows/windows-arm=success，release-attach=skipped 非 tag 常态，run conclusion=success）。
+与 flake watch 账第二成员 AgentLoopTest 同型（CI 红 + rerun 绿 + 零代码改动 = flake 定性）；记第三成员。
+
+三、rc 清理
+draft 449484005 已删（gh api -X DELETE releases/449484005，rc=0）；
+本地 tag 已删（git tag -d v0.5.0-rc1，曾为 d321d06）；
+远端 tag ref 已删（gh api -X DELETE git/refs/tags/v0.5.0-rc1，rc=0——API 面避 git 直传抖窗，0.4.0 先例）。
+实核（不信任删除 rc）：
+  gh api GET git/ref/tags/v0.5.0-rc1 → 404 Not Found；
+  releases 列表无 rc1 draft（仅 v0.4.0 / v0.3.0 / v0.2.0 / v0.1.0，俱 draft=false）；
+  本地 git tag -l 'v0.5.0*' → 空。
+
+四、结论
+rc 排练全链绿（tag run 五绿 + master 复跑四绿 + draft 8 归档占位 + 清理 404 无残留）。
+0.5.0 发布就绪树 = d321d06（带围栏 + 翻转 71 坐标 + notes 定稿）。
+下一步 = deploy（-P release 真签名；签名/上传默认用户侧，GPG passphrase 框输热缓存）+
+Portal 对账门 67→71（三查 + workbench 四坐标 eyeball，停下等用户 Publish——不可逆）。

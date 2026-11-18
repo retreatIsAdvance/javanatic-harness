@@ -24,4 +24,13 @@ attempt 2 实核（gh api .../attempts/2/jobs，不信任 watch exit 0）：
   run conclusion=success，head_sha=468297bbc7514e60dd1b681cc91a8f42d068de9e 对账吻合。
 flake 登记于此（attempt 1 红 → attempt 2 绿，无代码改动）。
 
-后续：开工批 e831117（裁决归档 + 停 1 设计）与停 1 实施批本地待推，等用户点名。
+发布批 push 落地（2026-11-18，用户「执行吧」授权合并推 5 笔）
+------------------------------------------------------------
+链：e831117（裁决归档 + 停 1 设计）→ febf51e（停 1 围栏 B36/B37）→ db96699（放行归档 + watch 账第二成员）
+→ 5d628e9（chore(release): 0.5.0 翻转）→ d321d06（notes 定稿 + 翻转取证 + 状态同步）。
+围栏 febf51e 在翻转 5d628e9 前——满足「围栏代码进版本树后再翻转」不变量。
+脚本 /tmp/it37-push.sh 一次落地；独立实核 gh api git/ref/heads/master .object.sha == d321d06（LANDED_CONFIRMED）。
+CI run 44226672669（head_sha=d321d06）：attempt 1 windows 腿红（mcp/stdio McpStdioRecoveryTest 4 errors，
+夹具单文件源码启动 spawn 抖动，零项目版本依赖、it37 未触该模块）→ rerun --failed → attempt 2 四腿全绿
+（独立 gh api attempts/2/jobs 实核）。flake 定性与处置详见 rc1-rehearsal.txt §二；记 watch 账第三成员。
+rc 排练 v0.5.0-rc1 全链 + 清理见 rc1-rehearsal.txt。
