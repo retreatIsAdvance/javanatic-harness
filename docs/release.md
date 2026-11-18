@@ -65,7 +65,7 @@ mvn -B -P release -Dgpg.skip=true package      # release 剖面干跑：sources/
 # 3.1 版本翻转 0.4.0-SNAPSHOT → 0.4.0（每个 POM 各一处）
 mvn versions:set -DnewVersion=0.4.0 -DgenerateBackupPoms=false   # 首次运行会拉取 versions-maven-plugin
 rm -rf dist/jh/target                                            # 旧版本 jar 残留 → jlink「Two versions of module」（注2）
-grep -rl "0.5.0-SNAPSHOT" --include=pom.xml . | wc -l            # 翻转后应为 0；翻转前全仓 73 = reactor 72 + 非 reactor 示例 1（示例不入 versions:set，须手动同步 pom + README）。0.4.0 坐标 67（0.3.0 的 59 + jobs 4 + delegation 4，it30–it31）——机械计数定案，Portal 前对账
+grep -rl "0.5.0-SNAPSHOT" --include=pom.xml . | wc -l            # 翻转后应为 0；翻转前全仓 77 = reactor 76 + 非 reactor 示例 1（示例不入 versions:set，须手动同步 pom + README）。0.5.0 坐标 71（0.4.0 的 67 + workbench 4，it33–it36）——机械计数定案，Portal 前对账
 
 # 3.2 提交翻转（tag 指向窗口内发布就绪 HEAD——须承载 0.4.0 版本树，不得落在翻转前；0.4.0 先例 = 翻转 513a510 处）
 git add -A && git commit -m "chore(release): 0.4.0"

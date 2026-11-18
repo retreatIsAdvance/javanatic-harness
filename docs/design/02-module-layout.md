@@ -544,7 +544,7 @@ harness/
 
     <groupId>io.github.retreatisadvance</groupId>
     <artifactId>harness-parent</artifactId>
-    <version>0.5.0-SNAPSHOT</version>
+    <version>0.5.0</version>
     <packaging>pom</packaging>
 
     <name>DeepSeek Harness (JH)</name>
@@ -738,7 +738,7 @@ harness/
     <parent>
         <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-parent</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
+        <version>0.5.0</version>
         <!-- parent 的 relativePath 默认指向上一级 -->
     </parent>
 
@@ -768,7 +768,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
     <parent>
         <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-kernel-aggregator</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
+        <version>0.5.0</version>
     </parent>
 
     <artifactId>harness-kernel-core</artifactId>
@@ -782,7 +782,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
     <parent>
         <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-llm-aggregator</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
+        <version>0.5.0</version>
     </parent>
 
     <artifactId>harness-llm-deepseek</artifactId>
@@ -812,7 +812,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
     <parent>
         <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-fs-aggregator</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
+        <version>0.5.0</version>
     </parent>
 
     <artifactId>harness-fs-tool</artifactId>
@@ -842,7 +842,7 @@ kernel/core 零内部依赖，无 `<dependencies>` 段（测试依赖 junit/asse
     <parent>
         <groupId>io.github.retreatisadvance</groupId>
         <artifactId>harness-examples-aggregator</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
+        <version>0.5.0</version>
     </parent>
 
     <artifactId>harness-examples-headless</artifactId>
