@@ -50,7 +50,7 @@
 
 ## 审查停点
 
-- **停 1 = 读面信任围栏 + Content-Type 闸**（已裁带入；**已实施待评审**（2026-11-18）：TDD 红绿两段 + 突变 M1–M4 必红复绿 + 全量 1521/0/0/31 + keyless 34/41/0 不变；取证 [stop1-tdd-evidence.md](evidence/iteration-37/stop1-tdd-evidence.md)，packet [stop1-review-packet.md](evidence/iteration-37/stop1-review-packet.md)；设计稿 [stop1-fence-design.md](evidence/iteration-37/stop1-fence-design.md)；停下等用户放行）。
+- **停 1 = 读面信任围栏 + Content-Type 闸——已放行（2026-11-18 用户评审通过，围栏形状全对）**：用户独立复跑 rpc 98 例全绿（含停 1 的 46 面）+ validate EXIT=0 + 树净。三处设计质量点名：① 围栏覆盖 ALL 方法含 GET——raw Socket 恶 Host 闸前 200 UI / 闸后 403 钉死的不只是 CSRF，**DNS rebinding 对 HTML 页读取面也关了**（rebinding 下 Host=攻击者域名被拒——Host 检查比 Origin 更本质的那一半，测试面一并覆盖）；② `::1` 显式不在白名单与 IPv4-only 绑定自洽（::1 在 connect 层即拒，浏览器 happy-eyeballs 回落 127.0.0.1），窄白名单姿态正确；③ 两处如实注成立（+4 例钉规范化规则否则突变不可观察；M3 null 早退分支由 `missingContentTypeRejected` 独立钉死，覆盖自洽）。TDD 红绿两段 + 突变 M1–M4 必红复绿 + 全量 1521/0/0/31 + keyless 34/41/0 不变；取证 [stop1-tdd-evidence.md](evidence/iteration-37/stop1-tdd-evidence.md)，packet [stop1-review-packet.md](evidence/iteration-37/stop1-review-packet.md)，设计稿 [stop1-fence-design.md](evidence/iteration-37/stop1-fence-design.md)。**放行 → 翻转批起步**。
 - 发布工程本体 = **流程节点门**（无代码停点）：rc 排练绿 → deploy → Portal 用户审核 → tag；每节点取证落盘。
 - 草案评审 = 已通过（2026-11-17 三项裁决，见首部）。
 
@@ -69,7 +69,7 @@
 ## 验收（草案，执行期逐项勾选）
 
 - [x] 草案评审通过（四确认 + B36 回补带入 + Content-Type 增项 + 闭包口径，2026-11-17 用户三项裁决）
-- [ ] B36/B37 读面回补停 1 放行（TDD + 突变必红 + 契约增量同步）
+- [x] B36/B37 读面回补停 1 放行（TDD + 突变必红 + 契约增量同步；2026-11-18 用户评审通过，rpc 98 例独立复跑全绿）
 - [ ] 版本翻转 + 坐标机械复测定案（71 预期）+ 全量 package 绿
 - [ ] release-notes-0.5.0.md 定稿
 - [ ] rc 排练全链绿（tag run 五绿 + master 复跑 + draft 8 归档 + rc 清理）
