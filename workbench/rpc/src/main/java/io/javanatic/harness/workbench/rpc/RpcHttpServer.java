@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,6 +24,12 @@ import java.util.concurrent.Executors;
  * <p>协议语义(JSON-RPC 帧、错误分档)全部归 {@link JsonRpcWire};本类只做
  * transport 守卫。bind 失败(端口占用)IOException 上抛,不翻译不吞
  * (CLI 停 2 映射 exit 3)。
+ *
+ * <p>it37 停 1 读面信任围栏(B36/B37,横切前置条件非路由变更——W4 T1
+ * 矩阵在围栏放行域内逐字成立):dispatch 头部先过 {@link RequestFence}
+ * Host/Origin 检查(一切方法,先于路由),拒 = 403 + 具名理由行;POST {@code /}
+ * 读 body 之前过 Content-Type 闸(仅收 application/json,堵简单请求绕
+ * CORS 预检变体),拒 = 415 + 具名理由行。理由行 text/plain; charset=utf-8。
  */
 public final class RpcHttpServer implements AutoCloseable {
 
@@ -59,6 +66,15 @@ public final class RpcHttpServer implements AutoCloseable {
     }
 
     private void dispatch(HttpExchange exchange) throws IOException {
+        // B36 围栏先于路由(一切方法):Host 白名单 + Origin 同源,port = 实际绑定面
+        Optional<String> rejection = RequestFence.hostOriginRejection(
+            exchange.getRequestHeaders().getFirst("Host"),
+            exchange.getRequestHeaders().getFirst("Origin"),
+            server.getAddress().getPort());
+        if (rejection.isPresent()) {
+            respondText(exchange, 403, rejection.get());
+            return;
+        }
         String method = exchange.getRequestMethod();
         boolean root = "/".equals(exchange.getRequestURI().getPath());
         if ("GET".equals(method) || "HEAD".equals(method)) {
@@ -86,10 +102,25 @@ public final class RpcHttpServer implements AutoCloseable {
             exchange.close();
             return;
         }
+        // B37 Content-Type 闸:读 body 之前,仅 POST / 处理路径
+        if (!RequestFence.jsonContentType(exchange.getRequestHeaders().getFirst("Content-Type"))) {
+            respondText(exchange, 415, "content-type must be application/json");
+            return;
+        }
         String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         byte[] out = wire.handle(body, handler).getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", JSON_CONTENT_TYPE);
         exchange.sendResponseHeaders(200, out.length);
+        exchange.getResponseBody().write(out);
+        exchange.close();
+    }
+
+    /** 围栏拒绝响应:具名理由行(text/plain; charset=utf-8),403/415 共用。 */
+    private static void respondText(HttpExchange exchange, int status, String reason)
+            throws IOException {
+        byte[] out = (reason + "\n").getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
+        exchange.sendResponseHeaders(status, out.length);
         exchange.getResponseBody().write(out);
         exchange.close();
     }

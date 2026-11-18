@@ -50,7 +50,7 @@
 
 ## 审查停点
 
-- **停 1 = 读面信任围栏 + Content-Type 闸**（已裁带入；TDD 红绿 + 突变必红 + packet，停下等放行；设计稿 [stop1-fence-design.md](evidence/iteration-37/stop1-fence-design.md)）。
+- **停 1 = 读面信任围栏 + Content-Type 闸**（已裁带入；**已实施待评审**（2026-11-18）：TDD 红绿两段 + 突变 M1–M4 必红复绿 + 全量 1521/0/0/31 + keyless 34/41/0 不变；取证 [stop1-tdd-evidence.md](evidence/iteration-37/stop1-tdd-evidence.md)，packet [stop1-review-packet.md](evidence/iteration-37/stop1-review-packet.md)；设计稿 [stop1-fence-design.md](evidence/iteration-37/stop1-fence-design.md)；停下等用户放行）。
 - 发布工程本体 = **流程节点门**（无代码停点）：rc 排练绿 → deploy → Portal 用户审核 → tag；每节点取证落盘。
 - 草案评审 = 已通过（2026-11-17 三项裁决，见首部）。
 

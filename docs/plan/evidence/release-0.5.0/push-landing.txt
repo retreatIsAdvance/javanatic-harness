@@ -1,0 +1,27 @@
+it37 文档批 push 落地 + CI 实核（2026-11-18）
+================================================
+
+批次：468297b（it37 草案 + B36 落位，纯 .md 文档批，搭 CI 绿的 5c61f7c；用户裁决③授权）。
+
+push 实录
+---------
+脚本：/tmp/it37-push.sh（探活-即刻推送一体，3 轮轮换，KNOWN 10 IP + gh api meta 全表，
+重复 -c http.curloptResolve=github.com:443:<IP> + -c http.version=HTTP/1.1）。
+日志：/tmp/it37-push-rounds3.log。
+轮 1：transfer 段重置（curl 35 Recv failure + send-pack disconnect + "Everything up-to-date" 伪影）——脚本自动轮 2。
+轮 2：112.4 + 116.3 双探活 → 一次落地，LANDED_OK。
+落地判定（不信任脚本/后台 exit 0）：gh api repos/retreatIsAdvance/javanatic-harness/git/ref/heads/master
+独立实核 == 本地 HEAD 468297b。
+
+CI（run 44214603369，head_sha=468297b）
+---------------------------------------
+attempt 1：macos 腿红——job 134501171608，core/agent-loop AgentLoopTest.maintenanceRunsWhenIdleAndRejectsWhenBusy
+L682 "Expecting code to raise a throwable"（57 跑 1 红）。
+定性 = flake：468297b 纯 .md 提交零代码，不可能回归；macOS 调度饥饿时序竞态（it34 TwoHostLostProbe 先例同型）。
+处置：gh run rerun --failed → attempt 2。
+attempt 2 实核（gh api .../attempts/2/jobs，不信任 watch exit 0）：
+  build=success / macos=success / windows=success / windows-arm=success / release-attach=skipped（非 tag 常态）
+  run conclusion=success，head_sha=468297bbc7514e60dd1b681cc91a8f42d068de9e 对账吻合。
+flake 登记于此（attempt 1 红 → attempt 2 绿，无代码改动）。
+
+后续：开工批 e831117（裁决归档 + 停 1 设计）与停 1 实施批本地待推，等用户点名。

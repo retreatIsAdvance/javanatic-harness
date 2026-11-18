@@ -4,11 +4,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -277,7 +281,129 @@ class RpcHttpServerTest {
             .isInstanceOf(IOException.class);
     }
 
+    // ────────── it37 停 1:B36/B37 读面信任围栏(HTTP 层真往返) ──────────
+
+    @Test
+    void evilOriginPostYields403() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/"))
+                .header("Origin", "http://evil.com")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/sessionsList\",\"id\":1}"))
+                .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+            assertThat(res.statusCode()).isEqualTo(403);
+            assertThat(res.body()).contains("origin not allowed");
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void evilHostGetRootYields403BeforeRouting() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            // java.net.http 限制 Host 头——裸套接字绕开发送侧限制;
+            // 围栏先于路由:恶 Host 的 GET / 不得服务 UI(不是 200)
+            assertThat(rawStatusLine(server, "evil.com")).startsWith("HTTP/1.1 403");
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void loopbackHostGetRootYields200ViaRawSocket() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            // 正对照:裸套接字写法本身合法,合法 Host 放行(防假红)
+            assertThat(rawStatusLine(server, "127.0.0.1:" + server.address().getPort()))
+                .startsWith("HTTP/1.1 200");
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void postFormEncodedYields415() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/sessionsList\",\"id\":1}"))
+                .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+            assertThat(res.statusCode()).isEqualTo(415);
+            assertThat(res.body()).contains("content-type must be application/json");
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void postTextPlainYields415() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/"))
+                .header("Content-Type", "text/plain")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/sessionsList\",\"id\":1}"))
+                .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+            assertThat(res.statusCode()).isEqualTo(415);
+            assertThat(res.body()).contains("content-type must be application/json");
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void postWithoutContentTypeYields415() throws Exception {
+        RpcHttpServer server = new RpcHttpServer((method, params) -> null);
+        server.start(0);
+        try {
+            // 显式不带 Content-Type(java.net.http 缺省不发)——不走 post() helper,
+            // helper 加头后本用例仍钉「缺头拒」
+            HttpRequest req = HttpRequest.newBuilder(uri(server, "/"))
+                .POST(HttpRequest.BodyPublishers.ofString(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"workbench/sessionsList\",\"id\":1}"))
+                .build();
+            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+
+            assertThat(res.statusCode()).isEqualTo(415);
+            assertThat(res.body()).contains("content-type must be application/json");
+        } finally {
+            server.close();
+        }
+    }
+
     // ────────── 工具面 ──────────
+
+    /** 裸套接字发 GET /,只取状态行(Connection: close + soTimeout 防挂)。 */
+    private String rawStatusLine(RpcHttpServer server, String hostHeader) throws Exception {
+        try (Socket socket = new Socket("127.0.0.1", server.address().getPort())) {
+            socket.setSoTimeout(5000);
+            String request = "GET / HTTP/1.1\r\nHost: " + hostHeader
+                + "\r\nConnection: close\r\n\r\n";
+            socket.getOutputStream().write(request.getBytes(StandardCharsets.UTF_8));
+            socket.getOutputStream().flush();
+            BufferedReader reader = new BufferedReader(
+                new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+            String statusLine = reader.readLine();
+            assertThat(statusLine).isNotNull();
+            return statusLine;
+        }
+    }
 
     private JsonNode tailResult(RpcHttpServer server, int lastSeq) throws Exception {
         HttpResponse<String> res = post(server,
@@ -288,6 +414,7 @@ class RpcHttpServerTest {
 
     private HttpResponse<String> post(RpcHttpServer server, String body) throws Exception {
         HttpRequest req = HttpRequest.newBuilder(uri(server, "/"))
+            .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();
         return http.send(req, HttpResponse.BodyHandlers.ofString());
     }

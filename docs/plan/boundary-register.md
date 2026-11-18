@@ -1,6 +1,6 @@
 # 边界登记表
 
-> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-11-17（it38 W5 预登记：B36 Host/Origin 信任围栏准入条件，用户裁定）。
+> 单一登记处：外部输入、信任面、预算上限与**刻意不做**。新边界先在这里挂行，再落到代码与设计文档；口径变化同提交更新本表。最近更新：2026-11-18（it37 停 1：B36 读面已实施 + B37 Content-Type 严格性闸新行，用户裁决②增项）。
 >
 > 编号消歧：本表原 B4「MCP 消费结果预算」现为 `B-MCP-RESULT`；冻结历史中的旧编号仍按本映射解读。图生成器挂账保留 [it26 提案 B4](evidence/iteration-26/roadmap-diff-proposal.md#b4-capability-graph-机械化建议挂账)，与本表预算项无关。
 
@@ -77,7 +77,8 @@
 
 | # | 边界 | 规则 | 落地与证据 |
 |---|---|---|---|
-| B36 | Host/Origin 信任围栏 | **W5 写面准入条件（非 T 项候选）**：Host 头白名单 `127.0.0.1:<port>` / `localhost:<port>`（port = 实际绑定端口）+ Origin 校验拒绝跨站（Origin 存在即须同源）；**突变必红**。依据：B29 回环恒绑防网络面（远程主机连不进来），不防浏览器面——SOP 只挡读响应不挡发请求，恶意网页可从用户浏览器向回环端口发 POST；读面时代风险低，**写面一开 = 用户访问的任何网站都能驱动其 agent**。围栏是信任层非 auth 层（dsh api-request-trust 先例同口径），B29 单用户假设不变。形状输入：纯函数围栏 + dispatch 头部守卫（先于路由）；W4 T1 路由契约不变——围栏是横切前置条件，显式记契约增量不静默 | 预登记（it38 准入条件，[iteration-38](iteration-38.md)）；侦察出处 [recon-chat.md](evidence/iteration-38/recon-chat.md) Host 围栏节（基线 5badb15009）；**读面防御性回补 = it37 评估项**（0.5.0 候选携带，[iteration-37](iteration-37.md)）；实施证据待 it38 |
+| B36 | Host/Origin 信任围栏 | **W5 写面准入条件（非 T 项候选）**：Host 头白名单 `127.0.0.1:<port>` / `localhost:<port>`（port = 实际绑定端口）+ Origin 校验拒绝跨站（Origin 存在即须同源）；**突变必红**。依据：B29 回环恒绑防网络面（远程主机连不进来），不防浏览器面——SOP 只挡读响应不挡发请求，恶意网页可从用户浏览器向回环端口发 POST；读面时代风险低，**写面一开 = 用户访问的任何网站都能驱动其 agent**。围栏是信任层非 auth 层（dsh api-request-trust 先例同口径），B29 单用户假设不变。形状输入：纯函数围栏 + dispatch 头部守卫（先于路由）；W4 T1 路由契约不变——围栏是横切前置条件，显式记契约增量不静默 | **读面已实施（it37 停 1，2026-11-18）**：`RequestFence.hostOriginRejection` 纯函数 + `RpcHttpServer.dispatch` 头部守卫（一切方法先于路由，拒 = 403 具名理由行）；突变 M1/M2/M4 必红，证据 [stop1-tdd-evidence.md](evidence/iteration-37/stop1-tdd-evidence.md)。**写面准入条件维持预登记**（it38，[iteration-38](iteration-38.md)）；侦察出处 [recon-chat.md](evidence/iteration-38/recon-chat.md) Host 围栏节（基线 5badb15009） |
+| B37 | Content-Type 严格性闸 | POST `/` 仅收 `Content-Type: application/json`（媒体类型精确——`;` 前、trim、lowercase；charset 等参数放行），缺失/空/form-urlencoded/text/plain/multipart/其余一律 **415** 具名理由行；读 body 之前判定。依据：CORS 预检只挡非简单请求——form-encoded/text/plain 等**简单请求形态不触发预检可直达**，严格 Content-Type 是与 Host/Origin 正交的第二层防御（用户裁决②增项，2026-11-17）；围栏是信任层非 auth 层，B29 单用户不变 | **已实施（it37 停 1，2026-11-18）**：`RequestFence.jsonContentType` + dispatch POST `/` 读 body 前闸；突变 M3 必红，证据 [stop1-tdd-evidence.md](evidence/iteration-37/stop1-tdd-evidence.md) |
 
 ## 维护规则
 
