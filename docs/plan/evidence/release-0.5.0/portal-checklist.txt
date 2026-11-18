@@ -1,0 +1,123 @@
+0.5.0 Portal 核对单（Publish 前对照面）
+
+提取面：本单坐标面由 reactor POM 机械派生（命令见末节），非 bundle 实测。
+真 deploy（-P release，用户侧签名）后须从根工程 target/central-publishing/central-bundle.zip
+提取实核回填（deploy 记录将见 deploy-0.5.0.txt）；bundle 实测项在本单标「待 deploy 实核」。
+发布就绪树 = d321d06（带 B36/B37 围栏 + 翻转 71 坐标 + notes 定稿）；rc 排练全链绿见 rc1-rehearsal.txt。
+
+坐标数：71 = 根 POM（harness-parent，即根工程自身）+ 聚合器 16 + 叶 54。
+  pom-only 17（根 1 + 聚合器 16）；叶 54（jar 四件套：jar/sources/javadoc/pom）。
+  机械派生：reactor 76 POM − excludeArtifacts 5（examples 3 + dist 2）= 71；全 71 version=0.5.0。
+排除面：examples（3：aggregator/agent-spine/headless）/ dist（2：aggregator/jh）零出现——bundle 内无任何该族坐标。
+非 reactor 点位（不入发布面）：integration/consumer-sample（示例）+ 其 negatives/no-version 夹具（故意无版本）。
+
+新增 4 件（0.4.0 67 → 0.5.0 71；71−67=4，全 workbench 族，it33–it36 四站）：
+  harness-workbench-aggregator   （pom-only，聚合器）
+  harness-workbench-projection   （jar 四件套，W1 投影/五视图）
+  harness-workbench-tui          （jar 四件套，W2 全屏 TUI）
+  harness-workbench-rpc          （jar 四件套，W3 本地回环 JSON-RPC server）
+  注：W4 本地 Web UI（it36）= ui.html 单文件资源，随 workbench-rpc 模块打包，非独立坐标——故四站只增 4 坐标。
+
+Publish 前 Portal 面三查（用户点名「67→71 三查」）：
+  1. 下方 71 坐标全在场（groupId 一律 io.github.retreatisadvance，version 0.5.0）
+  2. 每个主件带 .asc（签名硬门槛：54 叶 × 4 主件 + 17 pom-only 各带校验和与签名）——待 deploy 实核
+  3. examples/dist 零出现（排除面）——待 deploy 实核
+
+workbench 四坐标 eyeball（用户点名）：
+  harness-workbench-aggregator → pom-only（仅 pom + 校验和 + .asc，无 jar/sources/javadoc）
+  harness-workbench-projection / -tui / -rpc → 各 jar 四件套（jar/sources/javadoc/pom + 校验和 + .asc）
+  四坐标 <name> 全自带（机械核验 71/71 有 name，0 缺失；workbench 四 name 逐字 = artifactId）——
+  Central 硬校验项（it16 首发实撞：39 包因 Project name is missing 全数拒绝）。
+
+bundle 预期 1398 项（待 deploy 实核，以真 deploy 日志为准）：
+  233 主件（54 叶 × 4 = 216 + 17 pom-only × 1 = 17）+ 233 .asc + 932 校验和（4 种 × 233）= 1398。
+  对照：0.4.0 实测 1320 = 220 主件 + 220 .asc + 880 校验和；0.3.0 实测 1164 = 194 主件 + 194 .asc + 776 校验和。
+  0.5.0 较 0.4.0 增 78 项：新增主件 13 = 1（workbench-aggregator pom）+ 3 叶 × 4（projection/tui/rpc 四件套）；
+  每主件携 1 .asc + 4 校验和 = 6 文件，13 × 6 = 78；1320 + 78 = 1398。✓
+  （主件 220→233 增 13；.asc 220→233 增 13；校验和 880→932 增 52；13+13+52=78）
+
+签名硬门槛（§4.3，放行必备，待 deploy 实核）：
+  bundle 内每主件都有 .asc（233/233）；抽查 gpg --verify <artifact>.jar.asc <artifact>.jar → 「完好的签名」。
+  缺 .asc = 未真签名（多半误带 -Dgpg.skip=true）——不得点 Publish。
+  注：release 剖面干跑（-Dgpg.skip=true package）无 .asc 是预期，不得当签名达标证据（干跑取证见 flip-evidence/dryrun）。
+
+全量坐标清单（71，机械派生排序；[P]=pom-only，[J]=jar 叶）：
+  harness-bundle-aggregator [P]
+  harness-bundle-base [J]
+  harness-core-agent [J]
+  harness-core-agent-loop [J]
+  harness-core-aggregator [P]
+  harness-core-plan [J]
+  harness-core-preset [J]
+  harness-core-session [J]
+  harness-core-system-prompt [J]
+  harness-core-todo [J]
+  harness-core-tools [J]
+  harness-delegation-aggregator [P]
+  harness-delegation-delegation [J]
+  harness-delegation-local [J]
+  harness-delegation-tool [J]
+  harness-fs-aggregator [P]
+  harness-fs-fs [J]
+  harness-fs-local [J]
+  harness-fs-tool [J]
+  harness-interaction-aggregator [P]
+  harness-interaction-approval [J]
+  harness-interaction-ask [J]
+  harness-interaction-commands [J]
+  harness-jobs-aggregator [P]
+  harness-jobs-jobs [J]
+  harness-jobs-local [J]
+  harness-jobs-tool [J]
+  harness-kernel-aggregator [P]
+  harness-kernel-brand [J]
+  harness-kernel-config [J]
+  harness-kernel-core [J]
+  harness-llm-aggregator [P]
+  harness-llm-deepseek [J]
+  harness-llm-llm [J]
+  harness-llm-openai-compat [J]
+  harness-llm-replay [J]
+  harness-lsp-aggregator [P]
+  harness-lsp-jdtls [J]
+  harness-lsp-lsp [J]
+  harness-lsp-tool [J]
+  harness-mcp-aggregator [P]
+  harness-mcp-http [J]
+  harness-mcp-mcp [J]
+  harness-mcp-stdio [J]
+  harness-mcp-tool [J]
+  harness-parent [P]
+  harness-sandbox-aggregator [P]
+  harness-sandbox-local [J]
+  harness-sandbox-policy [J]
+  harness-sandbox-sandbox [J]
+  harness-session-aggregator [P]
+  harness-session-persistence [J]
+  harness-session-persistence-jsonl [J]
+  harness-shell-aggregator [P]
+  harness-shell-docker [J]
+  harness-shell-local [J]
+  harness-shell-shell [J]
+  harness-shell-tool [J]
+  harness-skill-aggregator [P]
+  harness-skill-local [J]
+  harness-skill-skill [J]
+  harness-skill-tool [J]
+  harness-web-aggregator [P]
+  harness-web-fetch-http [J]
+  harness-web-search-deepseek [J]
+  harness-web-tool [J]
+  harness-web-web [J]
+  harness-workbench-aggregator [P]
+  harness-workbench-projection [J]
+  harness-workbench-rpc [J]
+  harness-workbench-tui [J]
+
+机械派生命令（坐标面 + name 硬校验，可复跑）：
+  # 全仓 pom 78 = reactor 76 + consumer-sample 1 + negatives/no-version 1
+  find . -name pom.xml -not -path '*/target/*' | sort | wc -l
+  # python ElementTree 解析每 reactor pom 的 project artifactId/packaging/version/name，
+  # 排除 integration/consumer-sample（非 reactor）+ harness-examples*/harness-dist*（excludeArtifacts 5），
+  # 得 71 发布坐标（17 pom-only + 54 leaf），全 version=0.5.0，71/71 自带 <name>（0 缺失）。
+  # （派生脚本随本单取证落盘，见 flip-evidence.txt 坐标机械复测节）

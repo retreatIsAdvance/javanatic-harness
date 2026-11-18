@@ -1,0 +1,54 @@
+it37 deploy 预检取证：release 剖面干跑 + 坐标面复核（2026-11-18）
+
+一、release 剖面干跑（§2 预检第二腿，无签名）
+命令：`mvn -B -P release -Dgpg.skip=true package`
+  （JAVA_HOME=temurin-25，~/Documents/apache-maven-3.10.0/bin/mvn；dir=仓库根）
+日志：/tmp/it37-release-dryrun.log；DRYRUN_EXIT=0；BUILD SUCCESS ×1 / BUILD FAILURE ×0；
+  Total time 04:29 min，Finished 2026-11-18T11:38:05+08:00；全 76 reactor 模块 SUCCESS（含 workbench 四）。
+surefire XML 求和（mtime 窗口 11:33:00–11:39:00，避孤儿 XML）：
+  测量面 **/target/surefire-reports/TEST-*.xml，窗口内 187 XML（窗口外/孤儿 2 排除）
+  tests=1521 failures=0 errors=0 skipped=31 —— 与翻转批基线逐字一致（干跑不改测试数）。
+sources/javadoc 齐全（release 剖面 attach-sources jar-no-fork + attach-javadocs jar）：
+  日志「Building jar: …-0.5.0-sources.jar」54 +「…-0.5.0-javadoc.jar」54（排除 examples/dist/consumer-sample）；
+  attach-sources / attach-javadocs 执行各 76（全 reactor 含 pom-only；pom 包装不产 jar）。
+  盘上实核：54 发布叶各 main jar + sources jar + javadoc jar 三件齐全（pom 为第四件）= 四件套完整，0 缺失；
+  3 个排除面 jar 模块（dist-jh / examples-agent-spine / examples-headless）不在发布叶集。
+  注：main jar 本次未重打（jar:jar up-to-date——c5fce8c 纯文档零源码改动，classes 自翻转批未变；
+  main jar 由翻转批 10:41 全量 package 产出，盘上 0.5.0 在位）；sources/javadoc 每次重 attach。
+签名面（gpg.skip 预期）：0.5.0 .asc = **0**（干跑无 .asc 是预期，不得当签名达标证据——硬门槛见 release.md §4.3）。
+  卫生注：target 目录残留 386 个 .asc 俱为 0.3.0/0.4.0 旧版真 deploy 遗留（mtime 实证：最旧 0.3.0、最新 0.4.0；
+  干跑窗口 11:33–11:39 内新增 .asc = 0）——非 0.5.0 件，central-publishing 按当前 reactor 附件收 bundle，
+  旧版 .asc 不入 0.5.0 bundle；真 deploy 将生成全新 0.5.0 .asc（233 主件各一）。
+
+二、坐标面机械复核（与 flip-evidence §二 / portal-checklist 互证）
+全仓 pom 78 = reactor 76 + consumer-sample 1 + negatives/no-version 1（find 实核）。
+python ElementTree 解析每 reactor pom 的 project artifactId/packaging/version/name：
+  排除 integration/consumer-sample（非 reactor）+ harness-examples*/harness-dist*（excludeArtifacts 5）
+  → 发布坐标 **71**（pom-only 17 = 根 1 + 聚合 16；jar 叶 54），全 version=0.5.0。
+  excludeArtifacts 5 与 root pom release profile 逐字吻合（examples-aggregator/agent-spine/headless + dist-aggregator/jh）。
+Central 硬校验 <name>：71/71 发布 pom 自带 project 级 <name>，**0 缺失**（it16 教训预检）；
+  workbench 四 name 逐字 = artifactId（aggregator/projection/rpc/tui）。
+bundle 预期 1398 = 233 主件（54×4+17）+ 233 .asc + 932 校验和（4×233）；
+  较 0.4.0 实测 1320 增 78 = 新增 13 主件（workbench aggregator pom 1 + 3 叶×4）×6 文件。待真 deploy 实核。
+
+三、release profile 配置实核（root pom L517–575）
+maven-source-plugin attach-sources（jar-no-fork）；maven-javadoc-plugin attach-javadocs（jar，doclint none/quiet）；
+maven-gpg-plugin sign-artifacts 绑 **verify** 阶段（goal sign）——真 deploy 在此签每主件，需 GPG passphrase；
+central-publishing-maven-plugin：publishingServerId=central，autoPublish=**false**（上传为草稿，门户人工 Publish 留人闸），
+  excludeArtifacts 5。凭据取 settings.xml server id `central`（用户令牌，用户侧持有）。
+
+四、deploy 就绪判定 + 用户侧门
+干跑绿（sources/javadoc/元数据齐全 + 测试 1521/0/0/31 + 坐标 71/name 71/71）= deploy 预检通过。
+真 deploy 命令：`mvn -B -P release deploy`（release.md §3.3）——**默认用户侧动作**：
+  1. GPG 签名需 passphrase（pinentry 框输热缓存 ~10 分钟；首跑若「缺少 pinentry」→ gpgconf --reload + 探测签名即恢复，预案在案）；
+     非 TTY agent 环境无法独自完成框输签名——须用户在场或用户点名代跑（0.3.0 先例）。
+  2. Central Portal 上传凭据（settings.xml server central 用户令牌）用户侧持有。
+  3. autoPublish=false → 上传生成草稿，**Publish 恒用户侧、公开不可逆**。
+Portal 对账门（用户点名「我在这个门等你」）：deploy 草稿生成后，对照 portal-checklist.txt 三查
+  （71 坐标全在场 / 每主件带 .asc / examples/dist 零出现）+ workbench 四坐标 eyeball + bundle 1398 实核，
+  停下等用户审核草稿 → 用户点 Publish。**本草稿未 deploy，bundle 实测项待真 deploy 回填。**
+
+五、结论
+deploy 预检全绿，发布就绪树 d321d06（带围栏 + 翻转 71 + notes 定稿 + rc 排练全链绿）。
+下一步 = 用户侧真 deploy（签名/上传）→ Portal 对账门停下等用户 Publish。
+当前停在对账门前：rc closeout 已提交 c5fce8c（未推）；deploy-prep + portal-checklist 文档批待提交（未推）。
