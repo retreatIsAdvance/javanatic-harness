@@ -1,0 +1,80 @@
+# 0.5.0 发布验收 · 稳定面差异审计（v0.4.0 → 0.5.0 树）
+
+核对基准 = [12-api-stability.md](../../design/12-api-stability.md) §7 三法固化：导出面 =
+module-info.java 扫描；配置键 = 插件 config 读取点 / base bundle；CLI = `jh --help` /
+`--verify`。本次在 v0.4.0 发布面（67 坐标）与 0.5.0 树之间逐项比对，2026-11-18 执行。
+发布执行属用户侧；本档承载验收证据。收尾批（bump `0.6.0-SNAPSHOT` 等）不改任何主源
+语义，不影响比对；版本串同步见文末观察项。
+
+## 一、导出面（module-info.java 扫描）
+
+`git diff v0.4.0..HEAD --stat -- '**/module-info.java'`：4 文件 62+/1−，**零既有模块
+导出包增删**：
+
+- 3 个**新模块** module-info 入场：`workbench/projection`（15 行）/
+  `workbench/rpc`（26 行）/ `workbench/tui`（16 行）——新导出包
+  `io.javanatic.harness.workbench.projection` / `.rpc` / `.tui`。workbench 聚合器为
+  pom-only，无 module-info。
+- `examples/headless`（+6/−1）：`requires workbench.projection/tui/rpc` 三行；
+  `requires static jdk.httpserver` 改 `requires jdk.httpserver`（it35 `--serve` 真运行时
+  消费，jlink 镜像须含该 JDK 模块）。既有 51 叶 + 16 pom-only 的 module-info **零改动**。
+- `session/persistence` 包（既有导出）**新增类型** `SessionTail`（71 行纯增量）——
+  包级导出面不变，新增 seam 接口属纯增量；`SessionPersistence.KEY` 语义不变。
+
+## 二、事件 schema
+
+`git diff v0.4.0..HEAD -- core/session/src/main` **为空**：`SessionEvent` sealed permits
+零变化，零新事件（与 release notes「零新事件」一致）。
+
+## 三、配置键
+
+`git diff v0.4.0..HEAD -- bundle/base/src/main` **为空**（仅 pom 版本行变动）：base
+41 行（24 可配 + 17 无配）不变，**零新配置键**；bundle.yml 组合面零改动。既有插件
+config 读取点模块零新增键。
+
+## 四、既有模块主源改动（`*/src/main/java/**`，排除新模块与示例）
+
+6 文件 247+/24−，全部为向既有能力的纯增量接线或缺陷修复，无契约破坏：
+
+| 文件 | 改动 | 性质 |
+|---|---|---|
+| `session/persistence/SessionTail.java` | 新增 71 行 | 新 seam 接口（纯增量） |
+| `session/persistence/jsonl/JsonlPersistence.java` | 183 行 | 实现 `SessionTail` + 内嵌 `JsonlFollower` 只读流式读 |
+| `session/persistence/jsonl/JsonlPersistencePlugin.java` | +2 | 同实例双实现 `provide(SessionTail.KEY)` |
+| `web/fetch-http/PinnedHttpClient.java` | 11 行 | 取消-EOF 竞态修复（两处 `signal.checkAbort()` 优先于协议错）；UA 版本串 |
+| `web/search-deepseek/DeepSeekWire.java` | 2 行 | UA 版本串 |
+| `lsp/jdtls/JdtlsProvider.java` | 2 行 | clientInfo version 串 |
+
+## 五、CLI（jlink 镜像实测）
+
+新鲜门禁构建后（`rm -rf dist/jh/target` + 全量 `package` EXIT=0；187 XML =
+1521/0/0/31 不变）：
+
+- `dist/jh/target/jlink-image/bin/jh --help` **EXIT=0**：新增 **7 flag**——
+  `--session` / `--session-view` / `--workbench` / `--follow` / `--serve` / `--port` /
+  `--dump`；既有 flag 语义零变化（互斥矩阵与新 exit 码 2/3 已在帮助文本如实列出）。
+- `--verify` **EXIT=0**：`34 rows, 41 discovered, 0 unreferenced`（keyless，验收口径
+  不变）；`lsp:` / `jobs:` / `delegation:` 摘要行原样。
+- `--version` = `0.6.0-SNAPSHOT`（收尾批工作版本；0.5.0 发布件为 `0.5.0`）。
+- 镜像模块面：`dist/jh/target/jlink-image/bin/java --list-modules | wc -l` = **69**
+  不变（it36 收口同口径；镜像无模块增删）。
+
+## 六、发布面计数（deploy 实录互证）
+
+0.5.0 发布面 = **71 坐标**（67 + workbench 4：聚合器 pom-only 1 + 叶 3）；bundle 实测
+1398 项 = 233 主件（162 jar + 71 pom）+ 233 `.asc` + 932 校验和。明细见
+[deploy-0.5.0.txt](deploy-0.5.0.txt)。
+
+## 观察项（如实记录，非缺陷）
+
+- **对外版本标识串滞后一格**：0.4.0 发布件 UA 为 `javanatic-harness/0.3`（0.5 开发期
+  才补到 0.4）；本次 0.5.0 发布件 UA 为 `javanatic-harness/0.4`、JDT clientInfo 为
+  `0.4.0`。二者均为出站标识串、不进 API 稳定面；收尾批已同步为 `0.5` / `0.5.0`
+  （主源 + 测试断言），下个发布周期起随翻转批同步——与 0.4.0 同类漏网的复发，记观察。
+- 第三方依赖新坐标 JLine 4.6.0 三件套（it34）如实入 release notes；native 不可排除。
+
+## 结论
+
+**零破坏性变更**。全部为纯增量：4 新模块 / 3 新导出包 + 1 既有包新增 seam 类型、
++7 CLI flag、零新事件、零新配置键、零 base bundle 行变化。既有稳定面（导出包增删 /
+SessionEvent permits / 既有 CLI flag / 既有 config 键）零破坏，0.4.x 无补丁义务。

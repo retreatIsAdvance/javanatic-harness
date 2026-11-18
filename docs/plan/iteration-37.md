@@ -76,7 +76,10 @@
 - [x] rc 排练全链绿（tag v0.5.0-rc1→d321d06；tag run 44228781902 五绿 + master run 44226672669 attempt 2 四绿（windows McpStdioRecoveryTest spawn flake，rerun 绿）+ draft 449484005 8 归档占位正文 + rc 清理远端 tag ref 404 实核无残留；[rc1-rehearsal.txt](evidence/release-0.5.0/rc1-rehearsal.txt)）
 - [x] deploy 预检干跑绿（`mvn -B -P release -Dgpg.skip=true package` EXIT=0，BUILD SUCCESS；54 叶四件套齐全 + 17 pom-only；187 XML = 1521/0/0/31 不变；0.5.0 .asc=0 属 gpg.skip 预期；坐标 71 / name 71/71 复核；[deploy-prep.txt](evidence/release-0.5.0/deploy-prep.txt) / [portal-checklist.txt](evidence/release-0.5.0/portal-checklist.txt)）
 - [x] deploy 成功 + bundle 硬门槛（2026-11-18 实跑：首跑 pinentry 缺失 → 探测签名恢复后 BUILD SUCCESS 05:13；deploymentId `db4f47b5-171b-4668-b4c4-c03ba7181158` 上传并 Central 校验通过；bundle 实测 1398 = 233 主件（162 jar + 71 pom）+ 233 .asc + 932 校验和；71 坐标 / examples·dist 零 / 233/233 .asc / 71/71 name 三查全过；[deploy-0.5.0.txt](evidence/release-0.5.0/deploy-0.5.0.txt)）——**草稿已生成，Publish 仍待用户侧**
-- [ ] Portal Publish（用户侧）+ repo1 抽检验签（含 workbench 新坐标）
-- [ ] tag v0.5.0 + GitHub Release 发布（用户侧 Publish）
-- [ ] 收尾批（bump 0.6.0-SNAPSHOT / Roadmap 翻转 / 发布腿重指 / 版本串同步面 / release.md 0.5.0 化）+ CI 四腿绿
-- [ ] 稳定面差异审计入档
+- [x] Portal Publish（用户侧，2026-11-18 用户完成——0.5.0 已发布）
+- [ ] repo1 抽检验签（收录同步后进行；含 workbench 新坐标；结果入 [publish-0.5.0.txt](evidence/release-0.5.0/publish-0.5.0.txt)）
+- [x] tag v0.5.0 推送并实核（tag 对象 f7aed38a → 发布树 d321d06；`gh api` 远端 ref 实核）
+- [x] tag CI 五绿 + draft GitHub Release 8 归档核验（run 44280716512 五腿全绿；draft `javanatic-harness 0.5.0` isDraft=true、8 归档字节数实测、正文 = notes 采用稿；[publish-0.5.0.txt](evidence/release-0.5.0/publish-0.5.0.txt)）
+- [ ] GitHub Release Publish（用户侧，不可逆）
+- [ ] 收尾批（bump 0.6.0-SNAPSHOT / Roadmap 翻转 / 发布腿重指 / 版本串同步面 / release.md 0.5.0 化）+ CI 四腿绿（本地面全绿：187 XML 1521/0/0/31 + validate EXIT=0 + keyless 34/41/0 + 镜像 69；提交待 push）
+- [x] 稳定面差异审计入档（v0.4.0→0.5.0：导出面 4 文件 62+/1− 零既有包增删 / SessionEvent permits 零变化 / base 41 行零新键 / +7 CLI flag / 71 坐标；[audit-stability-surface.txt](evidence/release-0.5.0/audit-stability-surface.txt)）

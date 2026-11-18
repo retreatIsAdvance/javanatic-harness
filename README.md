@@ -146,9 +146,10 @@ workbench/           工作台（it33–it36，0.5 W1–W4）：projection 纯�
 | 17–25 ✅ | **0.2.0** 已发布：可靠单 Agent CLI、取消/恢复/资源边界、工作区与会话易用性、外部 Java 接入、Linux 归档 + Landlock、Windows 本机隔离 + pwsh；Maven Central + GitHub Release（四平台归档） | — |
 | 0.3 系列 ✅ | **0.3.0** 已发布：工具生态四站（Skills / MCP / Web / LSP）；Maven Central + GitHub Release（四平台归档） | [总体计划](docs/design/README.md#phased-evolution-plan) |
 | 0.4 系列 ✅ | **0.4.0** 已发布：可管理后台任务 + 受控委派（it30/it31）＋委派策略指引（it32）；Maven Central + GitHub Release（四平台归档） | [总体计划](docs/design/README.md#phased-evolution-plan) |
-| 0.5（W1–W4 已关账） | 个人工作台四站全通：事件投影与查询（it33）→ TUI 工作台（it34）→ JSON-RPC server（仅 127.0.0.1 回环，it35）+ 本地 Web UI（it36）；0.5.0 发布工程 = it37（开工中：停 1 读面围栏） | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 0.5 系列 ✅ | **0.5.0** 已发布：个人工作台四站（事件投影与查询 it33 → TUI 工作台 it34 → JSON-RPC server（仅 127.0.0.1 回环）it35 → 本地 Web UI it36）＋ 发布工程 it37；Maven Central + GitHub Release（四平台归档） | [总体计划](docs/design/README.md#phased-evolution-plan) |
+| 0.6（当前） | W5 交互工作台 = it38（0.6.0 周期首站；范围以总体计划为准） | [总体计划](docs/design/README.md#phased-evolution-plan) |
 
-**规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。0.5 四站已关账（it33–it36）；范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。能力落地不等于版本就绪，发布另设验收（0.5.0 另议）。
+**规划原则**：维护者场景驱动、真实任务验收、社区反馈校准，不等待社区反馈才推进。0.5 四站已关账（it33–it36），0.5.0 已发布（it37）；当前进入 0.6.0 周期，首站 W5 交互工作台。范围、依赖与验收闸门以总体计划为准，每轮仍须单独完成四确认和审查停点。能力落地不等于版本就绪，发布另设验收。
 
 **平台支持面（0.2.0）**：macOS、Linux 与 Windows 三平台可用（含同机沙箱）——沙箱是平台候选链，取宿主上第一个可用后端：
 
