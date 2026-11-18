@@ -63,7 +63,7 @@
 | portal-checklist.txt | Portal Publish 前 71 坐标 eyeball 核对单（新 4 坐标口径 + 三查） |
 | rc1-rehearsal.txt | rc1 排练全链（tag run 五绿 + master 复跑 + draft 8 归档 + rc 清理 API 404） |
 | deploy-prep.txt | deploy 预检：release 剖面干跑绿（gpg.skip，54 叶四件套齐全 / 1521/0/0/31 / 0.5.0 .asc=0）+ 坐标 71/name 71/71 复核 + release profile 配置实核 + 用户侧门 |
-| deploy-0.5.0.txt | deploy 实录 + bundle 硬门槛（1398 预期项 / 71 坐标 / 零 .asc 缺失） |
+| deploy-0.5.0.txt | deploy 实录 + bundle 硬门槛（实测 1398 项 / 71 坐标 / 233 主件全带 .asc / deploymentId + Central 校验通过 / 配额 grace period 如实记录） |
 | publish-0.5.0.txt | 两处 Publish 落地核验 + repo1 抽检验签（扩 workbench 新坐标） |
 | audit-stability-surface.txt | 稳定面差异审计 v0.4.0→0.5.0 + 核对三法重跑 |
 
@@ -75,7 +75,7 @@
 - [x] release-notes-0.5.0.md 定稿（零写面治理叙事 + 四站 Highlights + B36/B37 围栏节 + 升级必读纯增量枚举 + JLine 三坐标 native 不可排除如实 + 已知边界；[notes](../release-notes-0.5.0.md)）
 - [x] rc 排练全链绿（tag v0.5.0-rc1→d321d06；tag run 44228781902 五绿 + master run 44226672669 attempt 2 四绿（windows McpStdioRecoveryTest spawn flake，rerun 绿）+ draft 449484005 8 归档占位正文 + rc 清理远端 tag ref 404 实核无残留；[rc1-rehearsal.txt](evidence/release-0.5.0/rc1-rehearsal.txt)）
 - [x] deploy 预检干跑绿（`mvn -B -P release -Dgpg.skip=true package` EXIT=0，BUILD SUCCESS；54 叶四件套齐全 + 17 pom-only；187 XML = 1521/0/0/31 不变；0.5.0 .asc=0 属 gpg.skip 预期；坐标 71 / name 71/71 复核；[deploy-prep.txt](evidence/release-0.5.0/deploy-prep.txt) / [portal-checklist.txt](evidence/release-0.5.0/portal-checklist.txt)）
-- [ ] deploy 成功 + bundle 硬门槛（.asc 齐全 / 零残留 / 坐标数对账）——**用户侧真签名（GPG passphrase 框输）+ Portal 上传；停在对账门等用户**
+- [x] deploy 成功 + bundle 硬门槛（2026-11-18 实跑：首跑 pinentry 缺失 → 探测签名恢复后 BUILD SUCCESS 05:13；deploymentId `db4f47b5-171b-4668-b4c4-c03ba7181158` 上传并 Central 校验通过；bundle 实测 1398 = 233 主件（162 jar + 71 pom）+ 233 .asc + 932 校验和；71 坐标 / examples·dist 零 / 233/233 .asc / 71/71 name 三查全过；[deploy-0.5.0.txt](evidence/release-0.5.0/deploy-0.5.0.txt)）——**草稿已生成，Publish 仍待用户侧**
 - [ ] Portal Publish（用户侧）+ repo1 抽检验签（含 workbench 新坐标）
 - [ ] tag v0.5.0 + GitHub Release 发布（用户侧 Publish）
 - [ ] 收尾批（bump 0.6.0-SNAPSHOT / Roadmap 翻转 / 发布腿重指 / 版本串同步面 / release.md 0.5.0 化）+ CI 四腿绿
