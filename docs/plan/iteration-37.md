@@ -70,8 +70,8 @@
 
 - [x] 草案评审通过（四确认 + B36 回补带入 + Content-Type 增项 + 闭包口径，2026-11-17 用户三项裁决）
 - [x] B36/B37 读面回补停 1 放行（TDD + 突变必红 + 契约增量同步；2026-11-18 用户评审通过，rpc 98 例独立复跑全绿）
-- [ ] 版本翻转 + 坐标机械复测定案（71 预期）+ 全量 package 绿
-- [ ] release-notes-0.5.0.md 定稿
+- [x] 版本翻转 + 坐标机械复测定案（71 = reactor 76 − examples 3 − dist 2；grep 0.5.0-SNAPSHOT POM 77→0；全量 package EXIT=0，187 XML = 1521/0/0/31 不变；[flip-evidence.txt](evidence/release-0.5.0/flip-evidence.txt)）
+- [x] release-notes-0.5.0.md 定稿（零写面治理叙事 + 四站 Highlights + B36/B37 围栏节 + 升级必读纯增量枚举 + JLine 三坐标 native 不可排除如实 + 已知边界；[notes](../release-notes-0.5.0.md)）
 - [ ] rc 排练全链绿（tag run 五绿 + master 复跑 + draft 8 归档 + rc 清理）
 - [ ] deploy 成功 + bundle 硬门槛（.asc 齐全 / 零残留 / 坐标数对账）
 - [ ] Portal Publish（用户侧）+ repo1 抽检验签（含 workbench 新坐标）

@@ -1,0 +1,61 @@
+it37 翻转批取证：0.5.0-SNAPSHOT → 0.5.0（2026-11-18）
+
+一、版本翻转（versions:set + 手动同步）
+reactor 76 POM 经 `mvn versions:set -DnewVersion=0.5.0`（SET_EXIT=0，BUILD SUCCESS，
+日志 /tmp/it37-versions-set.log）；非 reactor 面手动同步（it32 513a510 先例对照）：
+  - integration/consumer-sample/pom.xml：<harness.version>0.5.0-SNAPSHOT → 0.5.0（版本单点）
+    + 注释「0.5.0 = 候选件（发布后为 Central 发布件）；发布腿用 -Dharness.version=0.4.0」
+    （发布腿重指 0.4.0→0.5.0 属收尾，Publish 后）；
+  - integration/consumer-sample/README.md：缺省版本串 0.5.0；
+  - docs/design/02-module-layout.md：6 处 <version> POM 片段 0.5.0-SNAPSHOT → 0.5.0（perl -pi）；
+  - docs/release.md：仅 §3.1 grep 行（full 版本化属收尾，it32 先例）。
+negatives/no-version 夹具 POM 故意无版本——不翻转不动（第 78 个 POM）。
+
+二、坐标机械复测（命令 + 测量面）
+全仓 POM 总数：`find . -name pom.xml -not -path '*/target/*' | wc -l` = 78
+  = reactor 76 + consumer-sample 1（非 reactor）+ negatives/no-version 夹具 1（无版本）。
+grep 残留：`grep -rl "0.5.0-SNAPSHOT" --include=pom.xml . | wc -l`
+  翻转前 77（reactor 76 + consumer-sample 1）→ 翻转后 0。
+发布坐标 = reactor 76 − excludeArtifacts 5 = 71（= 0.4.0 的 67 + workbench 4）。
+  excludeArtifacts 实闸 5（root pom release profile，逐字核）：
+    harness-examples-aggregator / harness-examples-agent-spine / harness-examples-headless
+    harness-dist-aggregator / harness-dist-jh
+  构成：pom-only 17（根 1 + 聚合 16）+ jar 叶 54 = 71。
+新 4 坐标（workbench 组，<name> 全自带——it16 教训预检过，version 均 0.5.0）：
+    harness-workbench-aggregator（packaging pom）
+    harness-workbench-projection / harness-workbench-tui / harness-workbench-rpc（jar 四件套）
+bundle 预期 1398 项 = 233 主件（54 叶 ×4 + 17 pom-only）+ 233 .asc + 932 校验和（4 种 ×233）
+  ——以真 deploy 日志为准（Portal 对账门核）。
+
+三、全量 package 绿（翻转树）
+命令：`mvn -B package`（JAVA_HOME=JDK25，~/Documents/apache-maven-3.10.0/bin/mvn）
+  日志 /tmp/it37-flip-full.log；FULL_EXIT=0；BUILD SUCCESS ×1 / BUILD FAILURE ×0；
+  Total time 04:03 min，Finished 2026-11-18T10:41:29+08:00。
+surefire XML 求和（mtime 窗口过滤 10:36:00–10:42:30，避孤儿 XML 带红坑）：
+  测量面 = **/target/surefire-reports/TEST-*.xml，窗口内 187 XML（窗口外/孤儿 2 排除）
+  tests=1521 failures=0 errors=0 skipped=31 —— 与停 1 基线一致（翻转不改测试数）。
+keyless --verify（翻转树 fresh jlink 镜像，镜像 mtime 10:41 在构建窗内）：
+  `dist/jh/target/jlink-image/bin/jh --verify` → VERIFY_EXIT=0
+  stdout「composition: 34 rows, 41 discovered, 0 unreferenced」—— 34/41/0 不变。
+`jh --version` → 0.5.0。
+JLine 三坐标实核（dist/jh/target/modules/）：jline-terminal-4.6.0.jar +
+  jline-terminal-ffm-4.6.0.jar + jline-native-4.6.0.jar（native 传递不可排除，
+  terminal 模块描述符硬 requires org.jline.nativ，jlink 全图解析缺之即败）。
+
+四、导出面增量（v0.4.0 tag → 翻转树，git diff 实核）
+新增 module-info 3：workbench/projection / workbench/tui / workbench/rpc
+  → 3 新导出包 io.javanatic.harness.workbench.projection/tui/rpc。
+既有 module-info 修改 1：examples/headless（+3 requires workbench；jdk.httpserver
+  static→真运行时消费）——examples 属 excludeArtifacts，不影响发布导出面。
+既有导出包 session.persistence.jsonl：exports 行 v0.4.0 与翻转树逐字相同（未新导出包）；
+  tail seam（SessionTail 四契约 + Follower.close 赋义）= 该既有导出包内新增类型，非新包。
+SessionEvent.java：v0.4.0→翻转树未改（permits 不变，零新事件）。
+module-info 删除：0（无导出面移除）。
+CLI flag +7：--session/--session-view/--workbench/--follow/--serve/--port/--dump
+  （12-api-stability.md §6 冻结清单逐字核）。
+
+五、结论
+翻转批版本树完成：坐标 71 定案（机械复测 + name 预检 + excludeArtifacts 实闸），
+grep 残留归零，全量 package EXIT=0（1521/0/0/31 不变），keyless --verify 34/41/0 不变，
+--version 0.5.0。release-notes-0.5.0.md 定稿（零写面治理叙事 + 四站 + B36/B37 围栏 +
+JLine 三坐标 native 不可排除如实）。下一步：提交翻转批 + notes 批 → push → rc 排练。
