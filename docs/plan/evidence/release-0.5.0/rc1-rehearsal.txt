@@ -23,7 +23,8 @@ literal `sleep 30` + 每 30s  spawned 真 sleep 30 子进程；该测试 awaitSl
 而非测试自身孙进程 → cancel 杀错树 → 断言查 watch 的仍活 sleep → false。3/3 一致因 watch 全程在跑。
 处置：watch 退出（master run 完成）→ 污染源清 → 重试 rc tag push → pre-push 全量绿（shell-local 复绿）→
 tag 一次落地。独立实核 gh api git/ref/tags/v0.5.0-rc1 .object.sha == d321d06（不信任脚本 exit 0）。
-教训入册：CI watch 轮询勿用 sleep 30（改 sleep 20，避确定性弄红本机 pre-push）。
+教训入册（原则化，不固化秒数）：门禁运行期间禁一切并发 watcher/轮询环——污染机制是任何并发
+子进程都可能落进「无过滤全局进程扫」测试的视野（it35 单场闸纪律的进程面推广；换秒数只是换撞运气，非修法）。
 不动测试代码——本机病理不驱动产品/测试改动；awaitSleepPid 全局扫无父进程/新近过滤是潜在隔离弱点，记观察。
 
 tag run 44228781902 五绿（build / macos / windows / windows-arm + release-attach），attempt 1，
