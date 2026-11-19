@@ -67,6 +67,12 @@ mvn versions:set -DnewVersion=0.5.0 -DgenerateBackupPoms=false   # 首次运行�
 rm -rf dist/jh/target                                            # 旧版本 jar 残留 → jlink「Two versions of module」（注2）
 grep -rl "0.5.0-SNAPSHOT" --include=pom.xml . | wc -l            # 翻转后应为 0；翻转前全仓 77 = reactor 76 + 非 reactor 示例 1（示例不入 versions:set，须手动同步 pom + README）。0.5.0 坐标 71（0.4.0 的 67 + workbench 4，it33–it36）——机械计数定案，Portal 前对账
 
+# 3.1b 版本串同步面（硬编码标识符 versions:set 抓不到——必须显式 grep；0.4.0/0.5.0
+#      同族两次滞后，0.6.0 起翻转时机械命中，不再依赖收尾批「机械枚举」后知后觉）
+grep -rnE --include='*.java' 'javanatic-harness/[0-9]+\.[0-9]+' .  # 期望 4 处、全部 = javanatic-harness/0.6：主源 2（PinnedHttpClient / DeepSeekWire UA 常量）+ 测试断言 2（同名两测试类）
+grep -rnE --include='*.java' 'clientInfo\.put\("version", "[0-9]' . # 期望 1 处 = "0.6.0"（lsp/jdtls JdtlsProvider）——完整三段版本号；MCP 两处 clientInfo 走 getImplementationVersion 自动派生，不入同步面
+# 命中数与值不符即停：先改齐再进 3.2（版本树承载这些串，tag 才对得上）
+
 # 3.2 提交翻转（tag 指向窗口内发布就绪 HEAD——须承载 0.5.0 版本树，不得落在翻转前；0.5.0 先例 = 翻转 d321d06 处）
 git add -A && git commit -m "chore(release): 0.5.0"
 
@@ -124,7 +130,7 @@ git tag v0.5.0 && git push origin v0.5.0      # push 需放行；tag 指向须�
 - [x] 版本 bump 回 SNAPSHOT：`mvn versions:set -DnewVersion=0.6.0-SNAPSHOT -DgenerateBackupPoms=false`（reactor 76 POM 翻转、零残留；见 §6）
 - [x] README×2 的 Roadmap 行翻转：`0.5（W1–W4 已关账）` → `0.5 系列 ✅ 0.5.0 已发布：个人工作台四站（it33–it36）＋ 发布工程 it37；Maven Central + GitHub Release（四平台归档）`；新增 `0.6（当前）` 行：W5 交互工作台 = it38（0.6.0 周期首站）（现状卡同步「0.5.0 发布验收」收口）
 - [x] release notes 定稿：`docs/release-notes-0.5.0.md` 发布前终读（含「升级必读」节），如需最小修正随收尾提交
-- [x] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值 `0.6.0-SNAPSHOT`）、`docs/embedding.md` 版本面（`0.4.0` → `0.5.0`；闭包 34 条维持、0.5.0 零新增消费坐标）
+- [x] 版本串同步面随 bump：`integration/consumer-sample`（pom + README 缺省值 `0.6.0-SNAPSHOT`）、`docs/embedding.md` 版本面（`0.4.0` → `0.5.0`；闭包 34 条维持、0.5.0 零新增消费坐标）；**硬编码标识串按 §3.1b 两条 grep 复核**（UA `javanatic-harness/0.5` 4 处 + JDT clientInfo `0.5.0` 1 处——0.4.0/0.5.0 两次滞后均由此漏网）
 - [x] 发布腿重指：`integration/verify-consumer.sh` 发布腿 `0.4.0` → `0.5.0`；`candidate-closure` 维持空（0.5.0 零新 bundle 行，workbench 三叶非行件；`-P '!candidate-closure'` 停用保留为 0.6.0 候选前置）
 - [x] release.md 0.5.0 化：标题 / §0 发布面 / §3 序列 / §4 校验点（bundle 实测 1398）/ §5 tag 面随核（0.4.0 化在 0.4.0 发布验收期完成；0.5.0 化随本次收尾补）
 
