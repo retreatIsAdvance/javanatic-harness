@@ -1,7 +1,7 @@
 # 0.5.0 发布验收 · 两处 Publish 与归档核验
 
-执行：2026-11-18 晚（peer 代跑取证）。Publish 动作恒用户侧：Portal Publish 已由用户完成
-（本节记录其后果核验）；GitHub Release Publish 仍待用户侧（本节只核 draft）。
+执行：2026-11-18 ~ 11-19（peer 代跑取证）。Publish 动作恒用户侧：Portal Publish 与
+GitHub Release Publish 均已由用户完成（本节记录其后果核验）。
 
 ## 一、Portal Publish（用户侧）
 
@@ -28,13 +28,15 @@ EDDSA 验签完好 / metadata `latest=0.5.0`。0.4.0 先例同步滞后亦为小
 - tag CI run **44280716512**（head `d321d06`，push event）：**五腿全绿**
   （build / macos / windows / windows-arm / release-attach，`gh run view --json` 实核）。
 
-## 四、GitHub Release draft（release-attach 产物）
+## 四、GitHub Release（release-attach 产物 → 用户 Publish）
 
-`gh release view v0.5.0 -R retreatIsAdvance/javanatic-harness` 实核：
+`gh release view v0.5.0 -R retreatIsAdvance/javanatic-harness` 实核（draft 期 → 发布后）：
 
-- name `javanatic-harness 0.5.0`，**isDraft=true**（Publish 待用户侧）。
-- 正文不是占位符：已带 release-notes-0.5.0 采用稿正文（`# javanatic-harness 0.5.0`
-  与零写面治理叙事段在列）。
+- draft 期：name `javanatic-harness 0.5.0`、**isDraft=true**；正文不是占位符——已带
+  release-notes-0.5.0 采用稿（`# javanatic-harness 0.5.0` 与零写面治理叙事段在列）。
+- **发布（用户侧，2026-11-19T00:54:17Z）**：isDraft=false、isPrerelease=false，
+  url `https://github.com/retreatIsAdvance/javanatic-harness/releases/tag/v0.5.0`，
+  assets=8。
 - 8 归档齐备（字节数实测）：
 
 | 资产 | 字节 |
@@ -51,4 +53,4 @@ EDDSA 验签完好 / metadata `latest=0.5.0`。0.4.0 先例同步滞后亦为小
 ## 待办
 
 - [ ] repo1 收录后补十项抽检（含 workbench 新坐标）。
-- [ ] GitHub Release Publish（用户侧，不可逆）。
+- [x] GitHub Release Publish（用户侧，2026-11-19T00:54:17Z 完成，8 归档正式发布）。
