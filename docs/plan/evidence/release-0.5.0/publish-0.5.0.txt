@@ -10,15 +10,30 @@ GitHub Release Publish 均已由用户完成（本节记录其后果核验）。
   `db4f47b5-171b-4668-b4c4-c03ba7181158`、71 坐标、bundle 1398 项、Central 校验通过、
   autoPublish=false。
 
-## 二、repo1 收录状态（待同步）
+## 二、repo1 收录（2026-11-19 补检，已收录）
 
-截至 2026-11-18T18:15+08:00 实测仍为同步滞后，**抽检十项待收录后补**：
+**口径更正**：先前记录的「workbench-rpc pom 404 / metadata latest 0.4.0」是**路径错误**——
+发布 groupId 为 `io.github.retreatisadvance`（Central 命名空间 = GitHub 身份），我按
+`io/javanatic/harness`（Java 包名）查的，404 与发布状态无关。正确路径下全部 200。
 
-- `GET .../harness-workbench-rpc/0.5.0/harness-workbench-rpc-0.5.0.pom` → **404**
-- `GET .../harness-agent/maven-metadata.xml` → `<latest>` 仍 0.4.0，无 0.5.0 `<version>` 行
+2026-11-19 实测（`https://repo1.maven.org/maven2/io/github/retreatisadvance/<artifactId>/0.5.0/`）：
 
-收录后补记：十项抽检（含 workbench 新坐标）HTTP 200 / sha1 与本地一致 /
-EDDSA 验签完好 / metadata `latest=0.5.0`。0.4.0 先例同步滞后亦为小时级，不设猜测结论。
+- **坐标面**：71 个发布 artifactId 的 `.pom` 全量 200，缺 0 个（artifactId 清单取自
+  `target/central-publishing/central-bundle.zip` 内的 `/0.5.0/*.pom` 路径，71 条去重）。
+- **叶件面**：54 个叶 artifactId 的 `.jar` 全量 200，缺 0 个。
+- **校验和**：抽三件比对本地 bundle 内 `.sha1` 与 repo1 回显逐字一致——
+  `harness-workbench-rpc-0.5.0.jar` = `3d34908f…2035`、`harness-parent-0.5.0.pom` =
+  `b28aad37…63a8`、`harness-workbench-tui-0.5.0.jar` = `b99c787c…b276`。
+- **签名面**：`harness-workbench-rpc-0.5.0.jar.asc` 与 `harness-parent-0.5.0.pom.asc`
+  均为 200；本地 `gpg --verify` → 「完好的签名，来自于 “retreatIsAdvance”」，
+  EDDSA 密钥 `F70A6EF502A556926965E9F39B08D129BB5BD9DC`。
+- **元数据**：`harness-workbench-rpc` 与 `harness-fs-local` 的 `maven-metadata.xml`
+  `<latest>`/`<release>` 均 = **0.5.0**，`<versions>` 含 0.5.0。
+
+**consumer 发布腿复验**（`integration/verify-consumer.sh release`，隔离本地仓初始为空）：
+默认 settings（aliyun 镜像）命中已知间歇 404 + 隔离仓缓存失败（settings-central.xml 注释所载
+S-d §16 现象），按该文件指引以 repo1 直连覆写 settings 重跑——**6/6 全 ok、失败项 0**，
+取件登记 `harness-bundle-base-0.5.0.jar>public-central-repo1-…`，用时 134s。
 
 ## 三、tag 与 tag CI
 
@@ -52,5 +67,6 @@ EDDSA 验签完好 / metadata `latest=0.5.0`。0.4.0 先例同步滞后亦为小
 
 ## 待办
 
-- [ ] repo1 收录后补十项抽检（含 workbench 新坐标）。
+- [x] repo1 收录后补十项抽检（含 workbench 新坐标）——2026-11-19 完成，见 §二（71 pom + 54 jar 全 200 / sha1 一致 / EDDSA 完好 / metadata 0.5.0）。
 - [x] GitHub Release Publish（用户侧，2026-11-19T00:54:17Z 完成，8 归档正式发布）。
+- [x] consumer 发布腿复验（repo1 直连 settings 覆写，6/6 ok）。

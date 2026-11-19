@@ -34,3 +34,18 @@ CI run 44226672669（head_sha=d321d06）：attempt 1 windows 腿红（mcp/stdio 
 夹具单文件源码启动 spawn 抖动，零项目版本依赖、it37 未触该模块）→ rerun --failed → attempt 2 四腿全绿
 （独立 gh api attempts/2/jobs 实核）。flake 定性与处置详见 rc1-rehearsal.txt §二；记 watch 账第三成员。
 rc 排练 v0.5.0-rc1 全链 + 清理见 rc1-rehearsal.txt。
+
+收尾 push 与最终 head CI（2026-11-19）
+--------------------------------------
+链：6552f1d（deploy 实录 + 对账门三查）→ aff0951（收尾：bump 0.6.0-SNAPSHOT + 文档/版本串同步）
+→ 07a7959（GitHub Release 已发布回填）→ 9f3758d（release.md §3.1b 版本串同步显式入清单）。
+push 轮 1 传输失败（RPC/curl 28），脚本自动轮 2 落地——独立 gh api git/ref/heads/master 实核。
+
+CI run **44471341289**（head_sha=9f3758d，纯文档批）：
+attempt 1 macos 腿红——`TwoHostLostProbeTest.killedHostRunningJobBecomesLostWithReadableRelic:68`
+（断言「宿主 A 已把 job 事件落盘」，harness-examples-headless 130 跑 1 红）；其余三腿绿。
+定性 = 观察账既有成员第二次 CI 再现（it34 先例同型；根因指向探针固定 800ms sleep 后 save + halt(0)，
+慢 runner 上 job 侧事件未落盘），处置：`gh run rerun --failed` → attempt 2 四腿全绿
+（build/macos/windows/windows-arm success；release-attach skipped 为非 tag 常态），
+`gh run view --json` 实核 conclusion=success。手术项按观察账纪律入 it38 开工首批
+（条件等待替代固定 sleep），详见 current-state 观察账。
