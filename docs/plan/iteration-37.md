@@ -81,5 +81,5 @@
 - [x] tag v0.5.0 推送并实核（tag 对象 f7aed38a → 发布树 d321d06；`gh api` 远端 ref 实核）
 - [x] tag CI 五绿 + draft GitHub Release 8 归档核验（run 44280716512 五腿全绿；draft `javanatic-harness 0.5.0` isDraft=true、8 归档字节数实测、正文 = notes 采用稿；[publish-0.5.0.txt](evidence/release-0.5.0/publish-0.5.0.txt)）
 - [x] GitHub Release Publish（用户侧，2026-11-19T00:54:17Z 完成——8 归档正式发布，isDraft=false；[…/releases/tag/v0.5.0](https://github.com/retreatIsAdvance/javanatic-harness/releases/tag/v0.5.0)）
-- [x] 收尾批（bump 0.6.0-SNAPSHOT / Roadmap 翻转 / 发布腿重指 / 版本串同步面 / release.md 0.5.0 化）+ CI 四腿绿（本地面全绿：187 XML 1521/0/0/31 + validate EXIT=0 + keyless 34/41/0 + 镜像 69；已推 3 笔 `6552f1d`/`aff0951`/`07a7959`，最终 head `9f3758d` run **44471341289** 四腿全绿——attempt 1 macos `TwoHostLostProbeTest:68` 已知 flake，attempt 2 rerun 绿）
+- [x] 收尾批（bump 0.6.0-SNAPSHOT / Roadmap 翻转 / 发布腿重指 / 版本串同步面 / release.md 0.5.0 化）+ CI 四腿绿（本地面全绿：187 XML 1521/0/0/31 + validate EXIT=0 + keyless 34/41/0 + 镜像 69；已推 3 笔 `6552f1d`/`aff0951`/`07a7959`，最终 head `9f3758d` run **44471341289** 四腿全绿——attempt 1 macos `TwoHostLostProbeTest:68` 已知 flake，attempt 2 rerun 绿）；关账批 `b568ef8`（repo1 补检 + 关账回填）已推，CI run **44479997675** 四腿全绿（release-attach skipped 非 tag 常态）
 - [x] 稳定面差异审计入档（v0.4.0→0.5.0：导出面 4 文件 62+/1− 零既有包增删 / SessionEvent permits 零变化 / base 41 行零新键 / +7 CLI flag / 71 坐标；[audit-stability-surface.txt](evidence/release-0.5.0/audit-stability-surface.txt)）

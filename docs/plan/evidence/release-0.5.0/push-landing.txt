@@ -49,3 +49,9 @@ attempt 1 macos 腿红——`TwoHostLostProbeTest.killedHostRunningJobBecomesLos
 （build/macos/windows/windows-arm success；release-attach skipped 为非 tag 常态），
 `gh run view --json` 实核 conclusion=success。手术项按观察账纪律入 it38 开工首批
 （条件等待替代固定 sleep），详见 current-state 观察账。
+
+关账批 CI（2026-11-19）
+--------------------------------------
+`b568ef8`（repo1 收录补检 + it37 关账回填，纯文档）已推，独立 `gh api commits/master` 实核远端 head == b568ef8。
+CI run **44479997675** 四腿全绿（build / macos / windows / windows-arm success，release-attach skipped 非 tag 常态），`gh run view --json` 实核 conclusion=success。
+it37 关账闭环：0.5.0 已发布 + repo1 收录已验 + 最终 head CI 四腿绿 + 观察账手术项已排入 it38 开工首批。
