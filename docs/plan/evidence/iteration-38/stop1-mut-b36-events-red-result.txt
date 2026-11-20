@@ -1,0 +1,14 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=RpcHttpServerSseTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T17:02:08.566839
+END=2026-11-20T17:02:45.256738
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+RpcHttpServerSseTest [21, 1, 0, 0] mtime=2026-11-20T17:02:44.871846
+FAILURE=fenceRejectsEvilHostAndOriginBeforeSourceWithLegal200Control 
+expected: 403
+ but was: 200
+FRESH_TOTAL=[21, 1, 0, 0]
+MISSING=[]
+LOG_SHA256=40f8e37db6fd4a68f2570079b932eaa405df2fe0317e27ccc76d56392522e6b2

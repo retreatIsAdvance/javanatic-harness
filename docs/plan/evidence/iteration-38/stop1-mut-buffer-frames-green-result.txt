@@ -1,0 +1,11 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=SseBufferTest -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SseBufferTest#sixtyFifthQueuedFrameAbortsInsteadOfDroppingAndContinuing test
+START=2026-11-20T17:00:48.847501
+END=2026-11-20T17:00:54.569761
+EXIT=0
+XML_COLUMNS=tests failures errors skipped
+SseBufferTest [1, 0, 0, 0] mtime=2026-11-20T17:00:54.522600
+FRESH_TOTAL=[1, 0, 0, 0]
+MISSING=[]
+LOG_SHA256=c6fffa17b41dd82982f95cf3d9ed30a00bc062453365e53ef5db2b6683ac6c17

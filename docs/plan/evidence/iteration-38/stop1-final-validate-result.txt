@@ -1,0 +1,4 @@
+command=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+start=2026-11-20T13:47:22.712888
+end=2026-11-20T13:47:27.185778
+EXIT=0

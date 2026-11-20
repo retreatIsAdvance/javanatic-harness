@@ -1,0 +1,14 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=RpcHttpServerSseTest,SseConnectionTest,SseBufferTest,RpcHttpServerTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:49:23.667980
+END=2026-11-20T16:50:06.071938
+EXIT=0
+XML_COLUMNS=tests failures errors skipped
+RpcHttpServerSseTest [21, 0, 0, 0] mtime=2026-11-20T16:50:05.687684
+SseConnectionTest [6, 0, 0, 0] mtime=2026-11-20T16:49:34.839144
+SseBufferTest [5, 0, 0, 0] mtime=2026-11-20T16:49:35.513690
+RpcHttpServerTest [21, 0, 0, 0] mtime=2026-11-20T16:49:35.508735
+FRESH_TOTAL=[53, 0, 0, 0]
+MISSING=[]
+LOG_SHA256=a7694dbd896b5b15926549d2a9ae8f218e0917f8e628e93322b54559c562b5b6

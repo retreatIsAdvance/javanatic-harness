@@ -1,0 +1,39 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=SseEncoderTest,SseBufferTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:18:14.406273
+END=2026-11-20T16:18:21.821275
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+SseEncoderTest [4, 4, 0, 0] mtime=2026-11-20T16:18:21.777582
+FAILURE=controlAndKeepaliveNeverSetReconnectId 
+Expecting actual:
+  ""
+to start with:
+  "data: "
+
+FAILURE=negativePersistedSequenceIsNotAControlFrame 
+Expecting code to raise a throwable.
+FAILURE=persistedFrameKeepsCompleteExtensionEnvelopeWithoutLineInjection 
+Expected size: 3 but was: 0 in:
+[]
+FAILURE=missingCodecFailsLoudRatherThanProjectingAwayPayload 
+Expecting code to raise a throwable.
+SseBufferTest [5, 4, 1, 0] mtime=2026-11-20T16:18:21.767220
+FAILURE=oversizedSingleFrameAlsoAborts 
+Expecting value to be false but was true
+FAILURE=sixtyFifthQueuedFrameAbortsInsteadOfDroppingAndContinuing 
+Expecting value to be false but was true
+FAILURE=aggregateEncodedByteBudgetIsEightMiB 
+Expecting value to be false but was true
+FAILURE=idleDiffersFromEofAndAbortWakesWaiter 
+Expecting actual:
+  Idle[]
+to be an instance of:
+  io.javanatic.harness.workbench.rpc.SseBuffer.End
+but was instance of:
+  io.javanatic.harness.workbench.rpc.SseBuffer.Idle
+ERROR=dequeueReleasesBudgetAndEofDrainsInOrder class io.javanatic.harness.workbench.rpc.SseBuffer$Idle cannot be cast to class io.javanatic.harness.workbench.rpc.SseBuffer$Data (io.javanatic.harness.workbench.rpc.SseBuffer$Idle and io.javanatic.harness.workbench.rpc.SseBuffer$Data are in unnamed module of loader 'app')
+FRESH_TOTAL=[9, 8, 1, 0]
+MISSING=[]
+LOG_SHA256=f2be587228277ff98c558e1e41f1ab06cd3854a137be4b24ab606752dd70bff9

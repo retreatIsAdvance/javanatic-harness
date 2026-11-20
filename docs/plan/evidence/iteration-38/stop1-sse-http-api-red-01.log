@@ -1,0 +1,70 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[ERROR] COMPILATION ERROR : 
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[286,41] 找不到符号
+  符号:   类 SseEventSource
+  位置: 类 io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[325,51] 找不到符号
+  符号:   类 SseEventSource
+  位置: 类 io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[363,64] 程序包SseEventSource不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[342,29] 找不到符号
+  符号:   类 Opened
+  位置: 类 io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.Fixture
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[103,41] 程序包SseEventSource不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[237,27] 无法将类 io.javanatic.harness.workbench.rpc.RpcHttpServer中的构造器 RpcHttpServer应用到给定类型;
+  需要: io.javanatic.harness.workbench.rpc.JsonRpcWire.Handler
+  找到:    (method,pa[...]>null,io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.Fixture,io.javanatic.harness.session.persistence.SessionCodecRegistry
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[273,34] 无法将类 io.javanatic.harness.workbench.rpc.RpcHttpServer中的构造器 RpcHttpServer应用到给定类型;
+  需要: io.javanatic.harness.workbench.rpc.JsonRpcWire.Handler
+  找到:    (method,pa[...]>null,<nulltype>,io.javanatic.harness.session.persistence.SessionCodecRegistry
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[275,34] 无法将类 io.javanatic.harness.workbench.rpc.RpcHttpServer中的构造器 RpcHttpServer应用到给定类型;
+  需要: io.javanatic.harness.workbench.rpc.JsonRpcWire.Handler
+  找到:    (method,pa[...]>null,io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.Fixture,<nulltype>
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[341,9] 方法不会覆盖或实现超类型的方法
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[379,9] 方法不会覆盖或实现超类型的方法
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[384,9] 方法不会覆盖或实现超类型的方法
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[396,9] 方法不会覆盖或实现超类型的方法
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:testCompile (default-testCompile) on project harness-workbench-rpc: Compilation failure: Compilation failure: 
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[286,41] 找不到符号
+[ERROR]   符号:   类 SseEventSource
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[325,51] 找不到符号
+[ERROR]   符号:   类 SseEventSource
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[363,64] 程序包SseEventSource不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[342,29] 找不到符号
+[ERROR]   符号:   类 Opened
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.Fixture
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[103,41] 程序包SseEventSource不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[237,27] 无法将类 io.javanatic.harness.workbench.rpc.RpcHttpServer中的构造器 RpcHttpServer应用到给定类型;
+[ERROR]   需要: io.javanatic.harness.workbench.rpc.JsonRpcWire.Handler
+[ERROR]   找到:    (method,pa[...]>null,io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.Fixture,io.javanatic.harness.session.persistence.SessionCodecRegistry
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[273,34] 无法将类 io.javanatic.harness.workbench.rpc.RpcHttpServer中的构造器 RpcHttpServer应用到给定类型;
+[ERROR]   需要: io.javanatic.harness.workbench.rpc.JsonRpcWire.Handler
+[ERROR]   找到:    (method,pa[...]>null,<nulltype>,io.javanatic.harness.session.persistence.SessionCodecRegistry
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[275,34] 无法将类 io.javanatic.harness.workbench.rpc.RpcHttpServer中的构造器 RpcHttpServer应用到给定类型;
+[ERROR]   需要: io.javanatic.harness.workbench.rpc.JsonRpcWire.Handler
+[ERROR]   找到:    (method,pa[...]>null,io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.Fixture,<nulltype>
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[341,9] 方法不会覆盖或实现超类型的方法
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[379,9] 方法不会覆盖或实现超类型的方法
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[384,9] 方法不会覆盖或实现超类型的方法
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerSseTest.java:[396,9] 方法不会覆盖或实现超类型的方法
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-workbench-rpc

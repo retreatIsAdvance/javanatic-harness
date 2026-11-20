@@ -1,0 +1,12 @@
+COMMAND: /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest,WorkbenchRpcWriteTest,RpcHttpServerTest,RequestFenceTest,WorkbenchRpcTest,JsonRpcWireTest,WorkbenchUiTest -Dsurefire.failIfNoSpecifiedTests=false test
+CWD: /Users/abel_yang/study/deepseek/javanatic-harness
+WINDOW: 2026-11-20T13:20:00.857720 .. 2026-11-20T13:20:38.083225
+EXIT=0
+TEST-io.javanatic.harness.workbench.rpc.ApprovalRelayTest.xml [7, 0, 0, 0]
+TEST-io.javanatic.harness.workbench.rpc.JsonRpcWireTest.xml [13, 0, 0, 0]
+TEST-io.javanatic.harness.workbench.rpc.RequestFenceTest.xml [29, 0, 0, 0]
+TEST-io.javanatic.harness.workbench.rpc.RpcHttpServerTest.xml [19, 0, 0, 0]
+TEST-io.javanatic.harness.workbench.rpc.WorkbenchRpcTest.xml [33, 0, 0, 0]
+TEST-io.javanatic.harness.workbench.rpc.WorkbenchRpcWriteTest.xml [6, 0, 0, 0]
+TEST-io.javanatic.harness.workbench.rpc.WorkbenchUiTest.xml [6, 0, 0, 0]
+TOTAL tests/failures/errors/skipped=[113, 0, 0, 0]

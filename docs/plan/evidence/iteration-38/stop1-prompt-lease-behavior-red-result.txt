@@ -1,0 +1,34 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=ApprovalRelayTest,RelayApprovalPromptTest,WebApprovalRelayContractTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:10:43.034827
+END=2026-11-20T16:10:53.837138
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+ApprovalRelayTest [22, 0, 0, 0] mtime=2026-11-20T16:10:52.079371
+RelayApprovalPromptTest [15, 6, 8, 0] mtime=2026-11-20T16:10:53.781371
+ERROR=slowSubscriberReceivesOnlyLatestCompleteSnapshot No value present
+FAILURE=listenerRegistrationCanObservePublishedRequestAndCancelSynchronously 
+Expecting code to raise a throwable.
+FAILURE=preCancelledAskPublishesNothing 
+Expecting code to raise a throwable.
+ERROR=pollingCancelsWhenOnCancelUsesDefaultNoOp No value present
+ERROR=snapshotsCarryLeaseMetadataAndReconnectWithoutSettledRequests No value present
+FAILURE=cancellationWinsEvenWhenAllowHasJustSettled 
+Expecting code to raise a throwable.
+FAILURE=retainedCancellationCallbackIsHarmlessAfterRelayRetiresTheRequest 
+Expecting value to be true but was false
+ERROR=subscribingRacesWithOpeningWithoutLosingThePendingSnapshot No value present
+ERROR=subscriptionCloseWakesWaiterAndReceivesNoFurtherChanges No value present
+FAILURE=listenerFailureStillWithdrawsThePendingRequest 
+Expecting code to raise a throwable.
+ERROR=humanDecisionControlsRealToolExecutor(Decision)[1] No value present
+ERROR=humanDecisionControlsRealToolExecutor(Decision)[2] No value present
+ERROR=closeCancelsOutstandingRequestsAndRejectsNewAsksWithoutClosingSharedRelay No value present
+FAILURE=closeRacesWithAskWithoutLeakingAnyPendingRequest 
+Expecting code to raise a throwable.
+WebApprovalRelayContractTest [2, 0, 1, 1] mtime=2026-11-20T16:10:53.787794
+ERROR=configuredOneSecondOverridesNonInteractiveDefault No value present
+FRESH_TOTAL=[39, 6, 9, 1]
+MISSING=[]
+LOG_SHA256=93cbb8d998b967aca44af4cc67ff8c0536618c2a884f0af77ef05a8d17f0ed71

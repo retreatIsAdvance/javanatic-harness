@@ -1,0 +1,24 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=WebSseCodecContractTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T17:01:06.738907
+END=2026-11-20T17:01:15.754528
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+WebSseCodecContractTest [1, 1, 0, 0] mtime=2026-11-20T17:01:15.698085
+FAILURE=completeAssistantChunkVariantsSurviveHttpAndResumeFromRealSequence 
+Expecting actual:
+  "data: {"seq":0,"type":"assistant/chunk","ignorable":true,"data":{}}"
+to contain:
+  [""type":"assistant/chunk"",
+    ""ignorable":true",
+    ""time":123",
+    ""turn":7",
+    ""step":2",
+    ""chunk":{"]
+but could not find:
+  [""time":123", ""turn":7", ""step":2", ""chunk":{"]
+ 
+FRESH_TOTAL=[1, 1, 0, 0]
+MISSING=[]
+LOG_SHA256=1aafa0cefd73937c6bb5f1913f931f40c2c4bc79973ca0a4df8031e2030e86a8

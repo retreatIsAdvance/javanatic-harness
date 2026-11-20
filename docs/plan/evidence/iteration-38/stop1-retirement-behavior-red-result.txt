@@ -1,0 +1,19 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:00:40.718886
+END=2026-11-20T16:00:48.201934
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+ApprovalRelayTest [19, 3, 0, 0] mtime=2026-11-20T16:00:48.133347
+FAILURE=closeCancelsPendingAndPreventsRegistration 
+Expecting code to raise a throwable.
+FAILURE=tombstoneExpiresAfterTenMinutesWithoutChangingOldDecision 
+expected: -32007
+ but was: -32009
+FAILURE=terminalRetentionIsBoundedAndOldHandleStillObservesItsOutcome 
+expected: -32007
+ but was: -32008
+FRESH_TOTAL=[19, 3, 0, 0]
+MISSING=[]
+LOG_SHA256=c20d9de4308c250c4be767f43481855a3d495ccae3081c0f7cb8e7909bb7de4f

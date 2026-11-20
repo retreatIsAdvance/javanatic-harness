@@ -1,0 +1,13 @@
+NAME=codec-payload
+FILE=workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/SseEncoder.java
+OLD='envelope.set("data", json(write(codec, event)));'
+NEW='envelope.set("data", MAPPER.createObjectNode());'
+BEFORE_SHA256=81ed36f4b4fb44ab5e2b3dc255b3bd6ae5f6aec4289aa097c100d0d9c948d09c
+AFTER_SHA256=81ed36f4b4fb44ab5e2b3dc255b3bd6ae5f6aec4289aa097c100d0d9c948d09c
+BYTE_RESTORED=True
+RED_EXIT=1
+RED_TOTAL=[1, 1, 0, 0]
+BEHAVIOR_RED=True
+GREEN_EXIT=0
+GREEN_TOTAL=[1, 0, 0, 0]
+PASS=True

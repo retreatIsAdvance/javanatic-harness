@@ -1,0 +1,12 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest -Dsurefire.failIfNoSpecifiedTests=false -Dtest=ApprovalRelayTest#responseBeforeDeadlineIsKeptAfterDeadline test
+START=2026-11-20T16:58:50.326865
+END=2026-11-20T16:58:56.147127
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+ApprovalRelayTest [1, 0, 1, 0] mtime=2026-11-20T16:58:56.107465
+ERROR=responseBeforeDeadlineIsKeptAfterDeadline approval expired
+FRESH_TOTAL=[1, 0, 1, 0]
+MISSING=[]
+LOG_SHA256=cf37fdfafac36ddce18f8b9b4a0a7a5cac56508124dc2c73a45e41aef912ed4c

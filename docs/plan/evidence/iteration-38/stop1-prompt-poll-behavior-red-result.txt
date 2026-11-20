@@ -1,0 +1,23 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=ApprovalRelayTest,RelayApprovalPromptTest,WebApprovalRelayContractTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:10:01.460298
+END=2026-11-20T16:10:13.067186
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+ApprovalRelayTest [22, 3, 0, 0] mtime=2026-11-20T16:10:13.024045
+FAILURE=pollRejectsAnotherRelaysHandleEvenWhenAlreadySettled 
+Expecting code to raise a throwable.
+FAILURE=pollUsesRegisteredDeadlineWithoutWaitingOrResettingIt 
+Expecting Optional to contain:
+  EXPIRED
+but was empty.
+FAILURE=pollNotifiesObserversOutsideRelayLock 
+Expecting Optional to contain:
+  EXPIRED
+but was empty.
+NO_FRESH_XML=RelayApprovalPromptTest
+NO_FRESH_XML=WebApprovalRelayContractTest
+FRESH_TOTAL=[22, 3, 0, 0]
+MISSING=['RelayApprovalPromptTest', 'WebApprovalRelayContractTest']
+LOG_SHA256=fbb9dcaa58486bf4ec707327d7e91b80212db84dfc22a6152b01aa0372bc7571

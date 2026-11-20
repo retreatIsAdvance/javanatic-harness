@@ -1,0 +1,11 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T15:57:20.300660
+END=2026-11-20T15:57:27.312749
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+NO_FRESH_XML=ApprovalRelayTest
+FRESH_TOTAL=[0, 0, 0, 0]
+MISSING=['ApprovalRelayTest']
+LOG_SHA256=aa9364205a00ffbb0b76552b7876eb7791eb4c5bdb0cd882519548292d0eeee4

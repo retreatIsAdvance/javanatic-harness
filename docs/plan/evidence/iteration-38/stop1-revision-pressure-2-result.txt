@@ -1,0 +1,14 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=ApprovalRelayTest,RelayApprovalPromptTest,SseConnectionTest,SseBufferTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T17:06:11.232261
+END=2026-11-20T17:06:24.172425
+EXIT=0
+XML_COLUMNS=tests failures errors skipped
+ApprovalRelayTest [22, 0, 0, 0] mtime=2026-11-20T17:06:22.393071
+RelayApprovalPromptTest [16, 0, 0, 0] mtime=2026-11-20T17:06:24.104663
+SseConnectionTest [8, 0, 0, 0] mtime=2026-11-20T17:06:21.671626
+SseBufferTest [5, 0, 0, 0] mtime=2026-11-20T17:06:22.408555
+FRESH_TOTAL=[51, 0, 0, 0]
+MISSING=[]
+LOG_SHA256=c6fffa17b41dd82982f95cf3d9ed30a00bc062453365e53ef5db2b6683ac6c17

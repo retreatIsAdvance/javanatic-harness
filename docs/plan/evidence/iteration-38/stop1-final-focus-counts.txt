@@ -1,0 +1,13 @@
+command=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=ApprovalRelayTest,JsonRpcWireTest,RequestFenceTest,RpcHttpServerTest,WorkbenchRpcTest,WorkbenchRpcWriteTest,WorkbenchUiTest,WebApprovalRelayContractTest -Dsurefire.failIfNoSpecifiedTests=false test
+start=2026-11-20T13:47:12.531348
+end=2026-11-20T13:47:22.710251
+EXIT=0
+ApprovalRelayTest [11, 0, 0, 0] mtime=2026-11-20T13:47:20.646826
+JsonRpcWireTest [13, 0, 0, 0] mtime=2026-11-20T13:47:20.946223
+RequestFenceTest [29, 0, 0, 0] mtime=2026-11-20T13:47:20.938474
+RpcHttpServerTest [21, 0, 0, 0] mtime=2026-11-20T13:47:20.923818
+WorkbenchRpcTest [33, 0, 0, 0] mtime=2026-11-20T13:47:20.962787
+WorkbenchRpcWriteTest [7, 0, 0, 0] mtime=2026-11-20T13:47:20.929095
+WorkbenchUiTest [6, 0, 0, 0] mtime=2026-11-20T13:47:20.655212
+WebApprovalRelayContractTest [2, 0, 0, 1] mtime=2026-11-20T13:47:22.629445
+TOTAL=[122, 0, 0, 1]

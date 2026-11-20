@@ -1,0 +1,76 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[ERROR] COMPILATION ERROR : 
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[299,29] 找不到符号
+  符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+  位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[300,29] 找不到符号
+  符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+  位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[302,29] 找不到符号
+  符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+  位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[307,29] 找不到符号
+  符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+  位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[316,43] 找不到符号
+  符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+  位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 other
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[317,29] 找不到符号
+  符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+  位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[343,56] 找不到符号
+  符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+  位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[344,57] 找不到符号
+  符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+  位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[346,63] 找不到符号
+  符号:   方法 contains(io.javanatic.harness.workbench.rpc.ApprovalRelay.Outcome)
+  位置: 类 org.assertj.core.api.ObjectAssert<java.lang.Object>
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[347,64] 找不到符号
+  符号:   方法 contains(io.javanatic.harness.workbench.rpc.ApprovalRelay.Outcome)
+  位置: 类 org.assertj.core.api.ObjectAssert<java.lang.Object>
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:testCompile (default-testCompile) on project harness-workbench-rpc: Compilation failure: Compilation failure: 
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[299,29] 找不到符号
+[ERROR]   符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+[ERROR]   位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[300,29] 找不到符号
+[ERROR]   符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+[ERROR]   位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[302,29] 找不到符号
+[ERROR]   符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+[ERROR]   位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[307,29] 找不到符号
+[ERROR]   符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+[ERROR]   位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[316,43] 找不到符号
+[ERROR]   符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+[ERROR]   位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 other
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[317,29] 找不到符号
+[ERROR]   符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+[ERROR]   位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[343,56] 找不到符号
+[ERROR]   符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+[ERROR]   位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[344,57] 找不到符号
+[ERROR]   符号:   方法 poll(io.javanatic.harness.workbench.rpc.ApprovalRelay.Request)
+[ERROR]   位置: 类型为io.javanatic.harness.workbench.rpc.ApprovalRelay的变量 relay
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[346,63] 找不到符号
+[ERROR]   符号:   方法 contains(io.javanatic.harness.workbench.rpc.ApprovalRelay.Outcome)
+[ERROR]   位置: 类 org.assertj.core.api.ObjectAssert<java.lang.Object>
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java:[347,64] 找不到符号
+[ERROR]   符号:   方法 contains(io.javanatic.harness.workbench.rpc.ApprovalRelay.Outcome)
+[ERROR]   位置: 类 org.assertj.core.api.ObjectAssert<java.lang.Object>
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-workbench-rpc

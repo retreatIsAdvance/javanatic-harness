@@ -26,6 +26,11 @@ import java.util.Objects;
  * (-32001/-32002/-32003,意外 IOException 兜底 -32603)。每请求
  * Follower 开→读→关闭环;并发请求无共享态。
  *
+ * <p>写面(it38 停 1):可选注入 {@link ChatControl}(`--web-write` 开启时由装配面
+ * 提供),四方法 {@code session/start|send|cancel} 与 {@code approval/respond}
+ * 只做参数校验与搬运;未注入时四方法一律 -32601,行为与 0.5.0 只读面一致。
+ * 域码:-32006 在途轮拒绝 send/-32007 审批请求不存在/-32008 已结算/-32009 已过期。
+ *
  * <p>模块图纪律:本模块不依赖 bundle/base——dump 文本由装配面
  * (HeadlessMain)启动期算好作为 String 快照注入(组合启动后不变,
  * 热重载不做 ⇒ 快照是正确形状);verify 能力经 {@link CompositionVerifier}
@@ -57,6 +62,10 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
     static final String METHOD_SESSION_TAIL = "workbench/sessionTail";
     static final String METHOD_COMPOSITION_DUMP = "workbench/compositionDump";
     static final String METHOD_VERIFY_COMPOSITION = "workbench/verifyComposition";
+    static final String METHOD_SESSION_START = "session/start";
+    static final String METHOD_SESSION_SEND = "session/send";
+    static final String METHOD_SESSION_CANCEL = "session/cancel";
+    static final String METHOD_APPROVAL_RESPOND = "approval/respond";
 
     private static final int DEFAULT_SESSIONS_MAX = 20;
 
@@ -65,19 +74,34 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
     private final String compositionDump;
     private final CompositionVerifier verifier;
     private final long maxResponseBytes;
+    private final ChatControl chat;
 
     public WorkbenchRpc(SessionPersistence persistence, SessionTail tail,
                         String compositionDump, CompositionVerifier verifier) {
-        this(persistence, tail, compositionDump, verifier, DEFAULT_MAX_RESPONSE_BYTES);
+        this(persistence, tail, compositionDump, verifier, DEFAULT_MAX_RESPONSE_BYTES, null);
+    }
+
+    /** 写面开启：注入 {@link ChatControl}（实现归装配面）。 */
+    public WorkbenchRpc(SessionPersistence persistence, SessionTail tail,
+                        String compositionDump, CompositionVerifier verifier, ChatControl chat) {
+        this(persistence, tail, compositionDump, verifier, DEFAULT_MAX_RESPONSE_BYTES, chat);
+    }
+
+    /** 只读面 + 自定义响应预算（0.5.0 形状，写面关闭）。 */
+    public WorkbenchRpc(SessionPersistence persistence, SessionTail tail,
+                        String compositionDump, CompositionVerifier verifier, long maxResponseBytes) {
+        this(persistence, tail, compositionDump, verifier, maxResponseBytes, null);
     }
 
     /**
      * @param compositionDump 启动期组合 dump 快照(AppBoot.dump(compose(boot)) 口径)
      * @param verifier 组合编辑干跑校验 seam(装配面注入)
      * @param maxResponseBytes 序列化响应字节上限(须为正;超出 → -32004,不静默截断)
+     * @param chat 写面 seam;null = 写面关闭(四方法 -32601)
      */
     public WorkbenchRpc(SessionPersistence persistence, SessionTail tail,
-                        String compositionDump, CompositionVerifier verifier, long maxResponseBytes) {
+                        String compositionDump, CompositionVerifier verifier, long maxResponseBytes,
+                        ChatControl chat) {
         this.persistence = Objects.requireNonNull(persistence, "persistence");
         this.tail = Objects.requireNonNull(tail, "tail");
         this.compositionDump = Objects.requireNonNull(compositionDump, "compositionDump");
@@ -86,6 +110,7 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
             throw new IllegalArgumentException("maxResponseBytes must be positive");
         }
         this.maxResponseBytes = maxResponseBytes;
+        this.chat = chat;
     }
 
     @Override
@@ -96,6 +121,10 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
             case METHOD_SESSION_TAIL -> sessionTail(params);
             case METHOD_COMPOSITION_DUMP -> compositionDump();
             case METHOD_VERIFY_COMPOSITION -> verifyComposition(params);
+            case METHOD_SESSION_START -> sessionStart(params);
+            case METHOD_SESSION_SEND -> sessionSend(params);
+            case METHOD_SESSION_CANCEL -> sessionCancel(params);
+            case METHOD_APPROVAL_RESPOND -> approvalRespond(params);
             default -> throw new RpcException(-32601, "method not found");
         };
         if (RpcJson.sizeOf(result) > maxResponseBytes) {
@@ -196,5 +225,54 @@ public final class WorkbenchRpc implements JsonRpcWire.Handler {
             out.put("nextSeq", all.isEmpty() ? -1L : (long) all.size() - 1);
             return out;
         }
+    }
+
+    /** 写面：开会话并跑首轮；返回新会话 id（实现归装配面）。 */
+    private JsonNode sessionStart(JsonNode params) {
+        ChatControl control = requireChat();
+        String text = RpcJson.text(params);
+        String session = control.start(text);
+        ObjectNode out = RpcJson.node();
+        out.put("sessionId", session);
+        return out;
+    }
+
+    /** 写面：送下一轮（exit 5 答复通道）；在途轮由实现拒绝 -32006。 */
+    private JsonNode sessionSend(JsonNode params) {
+        ChatControl control = requireChat();
+        String session = RpcJson.session(params);
+        String text = RpcJson.text(params);
+        control.send(session, text);
+        return ok();
+    }
+
+    /** 写面：取消在途轮（aborted 落账、exit 4 语义归实现）。 */
+    private JsonNode sessionCancel(JsonNode params) {
+        ChatControl control = requireChat();
+        String session = RpcJson.session(params);
+        control.cancel(session);
+        return ok();
+    }
+
+    /** 写面：审批一次性结算；迟到/重复/未知由实现按域码拒绝。 */
+    private JsonNode approvalRespond(JsonNode params) {
+        ChatControl control = requireChat();
+        String requestId = RpcJson.requestId(params);
+        boolean allow = RpcJson.allow(params);
+        control.respondApproval(requestId, allow);
+        return ok();
+    }
+
+    private ChatControl requireChat() {
+        if (chat == null) {
+            throw new RpcException(-32601, "method not found");
+        }
+        return chat;
+    }
+
+    private static JsonNode ok() {
+        ObjectNode out = RpcJson.node();
+        out.put("ok", true);
+        return out;
     }
 }

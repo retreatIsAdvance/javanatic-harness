@@ -1,0 +1,13 @@
+NAME=buffer-frames
+FILE=workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/SseBuffer.java
+OLD='MAX_FRAMES = 64'
+NEW='MAX_FRAMES = 65'
+BEFORE_SHA256=157a0f8070af8c96628182f2f72e7ec365e30131b67825950ad943baf4b4dfe0
+AFTER_SHA256=157a0f8070af8c96628182f2f72e7ec365e30131b67825950ad943baf4b4dfe0
+BYTE_RESTORED=True
+RED_EXIT=1
+RED_TOTAL=[1, 1, 0, 0]
+BEHAVIOR_RED=True
+GREEN_EXIT=0
+GREEN_TOTAL=[1, 0, 0, 0]
+PASS=True

@@ -1,0 +1,210 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[ERROR] Tests run: 13, Failures: 13, Errors: 0, Skipped: 0, Time elapsed: 2.380 s <<< FAILURE! -- in io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.beyondStableHeadIs400AndOpenedIsClosedBeforeNext -- Time elapsed: 0.281 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 400
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.beyondStableHeadIs400AndOpenedIsClosedBeforeNext(RpcHttpServerSseTest.java:91)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.missingCodecIsAnExplicitMidstreamFailureAfter200 -- Time elapsed: 0.010 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 200
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.missingCodecIsAnExplicitMidstreamFailureAfter200(RpcHttpServerSseTest.java:242)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.sourceOpenFailuresArePlainTextBeforeSseHeaders -- Time elapsed: 0.009 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting Optional to contain:
+  "text/plain; charset=utf-8"
+but was empty.
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.sourceOpenFailuresArePlainTextBeforeSseHeaders(RpcHttpServerSseTest.java:107)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.enabledHeadPostAndDisabledMatrixRemainSeparate -- Time elapsed: 0.015 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 405
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.enabledHeadPostAndDisabledMatrixRemainSeparate(RpcHttpServerSseTest.java:136)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.defaultAndMinusOneIncludeSeqZeroButZeroIsExclusive -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 200
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.defaultAndMinusOneIncludeSeqZeroButZeroIsExclusive(RpcHttpServerSseTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.serverCloseWakesBlockedNextAndReclaimsReader -- Time elapsed: 0.006 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 200
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.serverCloseWakesBlockedNextAndReclaimsReader(RpcHttpServerSseTest.java:178)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.lifecycleAndHalfAssemblyFailLoud -- Time elapsed: 0.002 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting code to raise a throwable.
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.lifecycleAndHalfAssemblyFailLoud(RpcHttpServerSseTest.java:272)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.openReturningAfterServerCloseCannotLeakRegistration -- Time elapsed: 2.014 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+Expecting value to be true but was false
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.openReturningAfterServerCloseCannotLeakRegistration(RpcHttpServerSseTest.java:215)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.fenceRejectsEvilHostAndOriginBeforeSourceWithLegal200Control -- Time elapsed: 0.009 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 200
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.fenceRejectsEvilHostAndOriginBeforeSourceWithLegal200Control(RpcHttpServerSseTest.java:123)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.lastEventIdHeaderTakesPrecedenceOverQuery -- Time elapsed: 0.004 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 200
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.lastEventIdHeaderTakesPrecedenceOverQuery(RpcHttpServerSseTest.java:59)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.disconnectAndReconnectUsesRecordedExclusiveCursorAcrossLiveAppend -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 200
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.disconnectAndReconnectUsesRecordedExclusiveCursorAcrossLiveAppend(RpcHttpServerSseTest.java:155)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.malformedParametersAndDuplicateValuesAreNamed400BeforeOpen -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[/events] 
+expected: 400
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.malformedParametersAndDuplicateValuesAreNamed400BeforeOpen(RpcHttpServerSseTest.java:76)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.idleConnectionWritesCommentAtFifteenSecondsWithoutId -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 200
+ but was: 404
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.idleConnectionWritesCommentAtFifteenSecondsWithoutId(RpcHttpServerSseTest.java:262)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Failures: 
+[ERROR]   RpcHttpServerSseTest.beyondStableHeadIs400AndOpenedIsClosedBeforeNext:91 
+expected: 400
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.defaultAndMinusOneIncludeSeqZeroButZeroIsExclusive:41 
+expected: 200
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.disconnectAndReconnectUsesRecordedExclusiveCursorAcrossLiveAppend:155 
+expected: 200
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.enabledHeadPostAndDisabledMatrixRemainSeparate:136 
+expected: 405
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.fenceRejectsEvilHostAndOriginBeforeSourceWithLegal200Control:123 
+expected: 200
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.idleConnectionWritesCommentAtFifteenSecondsWithoutId:262 
+expected: 200
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.lastEventIdHeaderTakesPrecedenceOverQuery:59 
+expected: 200
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.lifecycleAndHalfAssemblyFailLoud:272 
+Expecting code to raise a throwable.
+[ERROR]   RpcHttpServerSseTest.malformedParametersAndDuplicateValuesAreNamed400BeforeOpen:76 [/events] 
+expected: 400
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.missingCodecIsAnExplicitMidstreamFailureAfter200:242 
+expected: 200
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.openReturningAfterServerCloseCannotLeakRegistration:215 
+Expecting value to be true but was false
+[ERROR]   RpcHttpServerSseTest.serverCloseWakesBlockedNextAndReclaimsReader:178 
+expected: 200
+ but was: 404
+[ERROR]   RpcHttpServerSseTest.sourceOpenFailuresArePlainTextBeforeSseHeaders:107 
+Expecting Optional to contain:
+  "text/plain; charset=utf-8"
+but was empty.
+[ERROR] Tests run: 13, Failures: 13, Errors: 0, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-workbench-rpc: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-workbench-rpc

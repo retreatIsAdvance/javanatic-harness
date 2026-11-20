@@ -1,0 +1,25 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=JsonRpcWireTest,WorkbenchRpcTest,WorkbenchUiTest,RequestFenceTest,WorkbenchRpcWriteTest,RpcHttpServerTest,SseEncoderTest,SseRequestTest,SseBufferTest,RpcHttpServerSseTest,ApprovalRelayTest,SseConnectionTest,RelayApprovalPromptTest,WebApprovalRelayContractTest,WebSseCodecContractTest -Dsurefire.failIfNoSpecifiedTests=false -Dit38.realClock=true test
+START=2026-11-20T17:07:28.354453
+END=2026-11-20T17:13:08.626456
+EXIT=0
+XML_COLUMNS=tests failures errors skipped
+JsonRpcWireTest [13, 0, 0, 0] mtime=2026-11-20T17:08:06.330055
+WorkbenchRpcTest [33, 0, 0, 0] mtime=2026-11-20T17:08:06.343605
+WorkbenchUiTest [6, 0, 0, 0] mtime=2026-11-20T17:07:35.913155
+RequestFenceTest [29, 0, 0, 0] mtime=2026-11-20T17:08:06.323862
+WorkbenchRpcWriteTest [7, 0, 0, 0] mtime=2026-11-20T17:07:36.182902
+RpcHttpServerTest [21, 0, 0, 0] mtime=2026-11-20T17:07:36.177963
+SseEncoderTest [4, 0, 0, 0] mtime=2026-11-20T17:08:06.314827
+SseRequestTest [3, 0, 0, 0] mtime=2026-11-20T17:07:35.899858
+SseBufferTest [5, 0, 0, 0] mtime=2026-11-20T17:07:36.189043
+RpcHttpServerSseTest [21, 0, 0, 0] mtime=2026-11-20T17:08:06.312479
+ApprovalRelayTest [22, 0, 0, 0] mtime=2026-11-20T17:07:35.890120
+SseConnectionTest [8, 0, 0, 0] mtime=2026-11-20T17:07:35.729128
+RelayApprovalPromptTest [16, 0, 0, 0] mtime=2026-11-20T17:08:07.434997
+WebApprovalRelayContractTest [2, 0, 0, 0] mtime=2026-11-20T17:13:08.486658
+WebSseCodecContractTest [1, 0, 0, 0] mtime=2026-11-20T17:13:08.553730
+FRESH_TOTAL=[191, 0, 0, 0]
+MISSING=[]
+LOG_SHA256=a8038f8ccce7b0d3c04e87748c71f1d833493efe3ba40782ebfd388d573dd3cb

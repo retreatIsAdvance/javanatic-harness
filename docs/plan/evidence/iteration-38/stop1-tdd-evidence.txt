@@ -1,0 +1,569 @@
+# 停 1 证据档 — 写面契约 / 中继 / B36-B37 / 突变
+
+性质：历史验证与本轮修正记录；不表示停 1 已达标或已放行。
+首批代码并非全部测试先行，不补造初始 RED；本轮审查修正明确记录行为 RED → GREEN。
+
+日期：2026-11-20。环境：macOS arm64，JDK 25（`/usr/libexec/java_home -v 25`），
+Maven `~/Documents/apache-maven-3.10.0/bin/mvn`（不在 PATH）。仓库根
+`javanatic-harness`。
+
+## 1. 聚焦测试（绿）
+
+命令（本会话实跑，输出重定向只用于日志留存，判定取 surefire XML）：
+
+```
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am \
+  -Dtest='ApprovalRelayTest,WorkbenchRpcWriteTest,RpcHttpServerTest,RequestFenceTest,WorkbenchRpcTest' \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+结果：`RESTORE_EXIT=0`。surefire XML（同一窗口 `2026-11-20 09:25:31`）：
+
+| 测试类 | tests | failures | errors | skipped |
+|---|---|---|---|---|
+| `ApprovalRelayTest` | 7 | 0 | 0 | 0 |
+| `WorkbenchRpcWriteTest` | 6 | 0 | 0 | 0 |
+| `RpcHttpServerTest` | 19 | 0 | 0 | 0 |
+| `RequestFenceTest` | 29 | 0 | 0 | 0 |
+| `WorkbenchRpcTest` | 33 | 0 | 0 | 0 |
+
+合计 **94**（求和自 XML，非同一次命令的不同测量面混比；本次五类同命令同轮）。
+
+新增/覆盖点：
+
+- `ApprovalRelayTest`：首答 ALLOW + 重复 -32008；REJECT；未知 id -32007；
+  50ms 超时 → EXPIRED + 迟到 allow -32009；cancel → CANCELLED + 迟到 -32009；
+  已结算后 expire 幂等保留 ALLOWED；发号碰撞 fail loud（发号源被调用两次）。
+- `WorkbenchRpcWriteTest`：start 返回 `sessionId` 且文本透传；send + 在途 -32006；
+  cancel；approval 透传 allow=false + dup -32008 / late -32009；写面关闭四方法
+  全 -32601 且 fake 未被触达；参数错 -32602 先于 seam。
+- `RpcHttpServerTest` 新增：`writeMethodPostFromEvilOriginYields403BeforeSeam`
+  （403 + "origin not allowed" + handler 调用 0）；
+  `writeMethodPostWithoutOriginReachesSeam`（200 + 调用 1，正对照）。
+
+## 2. 编译期修正（如实记录）
+
+首次跑测试暴露两处编译错误：第一处是生产构造器源兼容缺陷，第二处是测试夹具问题。
+
+1. `WorkbenchRpc` 漏保留既有 5 参 long 构造器，既有调用点的 long/int
+   被迫匹配 ChatControl 参数而编译失败（并非重载歧义）→ 补回
+   long maxResponseBytes 重载（委托 null chat），恢复源兼容。
+2. `WorkbenchRpcWriteTest.params()` 声明 `throws Exception`，lambda（Runnable）
+   内不可抛 → 夹具改为受检包装 `IllegalArgumentException`（JSON 夹具恒合法）。
+
+## 3. 突变检查（破坏必红 → 还原复绿，sha256 逐字节核）
+
+编号接开工批（M1 = TwoHostLostProbe 条件等待，见
+`startup-batch-flake-surgery.txt`）。
+
+### M2 — 删除 dispatch 的 B36 Host/Origin 守卫
+
+改动：`RpcHttpServer.dispatch` 移除
+
+```java
+if (rejection.isPresent()) { respondText(exchange, 403, rejection.get()); return; }
+```
+
+命令：`~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=RpcHttpServerTest -Dsurefire.failIfNoSpecifiedTests=false test` → `M2_EXIT=1`：
+
+```
+Tests run: 19, Failures: 3
+  RpcHttpServerTest.writeMethodPostFromEvilOriginYields403BeforeSeam
+  RpcHttpServerTest.evilHostGetRootYields403BeforeRouting
+  RpcHttpServerTest.evilOriginPostYields403
+```
+
+还原：`RpcHttpServer.java` sha256 回到
+`1fcd95f4489e0928ef50bfea25d51e0e115ab440fd3e4561a341a5971f8ff0b7`（突变前同值），
+`M2R_EXIT=0`，19/0/0/0。
+
+### M3 — 绕过 B37 Content-Type 闸
+
+改动：`if (!RequestFence.jsonContentType(...))` → `if (false && ...)`。
+
+命令：同上 → `M3_EXIT=1`：
+
+```
+Tests run: 19, Failures: 3
+  postWithoutContentTypeYields415
+  postFormEncodedYields415
+  postTextPlainYields415
+```
+
+还原后随最终 94 绿复跑。
+
+### M4 — 删中继「已结算」闸（一次性结算破防）
+
+改动：`ApprovalRelay.settle` 移除 `if (entry.done != null) throw -32008`。
+
+命令：`~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest -Dsurefire.failIfNoSpecifiedTests=false test` →
+`M4_EXIT=1`：`Tests run: 7, Failures: 1`，
+`ApprovalRelayTest.allowSettlesOnceAndDuplicateIsRejected`。
+
+还原：`ApprovalRelay.java` sha256 回到
+`e476c3b319f12b5d126f8f98cfc17a753b55ac99722da0066ad6356b6b1bcd0f`，最终 7/0/0/0。
+
+### M5 — 删写面关闭闸（T1 seam 缺省只读）
+
+改动：`WorkbenchRpc.requireChat()` 去掉 null → -32601，直接 `return chat`。
+
+命令：`~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=WorkbenchRpcWriteTest -Dsurefire.failIfNoSpecifiedTests=false test` →
+`M5_EXIT=1`：`Tests run: 6, Failures: 1`，
+`WorkbenchRpcWriteTest.disabledWriteFaceAnswersMethodNotFound`（NPE 取代域码）。
+
+还原：`WorkbenchRpc.java` sha256 回到
+`ceee8ddc8f435eb95a9e6892eccc8e075f4dd337ab4e8442e2550312da146fb5`，最终 6/0/0/0。
+
+### 还原总核
+
+最终复跑五类：`RESTORE_EXIT=0`，94/0/0/0（XML mtime 同窗见 §1），三个主类文件
+sha256 与突变前一致（见 M2–M5 各条）。
+
+## 4. 口径声明
+
+- §1–§3 历史记录没有300s真值测量，不能用毫秒测试/常量断言/1s覆盖值替代用户要求。
+  新增 WebApprovalRelayContractTest 单独测试适配器集成；具体实跑结果在后续节登记。
+  无论测试适配器结果如何，生产serve接线、取消与严格deadline归属均不能由此冒充已验证。
+- `/events` 为契约设计，实现与测试归停 2；本档不含 SSE 运行证据（不冒充已实现）。
+- `--web-write` 解析/横幅归停 3（设计稿 §5）；本档不含 CLI 证据。
+
+## 5. 本轮审查修正的行为 RED → GREEN（2026-11-20）
+
+以下日志保留 Maven 原始字节；EXIT 是当次工具运行已返回的退出码，旧日志未内嵌
+退出码，不据日志无 ERROR 反推成功。计数优先采用最终新鲜 XML；RED 的数来自
+日志单模块汇总行，绝不将类行与模块行重复求和。
+
+每条命令均在仓库根执行，先运行：
+
+```
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+```
+
+A：关闭写面与观察句柄（RED/GREEN 共用）：
+
+```
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest,WorkbenchRpcWriteTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+- stop1-review-red.log：EXIT=1，15/2/0/0。关闭方法 malformed params 原返回
+  -32602 而非 -32601；修改外部 future 副本后 await 原得到 ALLOWED 而非 REJECTED。
+- 修正：四 handler 先 requireChat 再解析；Request 私有构造+Entry 内部 future，
+  对外 minimalCompletionStage，外部副本不持结算权。
+- stop1-review-green.log：EXIT=0。该轮不补造未留存的 XML mtime。
+
+B：签发归属与超时/首答竞争：
+
+```
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+- stop1-race-red.log（unused import）与 stop1-race-red-behavior.log（行内 FQN）
+  为门禁前置失败，不是行为 RED。
+- stop1-race-red-tests.log：EXIT=1，10/2/0/0。外来 relay 句柄原未抛错；
+  2000轮竞争原出现期望 ALLOWED、实际 EXPIRED，等待方与裁决方矛盾。
+- 修正：await 校验 Entry 身份；超时调用 expire 竞争终态后读真实赢家，
+  不再无条件返回 EXPIRED。stop1-race-green.log 用命令 A，EXIT=0。
+- 此处只证明终态一致，不能证明注册级 deadline。截止后才获调度的 settle
+  仍可能抢先 ALLOW，是当前停1阻断项，不以压力重复替代确定性边界测试。
+
+C：独立复审发现的回调交叉死锁：
+
+- stop1-callback-red.log，用命令 B：EXIT=1，11/1/0/0；
+  concurrentObserversCanInspectPendingRequestsWithoutDeadlock 等待5秒超时。
+  两个请求的完成回调通过 latch 同步后都读 pendingCount，锁内 complete
+  会同步运行回调，形成交叉等锁。
+- 修正：settle/expire/cancel 在锁内决定终态，锁外 future.complete；
+  await 超时调用 expire 时不再持外层 Entry 锁；再加锁只读终态。
+- stop1-callback-green.log：EXIT=0，命令如下（不补造该轮未归档的 XML 总数）：
+
+```
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest,RpcHttpServerTest,WorkbenchRpcWriteTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+## 6. 真时钟测试适配器集成（不是生产 serve）
+
+测试：examples/headless/src/test/java/io/javanatic/harness/examples/headless/
+WebApprovalRelayContractTest.java。以 ApprovalPrompt.effectiveIdleTimeout 计算
+Duration，测试 lambda 接 relay；真实 ApprovalAskPlugin、ToolsPlugin、ToolExecutor
+执行无外部副作用的 probe 工具。无模型、无网络、无 API key。
+
+短测命令：
+
+```
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=WebApprovalRelayContractTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+stop1-relay-integration-short.log：EXIT=0，覆盖1s，慢测缺省跳过。
+关键输出：configured=PT1S elapsed=PT1.023439292S toolExecutions=0 lateAllow=-32009。
+
+首轮300s命令：
+
+```
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=WebApprovalRelayContractTest -Dit38.realClock=true -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+stop1-relay-integration-300s.log：EXIT=0；对应精确 XML 归档见
+stop1-relay-integration-300s-counts.txt，mtime=2026-11-20T13:34:31.514041，
+2/0/0/0，time=301.246。关键输出：
+
+```
+RELAY_REAL_CLOCK configured=PT5M elapsed=PT5M0.045421125S toolExecutions=0 lateAllow=-32009
+RELAY_REAL_CLOCK configured=PT1S elapsed=PT1.0055405S toolExecutions=0 lateAllow=-32009
+```
+
+该轮早于锁外通知修复，属于当时源码快照。测试断言 error result 包含
+“denied by human gate”、工具执行0、终态EXPIRED、迟到ALLOW=-32009，随后再次
+断言执行0；上下界为目标秒数至目标+15秒。未覆盖取消信号（用AbortSignal.never）、
+生产prompt、会话关联及注册级deadline，不能将其统称生产全链验收。
+
+## 7. B36 / B37 扩展矩阵突变（M6 / M7）
+
+每次均只改变一条生产守卫，不改用例或期望常量。命令均为：
+
+```
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=RpcHttpServerTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+- M6：B36 rejection.isPresent() 临时加 false &&；
+  stop1-b36-matrix-mutation.log，EXIT=1，21/4/0/0。
+  失败：writeMethodPostFromEvilOriginYields403BeforeSeam、
+  evilHostGetRootYields403BeforeRouting、evilOriginPostYields403、
+  eventsPathCannotBypassOriginFenceEvenBeforeSseIsInstalled。
+  还原后 stop1-b36-matrix-restore.log，EXIT=0。
+- M7：B37 !RequestFence.jsonContentType(...) 临时加 false &&；
+  stop1-b37-matrix-mutation.log，EXIT=1，21/4/0/0。
+  失败：allWriteMethodsRejectInvalidContentTypeBeforeDispatch、
+  postWithoutContentTypeYields415、postFormEncodedYields415、postTextPlainYields415。
+  还原后 stop1-b37-matrix-restore.log，EXIT=0。
+- 两次还原均核验 RpcHttpServer.java SHA-256 与突变前一致：
+  1fcd95f4489e0928ef50bfea25d51e0e115ab440fd3e4561a341a5971f8ff0b7。
+  终检生产目录 false\\s*&&|MUTANT|MUTATION 无命中。
+- 四方法矩阵在同一个测试中循环；突变在首个失败断言即停止，不能把这4个失败
+  宣称为四个方法各自独立红。还原绿时完整循环检查四方法拒绝/正对照。
+- GET /events 合法侧仍404；403证明公共围栏，不是SSE已接通。
+
+## 8. CPU 压力重复
+
+命令 B，10个 Python 紧循环进程（os.cpu_count()=10），逐轮顺序执行5次。
+原始日志 stop1-cpu-repeat-1.log 至 stop1-cpu-repeat-5.log；
+逐轮起止时间、退出码、同窗 XML 求值见 stop1-cpu-repeats.txt：
+2026-11-20T13:37:13.848704 至 13:38:03.369373，各轮 EXIT=0，11/0/0/0。
+五轮共重复55个测试实例，不混算为55个独立用例。
+
+压力进程由同一 Python 父进程保留全部 PID，finally 逐个 terminate + wait；
+allBurnersReaped=True。不按进程名称批量杀用户进程，无后台残留轮询。
+
+## 9. 定向复审与源码快照
+
+stop1-callback-review.txt 归档独立只读复审：锁外通知消除已报告的交叉锁环，
+未发现新的结算安全问题；复审未运行测试。直接屏障测试覆盖settle/cancel，
+不宣称expire/await各回调路径均已实跑。
+
+stop1-source-snapshot.txt 保存2026-11-20T13:44:10.479854的8个未提交Java文件
+SHA-256、HEAD与组合差异检查；pom/module-info改动为空。回调修复后的
+ApprovalRelay.java SHA-256：
+22a1ef5348ae743398b7a9c98e973c411d339870fd4e4776864dea566301f96d。
+
+本轮只补可审查证据，不commit、不push，不推进停2；停1所有阻断仍见审查包。
+
+## 10. 最终源码真时钟、正确清单复跑与 validate
+
+回调修复后的真时钟：stop1-final-focus-300s.log，精确慢测 XML 提取保存在
+stop1-final-realclock-counts.txt（先保存此轮结果，再执行下一轮以免覆盖）。
+日志创建13:41:20.213850，慢测 XML mtime=2026-11-20T13:46:31.956106，
+WebApprovalRelayContractTest=2/0/0/0，关键原文：
+
+```
+RELAY_REAL_CLOCK configured=PT5M elapsed=PT5M0.046872625S toolExecutions=0 lateAllow=-32009
+RELAY_REAL_CLOCK configured=PT1S elapsed=PT1.005377583S toolExecutions=0 lateAllow=-32009
+```
+
+该轮命令的完整实参在 counts 档。取证脚本误写不存在的 UiResourceTest，实际应为
+WorkbenchUiTest；Maven未执行UI测试。包装脚本在测试后核验预期XML时主动报错：
+
+```
+RuntimeError: missing fresh XML /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/target/surefire-reports/TEST-io.javanatic.harness.workbench.rpc.UiResourceTest.xml
+```
+
+wrapper_EXIT=1；该次Maven退出码在异常前未留档，不补造EXIT=0，也不将该轮称作
+八类完整通过；validate因此未执行。慢测上述2/0/0/0仅依据已归档的新鲜XML。
+
+纠正后的最终命令（先检查8个测试源文件存在，再运行）：
+
+```
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=ApprovalRelayTest,JsonRpcWireTest,RequestFenceTest,RpcHttpServerTest,WorkbenchRpcTest,WorkbenchRpcWriteTest,WorkbenchUiTest,WebApprovalRelayContractTest -Dsurefire.failIfNoSpecifiedTests=false test
+/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+```
+
+聚焦：stop1-final-focus.log / stop1-final-focus-counts.txt。
+2026-11-20T13:47:12.531348 至 13:47:22.710251，EXIT=0；仅汇总本次指定8类、
+mtime在起止窗内的XML（tests/failures/errors/skipped）：
+
+| 类 | tests | failures | errors | skipped |
+|---|---|---|---|---|
+| ApprovalRelayTest | 11 | 0 | 0 | 0 |
+| JsonRpcWireTest | 13 | 0 | 0 | 0 |
+| RequestFenceTest | 29 | 0 | 0 | 0 |
+| RpcHttpServerTest | 21 | 0 | 0 | 0 |
+| WorkbenchRpcTest | 33 | 0 | 0 | 0 |
+| WorkbenchRpcWriteTest | 7 | 0 | 0 | 0 |
+| WorkbenchUiTest | 6 | 0 | 0 | 0 |
+| WebApprovalRelayContractTest | 2 | 0 | 0 | 1 |
+| 合计 | 122 | 0 | 0 | 1 |
+
+即121通过、1跳过（该命令未启用300s开关；300s按上轮独立证据列出），
+不把不同轮XML拼成一个“122全通过”。validate：stop1-final-validate.log /
+stop1-final-validate-result.txt，13:47:22.712888至13:47:27.185778，EXIT=0。
+随后8个Java文件与stop1-source-snapshot.txt逐项SHA核对一致。
+
+日志仍有既有Spotless sun.misc.Unsafe弃用警告、HTTP HEAD长度警告；
+不声称输出零警告，不为此改动范围外依赖。没有执行本轮全量package/jlink、
+真实serve、CI、浏览器或用户亲跑，不外推对应验证结论。
+
+## 11. Stop 1 revision evidence — 追加归档（2026-11-20）
+
+本节为独立文档代理对已落盘结果的归档，不是该代理运行 Maven 或重新审查生产代码
+所得的结论。旧 §1–§10 原文保留；其中「/events 尚未实现」「注册级 deadline 阻断」
+及旧“最终”轮次均有各自历史窗口，不代表本次修订后的验证范围。本节仅覆盖下面
+35 份结果，从 15:57:20.300660 至 16:57:16.601246，不以当前 target 残留 XML
+替换任何历史轮次，也不把后续正在进行的修改纳入已验证快照。
+
+证据目录：/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-38/。
+以下表内文件均位于该目录；每份 *-result.txt 留有 cwd、JAVA_HOME、完整 COMMAND、
+START/END、实际 Maven EXIT、逐类 XML mtime/计数、FRESH_TOTAL、MISSING 和日志 SHA256；
+同名去掉 -result.txt 换成 .log 即当轮日志。表中 T/F/E/S = tests/failures/errors/skipped，
+不是“通过数”。EXIT 与 XML 仅按同一份结果档配对，绝不跨轮拼接。
+“无新鲜 XML”保留原档 FRESH_TOTAL=0/0/0/0 的缺席含义，不将其记成零测试全绿。
+编译/门禁 RED 未到行为断言；行为 RED 包含实际 failure/error，错误不能隐去。
+
+### 11.1 Deadline
+
+| 结果文件 | Maven EXIT | 同窗 T/F/E/S | 实际性质 |
+|---|---|---|---|
+| stop1-deadline-api-red-result.txt | 1 | 无新鲜 XML | testCompile RED：时钟构造器及 open/await 签名尚不匹配 |
+| stop1-deadline-behavior-red-result.txt | 1 | 15/1/0/0 | 行为 RED：registeredDeadlineRejectsAtBoundaryWithoutAnyWaiter 未抛异常 |
+| stop1-deadline-green-result.txt | 0 | 17/0/0/1 | GREEN：ApprovalRelayTest 15 + WebApprovalRelayContractTest 2；慢测跳过 1 |
+
+这是注册 deadline 无 waiter 边界的红绿证据，不以旧的 1ns 压力竞赛代替边界证明。
+该轮 GREEN 未启用 300s；后续测试硬化归 §11.6，静态审查来源另见 stop1-revision-reviews.txt。
+
+### 11.2 Retirement
+
+| 结果文件 | Maven EXIT | 同窗 T/F/E/S | 实际性质 |
+|---|---|---|---|
+| stop1-retirement-red-result.txt | 1 | 无新鲜 XML | Checkstyle RED：测试中两处 OneStatementPerLine；不是行为红 |
+| stop1-retirement-behavior-red-result.txt | 1 | 19/3/0/0 | 行为 RED：close 后注册未拒绝；10 分钟 tombstone 退役预期 -32007 实得 -32009；容量退役预期 -32007 实得 -32008 |
+| stop1-retirement-green-result.txt | 0 | 21/0/0/1 | GREEN：ApprovalRelayTest 19 + WebApprovalRelayContractTest 2；慢测跳过 1 |
+
+本轮容量测试后来被审批初审指出不足：容量误缩为 1 也可能绿。4096/4097 的钉死断言
+属于后续硬化，不能倒写成 retirement 初轮已经覆盖，见 §11.6 及审查摘要归档。
+
+### 11.3 Prompt
+
+| 结果文件 | Maven EXIT | 同窗 T/F/E/S | 实际性质 |
+|---|---|---|---|
+| stop1-prompt-api-red-result.txt | 1 | 无新鲜 XML | testCompile RED：ApprovalRelay.poll 缺失及关联断言编译错误 |
+| stop1-prompt-poll-behavior-red-result.txt | 1 | 22/3/0/0 | 行为 RED：外来句柄未拒绝、注册截止后仍 empty、锁外通知用例未见 EXPIRED；后两类无新鲜 XML |
+| stop1-prompt-lease-behavior-red-result.txt | 1 | 39/6/9/1 | 行为 RED：relay 22/0/0/0；prompt 15/6/8/0；contract 2/0/1/1 |
+| stop1-prompt-green-result.txt | 0 | 39/0/0/1 | GREEN：22 + 15 + 2；慢测跳过 1 |
+| stop1-prompt-final-green-result.txt | 0 | 40/0/0/1 | GREEN：22 + 16 + 2；慢测跳过 1 |
+
+lease 行为红涉及取消前置、同步取消监听、ALLOW 后取消、回调退役后安全性、监听失败
+撤回、快照/订阅/重连、订阅关闭唤醒、真实 ToolExecutor 决策与 close/ask 竞赛；
+9 个 error 按原档保留，其中 prompt 8 个、1s contract 1 个，均报 No value present。
+poll 红在 rpc 模块中止，不能借后续轮的 prompt/contract XML 补齐该轮 MISSING。
+
+### 11.4 SSE
+
+| 结果文件 | Maven EXIT | 同窗 T/F/E/S | 实际性质 |
+|---|---|---|---|
+| stop1-sse-api-red-01-result.txt | 1 | 无新鲜 XML | testCompile RED：SseFrame/SseBuffer 等类型缺失 |
+| stop1-sse-api-red-02-result.txt | 1 | 无新鲜 XML | testCompile RED：上述类型仍缺失；不是第二轮行为红 |
+| stop1-sse-behavior-red-01-result.txt | 1 | 9/8/1/0 | 行为 RED：encoder 4/4/0/0、buffer 5/4/1/0 |
+| stop1-sse-codec-buffer-green-01-result.txt | 1 | 无新鲜 XML | 名含 green 但实际门禁 RED：Checkstyle 解析 SseEncoder 的 case 失败 |
+| stop1-sse-codec-buffer-green-02-result.txt | 0 | 9/0/0/0 | encoder/buffer GREEN |
+| stop1-sse-http-api-red-01-result.txt | 1 | 无新鲜 XML | testCompile RED：SseEventSource/Opened 及注入构造器缺失 |
+| stop1-sse-http-behavior-red-01-result.txt | 1 | 13/13/0/0 | 行为 RED：有效路径仍 404、半装配未拒绝、late-open 未回收等 |
+| stop1-sse-request-red-01-result.txt | 1 | 2/2/0/0 | 行为 RED：畸形转义/UTF-8/多值未拒绝，中文 session 解码错误 |
+| stop1-sse-connection-red-01-result.txt | 1 | 无新鲜 XML | Checkstyle RED：测试 OneStatementPerLine；不是行为红 |
+| stop1-sse-connection-red-02-result.txt | 1 | 6/6/0/0 | 行为 RED：队列/字节超限、EOF 排水、异常清理、阻塞读写关闭 |
+| stop1-sse-green-01-result.txt | 1 | 51/0/4/0 | 名含 green 但实际行为 RED：超大帧用例 InterruptedException，三个 HTTP 用例 request timed out |
+| stop1-sse-http-header-flush-01-result.txt | 1 | 13/1/0/0 | 测试断言 RED：最外层异常消息为 closed，chunked 在 cause 中，不能报 GREEN |
+| stop1-sse-green-02-result.txt | 0 | 51/0/0/0 | 六类聚焦 GREEN |
+| stop1-sse-boundary-red-01-result.txt | 1 | 18/3/0/0 | 行为 RED：重复 Origin/Host 未拒绝，raw 中文 session 变 ?? |
+| stop1-sse-green-03-result.txt | 0 | 56/0/0/0 | 六类扩展聚焦 GREEN |
+| stop1-sse-heartbeat-red-01-result.txt | 1 | 18/0/1/0 | 行为 RED：keepaliveDeadlineIsNotPostponedByLiveTraffic error |
+| stop1-sse-heartbeat-green-01-result.txt | 0 | 18/0/0/0 | HTTP 心跳聚焦 GREEN |
+| stop1-sse-final-green-01-result.txt | 0 | 57/0/0/0 | 当时六类聚焦 GREEN；不是关闭修订后的最终全量 |
+
+encoder/buffer 行为红具体覆盖完整扩展 envelope 与行注入、control/keepalive 无 id、
+负 seq 拒绝、缺 codec fail loud、64 帧/第 65 帧、8 MiB 聚合预算、单帧超限、
+出队释放预算、EOF 顺序及 abort 唤醒。这里仅按当轮失败名归档，不据此冒充测试质量
+复审；buffer 的等待屏障不足在后续独立初审中仍被指出，见审查摘要归档。
+
+六类清单为 SseEncoderTest、SseBufferTest、SseRequestTest、SseConnectionTest、
+RpcHttpServerSseTest、RpcHttpServerTest。其 51 → 56 → 57 是不同窗口的测试清单变化，
+不能累加为独立用例总数，也不能代替真实 host/CLI 接线验证。
+
+SSE 关闭初审后真实 socket 红绿：
+
+| 结果文件 | Maven EXIT | 同窗 T/F/E/S | 实际性质 |
+|---|---|---|---|
+| stop1-sse-close-raw-red-01-result.txt | 1 | 53/2/0/0 | 两个行为 RED：缺 GET body 时 server.close 卡住，source EOF 时 writer 仍未退出 |
+| stop1-sse-close-stop-first-01-result.txt | 1 | 53/1/0/0 | 仅 EOF writer 仍红；不能把 stop-first 修正称作全部关闭路径绿 |
+| stop1-sse-close-eof-green-01-result.txt | 0 | 53/0/0/0 | EOF 修正后四类 GREEN |
+| stop1-sse-close-final-green-01-result.txt | 0 | 54/0/0/0 | 随后四类复验 GREEN；SseConnectionTest 从 6 增至 7 |
+
+该四类为 RpcHttpServerSseTest、SseConnectionTest、SseBufferTest、RpcHttpServerTest。
+raw-red 两条为 sourceEofReclaimsMissingBodyConnectionWithoutServerClose 和
+serverCloseDoesNotDrainMissingGetBodyBeforeStoppingSockets；结果档保留的阻塞栈落在
+LeftOverInputStream.drain → exchange.close。stop-first 轮只剩前者，不倒灌最终绿。
+
+### 11.5 Real codec
+
+stop1-real-codec-contract-result.txt：Maven EXIT=0，窗口 16:41:37.607231 至
+16:41:46.633472，WebSseCodecContractTest=1/0/0/0，MISSING=[]。
+这是已有真实 codec 契约测试结果；本批未找到该阶段独立 RED，不补造红绿过程。
+不把 1/0/0/0 拼入另一轮 SSE EXIT，更不外推为 CI、浏览器或生产 host 接线已验证。
+
+### 11.6 Review hardening
+
+stop1-review-hardening-green-result.txt：Maven EXIT=0，窗口 16:57:05.010142 至
+16:57:16.601246，四类同窗合计 41/0/0/1，MISSING=[]：
+- ApprovalRelayTest=22/0/0/0。
+- RelayApprovalPromptTest=16/0/0/0。
+- WebApprovalRelayContractTest=2/0/0/1。
+- WebSseCodecContractTest=1/0/0/0。
+
+即 40 通过、1 跳过，不是 41 全通过。交接的已返回审查摘要说明，主代理把旧 1ns
+竞赛改为受控 9/10/11ns 各 200 轮，并补 4096 条时最旧仍 -32008、第 4097 条才
+-32007 的断言。此处将“修订内容来自摘要”和“GREEN 来自结果档”分开记录；
+本代理不读正在突变的生产 Java，不重新作代码审查。600 次竞赛迭代不是 600 个
+独立测试用例；本批没有与上述两项硬化单独配对的 RED 结果，不编造突变红。
+
+### 11.7 Accounting and limits
+
+计数矛盾更正（只追加，不改原记录）：交接摘要将 SSE “eof/final 绿”合称
+54/0/0/0；实际 stop1-sse-close-eof-green-01-result.txt 为 53/0/0/0，
+stop1-sse-close-final-green-01-result.txt 才为 54/0/0/0。两轮差在
+SseConnectionTest 6 → 7；最终 54 没有否定，但不可倒填进 EOF 轮。
+另两份名字含 green 的结果实际 EXIT=1，已在 §11.4 分别列为门禁红/行为红。
+
+归档核对只读了上述 35 份结果及其日志：逐类计数求和与 FRESH_TOTAL 一致、每条
+记录内 XML mtime 位于各自 START/END 内、对应日志 SHA256 一致，差异数为 0。
+这是对已有记录的算术/窗口/哈希核对，不是重跑测试、重新读取 XML 或代码审查。
+
+本次覆盖窗口内尚未执行修订后最终 300s 真时钟和全量验证，由主代理后续补录
+实际命令、Maven EXIT 与同窗 XML。旧 §6/§10 的 300s 不属于本次修订快照，
+本批带 WebApprovalRelayContractTest 的 GREEN 均跳过慢测，不能代用。
+stop1-final-validate-result.txt 属旧 13:47 窗口，不宣称修订后 validate 已绿。
+
+已返回的独立静态审查意见见 stop1-revision-reviews.txt；审查与运行证据分别归属。
+不外推 CI、生产 serve/host 接线、浏览器或用户亲跑；不表示停 1 已获放行，
+不 commit、不 push、不进入停 2。review packet 与最终验收仍由主代理负责核对。
+
+## 12. Revision mutations / pressure — 主代理补录
+
+定向突变执行窗口16:58:37.583446至17:03:38.193876，脚本为stop1-mutations.py。
+14项包括deadline边界/提前1ns/settle检查、墓碑容量/TTL、buffer唤醒/帧帽/字节帽、
+真实codec载荷、默认游标/header优先、原始中断位、SSE围栏、写方法Content-Type。
+逐项red→逐字还原→green；所有result保留完整命令、Maven EXIT与同窗XML。
+详表和失败原因核验在stop1-revision-mutation-review.txt（独立代理核读历史证据，
+非测试重跑）；主代理已核读该归档。14项均捕获预期破坏，绿侧均EXIT=0且无失败/错误/跳过；
+14项BYTE_RESTORED=True，所涉6个生产文件SHA均与突变前相等。
+
+例外不得隐去：deadline-early红为1/0/1/0，合法期前答复被错报approval expired，
+旧分类器只认failure而记PASS=False；保留原audit及单独adjudication，不补造失败。
+b37条件反转红为21/6/1/0：非法类型被放过、合法JSON反被415，解析拒绝文本产生error，
+还原为21/0/0/0。循环测试首个断言即可红，不宣称每个写方法或chunk变体单独杀死。
+
+SSE关闭复审所提原始interrupt=true已补直接测试，与false分支共用helper；删除守卫
+使true被清除，1/1/0/0红→恢复1/0/0/0绿。SseConnectionTest终态增加为8项，
+不是回填早先7项的54/0/0/0窗口。
+
+压力命令：python3 docs/plan/evidence/iteration-38/stop1-pressure.py。
+本机CPU_COUNT=10，10个自有Python忙循环进程；17:05:55.719201至17:07:07.006509。
+五轮均使用examples/headless -am，准确并集为
+ApprovalRelayTest,RelayApprovalPromptTest,SseConnectionTest,SseBufferTest。
+各轮同窗XML22+16+8+5=51/0/0/0，Maven EXIT=0、MISSING=[]。
+逐轮报告stop1-revision-pressure-1-result.txt至-5-result.txt；总报告
+stop1-revision-pressure.txt记录全部自有PID、各进程约43秒CPU时间、退出码0、
+ALL_OWNED_REAPED=True。255次是51个独立测试的5次重复，不增加独立用例计数。
+压力进程全部terminate+wait回收后才开始终态慢测，没有并发Maven写target。
+
+以上不替代终态300s与全量构建；最终源码验证另列下一节，不拼历史结果。
+
+## 13. Final frozen source / real clock — 主代理终态取证
+
+先运行 python3 docs/plan/evidence/iteration-38/stop1-audit.py snapshot，冻结36个Java
+文件，清单 stop1-revision-source-sha256.txt、全文 stop1-revision-source-snapshot.txt；
+HEAD=b71c6174c3411c143229786a44b3ce00cfa253f0。冻结后未修改Java源码或测试。
+
+终态15类聚焦命令（仓库根执行，JDK25，不与其他Maven并发）：
+
+```
+python3 docs/plan/evidence/iteration-38/stop1-check.py revision-final-focus examples/headless JsonRpcWireTest,WorkbenchRpcTest,WorkbenchUiTest,RequestFenceTest,WorkbenchRpcWriteTest,RpcHttpServerTest,SseEncoderTest,SseRequestTest,SseBufferTest,RpcHttpServerSseTest,ApprovalRelayTest,SseConnectionTest,RelayApprovalPromptTest,WebApprovalRelayContractTest,WebSseCodecContractTest -Dit38.realClock=true test
+```
+
+结果 stop1-revision-final-focus-result.txt，原始日志 stop1-revision-final-focus.log。
+窗口2026-11-20T17:07:28.354453至17:13:08.626456，Maven EXIT=0；15类新鲜XML
+同窗计数合计191/0/0/0，MISSING=[]。逐类分别为：JsonRpcWire13、WorkbenchRpc33、
+WorkbenchUi6、RequestFence29、WorkbenchRpcWrite7、RpcHttpServer21、SseEncoder4、
+SseRequest3、SseBuffer5、RpcHttpServerSse21、ApprovalRelay22、SseConnection8、
+RelayApprovalPrompt16、WebApprovalRelayContract2、WebSseCodecContract1（均带Test后缀）。
+
+当前唯一300秒真钟哨兵的原始输出：
+
+```
+RELAY_REAL_CLOCK configuredSeconds=-1 elapsed=PT5M0.013325667S toolExecutions=0 lateAllow=-32009
+RELAY_REAL_CLOCK configuredSeconds=1 elapsed=PT1.012295708S toolExecutions=0 lateAllow=-32009
+```
+
+本轮使用生产RelayApprovalPrompt，不是旧§6/§10的测试lambda；真实ApprovalAskPlugin
+和ToolExecutor对无副作用probe作超时拒绝，断言error result含denied by human gate、
+prompt/relay未决清空、迟到ALLOW=-32009，迟到后工具执行仍0。只有默认值用例等待
+300秒；显式1秒覆盖是另一短测。可注入时钟变体承担突变矩阵，不重复5分钟来替代逻辑测试。
+本轮不验证生产serve/Agent/AppBoot生命周期；取消与关联由独立prompt用例覆盖，
+不能把真钟哨兵的AbortSignal.never()宣称为取消实录。
+
+全量命令（上述聚焦完成后串行，不启用it38.realClock）：
+
+```
+python3 docs/plan/evidence/iteration-38/stop1-check.py revision-full - - package
+python3 docs/plan/evidence/iteration-38/stop1-audit.py counts revision-full
+```
+
+Maven实际命令为 /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q package，
+JDK25。窗口2026-11-20T17:13:48.042379至17:18:21.997513，Maven EXIT=0。
+stop1-revision-full-result.txt与stop1-revision-full.log配套；全量计数在
+stop1-revision-full-xml-counts.txt：197份新鲜XML，排除2份旧XML，1614/0/0/25，
+即此XML测量面1589通过、25跳过。TESTS=-模式result里的FRESH_TOTAL=0是未选择
+单类统计，不是全量零测试；最终XML同名覆盖仍存在，不称所有引擎执行总数。
+WebApprovalRelayContractTest在全量中为2/0/0/1，300s不重复跑；该轮短测输出：
+RELAY_REAL_CLOCK configuredSeconds=1 elapsed=PT1.029061459S toolExecutions=0 lateAllow=-32009。
+
+最终validate命令：
+
+```
+python3 docs/plan/evidence/iteration-38/stop1-check.py revision-validate - - validate
+```
+
+Maven实际命令 /Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q validate，
+窗口2026-11-20T17:18:53.510347至17:18:58.754644，EXIT=0。结果与原始日志分别为
+stop1-revision-validate-result.txt、stop1-revision-validate.log；validate不运行测试，
+不以0/0/0/0宣称测试全绿。
+
+终态审计命令：python3 docs/plan/evidence/iteration-38/stop1-audit.py audit。
+报告stop1-revision-audit.txt，日志哈希清单stop1-revision-log-sha256.txt。36个冻结Java
+逐项SHA匹配、四文档本地链接全部存在、git diff --check与换行检查通过，FAILURES=[]。
+该审计在终稿链接更新后再次执行，报告TIME为最后核验时刻，不覆盖原始测试日志。
+主代理另核终态聚焦/全量/validate三份result的日志SHA、行计数与起止窗，并在无Maven
+运行时重读全量197份XML核对mtime与计数全部相等；命令及输出见
+stop1-revision-record-integrity.txt。终检rpc/src中MUTANT|MUTATION|false\\s*&&无命中；
+装配面pom/module-info/bundle与HeadlessMain差异为空，未暗改R4解析器。
+
+日志仍有Spotless Unsafe弃用警告、HTTP HEAD长度警告，以及负例刻意触发的SSE
+missing codec/null source诊断，不声称零WARNING/严重日志。构建不等于镜像真跑，
+未做本轮CI、生产serve聊天、浏览器或用户亲跑；不放行停1，不提交、不push、不进入停2。

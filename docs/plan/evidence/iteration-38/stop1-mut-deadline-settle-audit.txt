@@ -1,0 +1,13 @@
+NAME=deadline-settle
+FILE=workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/ApprovalRelay.java
+OLD='            expireIfDue(entry);\n            error = terminalError(entry.done);'
+NEW='            error = terminalError(entry.done);'
+BEFORE_SHA256=e823971216c489a28e100c7e312bd3d809737e1824025dcf952d1c6125965bed
+AFTER_SHA256=e823971216c489a28e100c7e312bd3d809737e1824025dcf952d1c6125965bed
+BYTE_RESTORED=True
+RED_EXIT=1
+RED_TOTAL=[1, 1, 0, 0]
+BEHAVIOR_RED=True
+GREEN_EXIT=0
+GREEN_TOTAL=[1, 0, 0, 0]
+PASS=True

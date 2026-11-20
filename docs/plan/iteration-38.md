@@ -1,4 +1,4 @@
-# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），开工首批进行中；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
+# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），停 1 已放行，转停 2 集成面；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
 
 基线：it37 已关账（0.5.0 全链闭环：Central 71 坐标 + GitHub Release 8 归档 + tag；最终 head `b568ef8`），工作版本 `0.6.0-SNAPSHOT`。**版本号与顺序已裁（2026-11-17）：先 0.5.0 发布（it37），W5 = 0.6.0**——版本叙事对齐治理叙事：0.5.0 把「零写面只读工作台」作为完整自洽的能力相位发布收口；「零写面不变量的终结」是叙事反转，配 ADR 配新 minor 号，patch 号不承载这种重量；发布后 W5 在**已发布基线**上动写面，回退面干净。路线表新起行（0.6.0），不混入已关账的 0.5 行：W5 显式终结零写面不变量，属新能力相位。
 
@@ -20,6 +20,16 @@
   4. **R4 增补**（收进内容⑦）：写面成为治理相关能力后，`--verify` 与 serve 启动 banner 应可证明其状态——增 `web-write: off（缺省）` / `on（--web-write）` 行，兼入停 3 verify 项。
 - **停 1 评审重点（预告）**：① seam 接口形状；② 审批中继一次性结算状态机 + 300s 真时钟集成（fail-closed 在中继下的语义，本站最重的一件）；③ B36 写面复验突变；④ SSE 围栏覆盖 + `Last-Event-ID=seq` 续传语义（seq = R1 信封序，回放安全的地基）。
 - **执行序**：开工首批 = ADR 0012 入 notes + TwoHostLostProbe 手术 + 停 1 seam 契约；push 两笔（`00768be` + `be8df00`）已授权并落地（远端 head `be8df00` 实核）。
+
+## 停 1 已放行，转停 2 集成面（2026-11-20）
+
+用户已点名「通过放行——契约层全绿，进停 2（集成面）」并授权 commit 停 1 批，完整原文见[放行归档](evidence/iteration-38/stop1-acceptance.txt)。用户独立复跑 rpc 172 绿、validate EXIT=0；与代理聚焦15类的测量面分开记，不混加。[审查包](evidence/iteration-38/stop1-review-packet.md)及[设计稿](evidence/iteration-38/stop1-write-seam-design.md)保留送审时状态；[证据档](evidence/iteration-38/stop1-tdd-evidence.txt)冻结各轮红绿，不以新状态改写历史。
+
+注册级严格 deadline、T3 双 respond/重放、4096/600s 墓碑回收已实现；生产每 session/turn 的 RelayApprovalPrompt 有取消双机制和恢复快照；SSE 可注入 source、完整 codec 帧、游标与有界队列已有真实 HTTP/Socket 测试。终态15类同轮191/0/0/0，唯一300s哨兵实测300.013325667秒后拒绝、工具0、迟到ALLOW=-32009；14项定向突变捕获并逐字恢复复绿；五轮CPU压力各51/0/0/0，自有进程全部回收。全量package EXIT=0，同窗197 XML为1614/0/0/25（排除2份旧XML，慢哨兵不重复跑）；validate EXIT=0；36个冻结Java哈希及证据链接核验通过，完整测量面与命令见审查包§6。
+
+停 2 范围由本轮评审明确：WebChatControl 与 Agent/AppBoot 生命周期桥、真实持久化 follower、`--web-write` CLI 互斥/exit2、verify/banner 的 off/on、SSE dispatch/围栏与既有五读方法一致性、ui.html 聊天与审批接管/IME/零 innerHTML。R4 采纳送审包 §5：`--verify --serve [--web-write]` 为 keyless 纯预检，零监听/轮/工具；无 serve 的 web-write 仍 exit2，port 只校验范围，其余互斥不放宽。此裁决归档时尚未改解析器或接宿主。
+
+停 1 批获准提交；本地开工两笔和本批均未获 push 授权。停 2 必须另出 packet，未放行不提交、不进停 3。停 3 为用户亲手真浏览器发消息、看流式、点审批的检视轮，代理验证不得冒充；本机契约测试不外推 CI、浏览器或生产 serve 验收。
 
 ## 准入条件：B36 Host/Origin 信任围栏（预登记，写面开工前必须落地）
 
@@ -140,7 +150,7 @@ dsh 三张清单落 `evidence/iteration-38/`（原 `evidence/iteration-37/`，�
 - [x] 四确认通过并落盘（2026-11-20 评审：ADR 0012 批准、T1–T7 全批，含 T2/T4/R4 三处注记增补）
 - [x] 开工批：TwoHostLostProbe 手术（条件等待 + fsync 证据）完成——聚焦 1/0/0/0 + CPU 饱和 5/5 绿 + 突变 M1 必红复绿（[证据](evidence/iteration-38/startup-batch-flake-surgery.txt)）
 - [x] ADR 0012 入 notes 并互链（[0012-zero-write-surface-end.md](../../.agents/notes/0012-zero-write-surface-end.md)，2026-11-20）
-- [ ] 停 1 评审放行（写面契约 + B36 写面复验 + 中继契约 + ADR 0012）
+- [x] 停 1 评审放行（2026-11-20：契约及实现前移范围通过，R4 拟案采纳，[用户原文](evidence/iteration-38/stop1-acceptance.txt)）
 - [ ] 停 2 评审放行（中继实现 + SSE + 状态机 + UI）
 - [ ] 停 3 真机验收：jlink `--serve --web-write` → 浏览器跑通开轮/流式/审批/答复/取消 + 用户检视实录
 - [ ] B29/B36 复验（监听地址实录 + 跨站 Host/Origin 拒绝 + 突变必红）

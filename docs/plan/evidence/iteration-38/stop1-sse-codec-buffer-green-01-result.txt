@@ -1,0 +1,12 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=SseEncoderTest,SseBufferTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:19:07.051510
+END=2026-11-20T16:19:11.931306
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+NO_FRESH_XML=SseEncoderTest
+NO_FRESH_XML=SseBufferTest
+FRESH_TOTAL=[0, 0, 0, 0]
+MISSING=['SseEncoderTest', 'SseBufferTest']
+LOG_SHA256=34953cf2ffa3864919ff2e0c102faa8c5d2bc1ea38fcbc74d8265a17ef378e50

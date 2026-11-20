@@ -1,0 +1,62 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+11月 20, 2026 4:47:43 下午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: being invoked with a content length for a HEAD request
+11月 20, 2026 4:47:45 下午 io.javanatic.harness.workbench.rpc.SseConnection read
+严重: SSE source/codec failed after 200
+java.lang.IllegalStateException: missing SSE codec: test/chunk
+	at io.javanatic.harness.workbench.rpc.SseEncoder.lambda$encode$0(SseEncoder.java:30)
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403)
+	at io.javanatic.harness.workbench.rpc.SseEncoder.encode(SseEncoder.java:29)
+	at io.javanatic.harness.workbench.rpc.SseConnection.read(SseConnection.java:101)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+11月 20, 2026 4:47:45 下午 io.javanatic.harness.workbench.rpc.RpcHttpServer serveEvents
+严重: SSE open failed before 200
+java.lang.NullPointerException: SSE source returned null
+	at java.base/java.util.Objects.requireNonNull(Objects.java:246)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServer.serveEvents(RpcHttpServer.java:173)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServer.dispatch(RpcHttpServer.java:125)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:76)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:101)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:924)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:900)
+	at java.base/java.util.concurrent.ThreadPerTaskExecutor$TaskRunner.run(ThreadPerTaskExecutor.java:291)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+[ERROR] Tests run: 21, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 32.17 s <<< FAILURE! -- in io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.sourceEofReclaimsMissingBodyConnectionWithoutServerClose -- Time elapsed: 2.015 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[HTTP writer exited without server.close; stack=[java.base/java.lang.VirtualThread.park(VirtualThread.java:745), java.base/java.lang.System$1.parkVirtualThread(System.java:2285), java.base/java.util.concurrent.locks.LockSupport.park(LockSupport.java:367), java.base/sun.nio.ch.Poller.poll(Poller.java:197), java.base/sun.nio.ch.Poller.poll(Poller.java:142), java.base/sun.nio.ch.SelChImpl.park(SelChImpl.java:88), java.base/sun.nio.ch.SelChImpl.park(SelChImpl.java:116), java.base/sun.nio.ch.SocketChannelImpl.implRead(SocketChannelImpl.java:425), java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:489), jdk.httpserver/sun.net.httpserver.Request$ReadStream.read(Request.java:315), java.base/java.io.BufferedInputStream.fill(BufferedInputStream.java:289), java.base/java.io.BufferedInputStream.read1(BufferedInputStream.java:330), java.base/java.io.BufferedInputStream.read(BufferedInputStream.java:388), jdk.httpserver/sun.net.httpserver.FixedLengthInputStream.readImpl(FixedLengthInputStream.java:59), jdk.httpserver/sun.net.httpserver.LeftOverInputStream.skip(LeftOverInputStream.java:118), jdk.httpserver/sun.net.httpserver.LeftOverInputStream.drain(LeftOverInputStream.java:137), jdk.httpserver/sun.net.httpserver.LeftOverInputStream.close(LeftOverInputStream.java:70), jdk.httpserver/sun.net.httpserver.ExchangeImpl.close(ExchangeImpl.java:146), jdk.httpserver/sun.net.httpserver.HttpExchangeImpl.close(HttpExchangeImpl.java:66), io.javanatic.harness.workbench.rpc.SseConnection.close(SseConnection.java:144), io.javanatic.harness.workbench.rpc.SseConnection.closeAtBoundary(SseConnection.java:119), io.javanatic.harness.workbench.rpc.SseConnection.run(SseConnection.java:61), io.javanatic.harness.workbench.rpc.RpcHttpServer.serveEvents(RpcHttpServer.java:213), io.javanatic.harness.workbench.rpc.RpcHttpServer.dispatch(RpcHttpServer.java:125), jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98), jdk.httpserver/sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:76), jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:101), jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:924), jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98), jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:900), java.base/java.util.concurrent.ThreadPerTaskExecutor$TaskRunner.run(ThreadPerTaskExecutor.java:291), java.base/java.lang.VirtualThread.run(VirtualThread.java:460)]] 
+Expecting value to be false but was true
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.assertExited(RpcHttpServerSseTest.java:507)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.assertReclaimed(RpcHttpServerSseTest.java:513)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerSseTest.sourceEofReclaimsMissingBodyConnectionWithoutServerClose(RpcHttpServerSseTest.java:260)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Failures: 
+[ERROR]   RpcHttpServerSseTest.sourceEofReclaimsMissingBodyConnectionWithoutServerClose:260->assertReclaimed:513->assertExited:507 [HTTP writer exited without server.close; stack=[java.base/java.lang.VirtualThread.park(VirtualThread.java:745), java.base/java.lang.System$1.parkVirtualThread(System.java:2285), java.base/java.util.concurrent.locks.LockSupport.park(LockSupport.java:367), java.base/sun.nio.ch.Poller.poll(Poller.java:197), java.base/sun.nio.ch.Poller.poll(Poller.java:142), java.base/sun.nio.ch.SelChImpl.park(SelChImpl.java:88), java.base/sun.nio.ch.SelChImpl.park(SelChImpl.java:116), java.base/sun.nio.ch.SocketChannelImpl.implRead(SocketChannelImpl.java:425), java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:489), jdk.httpserver/sun.net.httpserver.Request$ReadStream.read(Request.java:315), java.base/java.io.BufferedInputStream.fill(BufferedInputStream.java:289), java.base/java.io.BufferedInputStream.read1(BufferedInputStream.java:330), java.base/java.io.BufferedInputStream.read(BufferedInputStream.java:388), jdk.httpserver/sun.net.httpserver.FixedLengthInputStream.readImpl(FixedLengthInputStream.java:59), jdk.httpserver/sun.net.httpserver.LeftOverInputStream.skip(LeftOverInputStream.java:118), jdk.httpserver/sun.net.httpserver.LeftOverInputStream.drain(LeftOverInputStream.java:137), jdk.httpserver/sun.net.httpserver.LeftOverInputStream.close(LeftOverInputStream.java:70), jdk.httpserver/sun.net.httpserver.ExchangeImpl.close(ExchangeImpl.java:146), jdk.httpserver/sun.net.httpserver.HttpExchangeImpl.close(HttpExchangeImpl.java:66), io.javanatic.harness.workbench.rpc.SseConnection.close(SseConnection.java:144), io.javanatic.harness.workbench.rpc.SseConnection.closeAtBoundary(SseConnection.java:119), io.javanatic.harness.workbench.rpc.SseConnection.run(SseConnection.java:61), io.javanatic.harness.workbench.rpc.RpcHttpServer.serveEvents(RpcHttpServer.java:213), io.javanatic.harness.workbench.rpc.RpcHttpServer.dispatch(RpcHttpServer.java:125), jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98), jdk.httpserver/sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:76), jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:101), jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:924), jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98), jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:900), java.base/java.util.concurrent.ThreadPerTaskExecutor$TaskRunner.run(ThreadPerTaskExecutor.java:291), java.base/java.lang.VirtualThread.run(VirtualThread.java:460)]] 
+Expecting value to be false but was true
+[ERROR] Tests run: 53, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-workbench-rpc: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-workbench-rpc

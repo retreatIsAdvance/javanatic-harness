@@ -1,0 +1,30 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=SseConnectionTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:24:53.003636
+END=2026-11-20T16:25:12.022260
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+SseConnectionTest [6, 6, 0, 0] mtime=2026-11-20T16:25:11.959992
+FAILURE=blockedWriterCannotBlockReaderAndSixtyFifthQueuedFrameClosesEverything 
+Expecting value to be true but was false
+FAILURE=oversizedFrameClosesWithoutWritingIt 
+Expecting value to be true but was false
+FAILURE=encodedByteBudgetAlsoClosesBlockedWriterAndSource 
+Expecting value to be true but was false
+FAILURE=eofDrainsFramesBeforeClose 
+Expecting actual:
+  []
+to contain exactly (and in same order):
+  ["id: 0", "id: 1"]
+but could not find the following elements:
+  ["id: 0", "id: 1"]
+
+FAILURE=sourceCloseFailureStillClosesExchange 
+expected: 1
+ but was: 0
+FAILURE=explicitCloseInterruptsBlockedReaderAndWriterWithoutAnotherWrite 
+Expecting value to be true but was false
+FRESH_TOTAL=[6, 6, 0, 0]
+MISSING=[]
+LOG_SHA256=4ef96f24b6f177bda77f72c22cb765a168c05ce3ab0f54b2117f4d6aa2234a19

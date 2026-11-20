@@ -1,0 +1,9 @@
+2026-11-20 主agent核读
+突变：到期判断 >=0 改 >=-1，提前1ns拒绝；源码逐字节还原且目标测试复绿。
+原脚本只认JUnit failure，因本例抛出RpcException使Surefire记为error而中止；原audit PASS=False保留，不回写。
+实际红：stop1-mut-deadline-early-red-result.txt，EXIT=1、FRESH_TOTAL=[1,0,1,0]、MISSING=[]。
+错误方法：responseBeforeDeadlineIsKeptAfterDeadline，ERROR=approval expired。
+判据：时钟109、deadline110，本应允许；突变错误地进入EXPIRED并抛-32009，是预期生产行为破坏，不是编译/门禁/环境错误。
+绿：stop1-mut-deadline-early-green-result.txt，EXIT=0、FRESH_TOTAL=[1,0,0,0]。
+两端SHA=e823971216c489a28e100c7e312bd3d809737e1824025dcf952d1c6125965bed。
+人工结论：此突变被杀死。脚本更新为新鲜XML的failure或error均候选红，最终仍逐项核验错误原因，不自动把任意error当作行为证明。

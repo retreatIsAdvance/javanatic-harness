@@ -1,0 +1,9 @@
+command=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest -Dsurefire.failIfNoSpecifiedTests=false test
+burners=10
+burnerPids=80504,80505,80506,80507,80508,80509,80510,80511,80512,80513
+RUN1 start=2026-11-20T13:37:13.848704 end=2026-11-20T13:37:24.584972 EXIT=0 XML=[11, 0, 0, 0]
+RUN2 start=2026-11-20T13:37:24.586340 end=2026-11-20T13:37:32.204025 EXIT=0 XML=[11, 0, 0, 0]
+RUN3 start=2026-11-20T13:37:32.204855 end=2026-11-20T13:37:39.813894 EXIT=0 XML=[11, 0, 0, 0]
+RUN4 start=2026-11-20T13:37:39.814540 end=2026-11-20T13:37:53.350834 EXIT=0 XML=[11, 0, 0, 0]
+RUN5 start=2026-11-20T13:37:53.351220 end=2026-11-20T13:38:03.369373 EXIT=0 XML=[11, 0, 0, 0]
+allBurnersReaped=True

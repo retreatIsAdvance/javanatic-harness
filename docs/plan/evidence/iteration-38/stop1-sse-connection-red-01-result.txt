@@ -1,0 +1,11 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=SseConnectionTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:24:22.193480
+END=2026-11-20T16:24:30.819503
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+NO_FRESH_XML=SseConnectionTest
+FRESH_TOTAL=[0, 0, 0, 0]
+MISSING=['SseConnectionTest']
+LOG_SHA256=df91b03e695370c1cdb94c8bab8c3227f9fb0aa3c3ed85acc374272492a129d2

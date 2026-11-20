@@ -1,0 +1,134 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[ERROR] COMPILATION ERROR : 
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[60,20] 程序包SseFrame不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[17,9] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[17,32] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[23,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[28,9] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[28,32] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[32,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[37,9] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[37,32] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[39,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[44,9] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[44,32] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[47,31] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[52,31] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[53,31] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[54,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[59,9] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[59,32] 找不到符号
+  符号:   类 SseBuffer
+  位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[60,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[61,34] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[76,60] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[24,32] 找不到符号
+  符号:   类 SseEncoder
+  位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[41,9] 找不到符号
+  符号:   类 SseEncoder
+  位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[41,34] 找不到符号
+  符号:   类 SseEncoder
+  位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[42,58] 程序包SseFrame不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[46,25] 找不到符号
+  符号:   变量 SseEncoder
+  位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[51,38] 找不到符号
+  符号:   类 SseEncoder
+  位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[61,28] 程序包SseFrame不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[74,5] io.javanatic.harness.workbench.rpc.SseEncoderTest.Chunk不是抽象的, 并且未覆盖io.javanatic.harness.session.event.SessionEvent中的抽象方法time()
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:testCompile (default-testCompile) on project harness-workbench-rpc: Compilation failure: Compilation failure: 
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[60,20] 程序包SseFrame不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[17,9] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[17,32] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[23,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[28,9] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[28,32] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[32,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[37,9] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[37,32] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[39,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[44,9] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[44,32] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[47,31] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[52,31] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[53,31] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[54,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[59,9] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[59,32] 找不到符号
+[ERROR]   符号:   类 SseBuffer
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseBufferTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[60,70] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[61,34] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseBufferTest.java:[76,60] 程序包SseBuffer不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[24,32] 找不到符号
+[ERROR]   符号:   类 SseEncoder
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[41,9] 找不到符号
+[ERROR]   符号:   类 SseEncoder
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[41,34] 找不到符号
+[ERROR]   符号:   类 SseEncoder
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[42,58] 程序包SseFrame不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[46,25] 找不到符号
+[ERROR]   符号:   变量 SseEncoder
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[51,38] 找不到符号
+[ERROR]   符号:   类 SseEncoder
+[ERROR]   位置: 类 io.javanatic.harness.workbench.rpc.SseEncoderTest
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[61,28] 程序包SseFrame不存在
+[ERROR] /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/SseEncoderTest.java:[74,5] io.javanatic.harness.workbench.rpc.SseEncoderTest.Chunk不是抽象的, 并且未覆盖io.javanatic.harness.session.event.SessionEvent中的抽象方法time()
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-workbench-rpc

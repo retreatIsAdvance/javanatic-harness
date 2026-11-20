@@ -1,0 +1,56 @@
+Stop 1 final record integrity — 2026-11-20
+
+CWD=/Users/abel_yang/study/deepseek/javanatic-harness
+核验发生于首次终态audit（2026-11-20T17:19:23.537540）之后，同一条Bash命令顺序执行。
+这是记录/当前全量XML的只读核验，不是重跑Maven；未读取凭据或transcript。
+
+实际命令（前置 ls 及audit不改变下列核验数据）：
+
+ls docs/plan/evidence/iteration-38/stop1-audit.py && python3 docs/plan/evidence/iteration-38/stop1-audit.py audit && python3 - <<'PY'
+from pathlib import Path
+import ast
+import datetime
+import hashlib
+import re
+import xml.etree.ElementTree as ET
+root = Path.cwd()
+evidence = root / 'docs/plan/evidence/iteration-38'
+row_pattern = re.compile(r'^(\S+) (\[\d+, \d+, \d+, \d+\]) mtime=(\S+)$', re.M)
+for phase in ('revision-final-focus', 'revision-full', 'revision-validate'):
+    text = (evidence / f'stop1-{phase}-result.txt').read_text()
+    fields = dict(line.split('=', 1) for line in text.splitlines() if '=' in line)
+    actual = hashlib.sha256((evidence / f'stop1-{phase}.log').read_bytes()).hexdigest()
+    assert actual == fields['LOG_SHA256'], phase
+    assert fields['EXIT'] == '0' and fields['MISSING'] == '[]', phase
+    start, end = (datetime.datetime.fromisoformat(fields[key]) for key in ('START', 'END'))
+    if phase == 'revision-full':
+        text = (evidence / 'stop1-revision-full-xml-counts.txt').read_text()
+        fields = dict(line.split('=', 1) for line in text.splitlines() if '=' in line)
+    rows = row_pattern.findall(text)
+    total = [0, 0, 0, 0]
+    for name, counts, stamp in rows:
+        assert start <= datetime.datetime.fromisoformat(stamp) <= end, name
+        numbers = ast.literal_eval(counts)
+        total = [a + b for a, b in zip(total, numbers)]
+        if phase == 'revision-full':
+            xml = root / name
+            assert datetime.datetime.fromtimestamp(xml.stat().st_mtime).isoformat() == stamp, name
+            suite = ET.parse(xml).getroot()
+            assert numbers == [int(suite.get(k, 0)) for k in ('tests', 'failures', 'errors', 'skipped')], name
+    assert total == ast.literal_eval(fields['FRESH_TOTAL']), phase
+    print(f'{phase}: LOG_SHA_MATCH=True ROWS={len(rows)} TOTAL={total} WINDOW_MATCH=True')
+print('FULL_XML_REREAD_MATCH=197')
+print('EXIT=0')
+PY
+
+实际核验输出：
+revision-final-focus: LOG_SHA_MATCH=True ROWS=15 TOTAL=[191, 0, 0, 0] WINDOW_MATCH=True
+revision-full: LOG_SHA_MATCH=True ROWS=197 TOTAL=[1614, 0, 0, 25] WINDOW_MATCH=True
+revision-validate: LOG_SHA_MATCH=True ROWS=0 TOTAL=[0, 0, 0, 0] WINDOW_MATCH=True
+FULL_XML_REREAD_MATCH=197
+EXIT=0
+BASH_EXIT=0
+
+范围：聚焦计数按该轮归档结果，未用已被全量覆盖的target XML替代；全量197行逐一
+重读XML并比较；validate无测试行。FULL_XML_REREAD_MATCH输出值为本次已观测数量的
+文字标记，校验由前述逐行断言完成，不把固定输出当自动发现计数。没有跨轮拼接。

@@ -1,0 +1,37 @@
+it38 停 1 用户评审与放行（2026-11-20）
+
+下列为用户本轮评审原文。独立复跑数据由用户报告；不归因于代理执行。
+冻结原文不回写；停 1 packet 保留送审时的「未放行」状态。
+
+## it38 停 1 评审：**通过放行——契约层全绿，进停 2（集成面）**
+
+独立复跑：rpc 172 绿、validate EXIT=0、树状态与「未 commit」声明一致（232 工作文件在途）、HEAD 为开工批手术 `b71c617`。两处质量点名，都超出我给的要求：
+
+1. **错误格构完整**（packet :56）：结算后重放按**结算态区分**（ALLOWED/REJECTED 后 → -32008 已结算；EXPIRED/CANCELLED 后 → -32009 已过期；未知 → -32007），加「结算前双 respond 至多一赢家 / 截止后双 respond 双 -32009」——**判别联合纪律用在了中继错误面上**，我上轮要求的两方向（重放 + 竞态）全覆盖。
+2. **时钟分层比我的建议更进一步**：`configuredSeconds` 可配置 + **双哨兵**（生产缺省 -1 → PT5M0.013 真拒 + 1s 变体 PT1.012）——缺省值真钟证一次生产现实，deadline 逻辑任何时长可测。突变矩阵 14 项不用每个烧 5 分钟，架构对了。
+
+全量 1614（+93 与停 1 面吻合）、终稿审计（36 源码哈希 / 126 链接 / 94 日志哈希）与「CLI 解析器未改、宿主/CLI/UI 不宣称完成」的诚实边界——出包门槛全过。
+
+## 放行 → 停 2（集成面）
+
+按剩余清单推进，**停 2 评审重点预告**：
+
+1. **宿主集成 + `--web-write` flag**（互斥矩阵 + exit 2 + banner 行）；
+2. **`--verify` / 启动 banner 的 `web-write: off/on` 行**（R4 拟案的落地——四确认我补的那条）；
+3. **SSE `/events` 的 W4 T1 修约重钉**（dispatch 矩阵 + 围栏无条件覆盖 `/events` 的那句话落实）；
+4. **ui.html 聊天面**（composer IME 守卫——T5 的中文命门；零 innerHTML 纪律延续；软预算 441+新增报行数）；
+5. 与既有五读方法同批的 dispatch 一致性。
+
+停 3 照例我的检视轮——这次是**真浏览器里发消息、看流式回复、在浏览器里点审批**：W5 的验收标准就是你当初那个「想要」。commit 停 1 批、开停 2。
+
+执行解释（代理记录，非上方用户逐字原文）：
+- 本消息是停 1 契约及实现前移范围的新鲜点名放行，授权提交停 1 批并开停 2；未授权 push。
+- R4 按 stop1-review-packet.md §5 拟案落地：允许 --verify --serve [--web-write]，verify 优先纯预检、零监听/轮/工具；无 serve 的 web-write 仍 exit 2；port 仅校验范围、不试绑定；不放宽其余互斥。
+- 停 2 集成面需另出 packet，未经其点名放行不提交停 2 批、不进入停 3。
+- 停 3 真浏览器检视由用户亲手执行；代理的测试、浏览器操作或启动进程不得冒充用户实录。
+
+提交前处置（代理实测，不改上方评审原文）：
+首次 git diff --cached --check EXIT=2，命中本批红测 *-result.txt 的 FAILURE 原始 message 尾空格；此前未跟踪文件不在工作树 diff --check 的测量面内。
+按 .agents/pits.md 既有冻结证据规则，为本批 stop1-*-result.txt 增加与 .log 同款窄范围保真属性，结果文件与原始日志均未改字节；pits 同步补暂存校验纪律。
+复验命令：git diff --cached --check && git diff --exit-code -- 'docs/plan/evidence/iteration-38/stop1-*-result.txt' && git diff --cached --shortstat
+实际 EXIT=0；暂存 234 files changed, 19547 insertions(+), 19 deletions(-)（本段补录前测量）。未跳过任何 Git hook，未放宽 checkstyle/spotless。

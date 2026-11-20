@@ -1,0 +1,13 @@
+command=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=ApprovalRelayTest,JsonRpcWireTest,RequestFenceTest,RpcHttpServerTest,WorkbenchRpcTest,WorkbenchRpcWriteTest,UiResourceTest,WebApprovalRelayContractTest -Dit38.realClock=true -Dsurefire.failIfNoSpecifiedTests=false test
+wrapper_EXIT=1 (missing UiResourceTest XML; actual UI class is WorkbenchUiTest)
+maven_EXIT=not archived before wrapper exception; do not infer
+log_created=2026-11-20T13:41:20.213850
+XML=examples/headless/target/surefire-reports/TEST-io.javanatic.harness.examples.headless.WebApprovalRelayContractTest.xml
+mtime=2026-11-20T13:46:31.956106
+tests=2
+failures=0
+errors=0
+skipped=0
+time=301.206
+nonInteractiveDefaultWaitsReal300SecondsThenDeniesTool time=300.186
+configuredOneSecondOverridesNonInteractiveDefault time=1.006

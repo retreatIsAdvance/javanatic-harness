@@ -1,0 +1,5 @@
+XML=examples/headless/target/surefire-reports/TEST-io.javanatic.harness.examples.headless.WebApprovalRelayContractTest.xml
+mtime=2026-11-20T13:34:31.514041
+{'tests': '2', 'failures': '0', 'errors': '0', 'skipped': '0', 'time': '301.246'}
+{'name': 'nonInteractiveDefaultWaitsReal300SecondsThenDeniesTool', 'time': '300.222'}
+{'name': 'configuredOneSecondOverridesNonInteractiveDefault', 'time': '1.008'}

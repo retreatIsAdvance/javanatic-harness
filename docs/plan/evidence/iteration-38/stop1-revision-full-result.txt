@@ -1,0 +1,10 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q package
+START=2026-11-20T17:13:48.042379
+END=2026-11-20T17:18:21.997513
+EXIT=0
+XML_COLUMNS=tests failures errors skipped
+FRESH_TOTAL=[0, 0, 0, 0]
+MISSING=[]
+LOG_SHA256=92340a3d95d9e9cf4a2e8eb55c20c376b81f4524af79bb7d8bbb104689ed5d3c

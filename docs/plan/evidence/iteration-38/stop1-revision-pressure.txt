@@ -1,0 +1,23 @@
+COMMAND=python3 docs/plan/evidence/iteration-38/stop1-pressure.py
+CWD=/Users/abel_yang/study/deepseek/javanatic-harness
+START=2026-11-20T17:05:55.719201
+CPU_COUNT=10
+OWNED_PIDS=[79634, 79636, 79639, 79640, 79641, 79642, 79644, 79645, 79649, 79650]
+ROUND=1 EXIT=0 RESULT=stop1-revision-pressure-1-result.txt
+ROUND=2 EXIT=0 RESULT=stop1-revision-pressure-2-result.txt
+ROUND=3 EXIT=0 RESULT=stop1-revision-pressure-3-result.txt
+ROUND=4 EXIT=0 RESULT=stop1-revision-pressure-4-result.txt
+ROUND=5 EXIT=0 RESULT=stop1-revision-pressure-5-result.txt
+BURNER_PID=79634 EXIT=0 DATA={"pid": 79634, "cpu_seconds": 43.398452, "wall_seconds": 71.2566799169872}
+BURNER_PID=79636 EXIT=0 DATA={"pid": 79636, "cpu_seconds": 43.233329, "wall_seconds": 71.23603416699916}
+BURNER_PID=79639 EXIT=0 DATA={"pid": 79639, "cpu_seconds": 43.012652, "wall_seconds": 71.21454325004015}
+BURNER_PID=79640 EXIT=0 DATA={"pid": 79640, "cpu_seconds": 43.339144, "wall_seconds": 71.18708666693419}
+BURNER_PID=79641 EXIT=0 DATA={"pid": 79641, "cpu_seconds": 42.945496, "wall_seconds": 71.16500204103068}
+BURNER_PID=79642 EXIT=0 DATA={"pid": 79642, "cpu_seconds": 43.266302, "wall_seconds": 71.13649325002916}
+BURNER_PID=79644 EXIT=0 DATA={"pid": 79644, "cpu_seconds": 43.083876, "wall_seconds": 71.10138591600116}
+BURNER_PID=79645 EXIT=0 DATA={"pid": 79645, "cpu_seconds": 43.180664, "wall_seconds": 71.06702724995557}
+BURNER_PID=79649 EXIT=0 DATA={"pid": 79649, "cpu_seconds": 43.119245, "wall_seconds": 71.02717054192908}
+BURNER_PID=79650 EXIT=0 DATA={"pid": 79650, "cpu_seconds": 42.890483, "wall_seconds": 70.98234429094009}
+ALL_OWNED_REAPED=True
+END=2026-11-20T17:07:07.006509
+EXIT=0

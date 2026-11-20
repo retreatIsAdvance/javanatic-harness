@@ -1,0 +1,47 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=RpcHttpServerSseTest,SseRequestTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:30:54.203972
+END=2026-11-20T16:31:18.511087
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+RpcHttpServerSseTest [15, 2, 0, 0] mtime=2026-11-20T16:31:18.458279
+FAILURE=duplicateOriginCannotHideBehindFirstAllowedValue 
+expected: 403
+ but was: 200
+FAILURE=duplicateHostIsRejectedBeforeSource 
+Expecting actual:
+  "HTTP/1.1 200 OK
+Date: Fri, 20 Nov 2026 08:31:03 GMT
+Transfer-encoding: chunked
+Content-type: text/event-stream; charset=utf-8
+Cache-control: no-store
+
+92
+id: 0
+data: {"seq":0,"type":"test/chunk","ignorable":true,"data":{"text":"中文\n\nid: 999\r\ndata: forged","nested":{"values":[7,true,null]}}}
+
+
+92
+id: 1
+data: {"seq":1,"type":"test/chunk","ignorable":true,"data":{"text":"中文\n\nid: 999\r\ndata: forged","nested":{"values":[7,true,null]}}}
+
+
+92
+id: 2
+data: {"seq":2,"type":"test/chunk","ignorable":true,"data":{"text":"中文\n\nid: 999\r\ndata: forged","nested":{"values":[7,true,null]}}}
+
+
+0
+
+"
+not to contain:
+  "200 OK"
+
+SseRequestTest [3, 1, 0, 0] mtime=2026-11-20T16:31:03.072358
+FAILURE=rawUnicodeSessionDoesNotSilentlyBecomeQuestionMarks 
+expected: 中文
+ but was: ??
+FRESH_TOTAL=[18, 3, 0, 0]
+MISSING=[]
+LOG_SHA256=83e07f97fb619210c890e3d015628c5afdbaa4192a59dc9e6e432072c7e22c58

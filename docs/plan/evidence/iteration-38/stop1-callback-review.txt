@@ -1,0 +1,20 @@
+停1锁外通知定向复审（2026-11-20）
+
+来源：general-purpose 只读独立复审返回；未运行测试/构建、未写源码。
+范围：完整 ApprovalRelay.java 与 ApprovalRelayTest.java，核对锁外通知修复，
+不是整个停1的重新验收。当前HEAD=b71c6174c3411c143229786a44b3ce00cfa253f0，
+被审查类仍未提交。
+
+复审结论摘录：
+无新发现，已完整静态审阅：
+- ApprovalRelay.java:101–184：锁外通知消除所述交叉锁环；终态同锁唯一确定，
+  超时返回实际赢家。
+- ApprovalRelayTest.java:142–163：屏障能抓settle/cancel回归；
+  未直接覆盖expire/await重入。
+未运行测试、构建或写文件；不代表停1达标。
+
+主会话核验边界：此前已执行真实回调死锁RED（stop1-callback-red.log）、
+修后GREEN（stop1-callback-green.log）、10烧核5轮（stop1-cpu-repeats.txt）。
+不能把静态复审代替运行证明，亦不能把通过的settle/cancel场景描述为
+expire/await所有回调路径已逐条实测。严格deadline、终态回收、生产取消/
+会话关联、SSE未实现等阻断保持不变，见 stop1-review-packet.md。

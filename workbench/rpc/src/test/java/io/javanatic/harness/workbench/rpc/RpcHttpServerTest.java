@@ -20,6 +20,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.javanatic.harness.workbench.rpc.RpcFixtures.loaded;
 import static io.javanatic.harness.workbench.rpc.RpcFixtures.richEvents;
@@ -304,6 +305,51 @@ class RpcHttpServerTest {
     }
 
     @Test
+    void writeMethodPostFromEvilOriginYields403BeforeSeam() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        RpcHttpServer server = new RpcHttpServer((method, params) -> {
+            calls.incrementAndGet();
+            return null;
+        });
+        server.start(0);
+        try {
+            for (String method : writeMethods()) {
+                for (String contentType : List.of("application/json", "text/plain")) {
+                    HttpRequest req = HttpRequest.newBuilder(uri(server, "/"))
+                        .header("Origin", "http://evil.com")
+                        .header("Content-Type", contentType)
+                        .POST(HttpRequest.BodyPublishers.ofString(writeRequest(method))).build();
+                    HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+                    assertThat(res.statusCode()).as(method).isEqualTo(403);
+                    assertThat(res.body()).contains("origin not allowed");
+                    assertThat(calls.get()).as("B36 先于 B37 与写面派发").isZero();
+                }
+            }
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
+    void writeMethodPostWithoutOriginReachesSeam() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        RpcHttpServer server = new RpcHttpServer((method, params) -> {
+            calls.incrementAndGet();
+            return null;
+        });
+        server.start(0);
+        try {
+            for (String method : writeMethods()) {
+                HttpResponse<String> res = post(server, writeRequest(method));
+                assertThat(res.statusCode()).as(method).isEqualTo(200);
+            }
+            assertThat(calls.get()).as("无 Origin 的四种合法 POST 均进入派发").isEqualTo(4);
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
     void evilHostGetRootYields403BeforeRouting() throws Exception {
         RpcHttpServer server = new RpcHttpServer((method, params) -> null);
         server.start(0);
@@ -387,7 +433,55 @@ class RpcHttpServerTest {
         }
     }
 
+    @Test
+    void allWriteMethodsRejectInvalidContentTypeBeforeDispatch() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        try (RpcHttpServer server = new RpcHttpServer((method, params) -> {
+            calls.incrementAndGet();
+            return null;
+        })) {
+            server.start(0);
+            for (String method : writeMethods()) {
+                for (String contentType : List.of("", "text/plain", "application/x-www-form-urlencoded")) {
+                    var builder = HttpRequest.newBuilder(uri(server, "/"));
+                    if (!contentType.isEmpty()) {
+                        builder.header("Content-Type", contentType);
+                    }
+                    var request = builder.POST(HttpRequest.BodyPublishers.ofString(writeRequest(method))).build();
+                    var response = http.send(request, HttpResponse.BodyHandlers.ofString());
+                    assertThat(response.statusCode()).as(method).isEqualTo(415);
+                    assertThat(response.body()).contains("content-type must be application/json");
+                    assertThat(calls.get()).isZero();
+                }
+            }
+        }
+    }
+
+    @Test
+    void eventsPathCannotBypassOriginFenceEvenBeforeSseIsInstalled() throws Exception {
+        try (RpcHttpServer server = new RpcHttpServer((method, params) -> null)) {
+            server.start(0);
+            var request = HttpRequest.newBuilder(uri(server, "/events?session=s1"))
+                .header("Origin", "http://evil.com").GET().build();
+            var response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            assertThat(response.statusCode()).isEqualTo(403);
+            assertThat(response.body()).contains("origin not allowed");
+            // 当前仅钉公共围栏；合法 GET 仍 404，不冒充 SSE 已实现。
+            var allowed = HttpRequest.newBuilder(uri(server, "/events?session=s1")).GET().build();
+            assertThat(http.send(allowed, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(404);
+        }
+    }
+
     // ────────── 工具面 ──────────
+
+    private static List<String> writeMethods() {
+        return List.of("session/start", "session/send", "session/cancel", "approval/respond");
+    }
+
+    private static String writeRequest(String method) {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":{"
+            + "\"text\":\"hi\",\"session\":\"s1\",\"requestId\":\"r1\",\"allow\":true},\"id\":1}";
+    }
 
     /** 裸套接字发 GET /,只取状态行(Connection: close + soTimeout 防挂)。 */
     private String rawStatusLine(RpcHttpServer server, String hostHeader) throws Exception {

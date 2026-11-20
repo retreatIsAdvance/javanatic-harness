@@ -1,0 +1,13 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=ApprovalRelayTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T15:57:49.616182
+END=2026-11-20T15:57:56.409332
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+ApprovalRelayTest [15, 1, 0, 0] mtime=2026-11-20T15:57:56.364788
+FAILURE=registeredDeadlineRejectsAtBoundaryWithoutAnyWaiter 
+Expecting code to raise a throwable.
+FRESH_TOTAL=[15, 1, 0, 0]
+MISSING=[]
+LOG_SHA256=06cc5a42e33090f65a843745ce96cbbfed9b55209fe1855c38398bb154c03ec7

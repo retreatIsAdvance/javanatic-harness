@@ -1,0 +1,256 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[ERROR] Tests run: 15, Failures: 6, Errors: 8, Skipped: 0, Time elapsed: 0.136 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.RelayApprovalPromptTest
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.slowSubscriberReceivesOnlyLatestCompleteSnapshot -- Time elapsed: 0.054 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.nextPending(RelayApprovalPromptTest.java:386)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.slowSubscriberReceivesOnlyLatestCompleteSnapshot(RelayApprovalPromptTest.java:239)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.listenerRegistrationCanObservePublishedRequestAndCancelSynchronously -- Time elapsed: 0.003 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting code to raise a throwable.
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.listenerRegistrationCanObservePublishedRequestAndCancelSynchronously(RelayApprovalPromptTest.java:110)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.preCancelledAskPublishesNothing -- Time elapsed: 0.001 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting code to raise a throwable.
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.preCancelledAskPublishesNothing(RelayApprovalPromptTest.java:57)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.pollingCancelsWhenOnCancelUsesDefaultNoOp -- Time elapsed: 0.001 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.nextPending(RelayApprovalPromptTest.java:386)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.pollingCancelsWhenOnCancelUsesDefaultNoOp(RelayApprovalPromptTest.java:80)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.snapshotsCarryLeaseMetadataAndReconnectWithoutSettledRequests -- Time elapsed: 0.004 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.nextPending(RelayApprovalPromptTest.java:386)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.snapshotsCarryLeaseMetadataAndReconnectWithoutSettledRequests(RelayApprovalPromptTest.java:208)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.cancellationWinsEvenWhenAllowHasJustSettled -- Time elapsed: 0.001 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting code to raise a throwable.
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.cancellationWinsEvenWhenAllowHasJustSettled(RelayApprovalPromptTest.java:134)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.retainedCancellationCallbackIsHarmlessAfterRelayRetiresTheRequest -- Time elapsed: 0.005 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+Expecting value to be true but was false
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.retainedCancellationCallbackIsHarmlessAfterRelayRetiresTheRequest(RelayApprovalPromptTest.java:153)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.subscribingRacesWithOpeningWithoutLosingThePendingSnapshot -- Time elapsed: 0.001 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.nextPending(RelayApprovalPromptTest.java:386)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.subscribingRacesWithOpeningWithoutLosingThePendingSnapshot(RelayApprovalPromptTest.java:311)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.subscriptionCloseWakesWaiterAndReceivesNoFurtherChanges -- Time elapsed: 0.001 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.nextPending(RelayApprovalPromptTest.java:386)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.subscriptionCloseWakesWaiterAndReceivesNoFurtherChanges(RelayApprovalPromptTest.java:271)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.listenerFailureStillWithdrawsThePendingRequest -- Time elapsed: 0 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting code to raise a throwable.
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.listenerFailureStillWithdrawsThePendingRequest(RelayApprovalPromptTest.java:173)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.humanDecisionControlsRealToolExecutor(Decision)[1] -- Time elapsed: 0.021 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.nextPending(RelayApprovalPromptTest.java:386)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.humanDecisionControlsRealToolExecutor(RelayApprovalPromptTest.java:365)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:186)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:186)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:186)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.Iterator.forEachRemaining(Iterator.java:133)
+	at java.base/java.util.Spliterators$IteratorSpliterator.forEachRemaining(Spliterators.java:1939)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:570)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:153)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:176)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:632)
+	at java.base/java.util.stream.ReferencePipeline$7$1FlatMap.accept(ReferencePipeline.java:293)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1716)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:570)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:153)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:176)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:632)
+	at java.base/java.util.stream.ReferencePipeline$7$1FlatMap.accept(ReferencePipeline.java:293)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1716)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:570)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:153)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:176)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:632)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.humanDecisionControlsRealToolExecutor(Decision)[2] -- Time elapsed: 0.006 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.nextPending(RelayApprovalPromptTest.java:386)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.humanDecisionControlsRealToolExecutor(RelayApprovalPromptTest.java:365)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:186)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:186)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:186)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.Iterator.forEachRemaining(Iterator.java:133)
+	at java.base/java.util.Spliterators$IteratorSpliterator.forEachRemaining(Spliterators.java:1939)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:570)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:153)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:176)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:632)
+	at java.base/java.util.stream.ReferencePipeline$7$1FlatMap.accept(ReferencePipeline.java:293)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:214)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1716)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:570)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:153)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:176)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:632)
+	at java.base/java.util.stream.ReferencePipeline$7$1FlatMap.accept(ReferencePipeline.java:293)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1716)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:570)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:560)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:153)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:176)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:265)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:632)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.closeCancelsOutstandingRequestsAndRejectsNewAsksWithoutClosingSharedRelay -- Time elapsed: 0.001 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.nextPending(RelayApprovalPromptTest.java:386)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.closeCancelsOutstandingRequestsAndRejectsNewAsksWithoutClosingSharedRelay(RelayApprovalPromptTest.java:187)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.RelayApprovalPromptTest.closeRacesWithAskWithoutLeakingAnyPendingRequest -- Time elapsed: 0.001 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting code to raise a throwable.
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.assertAborted(RelayApprovalPromptTest.java:394)
+	at io.javanatic.harness.examples.headless.RelayApprovalPromptTest.closeRacesWithAskWithoutLeakingAnyPendingRequest(RelayApprovalPromptTest.java:339)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Tests run: 2, Failures: 0, Errors: 1, Skipped: 1, Time elapsed: 0.003 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.WebApprovalRelayContractTest
+[ERROR] io.javanatic.harness.examples.headless.WebApprovalRelayContractTest.configuredOneSecondOverridesNonInteractiveDefault -- Time elapsed: 0.002 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at io.javanatic.harness.examples.headless.WebApprovalRelayContractTest.assertTimeoutDeniesTool(WebApprovalRelayContractTest.java:73)
+	at io.javanatic.harness.examples.headless.WebApprovalRelayContractTest.configuredOneSecondOverridesNonInteractiveDefault(WebApprovalRelayContractTest.java:49)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Failures: 
+[ERROR]   RelayApprovalPromptTest.cancellationWinsEvenWhenAllowHasJustSettled:134 
+Expecting code to raise a throwable.
+[ERROR]   RelayApprovalPromptTest.closeRacesWithAskWithoutLeakingAnyPendingRequest:339->assertAborted:394 
+Expecting code to raise a throwable.
+[ERROR]   RelayApprovalPromptTest.listenerFailureStillWithdrawsThePendingRequest:173 
+Expecting code to raise a throwable.
+[ERROR]   RelayApprovalPromptTest.listenerRegistrationCanObservePublishedRequestAndCancelSynchronously:110 
+Expecting code to raise a throwable.
+[ERROR]   RelayApprovalPromptTest.preCancelledAskPublishesNothing:57 
+Expecting code to raise a throwable.
+[ERROR]   RelayApprovalPromptTest.retainedCancellationCallbackIsHarmlessAfterRelayRetiresTheRequest:153 
+Expecting value to be true but was false
+[ERROR] Errors: 
+[ERROR]   RelayApprovalPromptTest.closeCancelsOutstandingRequestsAndRejectsNewAsksWithoutClosingSharedRelay:187->nextPending:386 » NoSuchElement No value present
+[ERROR]   RelayApprovalPromptTest.humanDecisionControlsRealToolExecutor:365->nextPending:386 » NoSuchElement No value present
+[ERROR]   RelayApprovalPromptTest.humanDecisionControlsRealToolExecutor:365->nextPending:386 » NoSuchElement No value present
+[ERROR]   RelayApprovalPromptTest.pollingCancelsWhenOnCancelUsesDefaultNoOp:80->nextPending:386 » NoSuchElement No value present
+[ERROR]   RelayApprovalPromptTest.slowSubscriberReceivesOnlyLatestCompleteSnapshot:239->nextPending:386 » NoSuchElement No value present
+[ERROR]   RelayApprovalPromptTest.snapshotsCarryLeaseMetadataAndReconnectWithoutSettledRequests:208->nextPending:386 » NoSuchElement No value present
+[ERROR]   RelayApprovalPromptTest.subscribingRacesWithOpeningWithoutLosingThePendingSnapshot:311->nextPending:386 » NoSuchElement No value present
+[ERROR]   RelayApprovalPromptTest.subscriptionCloseWakesWaiterAndReceivesNoFurtherChanges:271->nextPending:386 » NoSuchElement No value present
+[ERROR]   WebApprovalRelayContractTest.configuredOneSecondOverridesNonInteractiveDefault:49->assertTimeoutDeniesTool:73 » NoSuchElement No value present
+[ERROR] Tests run: 17, Failures: 6, Errors: 9, Skipped: 1
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-examples-headless: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-examples-headless

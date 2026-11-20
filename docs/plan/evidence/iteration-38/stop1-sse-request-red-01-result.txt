@@ -1,0 +1,16 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=SseRequestTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:22:23.276257
+END=2026-11-20T16:22:31.421689
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+SseRequestTest [2, 2, 0, 0] mtime=2026-11-20T16:22:31.373189
+FAILURE=malformedEscapesUtf8AndMultivaluesAreTyped400 
+Expecting code to raise a throwable.
+FAILURE=decodedBrandAndHeaderPrecedenceRemainExplicit 
+expected: 中文
+ but was: s1
+FRESH_TOTAL=[2, 2, 0, 0]
+MISSING=[]
+LOG_SHA256=a3dc4c164ded3ace3c015abfaa751a6c720ca5dfab8cbf9eeb4e92d43354e2be

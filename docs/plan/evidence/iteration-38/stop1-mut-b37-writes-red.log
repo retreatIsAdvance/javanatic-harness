@@ -1,0 +1,144 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+11月 20, 2026 5:03:31 下午 sun.net.httpserver.ExchangeImpl sendResponseHeaders
+警告: sendResponseHeaders: being invoked with a content length for a HEAD request
+[ERROR] Tests run: 21, Failures: 6, Errors: 1, Skipped: 0, Time elapsed: 0.349 s <<< FAILURE! -- in io.javanatic.harness.workbench.rpc.RpcHttpServerTest
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerTest.concurrentTailRequestsShareNoState -- Time elapsed: 0.026 s <<< ERROR!
+java.util.concurrent.ExecutionException: 
+com.fasterxml.jackson.core.JsonParseException: Unrecognized token 'content': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 8]
+	at java.base/java.util.concurrent.FutureTask.report(FutureTask.java:124)
+	at java.base/java.util.concurrent.FutureTask.get(FutureTask.java:193)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.concurrentTailRequestsShareNoState(RpcHttpServerTest.java:254)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+Caused by: com.fasterxml.jackson.core.JsonParseException: Unrecognized token 'content': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 8]
+	at com.fasterxml.jackson.core.JsonParser._constructError(JsonParser.java:2567)
+	at com.fasterxml.jackson.core.JsonParser._constructReadException(JsonParser.java:2593)
+	at com.fasterxml.jackson.core.JsonParser._constructReadException(JsonParser.java:2601)
+	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportError(ParserMinimalBase.java:765)
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser._reportInvalidToken(ReaderBasedJsonParser.java:3018)
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser._handleOddValue(ReaderBasedJsonParser.java:2052)
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser.nextToken(ReaderBasedJsonParser.java:780)
+	at com.fasterxml.jackson.databind.ObjectMapper._readTreeAndClose(ObjectMapper.java:4934)
+	at com.fasterxml.jackson.databind.ObjectMapper.readTree(ObjectMapper.java:3280)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.tailResult(RpcHttpServerTest.java:506)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.lambda$concurrentTailRequestsShareNoState$1(RpcHttpServerTest.java:244)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerTest.e2eRoundTripsFiveMethodsOverHttpWithJsonContentType -- Time elapsed: 0.008 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 200
+ but was: 415
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.e2eRoundTripsFiveMethodsOverHttpWithJsonContentType(RpcHttpServerTest.java:188)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerTest.postWithoutContentTypeYields415 -- Time elapsed: 0.010 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 415
+ but was: 200
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.postWithoutContentTypeYields415(RpcHttpServerTest.java:429)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerTest.writeMethodPostWithoutOriginReachesSeam -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[session/start] 
+expected: 200
+ but was: 415
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.writeMethodPostWithoutOriginReachesSeam(RpcHttpServerTest.java:344)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerTest.postFormEncodedYields415 -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 415
+ but was: 200
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.postFormEncodedYields415(RpcHttpServerTest.java:390)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerTest.postTextPlainYields415 -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 415
+ but was: 200
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.postTextPlainYields415(RpcHttpServerTest.java:409)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.workbench.rpc.RpcHttpServerTest.allWriteMethodsRejectInvalidContentTypeBeforeDispatch -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[session/start] 
+expected: 415
+ but was: 200
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:499)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServerTest.allWriteMethodsRejectInvalidContentTypeBeforeDispatch(RpcHttpServerTest.java:452)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] Failures: 
+[ERROR]   RpcHttpServerTest.allWriteMethodsRejectInvalidContentTypeBeforeDispatch:452 [session/start] 
+expected: 415
+ but was: 200
+[ERROR]   RpcHttpServerTest.e2eRoundTripsFiveMethodsOverHttpWithJsonContentType:188 
+expected: 200
+ but was: 415
+[ERROR]   RpcHttpServerTest.postFormEncodedYields415:390 
+expected: 415
+ but was: 200
+[ERROR]   RpcHttpServerTest.postTextPlainYields415:409 
+expected: 415
+ but was: 200
+[ERROR]   RpcHttpServerTest.postWithoutContentTypeYields415:429 
+expected: 415
+ but was: 200
+[ERROR]   RpcHttpServerTest.writeMethodPostWithoutOriginReachesSeam:344 [session/start] 
+expected: 200
+ but was: 415
+[ERROR] Errors: 
+[ERROR]   RpcHttpServerTest.concurrentTailRequestsShareNoState:254 » Execution com.fasterxml.jackson.core.JsonParseException: Unrecognized token 'content': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 8]
+[ERROR] Tests run: 21, Failures: 6, Errors: 1, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-workbench-rpc: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-workbench-rpc

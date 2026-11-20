@@ -1,0 +1,12 @@
+measured=2026-11-20T13:44:10.479854
+HEAD=b71c6174c3411c143229786a44b3ce00cfa253f0
+scope=当前未提交Java源码及测试；不包含早已提交的开工手术
+978ee57f542461395b5e63578442a431ead6ff38f9036bab83fa63108f547bcd  examples/headless/src/test/java/io/javanatic/harness/examples/headless/WebApprovalRelayContractTest.java
+22a1ef5348ae743398b7a9c98e973c411d339870fd4e4776864dea566301f96d  workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/ApprovalRelay.java
+cd3608d5735db81a170c5be37b92b2f16343fa48656af61ec91a06a11fa3762f  workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/ChatControl.java
+d971efbd8691f0c4f3c0576fbdff41e84dba802e8125be19e10f9740281efb23  workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/RpcJson.java
+e483440e92d99745b04075c048489136c6d32a2ba1d9f8b8c455dc956df2f61d  workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/WorkbenchRpc.java
+578c375df17b3e56973c25e590a55c609cdad3f715c77776bd1bf8ee9fbaae48  workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/ApprovalRelayTest.java
+3788ed8ecf4cdf9d6aabb72ae9b20c1112ebd79a732e1f9e9aee8ae1e966363c  workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/RpcHttpServerTest.java
+6012b8b4450105b46608baf96e97c1325de176b5a95f04454452075e4e3498a9  workbench/rpc/src/test/java/io/javanatic/harness/workbench/rpc/WorkbenchRpcWriteTest.java
+changed pom/module-info=[]

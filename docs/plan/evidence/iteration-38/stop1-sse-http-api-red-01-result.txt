@@ -1,0 +1,11 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl workbench/rpc -am -Dtest=RpcHttpServerSseTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-20T16:21:08.404818
+END=2026-11-20T16:21:13.821640
+EXIT=1
+XML_COLUMNS=tests failures errors skipped
+NO_FRESH_XML=RpcHttpServerSseTest
+FRESH_TOTAL=[0, 0, 0, 0]
+MISSING=['RpcHttpServerSseTest']
+LOG_SHA256=4b0a2e5ce2b90d7c8dadfa58f931a40385e11bdf427aad5abd4425b7d65ecf7b

@@ -1,0 +1,116 @@
+# Stop 1 revision reviews — 已返回独立审查摘要归档
+
+日期：2026-11-20。范围：it38 停 1 修订；不 commit、不 push、不进入停 2。
+
+## Provenance and limits
+
+重要：本文件由独立文档代理归档任务交接中已返回的审查摘要，不是本代理重新读取
+生产 Java 后作出的独立代码审查结论，也不是本代理运行测试得到的结论。
+下列 agent 标识是摘要所归属的原审查者；本代理未读取其 transcript，不补造逐字
+审查原文、源码行号、额外发现或放行结论。代码判断均标为原审查摘要的静态意见。
+
+本代理仅阅读 AGENTS.md、.agents/pits.md、已有证据与对应日志，未运行 Maven，
+未读取正在突变的生产 Java、凭据或远端。运行计数另据本目录已落盘 *-result.txt
+归档，不把结果文件视为原审查者亲跑证明。静态审查、主代理修订说明和运行证据
+分开归属；没有 CI、生产 host/serve 接线或浏览器验收结论。
+
+证据目录：/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-38/。
+完整分阶段结果汇总见 stop1-tdd-evidence.txt §11；下列 T/F/E/S 均为
+ tests/failures/errors/skipped，不是通过数，EXIT 仅与同一结果档的 XML 记录配对。
+
+## Approval initial review
+
+来源：ageneral-purpose-dc00cd907f601585 已返回摘要。
+摘要报告的静态阅读范围：ApprovalRelay、RelayApprovalPrompt 全文及 3 份相关测试。
+摘要结论：无可确认的 P0–P2；另有两个 P3 测试强度提醒，不等于没有任何风险。
+
+- P3（竞赛）：旧 1ns 竞赛退化成纯到期场景，不能证明期前首答与截止边界竞争。
+  交接的主代理处理说明：改为受控 9/10/11ns，各 200 轮。
+- P3（容量）：旧容量测试即使实现容量误缩为 1 也可能绿。
+  交接的主代理处理说明：补充第 4096 条时最旧项仍返回 -32008，
+  第 4097 条才退役为 -32007 的钉死断言。
+
+已落盘复验证据（不是本代理重跑）：stop1-review-hardening-green-result.txt，
+START=2026-11-20T16:57:05.010142，END=2026-11-20T16:57:16.601246，
+Maven EXIT=0；ApprovalRelayTest 22/0/0/0、RelayApprovalPromptTest 16/0/0/0、
+WebApprovalRelayContractTest 2/0/0/1、WebSseCodecContractTest 1/0/0/0，
+合计 41/0/0/1（40 通过、1 跳过）。未启用最终 300s 慢测。
+
+修订内容来自交接摘要，复验计数来自结果档；本代理未独立核验代码中的新断言，
+也未发现本批有与两项 P3 硬化单独配对的 RED 结果，不补造突变执行记录。
+
+## SSE initial review and follow-up evidence
+
+来源：ageneral-purpose-4f52ff70ecdd9cf2 已返回摘要。
+摘要报告的静态阅读范围：7 份生产文件、5 份测试全文。
+
+- P1：GET 声明请求体但未发送完整 body 时，exchange.close 的排水可能阻塞，
+  进而卡住 server.close；原关闭顺序未处理这一真实 socket 边界。
+- P2：buffer waiter 的 latch 只证明线程到达某处，不能证明其已经实际等待。
+  交接的主代理处理说明：改为 TIMED_WAITING 屏障。
+
+主代理已落盘的真实 socket 关闭修订证据：
+
+| 结果文件 | Maven EXIT | 同窗 T/F/E/S | 记录内容 |
+|---|---|---|---|
+| stop1-sse-close-raw-red-01-result.txt | 1 | 53/2/0/0 | 缺 GET body 的 server.close 与 source EOF writer 两红 |
+| stop1-sse-close-stop-first-01-result.txt | 1 | 53/1/0/0 | 先 stop 后仅 EOF writer 仍红 |
+| stop1-sse-close-eof-green-01-result.txt | 0 | 53/0/0/0 | EOF 修正后四类绿 |
+| stop1-sse-close-final-green-01-result.txt | 0 | 54/0/0/0 | 随后四类复验绿，SseConnectionTest 6 → 7 |
+
+四类为 RpcHttpServerSseTest、SseConnectionTest、SseBufferTest、RpcHttpServerTest。
+raw-red 失败名为 sourceEofReclaimsMissingBodyConnectionWithoutServerClose、
+serverCloseDoesNotDrainMissingGetBodyBeforeStoppingSockets；原结果记录保留了
+LeftOverInputStream.drain → exchange.close 的阻塞栈。stop-first 只消除后者，
+不能将此中间状态写成所有关闭问题已解决。
+
+计数矛盾：交接摘要将“eof/final 绿”合称 54/0/0/0，但 EOF 轮实际为 53/0/0/0，
+只有 final 轮为 54/0/0/0。本归档按实际结果分轮列出，不改写原档，也不倒灌计数。
+
+## SSE latest static re-review
+
+来源：ageneral-purpose-712e29a0fc64b337 已返回摘要。
+摘要报告的范围：全文阅读 RpcHttpServer、SseConnection 及相关两份关闭测试；
+该原审查者明确未运行 Maven。以下仅归档其静态判断，不冒充本代理再次复审。
+
+摘要结论：无可确认 P1/P2。其静态依据为：
+
+1. stop(0) 先于 connection.close；所有回调抛异常时仍经 finally 清理 executor。
+2. EOF writer 仅在原本未被中断时临时 interrupt 以关闭 requestBody，随后清除
+   人为设置的中断标志，保证正常尾 chunk；不是无条件抹去线程中断。
+3. 已有 interrupt 的路径不进入清位 helper，不将既有中断当成人工临时标志清除。
+4. late-open 与关闭以锁线性化；关闭后返回的 open 会被撤销，且不再打开 200 响应。
+
+非阻断建议：补充“原始 interrupt=true”的直接断言。
+按本次交接状态，主代理尚未处理该建议；不得将上述 final GREEN 冒充这一断言
+已经补齐，也不得把“无可确认 P1/P2”改写为无遗漏或所有边界均已运行验证。
+
+## Pending verification and stop boundary
+
+本归档的运行结果窗口截至 2026-11-20T16:57:16.601246。修订后最终 300s 真时钟
+和全量验证尚未在本批执行，由主代理后续补实际命令、Maven EXIT 与同窗 XML；
+旧 13 点窗口的慢测/validate 不是当前修订源码的替代证据。
+
+三个 agent 的意见均为已返回摘要的静态审查归档。主代理将继续核对文件并产出
+review packet；本档不自行宣布停 1 放行，不外推 CI 或 host 接线，不进入停 2。
+
+## Main-agent follow-up — interrupt preservation
+
+上述交接窗口之后，主代理补充了 closePreservesAnAlreadyInterruptedWriter，
+与既有 false 分支共用 helper，分别断言 source.close 回调及 writer 返回后的中断位。
+定向删除 SseConnection.close 中 && !activeWriter.isInterrupted() 后：
+stop1-mut-interrupt-preserve-red-result.txt：EXIT=1，1/1/0/0；恢复后
+stop1-mut-interrupt-preserve-green-result.txt：EXIT=0，1/0/0/0。
+对应 audit 记录 BYTE_RESTORED=True。此条是主代理补录的运行处置，
+不是原静态审查者再次审查的意见，也不倒写前述 54 项历史窗口。
+
+## Final document/API consistency review
+
+来源：ageneral-purpose-8169473c3322d633 已返回摘要，主代理于2026-11-20归档。
+原审查者全文对照 stop1-review-packet.md、stop1-write-seam-design.md、点名六类
+及相关API；结论为“无可确认的一致性问题：阻断项无，建议项无”。实现前移、
+R4待裁与后续宿主接入边界均已显式披露。
+
+本轮仅为静态只读审查，未运行验证；审查时§6尚待补运行结果，未将此暂缺判为缺陷。
+不把该结论扩大为终态验证数据审计、全部源码无缺陷或停1已放行。后续§6填入的
+实际命令/数字由主代理核读落盘结果，并由终态源码/链接审计另行校验。

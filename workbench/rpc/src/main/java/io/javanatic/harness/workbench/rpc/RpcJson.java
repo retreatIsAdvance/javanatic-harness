@@ -85,6 +85,33 @@ final class RpcJson {
         return lastSeq.asLong();
     }
 
+    /** "text":必填非空字符串(写面用户消息);缺失/空串/型错 → -32602。 */
+    static String text(JsonNode params) {
+        JsonNode text = params.get("text");
+        if (text == null || !text.isTextual() || text.asText().isEmpty()) {
+            throw new RpcException(-32602, "invalid params");
+        }
+        return text.asText();
+    }
+
+    /** "requestId":必填非空字符串(审批请求 id);缺失/空串/型错 → -32602。 */
+    static String requestId(JsonNode params) {
+        JsonNode requestId = params.get("requestId");
+        if (requestId == null || !requestId.isTextual() || requestId.asText().isEmpty()) {
+            throw new RpcException(-32602, "invalid params");
+        }
+        return requestId.asText();
+    }
+
+    /** "allow":必填布尔(审批决定;UI 词表只有允许/拒绝);缺失/型错 → -32602。 */
+    static boolean allow(JsonNode params) {
+        JsonNode allow = params.get("allow");
+        if (allow == null || !allow.isBoolean()) {
+            throw new RpcException(-32602, "invalid params");
+        }
+        return allow.booleanValue();
+    }
+
     // ────────── 通用面 ──────────
 
     static ObjectNode node() {

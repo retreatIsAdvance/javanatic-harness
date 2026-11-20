@@ -1,0 +1,101 @@
+Stop 1 Revision — Historical Mutation Evidence Review
+
+Scope and method
+核验日期：2026-11-20；当前目标文件 SHA 核验时刻：2026-11-20T17:07:29+08:00。
+仓库：/Users/abel_yang/study/deepseek/javanatic-harness
+证据根目录：/Users/abel_yang/study/deepseek/javanatic-harness/docs/plan/evidence/iteration-38
+
+这是历史证据核验，不是测试重跑。已读取根 AGENTS.md 与 .agents/pits.md；全文读取下表 14 项各自的 stop1-mut-{name}-red-result.txt、stop1-mut-{name}-green-result.txt、stop1-mut-{name}-audit.txt（共 42 文件），以及 stop1-mut-deadline-early-adjudication.txt。为定位实际失败原因，全文读取上述 14 项对应的 -red.log；另读 b36-events-green.log 区分日志诊断与测试失败。
+未运行 Maven、未重施突变、未读取生产/测试源码正文或当前 target 报告、未访问远端/凭据/transcript、未 commit/push。对源码仅执行 audit 所指目标文件的 SHA-256 校验；audit 的实际目标字段名为 FILE，并非 TARGET。只新建本文件，不修改既有 audit、裁决、日志、生产或测试文件。
+
+Evidence table
+T/F/E/S = tests / failures / errors / skipped，取各历史 result 的 FRESH_TOTAL；不是仅数方法名或 EXIT，也不重复累计日志类行与汇总行。全部 28 个 red/green result 的 MISSING=[]，记录的 XML mtime 均落在对应 START/END 窗口内。历史执行窗口自 2026-11-20T16:58:37.583446 至 2026-11-20T17:03:38.193876。
+下表“恢复=是(Hn)”表示该项 audit 的 BYTE_RESTORED=True、BEFORE_SHA256=AFTER_SHA256，且本次实测 CURRENT_SHA256 也相等；Hn 的完整目标路径与哈希见后表。捕获结论是本次核读裁定，不覆盖历史 PASS 字段。
+
+| name | 红 T/F/E/S | 红 EXIT | 绿 T/F/E/S | 绿 EXIT | 实际失败原因（对照 audit 的 OLD→NEW） | 字节恢复 | 捕获 |
+|---|---|---|---|---|---|---|---|
+| deadline-boundary | 1/1/0/0 | 1 | 1/0/0/0 | 0 | 到期比较 >=0 改为 >0；恰好到期且无 waiter 时不再抛应有的拒绝异常，断言为 Expecting code to raise a throwable。 | 是(H1) | 是 |
+| deadline-early | 1/0/1/0 | 1 | 1/0/0/0 | 0 | >=0 改为 >=-1；合法期前 1ns 被提前判为过期。responseBeforeDeadlineIsKeptAfterDeadline 在 settle 抛 RpcException: approval expired；是预期行为 error，不是编译或环境 error。 | 是(H1) | 是；历史 PASS=False 见例外说明 |
+| deadline-settle | 1/1/0/0 | 1 | 1/0/0/0 | 0 | 删除 settle 中 terminalError 前的 expireIfDue(entry)；无 waiter 的到期响应没有现场结算过期，拒绝断言因未抛异常失败。 | 是(H1) | 是 |
+| retention-capacity | 1/1/0/0 | 1 | 1/0/0/0 | 0 | MAX_RETIRED 从 4096 降为 1，应保留的终态条目过早淘汰；terminalRetentionIsBoundedAndOldHandleStillObservesItsOutcome 期望错误码 -32008，实为 -32007。 | 是(H1) | 是 |
+| retention-ttl | 1/1/0/0 | 1 | 1/0/0/0 | 0 | 墓碑保留从 10 分钟改为 11 分钟；10 分钟淘汰边界仍返回过期终态，tombstoneExpiresAfterTenMinutesWithoutChangingOldDecision 期望 -32007，实为 -32009。 | 是(H1) | 是 |
+| buffer-wakeup | 1/1/0/0 | 1 | 1/0/0/0 | 0 | 删除清零 bytes 后的 notifyAll；idleDiffersFromEofAndAbortWakesWaiter 的等待者唤醒/退出断言失败，期望 false 实为 true，而非编译失败或外层进程超时。 | 是(H2) | 是 |
+| buffer-frames | 1/1/0/0 | 1 | 1/0/0/0 | 0 | MAX_FRAMES 从 64 改为 65，第 65 个排队帧被错误接受；sixtyFifthQueuedFrameAbortsInsteadOfDroppingAndContinuing 期望 false 实为 true。 | 是(H2) | 是 |
+| buffer-bytes | 1/1/0/0 | 1 | 1/0/0/0 | 0 | MAX_BYTES 从 8 MiB 改为 9 MiB，越过原 8 MiB 聚合预算的入队被错误接受；aggregateEncodedByteBudgetIsEightMiB 期望 false 实为 true。 | 是(H2) | 是 |
+| codec-payload | 1/1/0/0 | 1 | 1/0/0/0 | 0 | codec 序列化结果被空对象替代；实际 SSE 为 seq=0、type=assistant/chunk、ignorable=true、data={}，缺少 time=123、turn=7、step=2 与 chunk 对象，载荷断言失败。 | 是(H3) | 是 |
+| cursor-default | 3/1/0/0 | 1 | 3/0/0/0 | 0 | 缺省 after 从 -1 改为 0；decodedBrandAndHeaderPrecedenceRemainExplicit 期望 -1L，实为 0L，破坏从首事件前开始的缺省游标。 | 是(H4) | 是 |
+| cursor-header | 3/2/0/0 | 1 | 3/0/0/0 | 0 | 强制只取 query lastSeq，忽略 Last-Event-ID；头优先级断言期望 1L 实为 0L；malformedEscapesUtf8AndMultivaluesAreTyped400 的非法输入拒绝断言也因不抛异常失败。 | 是(H4) | 是 |
+| interrupt-preserve | 1/1/0/0 | 1 | 1/0/0/0 | 0 | 移除 !activeWriter.isInterrupted() 条件，使当前 writer 原已存在的中断不能保留；closePreservesAnAlreadyInterruptedWriter 中断标志期望 true 实为 false。 | 是(H5) | 是 |
+| b36-events | 21/1/0/0 | 1 | 21/0/0/0 | 0 | 在 rejection 拒绝分支为 /events 加豁免；fenceRejectsEvilHostAndOriginBeforeSourceWithLegal200Control 的不可信请求应 403 却得 200，证明 SSE 围栏被绕过。 | 是(H6) | 是 |
+| b37-writes | 21/6/1/0 | 1 | 21/0/0/0 | 0 | Content-Type 判断删除 !，是条件反转而非仅删除拒绝：缺失/表单/text/plain 与写方法非法 Content-Type 从应 415 变 200；正常 JSON 从应 200 变 415，并连带使 tail 响应 JSON 解析报 Unrecognized token 'content'。6 failures + 1 error 均符合该反转，详见例外说明。 | 是(H6) | 是 |
+
+Failure trace anchors
+以下文件均在上述证据根目录，行号指历史日志；括号内的 Java 行号仅引用日志栈帧，并非本次读取源码。
+- deadline-boundary：stop1-mut-deadline-boundary-red.log:5-20；registeredDeadlineRejectsAtBoundaryWithoutAnyWaiter，经 assertRpcCode 失败（ApprovalRelayTest:179→372）。
+- deadline-early：stop1-mut-deadline-early-red.log:5-18；terminalException→settle→responseBeforeDeadlineIsKeptAfterDeadline（ApprovalRelay:266→131；ApprovalRelayTest:190）。合法时刻 109、deadline 110 及 -32009 的细节来自既存 stop1-mut-deadline-early-adjudication.txt:2-9。
+- deadline-settle：stop1-mut-deadline-settle-red.log:5-20；registeredDeadlineRejectsAtBoundaryWithoutAnyWaiter（ApprovalRelayTest:179→372）。
+- retention-capacity：stop1-mut-retention-capacity-red.log:5-25；terminalRetentionIsBoundedAndOldHandleStillObservesItsOutcome（ApprovalRelayTest:244→373→374）。
+- retention-ttl：stop1-mut-retention-ttl-red.log:5-25；tombstoneExpiresAfterTenMinutesWithoutChangingOldDecision（ApprovalRelayTest:261→373→374）。
+- buffer-wakeup：stop1-mut-buffer-wakeup-red.log:5-21；idleDiffersFromEofAndAbortWakesWaiter（SseBufferTest:77），该用例约 1.056s 后报告断言失败。
+- buffer-frames：stop1-mut-buffer-frames-red.log:5-21；sixtyFifthQueuedFrameAbortsInsteadOfDroppingAndContinuing（SseBufferTest:20）。
+- buffer-bytes：stop1-mut-buffer-bytes-red.log:5-21；aggregateEncodedByteBudgetIsEightMiB（SseBufferTest:30）。
+- codec-payload：stop1-mut-codec-payload-red.log:5-41；completeAssistantChunkVariantsSurviveHttpAndResumeFromRealSequence（WebSseCodecContractTest:79），日志给出完整缺失字段断言。
+- cursor-default：stop1-mut-cursor-default-red.log:5-23；decodedBrandAndHeaderPrecedenceRemainExplicit（SseRequestTest:39）。
+- cursor-header：stop1-mut-cursor-header-red.log:5-34；malformedEscapesUtf8AndMultivaluesAreTyped400（SseRequestTest:24）及 decodedBrandAndHeaderPrecedenceRemainExplicit（SseRequestTest:38）。日志没有给出前者触发断言的具体非法字面量，本核验不猜测该值。
+- interrupt-preserve：stop1-mut-interrupt-preserve-red.log:5-24；closePreservesAnAlreadyInterruptedWriter→assertWriterInterruptPreserved（SseConnectionTest:71→97）。
+- b36-events：stop1-mut-b36-events-red.log:29-47；围栏用例的 403/200 断言（RpcHttpServerSseTest:123）。
+- b37-writes：stop1-mut-b37-writes-red.log:7-131；全部六条断言与一条 error 的栈及汇总均在，细分如下。
+
+Exceptions and interpretation
+1. deadline-early 原 audit 的 BEHAVIOR_RED=False、PASS=False 如实保留。
+   旧分类器只认 failure，实际 Surefire 把生产 RpcException 记作 error；不能据此将它排除为非行为红，也不能泛化为任意 error 都算杀死。此例有明确变异 >=-1、期前 1ns、approval expired 的调用栈、相同选择器复绿与 SHA 恢复，和既存 adjudication 一致，因此本次裁定捕获。其余 13 项 audit 均为 BEHAVIOR_RED=True、PASS=True；14 项均 BYTE_RESTORED=True。
+
+2. b37-writes 红侧的 6 failures + 1 error 全部解释为同一条件反转：
+   - postWithoutContentTypeYields415、postFormEncodedYields415、postTextPlainYields415：期望 415，实际 200。
+   - allWriteMethodsRejectInvalidContentTypeBeforeDispatch：[session/start] 期望 415，实际 200。
+   - e2eRoundTripsFiveMethodsOverHttpWithJsonContentType：正常 JSON 期望 200，实际 415。
+   - writeMethodPostWithoutOriginReachesSeam：[session/start] 正常 JSON 期望 200，实际 415。
+   - concurrentTailRequestsShareNoState：ExecutionException 包装 JsonParseException；tailResult 的 readTree 收到以 'content' 开头而非 JSON 的拒绝响应，解析在 line 1 column 8 失败（日志:8-34，RpcHttpServerTest:254/506/244）。这与正常 JSON 被反转闸错拒 415 的结果相符，不是新的并发共享状态或非突变 JSON 缺陷。还原后整个类 21/0/0/0、EXIT=0。
+
+3. 不把日志严重级别或 WARNING 当测试失败。
+   b36-events 的 missing SSE codec: test/chunk、SSE source returned null 诊断在 red.log:5-27 与 green.log:5-27 都存在；绿结果仍为 21/0/0/0。红侧实际唯一 failure 是围栏的 403→200，不将这些诊断另算环境红或新缺陷。各红日志的 Unsafe 弃用 WARNING、b37 的 HEAD content-length 警告也不是本次红因。
+
+4. 证明范围限于这 14 个具体突变。
+   每项都已有非零运行测试数、可解释的目标行为 failure/error 和还原后非零测试数的绿结果；所读红日志均进入 Surefire 测试阶段并给出相应栈，无一以编译/门禁/依赖解析/启动环境失败替代目标行为红。单个测试在首个断言失败后可能未执行后续断言：b37 写面失败标签只显示 session/start，b36 日志只定位一处围栏失败，codec 红只显示首个缺载荷断言；不据方法名称夸称所有分支、所有 chunk 变体或每个写方法均分别杀死突变，也不据本核验宣称当前压力测试/全量门禁通过。
+
+Byte restoration verification
+本次实际执行：在显式 dir_path=/Users/abel_yang/study/deepseek/javanatic-harness 下执行 date -Iseconds，并以 shasum -a 256 校验下面六个绝对路径；仅计算哈希，没有显示或核读源码正文。输出时刻为 2026-11-20T17:07:29+08:00。
+表内完整 SHA 均同时等于所覆盖各 audit 的 BEFORE_SHA256、AFTER_SHA256 与本次 CURRENT_SHA256。
+
+H1
+TARGET=/Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/ApprovalRelay.java
+SHA256=e823971216c489a28e100c7e312bd3d809737e1824025dcf952d1c6125965bed
+APPLIES=deadline-boundary, deadline-early, deadline-settle, retention-capacity, retention-ttl
+
+H2
+TARGET=/Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/SseBuffer.java
+SHA256=157a0f8070af8c96628182f2f72e7ec365e30131b67825950ad943baf4b4dfe0
+APPLIES=buffer-wakeup, buffer-frames, buffer-bytes
+
+H3
+TARGET=/Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/SseEncoder.java
+SHA256=81ed36f4b4fb44ab5e2b3dc255b3bd6ae5f6aec4289aa097c100d0d9c948d09c
+APPLIES=codec-payload
+
+H4
+TARGET=/Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/SseRequest.java
+SHA256=73757d0092080ea7d50da825fb76653d245d52d6b432d12c267d8e3a91531f69
+APPLIES=cursor-default, cursor-header
+
+H5
+TARGET=/Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/SseConnection.java
+SHA256=83eba0d8dfd3f10e4a55f77da52aeea388b656bfe51d3c3c46379ed78824bbbb
+APPLIES=interrupt-preserve
+
+H6
+TARGET=/Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/main/java/io/javanatic/harness/workbench/rpc/RpcHttpServer.java
+SHA256=760c15a80bd6fc18cdd73d33115f2d1fb78f024d9ab1248329b54637a215ad04
+APPLIES=b36-events, b37-writes
+
+Conclusion
+14/14 项定向突变均由历史测试捕获：红因符合被破坏行为，无编译/环境假红；对应历史还原后结果全部 EXIT=0、F=E=S=0，测试数与红侧一致。14/14 项历史恢复哈希相等，所涉 6/6 个目标文件本次 SHA 也与各 BEFORE/AFTER 相等。唯一历史分类结论例外是 deadline-early 的 PASS=False（已有裁决且不回写）；b37 的 JSON 解析 error 是条件反转的连带结果，不新增非突变缺陷。本结论仅核验既有证据与当前目标字节恢复，不声称本次运行过任何测试。

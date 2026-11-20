@@ -1,0 +1,11 @@
+measured=2026-11-20T13:49:08.302734
+local_links_checked=99 missing=0
+changed_java_md_txt_whitespace=PASS (raw .log excluded by .gitattributes)
+source_snapshot_8_files=UNCHANGED
+B36_B37_source_restored=PASS
+git_diff_check_EXIT=0
+HEAD=b71c6174c3411c143229786a44b3ce00cfa253f0
+LOCAL_ONLY_COMMITS:
+b71c617 test(examples): TwoHostLostProbe 条件等待 + fsync 证据
+0e4f958 docs(plan): it38 四确认裁决落盘 + ADR 0012 零写面终结
+no_remote_query_or_push_performed
