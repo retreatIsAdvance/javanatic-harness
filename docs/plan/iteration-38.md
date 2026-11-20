@@ -1,4 +1,4 @@
-# 迭代 38 — W5 交互工作台（状态：四确认草案待评审（2026-11-19）；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
+# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），开工首批进行中；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
 
 基线：it37 已关账（0.5.0 全链闭环：Central 71 坐标 + GitHub Release 8 归档 + tag；最终 head `b568ef8`），工作版本 `0.6.0-SNAPSHOT`。**版本号与顺序已裁（2026-11-17）：先 0.5.0 发布（it37），W5 = 0.6.0**——版本叙事对齐治理叙事：0.5.0 把「零写面只读工作台」作为完整自洽的能力相位发布收口；「零写面不变量的终结」是叙事反转，配 ADR 配新 minor 号，patch 号不承载这种重量；发布后 W5 在**已发布基线**上动写面，回退面干净。路线表新起行（0.6.0），不混入已关账的 0.5 行：W5 显式终结零写面不变量，属新能力相位。
 
@@ -9,6 +9,17 @@
 1. **dsh 侦察三发现全部采纳**：① **Host/Origin 信任围栏升格 B 行准入条件（B36）**——不是 T 项候选：B29 回环恒绑防的是网络面（远程主机连不进来），防不了浏览器面（恶意网页可从用户浏览器向 `127.0.0.1:<port>` 发 POST，SOP 只挡读响应不挡发请求）；读面时代风险低，**写面一开就是「你访问的任何网站都能驱动你的 agent」**。要求与重访条件见下节 + [boundary-register B36](boundary-register.md)。② **审批超时口径**——JH 300s fail-closed 是 it22 自有契约（dsh 无此面，grep 零命中实证），中继不放宽 = 四确认**硬约束**。③ **SSE vs WS**——「写面是一次性 POST → 单向下行足够」推理成立，零新依赖纪律保持；`/events` 走显式修约（不动 W4 T1 契约的静默破口）纪律保持。
 2. **顺序裁定：先 0.5.0，W5 = 0.6.0**——it37 = 0.5.0 发布工程（it32 全模板复用），it38 = W5（0.6.0 周期首站）。
 3. **B36 预登记随 it37 文档批先行落位**（本批）；对既有读面的防御性回补由 it37 评估（低成本高价值，0.5.0 带上更好——评估结论与取舍见 [iteration-37](iteration-37.md)）。
+
+## 四确认评审裁决（2026-11-20，通过）
+
+- **ADR 0012 批准**：四条终结条件即评审标准；状态「已裁决（实施中）」，note 已落 `notes/0012-zero-write-surface-end.md`（2026-11-20，开工首批）。
+- **内容九项全过；T1–T7 全批**，附三处注记/增补：
+  1. **T1 精度**（停 1 评审重点）：seam 接口设计必须让 rpc 无 headless 可测——接口进 rpc、实现进 headless，与 `SessionPersistence`/`SessionTail` 同款。
+  2. **T2 注记**（同步写入「明确不做」）：inbox 的 `NEXT_TURN`/`NEXT_STEP` 机制是现存的 steer 通道——「拒绝」是自觉选择，不是无知；steer 支持挂账为升级路径。
+  3. **T4 增补**：`/events` 必须**无条件**过 B36/B37 围栏（GET 同样在 dispatch 面），写入设计，防实现时漏。
+  4. **R4 增补**（收进内容⑦）：写面成为治理相关能力后，`--verify` 与 serve 启动 banner 应可证明其状态——增 `web-write: off（缺省）` / `on（--web-write）` 行，兼入停 3 verify 项。
+- **停 1 评审重点（预告）**：① seam 接口形状；② 审批中继一次性结算状态机 + 300s 真时钟集成（fail-closed 在中继下的语义，本站最重的一件）；③ B36 写面复验突变；④ SSE 围栏覆盖 + `Last-Event-ID=seq` 续传语义（seq = R1 信封序，回放安全的地基）。
+- **执行序**：开工首批 = ADR 0012 入 notes + TwoHostLostProbe 手术 + 停 1 seam 契约；push 两笔（`00768be` + `be8df00`）已授权并落地（远端 head `be8df00` 实核）。
 
 ## 准入条件：B36 Host/Origin 信任围栏（预登记，写面开工前必须落地）
 
@@ -39,7 +50,7 @@
 4. **流式推送**：SSE（`GET /events`）——`Last-Event-ID` 直接映射 `LoggedEvent` 的 seq 游标，keep-alive 注释帧，浏览器 EventSource 原生长活重连；消费 `assistant/chunk` 等既有事件，**事件源与 R1 面不动**。若评审改裁轮询腿，则零路由修约、活跃会话短间隔 poll 既有 tail 方法。
 5. **轮生命周期 UI 状态机**：running / waiting-approval / **waiting-answer（exit 5）** / done；等答复态 = 浏览器内问题 + 答复框（`session/send` 即 resume）；**不引入问题超时**——JH exit 5 语义本就是无限等（与 dsh TimedQuestionWait 的差异登记在案，不随 dsh）。
 6. **安全准入**：B36 写面复验——it37 读面围栏（Host 白名单 + Origin 拒跨站）已在 `dispatch` 前置、覆盖一切方法；本站以测试钉死写面方法组的拒绝阶梯与突变必红，B29 回环恒绑不变。
-7. **写面开关**：新增 `--web-write`（缺省关）——关时行为与 0.5.0 完全一致（只读 UI）；开时 UI 出现聊天 / 审批 / 答复控件。见待裁 T6。
+7. **写面开关**：新增 `--web-write`（缺省关）——关时行为与 0.5.0 完全一致（只读 UI）；开时 UI 出现聊天 / 审批 / 答复控件。见待裁 T6。R4 可断言面：`--verify` 与 serve 启动 banner 显示 `web-write: off（缺省）` / `on（--web-write）`（2026-11-20 评审增补，停 3 verify 项同收）。
 8. **开工首批（独立于三停）**：观察账手术——`ProbeHostA` 固定 `Thread.sleep(800)` 改条件等待（job 日志 / Running 快照出现，带截止与失败诊断），`halt(0)` 前给出已 fsync 的可观察证据；不动产品代码。
 9. **同步面**：`docs/design/12`（CLI flag + JSON-RPC 方法面稳定面增量）、`05`/`00`（写面准入与 ADR 引用）、README / roadmap / current-state、AGENTS（如需）、0.6.0 release notes 后置。
 
@@ -56,16 +67,16 @@
 
 ### 明确不做
 
-steer / prompt queue（在途轮打断与排队——JH 无队列面，新语义）；附件上传；多用户 / 认证 / TLS / 远程暴露（B29 硬线）；jobs 运行中任务面（T7 延后）；问题超时（exit 5 语义不变）；WebSocket；动态配置热重载；node / 前端构建链；执行面重构或向后端迁移。
+steer / prompt queue（在途轮打断与排队——JH 无队列面，新语义；注记：inbox `NEXT_TURN`/`NEXT_STEP` 即现存 steer 通道，拒绝为自觉选择，steer 支持挂账为升级路径）；附件上传；多用户 / 认证 / TLS / 远程暴露（B29 硬线）；jobs 运行中任务面（T7 延后）；问题超时（exit 5 语义不变）；WebSocket；动态配置热重载；node / 前端构建链；执行面重构或向后端迁移。
 
 ## 待裁（T1–T7，拟案）
 
 | # | 待裁项 | 拟案 | 依据 |
 |---|---|---|---|
 | T1 | **写面代码归属与 seam 形状** | **批（workbench/rpc 内契约 + headless 注入实现）**：增写面 seam 接口（`session/start`、`send`、`cancel`、`approval/respond` 四动作），实现类放 `examples/headless`（唯一 AppBoot 组合点，与 projection/tail 注入同构）；零新发布坐标、零新模块、镜像 69 不动。备选（若停 1 评审认定 seam 过大）：独立 `workbench/chat` 模块（+1 发布坐标，须重议 0.6.0 发布面） | 预登记锚 1「全部复用既有执行面」；`WorkbenchRpc` 现有双 seam 构造注入先例；`core/agent` 公开 `start/followup/cancel` |
-| T2 | **在途轮的 `session/send` 处置** | **批拒绝**：running 轮的重复 send 返回 JSON-RPC 业务错误（「turn in flight」，code 停 1 钉死），不排队、不打断。重访条件 = 用户点名后台排队或 steer | dsh `prompt` 有 queue/steer 双模，JH 无队列面；首版最小语义，避免隐式并发 |
+| T2 | **在途轮的 `session/send` 处置** | **批拒绝**：running 轮的重复 send 返回 JSON-RPC 业务错误（「turn in flight」，code 停 1 钉死），不排队、不打断。重访条件 = 用户点名后台排队或 steer。**注记（2026-11-20 评审）：inbox `NEXT_TURN`/`NEXT_STEP` 是现存 steer 通道——拒绝是自觉选择，不是无知；steer 支持挂账为升级路径** | dsh `prompt` 有 queue/steer 双模，JH 无队列面；首版最小语义，避免隐式并发 |
 | T3 | **审批中继令牌与结算形状** | **批（server 发号 + 一次性结算）**：server 每次审批发 UUID；下行事件携带 requestId + toolName + summary；`approval/respond` 必带 requestId，首答结算、迟到/重复回业务错误并在 UI 显「已过期/已结算」；300s 与 `--approval-timeout` 不动；UI 词表只暴露「允许 / 拒绝」（cancelled/unavailable 归 host） | dsh `ApprovalRequestId` + 一次性 retire 先例；JH `ApprovalService.ApprovalRequest` 目前无 ID（需中继层发号）；it22 等待界契约 |
-| T4 | **流式推送实现腿** | **批 SSE**：`GET /events` 显式修约 W4 T1（仅精确 `/` GET/HEAD），`Last-Event-ID` = seq、keep-alive、慢消费者有界队列满即断开由 EventSource 重连续传；停 1 重钉 dispatch 测试。备选轮询腿（零修约）保留为评审可翻 | recon-streaming T 项三行成本/收益；SSE 零新依赖；W4 T1 用户原话「别静默破契」 |
+| T4 | **流式推送实现腿** | **批 SSE**：`GET /events` 显式修约 W4 T1（仅精确 `/` GET/HEAD），`Last-Event-ID` = seq、keep-alive、慢消费者有界队列满即断开由 EventSource 重连续传；停 1 重钉 dispatch 测试。**`/events` 必须无条件过 B36/B37 围栏（GET 同在 dispatch 面，2026-11-20 评审增补）**。备选轮询腿（零修约）保留为评审可翻 | recon-streaming T 项三行成本/收益；SSE 零新依赖；W4 T1 用户原话「别静默破契」 |
 | T5 | **审批 / 问题 UI 形状** | **批 composer takeover 非模态**：接管输入区，不浮层；审批 Enter = 允许 / Escape = 拒绝，问题 Enter = 提交（Shift+Enter 换行）；IME 组合守卫（composition 事件）防中文输入误提交 | dsh ApprovalPanel 先例；vanilla JS 可做；中文受众 IME 必要 |
 | T6 | **写面默认开关** | **批缺省关 + `--web-write` opt-in**：无该 flag 时行为与 0.5.0 完全一致（只读 UI、零写方法）；带 flag 才暴露写方法组与控件；`--web-write` 无 `--serve` = 用法错误（exit 2）。备选默认开——与「0.6 主题即写面」一致，但改变既有 `--serve` 语义；拟案取 fail-closed 优先 | B29 单用户信任模型 + fail-closed 传统；0.5.0 的 `--serve` 承诺是只读面；用户可显式选择 |
 | T7 | **jobs 面并站** | **批延后**：W5 不做，重访条件 = 用户点名 jobs 视图（沿用 W4 T2 口径） | it34/it36 两次挂账；与本站主题不同轴 |
@@ -76,7 +87,7 @@ steer / prompt queue（在途轮打断与排队——JH 无队列面，新语义
 - **裁决**：显式终结「零写面不变量」；终结的条件 = ①写面全部复用既有执行面（ToolExecutor 管线 + ApprovalService，R2 不开新通道）；②审批中继不降格（300s fail-closed 原样）；③B36 Host/Origin 围栏对写方法组同样生效（突变必红）；④写面由 `--web-write` 显式开启，缺省仍只读。
 - **推翻对象**：0.5.0 发布承诺「v1 零 server 写面」在 0.6.0 不再适用（[release-notes-0.5.0](../release-notes-0.5.0.md) §零写面）；[iteration-35](iteration-35.md) T6「会话控制写 v1 只读」的挂账由本站收口；[iteration-36](iteration-36.md) T3 的「server 零写路径」只是 W4 首版划界，本节不追溯改判历史文档。**不否定 0.5.0 已发布事实**——0.5.0 仍是一段完整、可独立讲述的只读能力相位。
 - **后果**：稳定面增量（新 CLI flag + 新 JSON-RPC 方法）须记入 [12](../design/12-api-stability.md)；写面成为 0.6.0 的正式承诺；后续版本不得以「兼容」名义把写面默认打开而不经新的裁决。
-- **状态**：`已裁决（实施中）`——四确认通过后随停 1 落 `notes/0012-zero-write-surface-end.md` 并互链。
+- **状态**：`已裁决（实施中）`——note 已落 [notes/0012](../../.agents/notes/0012-zero-write-surface-end.md) 并与索引互链（2026-11-20）；实现随停 1–3 推进。
 
 ## 流程锚（用户原文）
 
@@ -126,8 +137,9 @@ dsh 三张清单落 `evidence/iteration-38/`（原 `evidence/iteration-37/`，�
 
 ## 验收清单（骨架，随停点细化）
 
-- [ ] 四确认通过并落盘（本草案评审）
-- [ ] 开工批：TwoHostLostProbe 手术（条件等待）完成，聚焦 + 重复跑绿
+- [x] 四确认通过并落盘（2026-11-20 评审：ADR 0012 批准、T1–T7 全批，含 T2/T4/R4 三处注记增补）
+- [x] 开工批：TwoHostLostProbe 手术（条件等待 + fsync 证据）完成——聚焦 1/0/0/0 + CPU 饱和 5/5 绿 + 突变 M1 必红复绿（[证据](evidence/iteration-38/startup-batch-flake-surgery.txt)）
+- [x] ADR 0012 入 notes 并互链（[0012-zero-write-surface-end.md](../../.agents/notes/0012-zero-write-surface-end.md)，2026-11-20）
 - [ ] 停 1 评审放行（写面契约 + B36 写面复验 + 中继契约 + ADR 0012）
 - [ ] 停 2 评审放行（中继实现 + SSE + 状态机 + UI）
 - [ ] 停 3 真机验收：jlink `--serve --web-write` → 浏览器跑通开轮/流式/审批/答复/取消 + 用户检视实录

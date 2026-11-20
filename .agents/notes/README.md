@@ -24,6 +24,7 @@
 | [0008](0008-web-search-provider-and-token-gap.md) | 搜索 Provider：原生结构化来源，keyless 双态与 token 缺口 | 已实施 | it28 | [stop2-real-probe](../../docs/plan/evidence/iteration-28/stop2-real-probe.txt) |
 | [0009](0009-lsp-observation-anchor.md) | LSP 诊断锚定 JH 观察时点，不证明 LS 分析来源或完成 | 已裁决（实施中） | it29 | [stop0-acceptance.txt](../../docs/plan/evidence/iteration-29/stop0-acceptance.txt)、[stop1-acceptance.txt](../../docs/plan/evidence/iteration-29/stop1-acceptance.txt) |
 | [0011](0011-web-ui-non-goal-reversal.md) | Web UI 非目标改判：本地回环 Web UI 入 0.5 W4；远程/多租户维持不做 | 已裁决（实施中） | it35 | [stop2-serve-design.md](../../docs/plan/evidence/iteration-35/stop2-serve-design.md) §4 |
+| [0012](0012-zero-write-surface-end.md) | 零写面不变量终结：W5 写面入 0.6.0（四条终结条件 + `--web-write` 显式开启） | 已裁决（实施中） | it38 | [iteration-38.md](../../docs/plan/iteration-38.md) 评审裁决 |
 
 ## 与停点评审的关系
 
