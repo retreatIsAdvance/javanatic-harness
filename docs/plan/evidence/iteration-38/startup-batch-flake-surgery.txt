@@ -1,0 +1,59 @@
+# it38 开工首批：TwoHostLostProbe 手术证据
+
+日期：2026-11-20。范围：`examples/headless` 测试夹具（不动产品代码）。触发：观察账成员第二次 CI 再现（2026-11-19，`9f3758d` run 44471341289 attempt 1 macos 腿，`TwoHostLostProbeTest:68`）。
+
+## 根因
+
+`ProbeHostA` 在 `jobs.start(...)` 后固定 `Thread.sleep(800)` 即 `persistence.save(session)`，随即 `halt(0)`。job 侧 `LocalJobService` 的 `session.append(JobSnapshotEvent)` 是异步落账：慢 runner 上 800ms 内未 append 时，save 为增量语义写入零条，`sessions/<id>/log.jsonl` 根本不存在；`halt(0)` 又绕过任何优雅刷盘。宿主 B 的 `jobLog exists` 断言即红。
+
+## 手术
+
+`ProbeHostA`：
+
+1. **条件等待替代固定时延**：轮询会话事件账，直到出现 `JobSnapshotEvent` 且状态为 `JobState.Running`（25ms 间隔，30s 截止）；超时打印 `PROBE_A_FAILED: timed out waiting for Running job snapshot after PT30S` 并 `halt(3)`，带诊断大声失败。
+2. **fsync 可观察证据**：save 后 `FileChannel.open(log, WRITE).force(true)`，再回读日志确认 `job/snapshot` 且字节数 > 0，打印 `PROBE_A_FSYNCED <path> bytes=<n>`；缺失同样 fail loud（`halt(3)`）。
+
+`TwoHostLostProbeTest`：新增断言——宿主 A 输出必须含 `PROBE_A_FSYNCED`（「硬崩前已 fsync 并回读」成为可断言证据，而非仅口头流程）。
+
+## 验证
+
+### 1. 聚焦测试
+
+```sh
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+~/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am \
+  -Dtest=TwoHostLostProbeTest -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+结果：`TEST_EXIT=0`；surefire XML（mtime 2026-11-20 09:08）
+`tests="1" errors="0" skipped="0" failures="0"`（TEST-io.javanatic.harness.examples.headless.TwoHostLostProbeTest.xml）。
+
+### 2. CPU 饱和重复跑（5 轮）
+
+同一命令循环 5 轮，期间 6 个 `while :; do :; done` 烧核进程并发（本机 CPU 饱和）：
+
+```text
+RUN1 EXIT=0
+RUN2 EXIT=0
+RUN3 EXIT=0
+RUN4 EXIT=0
+RUN5 EXIT=0
+```
+
+### 3. 突变 M1（门是否承重）
+
+把等待条件 `JobState.Running` 改为 `JobState.Lost`（永不成立）后重跑：
+
+```text
+PROBE_A_FAILED: timed out waiting for Running job snapshot after PT30S
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 30.82 s
+[ERROR] TwoHostLostProbeTest.killedHostRunningJobBecomesLostWithReadableRelic:64 [宿主 A 必须在硬崩前打出 MARKER]
+MUT_EXIT=1
+```
+
+还原为 `JobState.Running` 后逐字节一致，复跑 `RESTORE_EXIT=0`、XML `1/0/0/0`；残留检查
+`grep -n "JobState\.\(Running\|Lost\)" ProbeHostA.java` 仅命中 `Running` 一行。
+
+## 结论
+
+固定时延假设消除；宿主 A 的「Running 快照已入账 + 已 fsync 可回读」在 halt 前均有可观察证据。观察账条目可关闭（仍随 CI 继续观察，若再现则按新证据处理）。

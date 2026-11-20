@@ -62,6 +62,8 @@ class TwoHostLostProbeTest {
                     .forEach(System.err::println);
         }
         assertThat(marker).as("宿主 A 必须在硬崩前打出 MARKER").isNotNull();
+        assertThat(hostALines.stream().anyMatch(line -> line.contains("PROBE_A_FSYNCED")))
+                .as("宿主 A 在硬崩前已 fsync 并回读 job/snapshot（可观察证据）").isTrue();
 
         Path jobLog = sessions.resolve(jobSession).resolve("log.jsonl");
         Path idleLog = sessions.resolve(idleSession).resolve("log.jsonl");
