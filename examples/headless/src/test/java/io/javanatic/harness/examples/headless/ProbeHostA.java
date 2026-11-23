@@ -5,10 +5,13 @@ import io.javanatic.harness.agent.AgentOptions;
 import io.javanatic.harness.agent.AgentRegistry;
 import io.javanatic.harness.agent.CreateAgentOptions;
 import io.javanatic.harness.boot.AppBoot;
+import io.javanatic.harness.jobs.Job;
 import io.javanatic.harness.jobs.JobRequest;
 import io.javanatic.harness.jobs.JobService;
+import io.javanatic.harness.jobs.JobSnapshot;
 import io.javanatic.harness.jobs.JobState;
 import io.javanatic.harness.jobs.local.JobSnapshotEvent;
+import io.javanatic.harness.kernel.brand.Id;
 import io.javanatic.harness.kernel.config.ConfigRowSpec;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.session.Session;
@@ -67,10 +70,11 @@ public final class ProbeHostA {
                 CreateAgentOptions.of(Session.newId(jobSession), new AgentOptions("replay", "m")));
         Session session = handle.agent().session();
         JobService jobs = rt.root().require(JobService.KEY);
-        jobs.start(new JobRequest(
+        JobSnapshot started = jobs.start(new JobRequest(
                 "echo relic-" + jobSession + (windows() ? "; Start-Sleep -Seconds 60" : "; sleep 60"),
                 ws, Duration.ofSeconds(120), 8192));
         awaitRunningSnapshot(session);
+        awaitRelicCaptured(jobs, started.id(), "relic-" + jobSession);
         persistence.save(session);
         fsyncAndVerify(sessions.resolve(jobSession).resolve("log.jsonl"));
         System.out.println("PROBE_A_READY");
@@ -96,6 +100,24 @@ public final class ProbeHostA {
             sleepQuietly();
         }
         failProbe("timed out waiting for Running job snapshot after " + SNAPSHOT_TIMEOUT);
+    }
+
+    /**
+     * 遗物可读的最小前置：Windows 上 pwsh 启动比 POSIX shell 慢，首行可能在宿主硬崩
+     * 之后才进捕获文件——waitFor(Running) 只保证快照入账，不保证输出已捕获。等标记
+     * 真出现在 read 游标里再崩，避免把"启动慢"误报成"遗物不可读"。
+     */
+    private static void awaitRelicCaptured(JobService jobs, Id<Job> id, String marker) {
+        long deadline = System.nanoTime() + SNAPSHOT_TIMEOUT.toNanos();
+        while (System.nanoTime() < deadline) {
+            if (jobs.read(id, 0, 8192).text().contains(marker)) {
+                System.out.println("PROBE_A_RELIC_READY");
+                System.out.flush();
+                return;
+            }
+            sleepQuietly();
+        }
+        failProbe("timed out waiting for relic output '" + marker + "' after " + SNAPSHOT_TIMEOUT);
     }
 
     /** halt 前可观察证据：fsync 落盘并回读 job/snapshot，字节数与内容双证。 */

@@ -73,7 +73,7 @@ class R1ReplayHashTest {
             List.of(
                 new StreamChunk.Delta("读"),
                 new StreamChunk.DeltaToolUse(CallId.of("c1"), "fs_read",
-                    "{\"path\":\"" + note + "\"}"),
+                    "{\"path\":\"" + jsonPath(note) + "\"}"),
                 new StreamChunk.Finish(FinishReason.TOOL_USE)),
             List.of(new StreamChunk.Delta("done"), new StreamChunk.Finish(FinishReason.STOP)));
 
@@ -151,6 +151,11 @@ class R1ReplayHashTest {
             }
             assertThat(rebuilt.deriveMessages().size()).isEqualTo(4);
         }
+    }
+
+    /** 工具参数 JSON 内的路径：Windows 反斜杠必须转义，否则 fs_read 拿到非法 JSON。 */
+    private static String jsonPath(Path path) {
+        return path.toString().replace("\\", "\\\\");
     }
 
     /** 两腿同段集:静态 + 动态(工具结果计数,自日志派生)——同日志必同提示词(R1)。 */

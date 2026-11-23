@@ -103,7 +103,7 @@ class WebChatControlTest {
     @Test
     void approvalAllowCompletesRoundAndRetiresRuntime() throws Exception {
         Path note = Files.writeString(workspace.resolve("note.txt"), "hello-note");
-        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
+        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         scripts.add(answerScript("已读"));
 
         WebApprovalHub hub = new WebApprovalHub(0);
@@ -167,7 +167,7 @@ class WebChatControlTest {
     @Test
     void deniedApprovalSurfacesHumanGateDenialToTheModel() throws Exception {
         Path note = Files.writeString(workspace.resolve("note.txt"), "secret");
-        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
+        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         scripts.add(answerScript("已拒绝"));
 
         WebApprovalHub hub = new WebApprovalHub(0);
@@ -191,8 +191,8 @@ class WebChatControlTest {
     @Test
     void multiStepSameTurnKeepsSingleLease() throws Exception {
         Path note = Files.writeString(workspace.resolve("note.txt"), "multi-step");
-        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
-        scripts.add(toolCallScript("c2", "fs_read", "{\"path\":\"" + note + "\"}"));
+        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
+        scripts.add(toolCallScript("c2", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         scripts.add(answerScript("读完"));
 
         WebApprovalHub hub = new WebApprovalHub(0);
@@ -221,8 +221,8 @@ class WebChatControlTest {
     void concurrentRootSessionsKeepFeedsAndAuditSeparate() throws Exception {
         Path noteA = Files.writeString(workspace.resolve("a.txt"), "note-a");
         Path noteB = Files.writeString(workspace.resolve("b.txt"), "note-b");
-        scripts.add(toolCallScript("ca", "fs_read", "{\"path\":\"" + noteA + "\"}"));
-        scripts.add(toolCallScript("cb", "fs_read", "{\"path\":\"" + noteB + "\"}"));
+        scripts.add(toolCallScript("ca", "fs_read", "{\"path\":\"" + jsonString(noteA.toString()) + "\"}"));
+        scripts.add(toolCallScript("cb", "fs_read", "{\"path\":\"" + jsonString(noteB.toString()) + "\"}"));
         scripts.add(answerScript("A 完成"));
         scripts.add(answerScript("B 完成"));
 
@@ -263,7 +263,7 @@ class WebChatControlTest {
     @Test
     void sendWhileTurnInFlightIsRejected() throws Exception {
         Path note = Files.writeString(workspace.resolve("note.txt"), "busy");
-        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
+        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         scripts.add(answerScript("好了"));
 
         WebApprovalHub hub = new WebApprovalHub(0);
@@ -286,7 +286,7 @@ class WebChatControlTest {
     @Test
     void cancelRevokesOnlyThatSessionLeaseAndRetiresRuntime() throws Exception {
         Path note = Files.writeString(workspace.resolve("note.txt"), "cancel-me");
-        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
+        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
 
         WebApprovalHub hub = new WebApprovalHub(0);
         WebChatControl control = newControl(hub);
@@ -307,8 +307,8 @@ class WebChatControlTest {
     @Test
     void closeRevokesAllLeasesAndRetiresEveryRuntime() throws Exception {
         Path note = Files.writeString(workspace.resolve("note.txt"), "close-me");
-        scripts.add(toolCallScript("ca", "fs_read", "{\"path\":\"" + note + "\"}"));
-        scripts.add(toolCallScript("cb", "fs_read", "{\"path\":\"" + note + "\"}"));
+        scripts.add(toolCallScript("ca", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
+        scripts.add(toolCallScript("cb", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
 
         WebApprovalHub hub = new WebApprovalHub(0);
         WebChatControl control = newControl(hub);
@@ -331,7 +331,7 @@ class WebChatControlTest {
     @Test
     void retainedRoundReusesRuntimeForNextSendThenRetiresAtJobTerminal() throws Exception {
         scripts.add(toolCallScript("j1", "job_start", "{\"command\":\"" + longSleepCommand()
-            + "\",\"cwd\":\"" + workspace + "\",\"timeoutSeconds\":30}"));
+            + "\",\"cwd\":\"" + jsonString(workspace.toString()) + "\",\"timeoutSeconds\":30}"));
         scripts.add(answerScript("任务已起"));
         scripts.add(answerScript("第二轮"));
 
@@ -365,9 +365,9 @@ class WebChatControlTest {
     void delegationChildApprovalStaysInParentFeedAndTreeRetiresAtTerminal() throws Exception {
         Path note = Files.writeString(workspace.resolve("child-note.txt"), "child-note");
         parentScripts.add(toolCallScript("d1", "delegate", "{\"task\":\"TASK-CHILD read the note\","
-            + "\"cwd\":\"" + workspace + "\",\"budgetTokens\":5000}"));
+            + "\"cwd\":\"" + jsonString(workspace.toString()) + "\",\"budgetTokens\":5000}"));
         parentScripts.add(answerScript("已派出"));
-        childScripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
+        childScripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         childScripts.add(answerScript("child done"));
         router.set(request -> request.contains("PARENT-MARKER") ? parentScripts.poll() : childScripts.poll());
 
@@ -405,9 +405,9 @@ class WebChatControlTest {
     void cancelParentDoesNotRevokeChildLease() throws Exception {
         Path note = Files.writeString(workspace.resolve("child-note.txt"), "child-note");
         parentScripts.add(toolCallScript("d1", "delegate", "{\"task\":\"TASK-CHILD read the note\","
-            + "\"cwd\":\"" + workspace + "\",\"budgetTokens\":5000}"));
-        parentScripts.add(toolCallScript("p2", "fs_read", "{\"path\":\"" + note + "\"}"));
-        childScripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
+            + "\"cwd\":\"" + jsonString(workspace.toString()) + "\",\"budgetTokens\":5000}"));
+        parentScripts.add(toolCallScript("p2", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
+        childScripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         childScripts.add(answerScript("child done"));
         router.set(request -> request.contains("PARENT-MARKER") ? parentScripts.poll() : childScripts.poll());
 
@@ -446,10 +446,10 @@ class WebChatControlTest {
     void cancelChildSessionAloneStopsOnlyChildTurn() throws Exception {
         Path note = Files.writeString(workspace.resolve("child-note.txt"), "child-note");
         parentScripts.add(toolCallScript("d1", "delegate", "{\"task\":\"TASK-CHILD read the note\","
-            + "\"cwd\":\"" + workspace + "\",\"budgetTokens\":5000}"));
-        parentScripts.add(toolCallScript("p2", "fs_read", "{\"path\":\"" + note + "\"}"));
+            + "\"cwd\":\"" + jsonString(workspace.toString()) + "\",\"budgetTokens\":5000}"));
+        parentScripts.add(toolCallScript("p2", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         parentScripts.add(answerScript("parent done"));
-        childScripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
+        childScripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         childScripts.add(answerScript("child done"));
         router.set(request -> request.contains("PARENT-MARKER") ? parentScripts.poll() : childScripts.poll());
 
@@ -516,7 +516,7 @@ class WebChatControlTest {
     void staleGenerationCleanupDoesNotRevokeNewRoundLease() throws Exception {
         Path note = Files.writeString(workspace.resolve("note.txt"), "gen-note");
         scripts.add(answerScript("第一轮"));
-        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + note + "\"}"));
+        scripts.add(toolCallScript("c1", "fs_read", "{\"path\":\"" + jsonString(note.toString()) + "\"}"));
         scripts.add(answerScript("第二轮"));
 
         WebApprovalHub hub = new WebApprovalHub(0);
@@ -548,6 +548,12 @@ class WebChatControlTest {
             control.close();
             hub.close();
         }
+    }
+
+    /** Windows 反斜杠在 JSON 字符串里必须双写；本机无 Windows 也能钉住这一支。 */
+    @Test
+    void toolArgumentJsonEscapesWindowsSeparators() {
+        assertThat(jsonString("C:\\tmp\\note.txt")).isEqualTo("C:\\\\tmp\\\\note.txt");
     }
 
     // ────────── 夹具 ──────────
@@ -642,6 +648,11 @@ class WebChatControlTest {
         return "data: {\"choices\":[{\"delta\":{\"content\":\"" + text + "\"}}]}\n\n"
             + "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n"
             + "data: [DONE]\n\n";
+    }
+
+    /** 工具参数 JSON 内的字符串字面量：Windows 路径含反斜杠，必须转义才成合法 JSON。 */
+    private static String jsonString(String raw) {
+        return raw.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private static String toolCallScript(String callId, String name, String arguments) {
