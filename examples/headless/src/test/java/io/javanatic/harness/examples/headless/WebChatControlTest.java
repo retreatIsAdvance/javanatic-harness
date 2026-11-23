@@ -240,7 +240,8 @@ class WebChatControlTest {
                 .isNotEqualTo(hub.snapshot(b).pending().get(0).requestId());
 
             control.respondApproval(hub.snapshot(a).pending().get(0).requestId(), true);
-            await(() -> control.completedTurns(a) == 1);
+            // A 收尾与 runtime 退休是两步：等 A 真退到只剩 B 一个，别把 Windows 的滞后当未退休。
+            await(() -> control.completedTurns(a) == 1 && control.openRuntimeCount() == 1);
             assertThat(control.openRuntimeCount()).as("B 的轮仍在途，runtime 未退休").isEqualTo(1);
             assertThat(hub.snapshot(b).pending()).hasSize(1);
 
