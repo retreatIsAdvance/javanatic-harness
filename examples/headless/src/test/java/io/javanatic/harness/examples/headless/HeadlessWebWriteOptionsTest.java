@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -100,6 +101,20 @@ class HeadlessWebWriteOptionsTest {
         assertThat(result.exit()).isEqualTo(1);
         assertThat(result.stdout()).isEmpty();
         assertNoSessionCreated();
+    }
+
+    @Test
+    void approvalTimeoutOverrideReportsOnlyRealMismatch() {
+        // 组合行显式值 ≠ 中继实际值：必须留痕（停 3 §4 裁决：配置被忽略不得静默）
+        assertThat(HeadlessMain.approvalTimeoutOverride(Map.of("idleTimeoutSeconds", 600), 300))
+            .contains("approval timeout: 300s（组合行 idleTimeoutSeconds=600 被中继覆盖）");
+        // 相等 / 未写配置：无任何行——不伪造「被覆盖」
+        assertThat(HeadlessMain.approvalTimeoutOverride(Map.of("idleTimeoutSeconds", 300), 300))
+            .isEmpty();
+        assertThat(HeadlessMain.approvalTimeoutOverride(Map.of(), 300)).isEmpty();
+        // 中继 0 = 不设限：文案陈述事实而不是「0s」
+        assertThat(HeadlessMain.approvalTimeoutOverride(Map.of("idleTimeoutSeconds", 600), 0))
+            .contains("approval timeout: 不设限（组合行 idleTimeoutSeconds=600 被中继覆盖）");
     }
 
     private void assertNoSessionCreated() throws Exception {

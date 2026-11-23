@@ -83,6 +83,7 @@ DEEPSEEK_API_KEY=sk-... dist/jh/target/jlink-image/bin/jh --workspace=<已存在
 # --sessions[=<N>] 列会话（id/状态/cwd/最后活动/事件数；keyless 只读，缺省 20，与任务文本/--resume/--verify 互斥）
 # --session=<id> [--session-view=<view>] 只读检视会话日志（it33：五视图 turns/tools/usage/timeline/messages，
 #   缺省 turns；keyless、零写路径；与任务文本/--resume/--verify/--sessions 互斥；id 不存在或写者锁冲突 exit 3）
+# --serve [--port=<N>] [--web-write] 本地回环工作台（keyless；缺省 8787；--web-write 显式开聊天/审批写面 + SSE /events）
 # --resume=<id> 不带任务文本 → 在该既有会话上进 REPL 续聊
 # --resume 命中占用（另一进程/实例持写者锁）fail loud：exit 3、stdout 为空
 # 任务结果契约（it17；it22 增「等待答复」）：
@@ -117,7 +118,7 @@ session/            持久化 seam（JsonValue 树 + codec SPI）+ JSONL 后端�
 interaction/        审批三模式（auto/ask/deny，it7）+ 命令面（registry/slash 解析/事件对，it14）
 dist/               jlink 运行时镜像编排：产出 bin/jh（解出即用，无需手拼 module-path，it13）
 bundle/ examples/   base 组合（AppBoot/ConfigService 数据化装配）+ 可运行示例（agent-spine / headless）
-workbench/           工作台（it33–it36，0.5 W1–W4）：projection 纯库——会话日志只读投影五视图（零写路径）；tui 纯库——全屏工作台渲染与端子薄壳（JLine 4）；rpc 纯库——本地回环 JSON-RPC server（仅 127.0.0.1）+ 单文件本地 Web UI（会话清单/五视图/tail 轮询 + 组合编辑器，零 server 写面）
+workbench/           工作台（it33–it36，0.5 W1–W4；it38 W5）：projection 纯库——会话日志只读投影五视图（零写路径）；tui 纯库——全屏工作台渲染与端子薄壳（JLine 4）；rpc 纯库——本地回环 JSON-RPC server（仅 127.0.0.1）+ 单文件本地 Web UI（三栏壳：会话清单/五视图/tail 轮询 + 组合编辑器；it38 W5 增 `--web-write` 显式开启的聊天/审批写面与 SSE `/events`，缺省仍只读零 server 写面）
 ```
 
 ## 实现路线（垂直切片）

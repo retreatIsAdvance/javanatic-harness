@@ -1,7 +1,9 @@
 package io.javanatic.harness.examples.headless;
 
+import io.javanatic.harness.agent.AgentOptions;
 import io.javanatic.harness.boot.AppBoot;
 import io.javanatic.harness.boot.Policy;
+import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.kernel.plugin.PluginLoader;
 import io.javanatic.harness.kernel.scope.Runtime;
 import io.javanatic.harness.session.CreateOptions;
@@ -27,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -136,6 +139,47 @@ class HeadlessServeTest {
             assertThatThrownBy(() -> client.send(
                 rpc("workbench/sessionsList", "{}", port), HttpResponse.BodyHandlers.ofString()))
                 .isInstanceOf(IOException.class);
+        }
+    }
+
+    /**
+     * 停 3 §4 裁决接线面：组合行显式 idleTimeoutSeconds 与中继实际值不同 → 启动 banner
+     * 必须留痕（配置被忽略不得静默）。只读面不印此行走纯函数用例。
+     */
+    @Test
+    void serveBannerNamesIgnoredCompositionIdleTimeout() throws Exception {
+        assumeSigint();
+        try (Runtime rt = new Runtime()) {
+            new PluginLoader().loadAll(rt, List.of(
+                new SessionStorePlugin(), new JsonlPersistencePlugin(sessions)));
+            rt.root().provide(ConfigService.KEY, plugin -> "approval-ask".equals(plugin)
+                ? Map.of("idleTimeoutSeconds", 600) : Map.of());
+            ByteArrayOutputStream outBuf = new ByteArrayOutputStream();
+            PrintStream out = new PrintStream(outBuf, true, StandardCharsets.UTF_8);
+            ByteArrayOutputStream errBuf = new ByteArrayOutputStream();
+            PrintStream err = new PrintStream(errBuf, true, StandardCharsets.UTF_8);
+            AtomicInteger exit = new AtomicInteger(Integer.MIN_VALUE);
+            AppBoot.BootOptions serverBoot = new AppBoot.BootOptions(
+                HeadlessMain.resolveProfile(null),
+                HeadlessMain.buildOverlays(HeadlessMain.parse(
+                    new String[] {"--serve", "--web-write", "--approval=ask"}), workspace, sessions),
+                false, Policy.STANDARD);
+            Thread serving = Thread.ofVirtual().start(() -> {
+                try {
+                    exit.set(HeadlessMain.runServe(rt.root(), new HeadlessMain.ServeStartup(
+                        0, "dump-snapshot-line", serverBoot, true,
+                        new AgentOptions("readonly", "readonly"), 300), out, err));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            awaitServePort(outBuf);
+            Signal.raise(new Signal("INT"));
+            serving.join(TimeUnit.SECONDS.toMillis(20));
+            assertThat(serving.isAlive()).isFalse();
+            assertThat(exit).hasValue(0);
+            assertThat(outBuf.toString(StandardCharsets.UTF_8)).contains(
+                "approval timeout: 300s（组合行 idleTimeoutSeconds=600 被中继覆盖）");
         }
     }
 

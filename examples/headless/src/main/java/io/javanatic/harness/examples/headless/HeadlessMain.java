@@ -22,6 +22,7 @@ import io.javanatic.harness.interaction.commands.CommandRegistry;
 import io.javanatic.harness.interaction.commands.CommandResult;
 import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.kernel.config.ConfigRowSpec;
+import io.javanatic.harness.kernel.config.ConfigService;
 import io.javanatic.harness.session.CreateOptions;
 import io.javanatic.harness.session.SessionStore;
 import io.javanatic.harness.session.Session;
@@ -190,7 +191,9 @@ public final class HeadlessMain {
                                     与 --verify 同用 = 纯预检:零监听、不建会话)
           --web-write              server 写面开关(缺省关:只读 UI;开:聊天/审批/答复控件)。
                                     需与 --serve 同用;`--verify --serve --web-write` 下只做
-                                    纯预检,不监听、不建会话
+                                    纯预检,不监听、不建会话。审批等待界固定为本启动的
+                                    --approval-timeout(非交互缺省 300s);组合行
+                                    idleTimeoutSeconds 被覆盖时启动 banner 留痕一行
           --port=<N>               server 端口(1-65535;缺省 8787;仅与 --serve 同用)
           --dump                   打印组合 dump(一行一插件:组合期行序,含禁用行注解、
                                      敏感配置脱敏;无 key 可跑;与任务文本 / --resume / --verify /
@@ -1358,6 +1361,13 @@ public final class HeadlessMain {
                 + "；Ctrl-C 退出）");
             // R4 可断言面(notes 0012):banner 与 --verify 同源 webWriteText,措辞不漂移
             out.println("web-write: " + webWriteText(startup.webWrite()));
+            if (startup.webWrite()) {
+                // 停 3 §4:中继读取的等待界固定为本启动值;组合行显式写了别的值必须留痕
+                // (配置被忽略不得静默)。禁用行 configFor 为空 Map → 无行。
+                approvalTimeoutOverride(root.resolve(ConfigService.KEY)
+                    .map(config -> config.configFor("approval-ask"))
+                    .orElse(Map.of()), startup.approvalSeconds()).ifPresent(out::println);
+            }
             out.println("UI: http://127.0.0.1:" + server.address().getPort() + "/（浏览器打开）");
             shutdown.await();
             return 0;
@@ -1721,6 +1731,25 @@ public final class HeadlessMain {
     static long askIdleTimeoutSeconds(OptionalInt flag, boolean interactive) {
         return ApprovalPrompt.effectiveIdleTimeout(flag.isPresent() ? flag.getAsInt() : -1, interactive)
             .toSeconds();
+    }
+
+    /**
+     * 停 3 §4 裁决：中继等待界是本启动期固定值（{@code --approval-timeout}，非交互缺省
+     * 300s），注入 prompt 后组合行 {@code idleTimeoutSeconds} 不再被读。组合行显式值与
+     * 中继实际值不同 → 返回一行留痕文案（配置被忽略不得静默）；相等 / 未写 / 非数值
+     * → empty（不伪造「被覆盖」）。中继 0 陈述为「不设限」而不是「0s」。
+     */
+    static Optional<String> approvalTimeoutOverride(Map<String, Object> askConfig, long relaySeconds) {
+        if (!(askConfig.get("idleTimeoutSeconds") instanceof Number number)) {
+            return Optional.empty();
+        }
+        long configured = number.longValue();
+        if (configured == relaySeconds) {
+            return Optional.empty();
+        }
+        String relayText = relaySeconds == 0 ? "不设限" : relaySeconds + "s";
+        return Optional.of("approval timeout: " + relayText
+            + "（组合行 idleTimeoutSeconds=" + configured + " 被中继覆盖）");
     }
 
     /** 终端形态探针：stdin 为 terminal（System.console() 非 null）= 交互终端。 */

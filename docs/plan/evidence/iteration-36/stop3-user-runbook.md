@@ -1,5 +1,7 @@
 # it36 停 3 用户检视 runbook（serve 由你亲手起）
 
+> **it38 指针（2026-11-23）**：工作台已改为 dsh 式三栏壳，本文件的 DOM 断言脚本锚在旧壳（header + 顶部两页签），**勿再用于现行检视**。现行脚本见 [it38 停 3 runbook](../iteration-38/stop3-user-runbook.md)。本文件保留 it36 当时状态，不改写历史。
+
 前提：新鲜镜像已构建（S1，IMAGE_BUILD_EXIT=0）。全程约 10 分钟。实录（终端输出 + 浏览器观察 + 断言结果）回贴后归档 stop3-user-round.txt。
 
 ## 第 1 步：起 serve（你的终端 A，交互终端——SIGINT 天然可用）

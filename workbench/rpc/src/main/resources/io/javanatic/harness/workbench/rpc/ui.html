@@ -6,204 +6,259 @@
 <title>Javanatic Workbench</title>
 <style>
 :root {
-  --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2430; --muted: #6b7684;
-  --line: #dde3ea; --accent: #2456a6; --ok: #1e7d3c; --bad: #b3261e;
+  --base: #ffffff; --side: #f8f9fb; --panel: #ffffff; --line: #e7eaf0; --line-2: #d9dee7;
+  --ink: #1b1c1e; --muted: #7b818a; --accent: #4176e6; --accent-soft: #edf3fe;
+  --ok: #1f7a43; --ok-bg: #e8f7ee; --warn: #8a5a00; --warn-bg: #fdf6e7; --warn-line: #f0d9a0;
+  --bad: #b3261e; --bad-bg: #fdecea; --bad-line: #f5c6c0;
+  --bubble: #eef3fb; --code: #f2f4f7;
+  --shadow: 0 1px 2px rgba(16,24,40,.04), 0 10px 28px rgba(16,24,40,.06);
+  --mono: ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --base: #151517; --side: #1a1a1c; --panel: #1f2023; --line: #2b2c30; --line-2: #3a3b40;
+    --ink: #e8eaed; --muted: #9aa0a8; --accent: #7aa7ff; --accent-soft: #20293a;
+    --ok: #79d99b; --ok-bg: #1b2b21; --warn: #f0c169; --warn-bg: #2c2415; --warn-line: #5a4a24;
+    --bad: #ff8a80; --bad-bg: #331c1a; --bad-line: #5e2d29;
+    --bubble: #262b34; --code: #26272b;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.35);
+  }
 }
 * { box-sizing: border-box; }
+html, body { height: 100%; }
 body {
-  margin: 0; background: var(--bg); color: var(--ink);
+  margin: 0; background: var(--base); color: var(--ink);
   font: 14px/1.55 -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
-header {
-  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-  padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
-}
-header h1 { margin: 0; font-size: 18px; }
-header .sub { color: var(--muted); font-size: 12px; }
-nav { display: flex; gap: 8px; padding: 10px 20px 0; }
-nav button {
-  border: 1px solid var(--line); border-bottom: none; background: var(--panel);
-  padding: 8px 18px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 14px;
-}
-nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-main { padding: 16px 20px 40px; }
-section.tab { display: none; }
-section.tab.active { display: block; }
-.panel {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-  padding: 14px 16px; margin-bottom: 14px;
-}
+button { font: inherit; cursor: pointer; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.app-shell { display: grid; grid-template-columns: 280px minmax(0, 1fr) 330px; height: 100vh; overflow: hidden; }
+.sidebar { display: flex; flex-direction: column; min-height: 0; background: var(--side); border-right: 1px solid var(--line); }
+.brand { display: flex; gap: 10px; align-items: center; padding: 18px 16px 14px; }
+.logo { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; letter-spacing: .4px; }
+.brand h1 { margin: 0; font-size: 15px; letter-spacing: .1px; }
+.brand .sub { color: var(--muted); font-size: 11px; }
+.side-section { padding: 6px 12px 0; min-height: 0; }
+.side-section.grow { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.side-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px; color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+#session-list { list-style: none; margin: 0; padding: 2px 0 8px; overflow-y: auto; min-height: 0; }
+#session-list li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid transparent; border-radius: 10px; margin-bottom: 4px; cursor: pointer; }
+#session-list li:hover { background: var(--panel); border-color: var(--line); }
+#session-list li.selected { background: var(--accent-soft); border-color: transparent; box-shadow: inset 2px 0 0 var(--accent); }
+#session-list .sid { font: 12px/1.4 var(--mono); color: var(--ink); word-break: break-all; }
+#session-list .meta { color: var(--muted); font-size: 11px; }
+#session-list .badge { justify-self: start; margin-top: 2px; }
+.side-pick { display: grid; gap: 6px; padding: 8px 4px 4px; }
+select { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line-2); border-radius: 9px; padding: 7px 9px; font: inherit; }
+#side-nav { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px 14px; border-top: 1px solid var(--line); }
+#side-nav button { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 9px; padding: 9px 10px; color: var(--ink); }
+#side-nav button:hover { background: var(--panel); }
+#side-nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+#side-nav button::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--line-2); flex: none; }
+#side-nav button.active::before { background: var(--accent); }
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 0 22px; }
+#error-bar { display: none; margin: 12px 0 0; padding: 9px 13px; border-radius: 10px; background: var(--bad-bg); color: var(--bad); border: 1px solid var(--bad-line); white-space: pre-wrap; font-size: 13px; }
+section.tab { display: none; flex: 1; min-height: 0; }
+section.tab.active { display: flex; flex-direction: column; }
+#pane-sessions.active, #pane-composition.active { display: block; overflow-y: auto; padding: 18px 0 40px; }
+.pane-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 2px 0 12px; }
+.pane-title { font-size: 17px; font-weight: 650; letter-spacing: .1px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-button.action {
-  border: 1px solid var(--accent); background: var(--accent); color: #fff;
-  padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
-}
-button.ghost {
-  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-  padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
-}
-#error-bar {
-  display: none; margin: 0 0 12px; padding: 8px 14px; border-radius: 8px;
-  background: #fdecea; color: var(--bad); border: 1px solid #f5c6c0; white-space: pre-wrap;
-}
-#session-list { list-style: none; margin: 10px 0 0; padding: 0; }
-#session-list li {
-  padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
-  margin-bottom: 6px; cursor: pointer; display: flex; gap: 12px; flex-wrap: wrap;
-}
-#session-list li:hover { border-color: var(--accent); }
-#session-list li.selected { border-color: var(--accent); background: #eef3fb; }
-#session-list .sid { font-family: ui-monospace, Menlo, Consolas, monospace; }
-#session-list .meta { color: var(--muted); font-size: 12px; }
-.badge { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: #fdecea; color: var(--bad); }
-.badge.idle { background: #e8f2ea; color: var(--ok); }
-#session-detail { display: none; }
+button.action { border: 1px solid var(--accent); background: var(--accent); color: #fff; padding: 7px 14px; border-radius: 9px; font-size: 13px; }
+button.ghost { border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); padding: 7px 14px; border-radius: 9px; font-size: 13px; }
+button.small { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+button.wide { width: 100%; }
+.hint { color: var(--muted); font-size: 12px; }
+.empty { color: var(--muted); padding: 12px 4px; font-size: 13px; }
+.badge { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--bad-bg); color: var(--bad); }
+.badge.idle { background: var(--ok-bg); color: var(--ok); }
+.badge.armed { background: var(--bad-bg); color: var(--bad); }
 #detail-header { color: var(--muted); font-size: 12px; margin-bottom: 8px; word-break: break-all; }
-.viewtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.viewtabs button {
-  border: 1px solid var(--line); background: var(--panel); padding: 4px 12px;
-  border-radius: 6px; cursor: pointer; font-size: 13px;
-}
-.viewtabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+#session-detail { display: none; }
+label.toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; cursor: pointer; }
+.viewtabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 12px; }
+.viewtabs button { border: 1px solid var(--line); background: var(--panel); padding: 5px 13px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+.viewtabs button.active { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
 .view { display: none; overflow-x: auto; }
 .view.active { display: block; }
-table { border-collapse: collapse; width: 100%; font-size: 13px; }
-th, td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; vertical-align: top; }
-th { background: #f0f3f7; white-space: nowrap; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { border-bottom: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; background: var(--side); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
 td { word-break: break-word; }
-.empty { color: var(--muted); padding: 10px 0; }
-label.toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; cursor: pointer; }
-#composition-editor {
-  width: 100%; min-height: 320px; resize: vertical; margin-top: 10px;
-  font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
-  border: 1px solid var(--line); border-radius: 8px; padding: 10px;
-}
-#verify-result { margin-top: 10px; white-space: pre-wrap; display: none; padding: 8px 14px; border-radius: 8px; }
-#verify-result.ok { display: block; background: #e8f2ea; color: var(--ok); border: 1px solid #bcd9c2; }
-#verify-result.bad { display: block; background: #fdecea; color: var(--bad); border: 1px solid #f5c6c0; }
-.hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
-pre.dump {
-  background: #f0f3f7; border: 1px solid var(--line); border-radius: 8px;
-  padding: 10px; font-size: 12px; overflow-x: auto; display: none; margin: 10px 0 0;
-}
+#composition-editor { width: 100%; min-height: 320px; resize: vertical; margin-top: 10px; font: 13px/1.55 var(--mono); background: var(--panel); color: var(--ink); border: 1px solid var(--line-2); border-radius: 10px; padding: 12px; }
+#verify-result { margin-top: 10px; white-space: pre-wrap; display: none; padding: 9px 13px; border-radius: 10px; font-size: 13px; }
+#verify-result.ok { display: block; background: var(--ok-bg); color: var(--ok); border: 1px solid transparent; }
+#verify-result.bad { display: block; background: var(--bad-bg); color: var(--bad); border: 1px solid var(--bad-line); }
+pre.dump { background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 11px; font-size: 12px; overflow-x: auto; display: none; margin: 10px 0 0; color: var(--ink); }
 /* it38 停 2:写面(--web-write)才出现聊天/审批控件;只读面 body 无 web-write 类 */
 body:not(.web-write) #tab-chat,
 body:not(.web-write) #pane-chat,
 body:not(.web-write) #approval-overlay { display: none; }
-#chat-log {
-  border: 1px solid var(--line); border-radius: 8px; background: #fbfcfd;
-  height: 46vh; min-height: 220px; overflow-y: auto; padding: 10px; margin-top: 10px;
+body:not(.web-write) .chat-only { display: none; }
+.chat-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 0 8px; border-bottom: 1px solid var(--line); }
+.chat-head .pane-title { font-size: 16px; }
+#chat-log { flex: 1; overflow-y: auto; padding: 18px 2px 6px; min-height: 0; }
+#chat-log .msg { max-width: min(78%, 700px); margin: 10px auto 10px 0; }
+.msg { white-space: pre-wrap; word-break: break-word; line-height: 1.65; }
+.msg.user { margin-left: auto; background: var(--bubble); padding: 10px 15px; border-radius: 18px 18px 6px 18px; width: fit-content; }
+.msg.assistant { padding: 2px; color: var(--ink); }
+.msg.tool { font: 12px/1.5 var(--mono); color: var(--muted); background: var(--code); padding: 6px 10px; border-radius: 9px; width: fit-content; max-width: 100%; }
+.msg.question { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn); padding: 10px 14px; border-radius: 12px; width: fit-content; }
+.msg.sys { color: var(--muted); font-size: 12px; text-align: center; margin-left: auto; margin-right: auto; }
+.composer { background: var(--panel); border: 1px solid var(--line-2); border-radius: 18px; box-shadow: var(--shadow); padding: 10px 12px 8px; margin: 8px 0 16px; }
+#chat-input { width: 100%; min-height: 46px; max-height: 180px; resize: none; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; padding: 4px 4px 6px; }
+.composer-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.composer-foot .hint { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rightbar { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; background: var(--side); border-left: 1px solid var(--line); padding: 16px 14px; }
+#approval-overlay { background: var(--panel); border: 1px solid var(--warn-line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+#approval-overlay > .hint { display: block; background: var(--warn-bg); color: var(--warn); padding: 9px 12px; margin: 0; font-size: 12px; }
+#approval-overlay .pending { padding: 12px; border-top: 1px solid var(--line); }
+#approval-overlay .pending:first-child { border-top: 0; }
+#approval-overlay .pending .hint { font-family: var(--mono); font-size: 11px; background: var(--code); border-radius: 8px; padding: 6px 9px; margin: 6px 0 9px; white-space: pre-wrap; word-break: break-all; }
+.ctx-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 13px; display: grid; gap: 8px; }
+#chat-session { font-size: 11.5px; word-break: break-all; }
+@media (max-width: 1180px) {
+  .app-shell { grid-template-columns: 260px minmax(0, 1fr); }
+  .rightbar { position: fixed; right: 16px; bottom: 16px; width: 360px; max-width: calc(100vw - 32px); height: auto; background: transparent; border: 0; padding: 0; overflow: visible; pointer-events: none; z-index: 30; }
+  .rightbar > .side-head, .rightbar .ctx-card { display: none; }
+  #approval-overlay { pointer-events: auto; }
 }
-.msg {
-  margin: 6px 0; padding: 6px 10px; border-radius: 8px; max-width: 94%;
-  width: fit-content; white-space: pre-wrap; word-break: break-word;
+@media (max-width: 820px) {
+  .app-shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .sidebar { flex-direction: row; align-items: center; gap: 6px; max-height: 64px; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .brand { padding: 10px 12px; }
+  .brand .sub { display: none; }
+  .side-section { display: none; }
+  #side-nav { flex-direction: row; border-top: 0; padding: 6px; }
+  #side-nav button { width: auto; white-space: nowrap; }
+  .main { padding: 0 12px; }
 }
-.msg.user { background: #eef3fb; margin-left: auto; }
-.msg.assistant { background: #fff; border: 1px solid var(--line); }
-.msg.tool { background: #f6f7f9; color: var(--muted); font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; }
-.msg.question { background: #fff8e6; border: 1px solid #f0d9a0; }
-.msg.sys { color: var(--muted); font-size: 12px; }
-#chat-input {
-  width: 100%; min-height: 64px; resize: vertical; border: 1px solid var(--line);
-  border-radius: 8px; padding: 8px; font: inherit;
-}
-#approval-overlay {
-  background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 8px;
-  padding: 10px 12px; margin-top: 10px;
-}
-#approval-overlay .pending { border-top: 1px dashed #e6cfa0; padding-top: 8px; margin-top: 8px; }
-#approval-overlay .pending:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-#chat-state.armed { background: #fdecea; color: var(--bad); }
 </style>
 </head>
 <body>
 <!-- javanatic-workbench-ui -->
-<header>
-  <h1>Javanatic Workbench</h1>
-  <span class="sub">本地回环工作台（127.0.0.1 · 单用户 · W5）——会话观察 + 组合编辑 + 聊天/审批（--web-write）</span>
-</header>
-<nav>
-  <button id="tab-sessions" class="active" type="button">会话</button>
-  <button id="tab-composition" type="button">组合编辑器</button>
-  <button id="tab-chat" type="button">聊天</button>
-</nav>
-<main>
-  <div id="error-bar" role="alert"></div>
-
-  <section id="pane-sessions" class="tab active">
-    <div class="panel">
-      <div class="row">
-        <button id="refresh-sessions" class="action" type="button">刷新清单</button>
-        <span class="hint">workbench/sessionsList（max=50）——落盘事实，只读</span>
+<div id="app-shell" class="app-shell">
+  <aside id="sidebar" class="sidebar" aria-label="工作台导航与会话">
+    <div class="brand">
+      <div class="logo">JH</div>
+      <div>
+        <h1>Javanatic Workbench</h1>
+        <div class="sub">127.0.0.1 · 单用户 · W5</div>
+      </div>
+    </div>
+    <div class="side-section grow">
+      <div class="side-head">
+        <span>会话</span>
+        <button id="refresh-sessions" class="ghost small" type="button">刷新清单</button>
       </div>
       <ul id="session-list"></ul>
       <div id="sessions-empty" class="empty">暂无会话——点「刷新清单」加载。</div>
     </div>
-    <div id="session-detail" class="panel">
-      <div id="detail-header"></div>
-      <div class="row" style="margin-bottom:8px">
-        <label class="toggle"><input type="checkbox" id="tail-toggle"> tail 跟随（2s 轮询增量）</label>
-        <span class="hint">workbench/sessionTail——游标 = nextSeq</span>
-      </div>
-      <div class="viewtabs">
-        <button id="view-turns" type="button">轮次</button>
-        <button id="view-tools" type="button">工具</button>
-        <button id="view-usage" type="button">用量</button>
-        <button id="view-timeline" type="button" class="active">时间线</button>
-        <button id="view-messages" type="button">消息</button>
-      </div>
-      <div id="viewbody-turns" class="view"></div>
-      <div id="viewbody-tools" class="view"></div>
-      <div id="viewbody-usage" class="view"></div>
-      <div id="viewbody-timeline" class="view active"></div>
-      <div id="viewbody-messages" class="view"></div>
-    </div>
-  </section>
-
-  <section id="pane-composition" class="tab">
-    <div class="panel">
-      <div class="row">
-        <button id="load-dump" class="ghost" type="button">载入当前组合 dump（对照）</button>
-        <button id="verify-composition" class="action" type="button">保存前校验</button>
-        <button id="download-profile" class="ghost" type="button">下载 profile.yml</button>
-      </div>
-      <pre id="dump-view" class="dump"></pre>
-      <textarea id="composition-editor" spellcheck="false"
-        placeholder="在此编辑完整 profile YAML（name / policy / bundles / rows）"></textarea>
-      <div id="verify-result" role="status"></div>
-      <div class="hint">
-        编辑对象是完整 profile YAML；dump 是组合期行序投影（含禁用行注解、脱敏），供对照。
-        校验 = 临时 profile 干跑 --verify（不触碰已落盘 profile）；下载经浏览器 Blob 落盘、不经 server——
-        保存到 ~/.harness/profiles/&lt;name&gt;/profile.yml 由你手动完成，新会话生效（无热重载）。
-      </div>
-    </div>
-  </section>
-
-  <section id="pane-chat" class="tab">
-    <div class="panel">
-      <div class="row">
-        <button id="chat-new" class="action" type="button">新会话（以输入框消息发起）</button>
+    <div class="side-section chat-only">
+      <div class="side-head"><span>载入会话</span></div>
+      <div class="side-pick">
         <select id="chat-sessions" aria-label="载入已有会话"></select>
-        <button id="chat-attach" class="ghost" type="button">载入</button>
-        <span id="chat-state" class="badge idle">空闲</span>
-        <button id="chat-cancel" class="ghost" type="button">取消在途轮</button>
-      </div>
-      <div id="chat-session" class="hint">尚未绑定会话——输入消息后点「新会话」，或选择既有会话「载入」。</div>
-      <div id="chat-log" role="log" aria-live="polite"></div>
-      <div id="approval-overlay" role="region" aria-label="待审批请求">
-        <div class="hint">等待审批 —— 提示条接管输入区：Enter 允许 / Escape 拒绝（不打断会话，日志仍可滚动）。</div>
-        <div id="approval-list"></div>
-      </div>
-      <div class="row" id="chat-compose" style="margin-top:10px">
-        <textarea id="chat-input" placeholder="输入消息；Enter 发送，Shift+Enter 换行（IME 组词中不会误发）"></textarea>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <button id="chat-send" class="action" type="button">发送</button>
-        <span class="hint">session/start · session/send · session/cancel · approval/respond；事件流 /events?session=（浏览器原生重连）</span>
+        <button id="chat-attach" class="ghost wide" type="button">载入</button>
       </div>
     </div>
-  </section>
-</main>
+    <nav id="side-nav" aria-label="主视图">
+      <button id="tab-sessions" class="active" type="button">会话观察</button>
+      <button id="tab-composition" type="button">组合编辑器</button>
+      <button id="tab-chat" class="chat-only" type="button">聊天</button>
+    </nav>
+  </aside>
+
+  <main id="main" class="main">
+    <div id="error-bar" role="alert"></div>
+
+    <section id="pane-sessions" class="tab active">
+      <div class="pane-head">
+        <div class="pane-title">会话观察</div>
+        <span class="hint">workbench/sessionsList（max=50）· 落盘事实 · 只读</span>
+      </div>
+      <div class="panel">
+        <div class="hint">从左侧清单选择会话，查看轮次、工具、用量、时间线与消息五种视图；tail 跟随按 2s 轮询增量。</div>
+      </div>
+      <div id="session-detail" class="panel">
+        <div id="detail-header"></div>
+        <div class="row" style="margin-bottom:8px">
+          <label class="toggle"><input type="checkbox" id="tail-toggle"> tail 跟随（2s 轮询增量）</label>
+          <span class="hint">workbench/sessionTail——游标 = nextSeq</span>
+        </div>
+        <div class="viewtabs">
+          <button id="view-turns" type="button">轮次</button>
+          <button id="view-tools" type="button">工具</button>
+          <button id="view-usage" type="button">用量</button>
+          <button id="view-timeline" type="button" class="active">时间线</button>
+          <button id="view-messages" type="button">消息</button>
+        </div>
+        <div id="viewbody-turns" class="view"></div>
+        <div id="viewbody-tools" class="view"></div>
+        <div id="viewbody-usage" class="view"></div>
+        <div id="viewbody-timeline" class="view active"></div>
+        <div id="viewbody-messages" class="view"></div>
+      </div>
+    </section>
+
+    <section id="pane-composition" class="tab">
+      <div class="pane-head">
+        <div class="pane-title">组合编辑器</div>
+        <span class="hint">完整 profile YAML · 干跑校验 · Blob 下载</span>
+      </div>
+      <div class="panel">
+        <div class="row">
+          <button id="load-dump" class="ghost" type="button">载入当前组合 dump（对照）</button>
+          <button id="verify-composition" class="action" type="button">保存前校验</button>
+          <button id="download-profile" class="ghost" type="button">下载 profile.yml</button>
+        </div>
+        <pre id="dump-view" class="dump"></pre>
+        <textarea id="composition-editor" spellcheck="false"
+          placeholder="在此编辑完整 profile YAML（name / policy / bundles / rows）"></textarea>
+        <div id="verify-result" role="status"></div>
+        <div class="hint">
+          编辑对象是完整 profile YAML；dump 是组合期行序投影（含禁用行注解、脱敏），供对照。
+          校验 = 临时 profile 干跑 --verify（不触碰已落盘 profile）；下载经浏览器 Blob 落盘、不经 server——
+          保存到 ~/.harness/profiles/&lt;name&gt;/profile.yml 由你手动完成，新会话生效（无热重载）。
+        </div>
+      </div>
+    </section>
+
+    <section id="pane-chat" class="tab chat-only">
+      <div class="chat-head">
+        <div>
+          <div class="pane-title">对话</div>
+          <div class="hint">Enter 发送 · Shift+Enter 换行 · 审批时 Enter 允许 / Escape 拒绝</div>
+        </div>
+        <button id="chat-new" class="action" type="button">新会话</button>
+      </div>
+      <div id="chat-log" role="log" aria-live="polite"></div>
+      <div id="chat-compose" class="composer">
+        <textarea id="chat-input" placeholder="输入消息；Enter 发送，Shift+Enter 换行（IME 组词中不会误发）"></textarea>
+        <div class="composer-foot">
+          <span class="hint">session/start · session/send · session/cancel · approval/respond · /events</span>
+          <button id="chat-send" class="action" type="button">发送</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside id="rightbar" class="rightbar chat-only" aria-label="审批与当前会话">
+    <div class="side-head"><span>审批</span></div>
+    <div id="approval-overlay" role="region" aria-label="待审批请求">
+      <div class="hint">等待审批 —— 提示条接管输入区：Enter 允许 / Escape 拒绝（不打断会话，日志仍可滚动）。</div>
+      <div id="approval-list"></div>
+    </div>
+    <div class="ctx-card">
+      <div class="side-head" style="padding:0"><span>当前会话</span></div>
+      <span id="chat-state" class="badge idle" style="justify-self:start">空闲</span>
+      <div id="chat-session" class="hint">尚未绑定会话——输入消息后点「新会话」，或选择既有会话「载入」。</div>
+      <button id="chat-cancel" class="ghost wide" type="button">取消在途轮</button>
+    </div>
+  </aside>
+</div>
 <script>
 "use strict";
 // 写面开关:WorkbenchUi 服务期替换哨兵(--web-write 时 true)。只读面零写控件、零 SSE。
@@ -326,6 +381,7 @@ async function selectSession(id, li) {
   state.lastSeq = -1;
   document.querySelectorAll("#session-list li").forEach(n => n.classList.remove("selected"));
   if (li) { li.classList.add("selected"); }
+  switchTab("sessions");
   try {
     const views = await rpc("workbench/sessionViews", { session: id });
     state.views = views;
@@ -495,7 +551,7 @@ document.getElementById("download-profile").addEventListener("click", () => {
 });
 
 // ────────── 聊天 + 审批（写面；只读面不初始化，零 SSE 连接） ──────────
-const chat = { session: null, source: null, state: "idle", lastSeq: -1, revision: null, pending: [] };
+const chat = { session: null, source: null, state: "idle", lastSeq: -1, revision: null, pending: [], questionPending: false };
 const CHAT_STATE_LABELS = {
   idle: "空闲", running: "运行中", "waiting-approval": "等待审批",
   "waiting-answer": "等待答复", done: "已收尾"
@@ -541,6 +597,7 @@ function onSessionEvent(frame) {
   const data = frame.data || {};
   switch (frame.type) {
     case "user/message":
+      chat.questionPending = false;
       appendBlocks("user", data.message);
       break;
     case "assistant/message":
@@ -549,19 +606,28 @@ function onSessionEvent(frame) {
     case "tool/result":
       if (data.concludesTurn === true) {
         appendChat("question", "模型提问：" + (data.content || ""));
+        chat.questionPending = true;
         setChatState("waiting-answer");
       } else {
         appendChat("tool", "← " + shorten(data.content, 200) + (data.isError ? "（错误）" : ""));
       }
       break;
     case "turn/start":
+      chat.questionPending = false;
       setChatState("running");
       break;
     case "turn/end":
       const reason = data.reason || {};
-      if (reason.kind === "aborted") { appendChat("sys", "已取消（" + text(reason.cause) + "）"); }
-      else if (reason.kind === "error") { appendChat("sys", "轮失败：" + text(reason.message)); }
-      setChatState("done");
+      if (reason.kind === "aborted") {
+        chat.questionPending = false;
+        appendChat("sys", "已取消（" + text(reason.cause) + "）");
+      } else if (reason.kind === "error") {
+        chat.questionPending = false;
+        appendChat("sys", "轮失败：" + text(reason.message));
+      }
+      // ask_user 是数据驱动停轮:turn/end 恒 completed,提问由 concludesTurn 事实位标记。
+      // 不得把「等待答复」(exit 5 语义)覆盖成「已收尾」。
+      setChatState(chat.questionPending ? "waiting-answer" : "done");
       break;
     default:
       break;
@@ -654,6 +720,7 @@ function attachChat(sessionId) {
   chat.session = sessionId;
   chat.lastSeq = -1;
   chat.revision = null;
+  chat.questionPending = false;
   clear(document.getElementById("chat-log"));
   renderApproval([]);
   document.getElementById("chat-session").textContent =

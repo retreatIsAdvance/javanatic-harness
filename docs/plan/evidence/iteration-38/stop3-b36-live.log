@@ -1,0 +1,3 @@
+JSON-RPC server 127.0.0.1:8791（工作台面；写面已开（聊天/审批）；Ctrl-C 退出）
+web-write: on（--web-write）
+UI: http://127.0.0.1:8791/（浏览器打开）

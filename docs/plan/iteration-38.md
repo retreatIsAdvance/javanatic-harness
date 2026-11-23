@@ -1,4 +1,4 @@
-# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），停 1 已提交 `27b2d88`，停 2 已放行并提交，转停 3 真机验收；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
+# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），停 1 已提交 `27b2d88`，停 2 已放行并提交，停 3 用户真机验收通过（2026-11-23）、收口中；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
 
 基线：it37 已关账（0.5.0 全链闭环：Central 71 坐标 + GitHub Release 8 归档 + tag；最终 head `b568ef8`），工作版本 `0.6.0-SNAPSHOT`。**版本号与顺序已裁（2026-11-17）：先 0.5.0 发布（it37），W5 = 0.6.0**——版本叙事对齐治理叙事：0.5.0 把「零写面只读工作台」作为完整自洽的能力相位发布收口；「零写面不变量的终结」是叙事反转，配 ADR 配新 minor 号，patch 号不承载这种重量；发布后 W5 在**已发布基线**上动写面，回退面干净。路线表新起行（0.6.0），不混入已关账的 0.5 行：W5 显式终结零写面不变量，属新能力相位。
 
@@ -54,6 +54,16 @@
 **§4 偏离裁决：方向批，静默须变响亮**。中继固定非交互 300s「取窄不放宽」方向正确；但组合行 `idleTimeoutSeconds` 被静默忽略违背 fail loud——**停 3 补一小件**：`--web-write` 启动 banner 在「配置值 ≠ 300s」时打一行显式提示（如 `approval timeout: 300s（组合行 idleTimeoutSeconds=N 被中继覆盖）`），配置被忽略必须在可观察面留痕。
 
 **预算预警**：ui.html 762/800，软预算余 38 行；停 3 若再给 UI 添东西，T4 重访条款大概率触发（超 800 = 重议形态的四确认议程），须先备「裁剪 vs 重新议」论证。本停 3 的 banner 补丁落 CLI stdout，不触 UI 行数。
+
+**it38 停 3 呈现面重设计（2026-11-23 用户预支裁决）**：工作台 UI 参考 dsh 改为三栏壳（左会话栏 / 中主区 / 右审批与上下文），**只重做视觉与布局，不新增 RPC 方法、不动 §4 banner 补丁的未提交改动**；功能与 JSON-RPC 契约原样，主题为浅色为主 + `prefers-color-scheme` 自动深暗。软预算由 800 修订为 **900 行**（用户原文：结构干净地落在 ≤900 即裁预算修订 + T4 重访条款记录在案，超 900 才回来谈裁剪）。实际落点 **830 行**：脚本 555 行原样保留，仅 `selectSession` 增一次 `switchTab("sessions")`（点左栏会话即进观察面），CSS/标记重写；另含停 3 状态机修复（下节）。**T4 重访条款**：后续若再需 UI 增量，先按「裁剪 vs 重议形态」论证，不得默认再抬预算。DOM 钉子同批新增 `app-shell`/`sidebar`/`main`/`rightbar` 结构断言（`WorkbenchUiTest`），检视脚本同步重写为[停 3 runbook](evidence/iteration-38/stop3-user-runbook.md)；旧 W4 脚本仅加指针停用，不改写历史。
+
+## 停 3 验收（2026-11-23）：用户真机通过，小观察已定位并修复
+
+用户原话「**通过——全链闭环，文件落盘为证**」，完整原文见[验收归档](evidence/iteration-38/stop3-acceptance.txt)。真 Chrome + 真 serve + 真 key 亲手跑完：新壳 DOM 12/12 PASS、暗色 `#151517` 逐字命中、审批拒绝（Escape）与允许（Enter）双路径、exit-5 等答回路（ask_user → 琥珀提问卡 → 答复=resume → fs_write 审批 → `jh-web-acceptance/browser-answer.txt` = `hello-from-browser`，shell cat 实核）、状态机迁移可见。三条如实记：自动化一次超时中断；一次误点「发送」被「先新建会话」正确拦下（T2 拒绝的反向防呆验证）；截图未内联，视觉以 token/栅格 + 用户浏览器终看补位。
+
+**小观察核对结论（非措辞，是状态机显示面）**：`ask_user` 是数据驱动停轮——`ToolResultEvent.concludesTurn=true`，而 `TurnEndReason` 只有 Completed/Aborted/Error，提问后的 `turn/end` 恒为 `completed`，原实现无条件 `setChatState("done")`，把「等待答复」（exit 5 语义）覆盖成「已收尾」。修复：以 `chat.questionPending` 事实位为准（`turn/start` 与 `user/message` 清零，`concludesTurn` 置位），`turn/end` 按标志选 `waiting-answer`/`done`，aborted/error 追加理由并清零。Node 假 DOM harness 先复现 `HARNESS_FAIL`、修复后 `HARNESS_PASS` + `ABORT_PASS`；`WorkbenchUiTest` 增 `uiKeepsWaitingAnswerAfterQuestionDriveStopTurnEnd` 静态钉，终态 12/0/0。**§4 banner 补丁**（组合行 `idleTimeoutSeconds` 被中继覆盖时显式提示）随本批提交，落 CLI stdout，不触 UI 行数。
+
+收口门禁（本机测量面，见[停 3 证据档](evidence/iteration-38/stop3-evidence.md)）：全量 package EXIT=0（fresh surefire XML 202 份 = **1669/0/0/25**；计数链 1669 = 停 2 的 1665 + 4，300s 真钟哨兵不重复跑）；validate EXIT=0；keyless `--verify` 与 `--verify --serve --web-write` 均 EXIT=0 且 banner 行 `web-write: off/on` 逐字命中、零监听；B29/B36 真 serve 复核（仅 127.0.0.1:8791 + 坏 Host 403 + 跨站 Origin POST 403 + 同源 200 + SIGINT 后 PORT_FREE）；ui.html 830 行 ≤900。推送与 CI 四腿结果在关账批回填。
 
 停 2 批随本提交入仓；停 3 = 真机验收（用户亲手：真 serve + 真浏览器发消息/流式/审批点选/exit-5 答复/SIGINT）+ banner 补丁 + 同步面 + 收口。未授权 push。
 
@@ -178,7 +188,7 @@ dsh 三张清单落 `evidence/iteration-38/`（原 `evidence/iteration-37/`，�
 - [x] ADR 0012 入 notes 并互链（[0012-zero-write-surface-end.md](../../.agents/notes/0012-zero-write-surface-end.md)，2026-11-20）
 - [x] 停 1 评审放行（2026-11-20：契约及实现前移范围通过，R4 拟案采纳，[用户原文](evidence/iteration-38/stop1-acceptance.txt)）
 - [x] 停 2 评审放行（2026-11-23：中继实现 + SSE + 状态机 + UI 通过，[用户原文](evidence/iteration-38/stop2-acceptance.txt)；§4 偏离裁决转停 3 banner 补丁）
-- [ ] 停 3 真机验收：jlink `--serve --web-write` → 浏览器跑通开轮/流式/审批/答复/取消 + 用户检视实录
-- [ ] B29/B36 复验（监听地址实录 + 跨站 Host/Origin 拒绝 + 突变必红）
-- [ ] 门禁：validate EXIT=0 + 全量 package EXIT=0 + 计数（surefire XML mtime 窗口）+ keyless `--verify`
+- [x] 停 3 真机验收：jlink `--serve --web-write` → 浏览器跑通开轮/流式/审批/答复/取消 + 用户检视实录（[用户原文](evidence/iteration-38/stop3-acceptance.txt)；小观察已定位修复——`questionPending` 事实位，非措辞）
+- [x] B29/B36 复验（监听地址实录仅 127.0.0.1:8787 + 坏 Host 403 + 跨站 Origin POST 403 + 同源 200）
+- [x] 门禁：validate EXIT=0 + 全量 package EXIT=0 + 计数（fresh XML 202 份 = 1669/0/0/25）+ keyless `--verify`（开/关两态 banner 实核、零监听）
 - [ ] 同步面全勾 + CI 四腿全绿 + run 号回填 + 关账

@@ -43,6 +43,39 @@ class WorkbenchUiTest {
         assertThat(ui.html()[0]).isEqualTo(original);
     }
 
+    // ────────── it38 停 3 呈现面：dsh 式三栏壳（结构钉子，检视脚本同源） ──────────
+
+    @Test
+    void uiHtmlShipsThreeColumnWorkbenchShell() {
+        String html = new String(new WorkbenchUi(true).html(), StandardCharsets.UTF_8);
+
+        // 三栏骨架 = 左会话栏 / 中主区 / 右审批与上下文；导航三向仍在左栏
+        assertThat(html)
+            .contains("id=\"app-shell\"")
+            .contains("id=\"sidebar\"")
+            .contains("id=\"main\"")
+            .contains("id=\"rightbar\"")
+            .contains("id=\"side-nav\"")
+            .contains("id=\"tab-chat\"")
+            .contains("id=\"tab-sessions\"")
+            .contains("id=\"tab-composition\"");
+        // 右栏承载审批卡片与当前会话上下文（元素 id 不变，位置迁移）
+        assertThat(html.indexOf("id=\"rightbar\""))
+            .isLessThan(html.indexOf("id=\"approval-overlay\""));
+        assertThat(html.indexOf("id=\"approval-overlay\""))
+            .isLessThan(html.indexOf("id=\"chat-state\""));
+    }
+
+    /** it38 停 3 用户实录修正:ask_user 是数据驱动停轮, turn/end 恒 completed——
+     * 徽标不得把「等待答复」(exit 5 语义)覆盖成「已收尾」; 以 concludesTurn 事实位为准。 */
+    @Test
+    void uiKeepsWaitingAnswerAfterQuestionDriveStopTurnEnd() {
+        String html = new String(new WorkbenchUi(true).html(), StandardCharsets.UTF_8);
+        assertThat(html)
+            .contains("chat.questionPending = true;")
+            .contains("setChatState(chat.questionPending ? \"waiting-answer\" : \"done\");");
+    }
+
     // ────────── it36 停 2 资源内容守卫(功能面回归钉子,非浏览器测试替代品) ──────────
 
     @Test

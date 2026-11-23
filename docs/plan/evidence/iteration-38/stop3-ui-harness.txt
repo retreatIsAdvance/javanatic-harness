@@ -1,0 +1,5 @@
+after question : 等待答复 / state=waiting-answer
+after turn/end : 等待答复 / state=waiting-answer
+HARNESS_PASS
+after abort    : 已收尾 / state=done
+ABORT_PASS

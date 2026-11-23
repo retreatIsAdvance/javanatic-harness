@@ -1,0 +1,13 @@
+Nov 23, 2026 4:45:11 PM io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+Profile: headless   policy: STANDARD
+  composition: 34 rows, 41 discovered, 0 unreferenced
+  approval: AUTO (approval-auto; exempt=ask_user)
+  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool; tools=0
+  web: web-fetch-http + web-tool; tools=web_fetch (approval-required)
+  web-write: on（--web-write）
+  lsp: lsp-tool; tools=0
+  jobs: jobs-local + jobs-tool; tools=job_cancel,job_read,job_start,job_status (approval-required)
+  delegation: delegation-local + delegation-tool; tools=delegate,delegate_answer,delegate_interrupt,delegate_list (approval-required)
+  audit: jsonl /Users/abel_yang/.harness/sessions (durable)
+  stop: max-turns=50 max-steps=40 budget=unlimited
