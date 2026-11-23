@@ -568,6 +568,8 @@ public record ApprovalRequest(
 
 三个 Provider 齐备：`approval-auto`（AUTO，开发/测试档）、`approval-ask`（HUMAN_GATE，CLI 交互或 ACP 上报）、`approval-deny`（DENY_ALL，最小权限档）。`policy: production` 禁止 AUTO（07 §6）。**审批在 ToolExecutor 的固定 stage 调用**（§8），单个工具无法绕过；**免审批是工具属性声明**（`ToolDefinition.approvalExempt`，it22）——不是第四种模式，问答类工具据此在 deny 档下仍可澄清。
 
+**0.6 W5 浏览器审批中继（it38）**：AppBoot 仅允许在启动期替换 `ApprovalPrompt` 实现（H1：终端提示 / serve 中继二选一，不开放通用插件或任意回调替换）；中继只搬运提示与决定，等待界仍由 `ApprovalPrompt.effectiveIdleTimeout` 单源控制——非交互 300s fail-closed 与 `--approval-timeout=` 口径不变，迟到/重复答复一次性结算后拒绝。`workbench/rpc` 不新增 `interaction-approval` 依赖边（适配器落 `examples/headless`，非稳定面）。
+
 ---
 
 ## 7. Session Persistence Seam

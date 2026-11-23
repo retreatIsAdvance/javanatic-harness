@@ -85,7 +85,7 @@ examples 两模块不在发布面（Central 上传面由根 POM release profile 
 | `WebFetchService` / `WebSearchService` / `WebFetchResult` / `WebFetchBody` / `WebSearchResult` / `WebSearchSource` / `WebErrorCode` / `WebException` | `web` | Web 双能力 seam（it28）：抓取/搜索入口、sealed 正文分类、结构化来源、稳定错误码；Provider 可替换，Consumer 不 import 实现 |
 | `LspService` / `LspQuery` / `LspPositionQuery` / `LspResult` / `LspAnchor` / `LspObservation` / `LspEvidence` / `LspDiagnostic` / `LspLocation` / `LspException` | `lsp` | Java 诊断 / 定义 / 引用的同步观察契约，JH hash 不证明 LS 分析来源或完成；Definition 已写、停 1 已通过并关闭，Provider / Consumer 已随停 2 / 停 3 交付并通过关闭（[05 §8.1](05-capability-seam.md#81-lsp-observation-and-process-contractit29)） |
 | `SessionPersistence` / `SessionEventCodec` / `JsonValue` | `session.persistence` | 持久化 seam 与 codec SPI（ServiceLoader）|
-| `ApprovalPrompt` | `interaction.approval` | 人闸回调（ask 模式） |
+| `ApprovalPrompt` | `interaction.approval` | 人闸回调（ask 模式）；it38 W5 起 AppBoot 可在启动期替换为 serve 中继实现（H1），中继不放宽等待界 |
 | `CommandRegistry` / `Command` / `Handler` / `CommandResult` | `interaction.commands` | 命令面（registry / slash 解析 / 事件对，it14） |
 | `ConfigService` / `ConfigRowSpec` / `CompositionManifest` | `kernel.config` | 配置服务、行模型、组合清单（进 SessionHeader）|
 | `AppBoot` / `BootOptions` / `Policy` | `boot` | 装配入口与治理档（`--verify` 断言面）|

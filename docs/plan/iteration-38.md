@@ -1,4 +1,4 @@
-# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），停 1 已提交 `27b2d88`，停 2 已放行并提交，停 3 用户真机验收通过（2026-11-23）、收口中；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
+# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），停 1 已提交 `27b2d88`，停 2 已放行并提交，停 3 用户真机验收通过（2026-11-23）、已关账（2026-11-23，CI 四腿全绿 run `45148236185`）；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
 
 基线：it37 已关账（0.5.0 全链闭环：Central 71 坐标 + GitHub Release 8 归档 + tag；最终 head `b568ef8`），工作版本 `0.6.0-SNAPSHOT`。**版本号与顺序已裁（2026-11-17）：先 0.5.0 发布（it37），W5 = 0.6.0**——版本叙事对齐治理叙事：0.5.0 把「零写面只读工作台」作为完整自洽的能力相位发布收口；「零写面不变量的终结」是叙事反转，配 ADR 配新 minor 号，patch 号不承载这种重量；发布后 W5 在**已发布基线**上动写面，回退面干净。路线表新起行（0.6.0），不混入已关账的 0.5 行：W5 显式终结零写面不变量，属新能力相位。
 
@@ -63,9 +63,11 @@
 
 **小观察核对结论（非措辞，是状态机显示面）**：`ask_user` 是数据驱动停轮——`ToolResultEvent.concludesTurn=true`，而 `TurnEndReason` 只有 Completed/Aborted/Error，提问后的 `turn/end` 恒为 `completed`，原实现无条件 `setChatState("done")`，把「等待答复」（exit 5 语义）覆盖成「已收尾」。修复：以 `chat.questionPending` 事实位为准（`turn/start` 与 `user/message` 清零，`concludesTurn` 置位），`turn/end` 按标志选 `waiting-answer`/`done`，aborted/error 追加理由并清零。Node 假 DOM harness 先复现 `HARNESS_FAIL`、修复后 `HARNESS_PASS` + `ABORT_PASS`；`WorkbenchUiTest` 增 `uiKeepsWaitingAnswerAfterQuestionDriveStopTurnEnd` 静态钉，终态 12/0/0。**§4 banner 补丁**（组合行 `idleTimeoutSeconds` 被中继覆盖时显式提示）随本批提交，落 CLI stdout，不触 UI 行数。
 
-收口门禁（本机测量面，见[停 3 证据档](evidence/iteration-38/stop3-evidence.md)）：全量 package EXIT=0（fresh surefire XML 202 份 = **1669/0/0/25**；计数链 1669 = 停 2 的 1665 + 4，300s 真钟哨兵不重复跑）；validate EXIT=0；keyless `--verify` 与 `--verify --serve --web-write` 均 EXIT=0 且 banner 行 `web-write: off/on` 逐字命中、零监听；B29/B36 真 serve 复核（仅 127.0.0.1:8791 + 坏 Host 403 + 跨站 Origin POST 403 + 同源 200 + SIGINT 后 PORT_FREE）；ui.html 830 行 ≤900。推送与 CI 四腿结果在关账批回填。
+收口门禁（本机测量面，见[停 3 证据档](evidence/iteration-38/stop3-evidence.md)）：全量 package EXIT=0（fresh surefire XML 202 份 = **1669/0/0/25**；计数链 1669 = 停 2 的 1665 + 4，300s 真钟哨兵不重复跑）；validate EXIT=0；keyless `--verify` 与 `--verify --serve --web-write` 均 EXIT=0 且 banner 行 `web-write: off/on` 逐字命中、零监听；B29/B36 真 serve 复核（仅 127.0.0.1:8791 + 坏 Host 403 + 跨站 Origin POST 403 + 同源 200 + SIGINT 后 PORT_FREE）；ui.html 830 行 ≤900。
 
-停 2 批随本提交入仓；停 3 = 真机验收（用户亲手：真 serve + 真浏览器发消息/流式/审批点选/exit-5 答复/SIGINT）+ banner 补丁 + 同步面 + 收口。未授权 push。
+推送与 CI：停 3 收口批 `1e80197` 已推；Windows 两腿首跑红（run `45142833538`，headless 7 失败），修复两笔——`a0cd0a5`（JSON 内路径转义 + 遗物捕获条件等待）、`f4b0879`（并发根会话等 runtime 真退休）——后 run `45148236185` **四腿全绿**（macos / build / windows / windows-arm）。修复期本地聚焦 18/0/0/0，全量 fresh XML 202 份 = **1670/0/0/25**（1669 + 转义钉子 1）；根因与证据见[CI Windows 修复档](evidence/iteration-38/ci-windows-fix.md)。产品代码零改动。
+
+停 2 批随本提交入仓；停 3 = 真机验收（用户亲手：真 serve + 真浏览器发消息/流式/审批点选/exit-5 答复/SIGINT）+ banner 补丁 + 同步面 + 收口。收口批经用户点名授权推送（`1e80197`），Windows 修复两笔同批续推。
 
 ## 准入条件：B36 Host/Origin 信任围栏（预登记，写面开工前必须落地）
 
@@ -191,4 +193,4 @@ dsh 三张清单落 `evidence/iteration-38/`（原 `evidence/iteration-37/`，�
 - [x] 停 3 真机验收：jlink `--serve --web-write` → 浏览器跑通开轮/流式/审批/答复/取消 + 用户检视实录（[用户原文](evidence/iteration-38/stop3-acceptance.txt)；小观察已定位修复——`questionPending` 事实位，非措辞）
 - [x] B29/B36 复验（监听地址实录仅 127.0.0.1:8787 + 坏 Host 403 + 跨站 Origin POST 403 + 同源 200）
 - [x] 门禁：validate EXIT=0 + 全量 package EXIT=0 + 计数（fresh XML 202 份 = 1669/0/0/25）+ keyless `--verify`（开/关两态 banner 实核、零监听）
-- [ ] 同步面全勾 + CI 四腿全绿 + run 号回填 + 关账
+- [x] 同步面全勾 + CI 四腿全绿（run `45148236185`）+ Windows 测试面修复（`a0cd0a5` / `f4b0879`）+ run 号回填 + 关账（2026-11-23）
