@@ -1,0 +1,12 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=HeadlessWebWriteOptionsTest,HeadlessOptionsTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-23T09:39:38.393444
+END=2026-11-23T09:39:45.100077
+EXIT=0
+XML_COLUMNS=tests failures errors skipped
+HeadlessWebWriteOptionsTest [7, 0, 0, 0] mtime=2026-11-23T09:39:45.046256
+HeadlessOptionsTest [29, 0, 0, 0] mtime=2026-11-23T09:39:44.966210
+FRESH_TOTAL=[36, 0, 0, 0]
+MISSING=[]
+LOG_SHA256=01aad91e3b6a20f4677236c6004a74eb4f51030c33992b3eee22bf9b200826f3

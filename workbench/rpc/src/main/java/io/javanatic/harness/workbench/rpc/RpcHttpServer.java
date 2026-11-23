@@ -45,7 +45,7 @@ public final class RpcHttpServer implements AutoCloseable {
 
     private final JsonRpcWire wire = new JsonRpcWire();
     private final JsonRpcWire.Handler handler;
-    private final WorkbenchUi ui = new WorkbenchUi();
+    private final WorkbenchUi ui;
     private final Optional<EventStream> events;
     private final Set<SseConnection> connections = ConcurrentHashMap.newKeySet();
     private HttpServer server;
@@ -57,18 +57,36 @@ public final class RpcHttpServer implements AutoCloseable {
     /** @param handler 方法派发面(WorkbenchRpc);wire 为内部纯函数组合；不启用 SSE */
     public RpcHttpServer(JsonRpcWire.Handler handler) {
         this.handler = Objects.requireNonNull(handler, "handler");
+        this.ui = new WorkbenchUi(false);
         events = Optional.empty();
     }
 
     /**
      * 显式启用 GET /events；source 与 codec 缺一即构造失败，不静默退回 404。
+     * 页面按只读面服务（0.5.0 形状）。
      *
      * @param handler JSON-RPC 方法派发面
      * @param source 已原子接续的 SSE 日志源
      * @param codecs 原始事件 codec 注册表
      */
     public RpcHttpServer(JsonRpcWire.Handler handler, SseEventSource source, SessionCodecRegistry codecs) {
+        this(handler, source, codecs, false);
+    }
+
+    /**
+     * 启用 SSE 并钉死页面写面形状（it38 停 2）：{@code webWrite = true} 时
+     * 页面加载聊天/审批控件；只读面页面不初始化任何写路径。本构造只描述
+     * **页面形状**，四写方法是否可达仍由注入的 {@link ChatControl} 决定。
+     *
+     * @param handler  JSON-RPC 方法派发面
+     * @param source   已原子接续的 SSE 日志源
+     * @param codecs   原始事件 codec 注册表
+     * @param webWrite true = 页面呈现写面控件
+     */
+    public RpcHttpServer(JsonRpcWire.Handler handler, SseEventSource source,
+                         SessionCodecRegistry codecs, boolean webWrite) {
         this.handler = Objects.requireNonNull(handler, "handler");
+        this.ui = new WorkbenchUi(webWrite);
         events = Optional.of(new EventStream(Objects.requireNonNull(source, "source"), new SseEncoder(codecs)));
     }
 

@@ -1,5 +1,7 @@
 package io.javanatic.harness.boot;
 
+import io.javanatic.harness.interaction.approval.ApprovalAskPlugin;
+import io.javanatic.harness.interaction.approval.ApprovalPrompt;
 import io.javanatic.harness.kernel.config.CompositionManifest;
 import io.javanatic.harness.kernel.config.ConfigRowSpec;
 import io.javanatic.harness.kernel.config.ConfigService;
@@ -181,30 +183,108 @@ public final class AppBoot {
      * @throws VerifyFailedException verify 违规
      */
     public static Booted bootReported(BootOptions options) throws IOException {
-        YamlRows.Profile profile = YamlRows.parseProfile(options.profilePath());
-        List<ConfigRowSpec> rows = compose(profile, options);
-        PluginLoader loader = new PluginLoader();
-        Map<String, Plugin> discovered = loader.discover();
-        // 双向校验对照全量行(禁用行也算引用——它在组合里,只是不加载)
-        verifyComposition(discovered, rows);
-        List<ConfigRowSpec> enabled = resolve(rows);
-        verifyWorkspaceAlignment(enabled);
+        return bootReported(options, null);
+    }
 
-        Runtime runtime = new Runtime();
-        Scope root = runtime.root();
-        root.provide(ConfigService.KEY, configServiceFrom(enabled));
-        root.provide(CompositionManifest.KEY, manifestFrom(enabled));
-        loader.loadAll(runtime, enabled.stream().map(row -> discovered.get(row.plugin())).toList());
+    /**
+     * 同 {@link #bootReported(BootOptions)}，另以外部 {@code ApprovalPrompt} 实现驱动
+     * 已启用的 approval-ask 行（it38 H1）：一个接口、两个实现（CLI 终端 / serve 中继），
+     * 组合时选实现。{@code prompt == null} 表示沿用插件自带终端提示。
+     *
+     * <p>注入只替换 approval-ask 实例；ask 行未启用（含 disabled 行）或发现实例类型不符
+     * 时 fail loud——不静默复用 auto/deny，也不把 prompt 挂到别的插件上。
+     *
+     * @param options 装配选项
+     * @param prompt 审批提示实现；null 表示不注入
+     * @return Runtime + 组合自述计数
+     * @throws IOException 读取失败
+     * @throws IllegalStateException 双向校验、注入前置或加载失败
+     * @throws VerifyFailedException verify 违规
+     */
+    public static Booted bootReported(BootOptions options, ApprovalPrompt prompt) throws IOException {
+        return assemble(new Runtime(), options, prompt);
+    }
 
-        if (options.verify()) {
-            List<String> violations = options.verifyPolicy().check(root);
-            if (!violations.isEmpty()) {
-                throw new VerifyFailedException(violations);
+    /**
+     * 装配到调用方提供的 Runtime：失败（含 verify 违规与 Error）时关闭它并上抛原错误
+     * （R3 半装配回收；清理失败只记 suppressed，不掩盖首因）。
+     *
+     * @param runtime 调用方拥有的 Runtime
+     * @param options 装配选项
+     * @param prompt 审批提示实现；null 表示不注入
+     * @return 装配结果
+     * @throws IOException 读取失败
+     * @throws IllegalStateException 双向校验、注入前置或加载失败
+     * @throws VerifyFailedException verify 违规
+     */
+    static Booted assemble(Runtime runtime, BootOptions options, ApprovalPrompt prompt) throws IOException {
+        try {
+            YamlRows.Profile profile = YamlRows.parseProfile(options.profilePath());
+            List<ConfigRowSpec> rows = compose(profile, options);
+            PluginLoader loader = new PluginLoader();
+            Map<String, Plugin> discovered = loader.discover();
+            // 双向校验对照全量行(禁用行也算引用——它在组合里,只是不加载)
+            verifyComposition(discovered, rows);
+            List<ConfigRowSpec> enabled = resolve(rows);
+            verifyWorkspaceAlignment(enabled);
+            Map<String, Plugin> toLoad = prompt == null
+                ? discovered : injectApprovalPrompt(discovered, enabled, prompt);
+
+            Scope root = runtime.root();
+            root.provide(ConfigService.KEY, configServiceFrom(enabled));
+            root.provide(CompositionManifest.KEY, manifestFrom(enabled));
+            loader.loadAll(runtime, enabled.stream().map(row -> toLoad.get(row.plugin())).toList());
+
+            if (options.verify()) {
+                List<String> violations = options.verifyPolicy().check(root);
+                if (!violations.isEmpty()) {
+                    throw new VerifyFailedException(violations);
+                }
+                emitSandboxObservations(root, LOG::log);
             }
-            emitSandboxObservations(root, LOG::log);
+            // 校验已过 → 恒 0；保留计数是摘要与校验同源的证据（不印常量）
+            return new Booted(runtime, profile.name(), discovered.size(),
+                unreferencedPlugins(discovered, rows).size());
+        } catch (IOException | RuntimeException | Error e) {
+            closeQuietly(runtime, e);
+            throw e;
         }
-        // 校验已过 → 恒 0；保留计数是摘要与校验同源的证据（不印常量）
-        return new Booted(runtime, profile.name(), discovered.size(), unreferencedPlugins(discovered, rows).size());
+    }
+
+    /** 半装配回收：关闭失败不掩盖首因（suppressed 记录），继续上抛原错误。 */
+    private static void closeQuietly(Runtime runtime, Throwable failure) {
+        try {
+            runtime.close();
+        } catch (RuntimeException closeFailure) {
+            failure.addSuppressed(closeFailure);
+        }
+    }
+
+    /**
+     * 注入前置（it38 H1）：仅替换已启用 approval-ask 行的实例。行未启用 → fail loud
+     * （auto/deny 不接受外部 prompt，不静默改档）；实例类型不符 → fail loud 点名实际类型。
+     *
+     * @param discovered 发现集（不修改）
+     * @param enabled 已求值启用行
+     * @param prompt 外部提示实现
+     * @return 替换了 approval-ask 实例的发现集副本
+     */
+    static Map<String, Plugin> injectApprovalPrompt(Map<String, Plugin> discovered,
+                                                    List<ConfigRowSpec> enabled, ApprovalPrompt prompt) {
+        java.util.Objects.requireNonNull(prompt, "prompt");
+        boolean askEnabled = enabled.stream().anyMatch(row -> "approval-ask".equals(row.plugin()));
+        if (!askEnabled) {
+            throw new IllegalStateException("启动期 ApprovalPrompt 注入要求组合启用 approval-ask 行"
+                + "（approval-auto / approval-deny 不接受外部 prompt）");
+        }
+        Plugin found = discovered.get("approval-ask");
+        if (!(found instanceof ApprovalAskPlugin)) {
+            throw new IllegalStateException("approval-ask 行已启用但发现实例类型不符: "
+                + (found == null ? "null" : found.getClass().getName()));
+        }
+        Map<String, Plugin> substituted = new LinkedHashMap<>(discovered);
+        substituted.put("approval-ask", new ApprovalAskPlugin(prompt));
+        return substituted;
     }
 
     /** --verify 治理摘要的数据面：装配结果 + 组合自述计数（07 §6）。 */

@@ -1,0 +1,7 @@
+BINARY=/Users/abel_yang/study/deepseek/javanatic-harness/dist/jh/target/jlink-image/bin/jh
+BINARY_SHA256=e7da4e184243ac324dd940ec9b9682929431c51e02440fb8d36540c9f15e4ebd
+COMMAND_OFF=jh --verify
+EXIT_OFF=0
+COMMAND_ON=jh --verify --serve --web-write
+EXIT_ON=0
+ROWS=['  web-write: off（缺省）', '  web-write: on（--web-write）']

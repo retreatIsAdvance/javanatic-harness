@@ -170,10 +170,11 @@
             <artifactId>harness-session-persistence-jsonl</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- it38 H1：启动期只注入 ApprovalPrompt 实现（CLI 终端/serve 中继二选一），
+             AppBoot 需要编译期可见 interaction.approval 的接口与 ask 插件类型 -->
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>
             <artifactId>harness-interaction-approval</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.github.retreatisadvance</groupId>

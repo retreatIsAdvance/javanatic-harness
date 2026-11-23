@@ -1,0 +1,9 @@
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q validate
+CWD=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+START=2026-11-23T08:43:39.695475
+END=2026-11-23T08:43:46.968208
+EXIT=0
+LOG_BYTES=477
+LOG_SHA256=c6fffa17b41dd82982f95cf3d9ed30a00bc062453365e53ef5db2b6683ac6c17
+SCOPE=spotless:check + checkstyle:check（全 reactor，不编译、不跑测试；不能替代红测复绿）

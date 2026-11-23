@@ -1,0 +1,8 @@
+BINARY=/Users/abel_yang/study/deepseek/javanatic-harness/dist/jh/target/jlink-image/bin/jh
+BINARY_SHA256=e7da4e184243ac324dd940ec9b9682929431c51e02440fb8d36540c9f15e4ebd
+BINARY_MTIME=2026-11-23T11:17:18.767329
+COMMAND=jh --web-write
+EXIT=2
+STDOUT=<empty>
+STDERR=Nov 23, 2026 11:17:26 AM io.javanatic.harness.examples.headless.HeadlessMain main
+严重: --web-write 需与 --serve 同用（写面是 server 的开关）（用法见 --help）

@@ -1,0 +1,9 @@
+COMMAND=grep -rn "interaction.approval|interaction-approval" workbench/rpc/src/main/java/module-info.java workbench/rpc/pom.xml
+RESULT=no match (exit 1)
+COMMAND=grep -rn "ApprovalPrompt" workbench/rpc/src
+RESULT=3 hits, all Javadoc text only (ApprovalRelay.java:24, ChatControl.java:11, ApprovalRelayTest.java:23); grep exit 0 but no import/type use
+COMMAND=grep -rl "ApprovalPrompt" examples/headless/src/main/java
+RESULT=5 files (adapter and composition live in examples/headless)
+CALLSITE=WebChatControl.java:373 AppBoot.bootReported(boot, injectPrompt ? hub.prompt() : null); other headless call sites pass one-arg bootReported only
+APPBOOT=AppBoot.bootReported(BootOptions, ApprovalPrompt) + injectApprovalPrompt present in bundle/base
+VERDICT=H1 boundary holds: workbench/rpc has no interaction-approval dependency/requires edge.

@@ -25,3 +25,7 @@ docs/plan/evidence/iteration-29/stop3-*.txt -text !eol whitespace=-trailing-spac
 docs/plan/evidence/iteration-38/stop1-*.log -text !eol whitespace=-trailing-space,-blank-at-eof
 # 同批 Surefire 结果摘要也逐字保留断言 message/stacktrace；不改已送审的红测证据。
 docs/plan/evidence/iteration-38/stop1-*-result.txt -text !eol whitespace=-trailing-space,-blank-at-eof
+
+# it38 停 2 同款原始 Maven / 审计输出保真；只豁免本停 log 与 result，不放宽源码门禁。
+docs/plan/evidence/iteration-38/stop2-*.log -text !eol whitespace=-trailing-space,-blank-at-eof
+docs/plan/evidence/iteration-38/stop2-*-result.txt -text !eol whitespace=-trailing-space,-blank-at-eof

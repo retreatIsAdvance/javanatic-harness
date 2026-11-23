@@ -36,6 +36,7 @@ import io.javanatic.harness.session.message.ContentBlock;
 import io.javanatic.harness.session.message.MessageSource;
 import io.javanatic.harness.session.message.TextBlock;
 import io.javanatic.harness.session.message.UserMessage;
+import io.javanatic.harness.session.persistence.SessionCodecRegistry;
 import io.javanatic.harness.session.persistence.SessionPersistence;
 import io.javanatic.harness.session.persistence.SessionSummary;
 import io.javanatic.harness.session.persistence.SessionTail;
@@ -141,9 +142,10 @@ public final class HeadlessMain {
                                                 (需真 TTY;无 key 可跑)
           jh --sessions[=<N>]                  列举会话(id/活动时间/事件数/写者状态/cwd;
                                                 无 key 可跑;续跑/检视用行内 id)
-          jh --serve [--port=<N>]              本地回环 JSON-RPC server(只读工作台面:
+          jh --serve [--port=<N>] [--web-write]
+                                                本地回环 JSON-RPC server(缺省只读工作台面:
                                                 仅 127.0.0.1,缺省 8787;无 key 可跑;
-                                                Ctrl-C 退出)
+                                                --web-write 开启聊天/审批写面;Ctrl-C 退出)
           jh --dump                            打印组合 dump(组合期行序,含禁用行注解、
                                                 敏感配置脱敏;无 key 可跑)
           jh --verify [flags]                  组合与治理断言(无 key 可跑,exit 0/1;
@@ -181,10 +183,14 @@ public final class HeadlessMain {
           --workbench               全屏只读工作台(--session 必配;与任务文本 / --resume /
                                     --verify / --sessions / --session-view 互斥;需真 TTY)
           --follow                  工作台跟随态:流式读面 live tail(--workbench 必配)
-          --serve                  本地回环 JSON-RPC server(只读工作台面;仅绑定 127.0.0.1;
-                                    无 key 可跑;stdout 报地址行 + UI 地址行,GET / 服务单文件
-                                    浏览器 UI;与任务文本 / --resume / --verify / --sessions /
-                                    --session / --session-view / --workbench 互斥)
+          --serve                  本地回环 JSON-RPC server(缺省只读工作台面;仅绑定 127.0.0.1;
+                                    无 key 可跑;stdout 报地址行 + `web-write: off/on` 行 + UI
+                                    地址行,GET / 服务单文件浏览器 UI;与任务文本 / --resume /
+                                    --sessions / --session / --session-view / --workbench 互斥;
+                                    与 --verify 同用 = 纯预检:零监听、不建会话)
+          --web-write              server 写面开关(缺省关:只读 UI;开:聊天/审批/答复控件)。
+                                    需与 --serve 同用;`--verify --serve --web-write` 下只做
+                                    纯预检,不监听、不建会话
           --port=<N>               server 端口(1-65535;缺省 8787;仅与 --serve 同用)
           --dump                   打印组合 dump(一行一插件:组合期行序,含禁用行注解、
                                      敏感配置脱敏;无 key 可跑;与任务文本 / --resume / --verify /
@@ -262,8 +268,8 @@ public final class HeadlessMain {
                          String resume, boolean docker, String image, Path workspace, String approval,
                          long budget, boolean help, boolean version, OptionalInt sessions,
                          OptionalInt approvalTimeout, String session, String sessionView,
-                         boolean workbench, boolean follow, boolean serve, OptionalInt servePort,
-                         boolean dump) {
+                         boolean workbench, boolean follow, boolean serve, boolean webWrite,
+                         OptionalInt servePort, boolean dump) {
 
         static final String DEFAULT_PROVIDER = "deepseek";
         static final String DEFAULT_MODEL = "deepseek-chat";
@@ -358,6 +364,7 @@ public final class HeadlessMain {
         boolean workbench = false;
         boolean follow = false;
         boolean serve = false;
+        boolean webWrite = false;
         OptionalInt servePort = OptionalInt.empty();
         boolean dump = false;
         for (String arg : args) {
@@ -411,6 +418,8 @@ public final class HeadlessMain {
                 follow = true;
             } else if ("--serve".equals(arg)) {
                 serve = true;
+            } else if ("--web-write".equals(arg)) {
+                webWrite = true;
             } else if ("--dump".equals(arg)) {
                 dump = true;
             } else if (arg.startsWith("--port=")) {
@@ -481,16 +490,18 @@ public final class HeadlessMain {
         if (servePort.isPresent() && !serve) {
             throw new IllegalArgumentException("--port 需与 --serve 同用（端口只对 server 有意义）");
         }
+        if (webWrite && !serve) {
+            // 写面是 server 的开关:无 server 时给了就是没说清意图(verify 同款,不猜)
+            throw new IllegalArgumentException("--web-write 需与 --serve 同用（写面是 server 的开关）");
+        }
         if (serve) {
-            // server 是只读旁路:与"要跑什么"/其他旁路同用即为用法错误(不猜意图)
+            // server 与"要跑什么"/其他旁路同用即为用法错误(不猜意图);
+            // --verify 例外:纯预检(零监听、不建会话),R4 裁定
             if (task != null) {
-                throw new IllegalArgumentException("--serve 与任务文本互斥（server 只读，不执行任务）");
+                throw new IllegalArgumentException("--serve 与任务文本互斥（server 不执行任务）");
             }
             if (resume != null) {
                 throw new IllegalArgumentException("--serve 与 --resume 互斥（服务与续跑请分开运行）");
-            }
-            if (verify) {
-                throw new IllegalArgumentException("--serve 与 --verify 互斥（一次只做一件事）");
             }
             if (sessions.isPresent()) {
                 throw new IllegalArgumentException("--serve 与 --sessions 互斥（一次只做一件事）");
@@ -556,7 +567,8 @@ public final class HeadlessMain {
             baseUrl == null ? RunnerOptions.DEFAULT_BASE_URL : baseUrl,
             apiKeyEnv == null ? RunnerOptions.DEFAULT_API_KEY_ENV : apiKeyEnv,
             apiKeyLiteral, profile, resume, docker, image, workspace, approval, budget, help, version,
-            sessions, approvalTimeout, session, sessionView, workbench, follow, serve, servePort, dump);
+            sessions, approvalTimeout, session, sessionView, workbench, follow, serve, webWrite,
+            servePort, dump);
     }
 
     private static String valueOf(String flag) {
@@ -723,9 +735,22 @@ public final class HeadlessMain {
             if (options.serve()) {
                 // 只读旁路:不进 API key 检查、不建 agent——回环 server 消费投影/流式读面;
                 // dump 快照启动期算好注入(workbench/rpc 不依赖 bundle/base);
-                // it36 停 2:boot 选项传入——干跑校验复用启动期 overlays/policy
-                return runServe(rt.root(), options.servePort().orElse(DEFAULT_SERVE_PORT),
-                    AppBoot.dump(AppBoot.compose(boot)), boot, out, err);
+                // it36 停 2:boot 选项传入——干跑校验复用启动期 overlays/policy;
+                // it38 停 2:写面开启时每轮真开 agent,路由身份与审批等待界随启动期束传导
+                if (options.webWrite()) {
+                    String key = options.resolvedApiKey();
+                    if (key == null) {
+                        LOG.log(Level.ERROR,
+                            "API key 未提供（--api-key=… 或环境变量 {0}；--verify 可无 key 运行）",
+                            options.apiKeyEnv());
+                        return 2;
+                    }
+                }
+                return runServe(rt.root(), new ServeStartup(
+                    options.servePort().orElse(DEFAULT_SERVE_PORT),
+                    AppBoot.dump(AppBoot.compose(boot)), boot, options.webWrite(),
+                    new AgentOptions(options.provider(), options.model()),
+                    askIdleTimeoutSeconds(options.approvalTimeout(), false)), out, err);
             }
             String apiKey = options.resolvedApiKey();
             if (apiKey == null) {
@@ -966,6 +991,7 @@ public final class HeadlessMain {
                 + "; exempt=" + exemptText(root) + ")",
             "  mcp: " + mcpText(root),
             "  web: " + webText(root),
+            "  web-write: " + webWriteText(options.webWrite()),
             "  lsp: " + lspText(root),
             "  jobs: " + jobsText(root),
             "  delegation: " + delegationText(root),
@@ -1069,6 +1095,15 @@ public final class HeadlessMain {
         return tools.isEmpty()
             ? mounted + "; tools=0"
             : mounted + "; tools=" + String.join(",", tools) + " (approval-required)";
+    }
+
+    /**
+     * 写面开关的 R4 可断言面（notes 0012 / it38 T6）：`--verify` 治理摘要与 serve
+     * 启动 banner 共用本函数渲染——两处措辞同源，断言面不会一处改了另一处漂移。
+     * 读实现（options / flag），不印文档常量。
+     */
+    private static String webWriteText(boolean enabled) {
+        return enabled ? "on（--web-write）" : "off（缺省）";
     }
 
     /**
@@ -1241,39 +1276,134 @@ public final class HeadlessMain {
     }
 
     /**
+     * --serve 启动期数据束：端口 / 组合 dump 快照 / 装配选项 / 写面开关 / 写面路由身份 /
+     * 审批等待界六件在 run() 确定、原样传导到 runServe。打成一束而非摊平参数
+     * （checkstyle ParameterNumber 理由）：这是同位数据束，不是互斥判别摊平；
+     * 后续宿主接线新增面只加字段，不再改签名。后两件只在 {@code webWrite} 时被消费
+     * （只读面不建 agent、不建中继）。
+     *
+     * @param port 监听端口（0 = ephemeral，测试/取证面）
+     * @param compositionDump 启动期组合 dump 快照
+     * @param boot 每轮装配选项（写面按轮重组同源）
+     * @param webWrite 写面开关
+     * @param agentOptions 每轮 agent 路由身份（provider / model）
+     * @param approvalSeconds 写面审批空闲上限秒数（0 = 不设限）
+     */
+    record ServeStartup(int port, String compositionDump, AppBoot.BootOptions boot, boolean webWrite,
+                        AgentOptions agentOptions, long approvalSeconds) {
+
+        /** 只读面便捷形（0.5.0 形状；写面字段不参与装配）。 */
+        ServeStartup(int port, String compositionDump, AppBoot.BootOptions boot, boolean webWrite) {
+            this(port, compositionDump, boot, webWrite, new AgentOptions("readonly", "readonly"), 0);
+        }
+    }
+
+    /**
      * --serve 本地回环 JSON-RPC server（只读工作台面,无 key 可跑）:boot 装配双 seam
      * （SessionPersistence/SessionTail 由 persistence-jsonl 既有行提供）→ 回环监听 →
      * stdout 地址行 + UI 地址提示行（it36 停 2 T5）→ 阻塞至 SIGINT 首按（close + exit 0;
      * 再按 halt(130) 逃生门）。端口占用 bind 失败是 CLI 失败面（stderr 指引,exit 3——
      * 写者锁冲突同族）;其余 IO 异常原样上抛。ephemeral（port=0）是测试/取证面,CLI parse 已拒收。
      *
-     * @param compositionDump 启动期组合 dump 快照（run() 算好注入;compositionDump 读面）
-     * @param serverBoot 启动期装配选项（it36 停 2:verifyComposition 干跑复用其 overlays/policy）
+     * <p>it38 停 2 写面：{@code webWrite} 时额外装配 {@link WebApprovalHub}（共享审批
+     * relay）+ {@link WebChatControl}（按轮重组组合）并把 {@link ChatControl} 注入
+     * {@link WorkbenchRpc}、{@link WebEventSource} 注入 {@link RpcHttpServer} 的 SSE 腿。
+     * 收口顺序 server → chat → hub（先断连接与轮，后撤租约）；bind 失败与收口共用同一
+     * 回收面，不留半装配态。
+     *
+     * @param startup serve 启动期数据束（端口 / 组合 dump 快照 / 装配选项 / 写面开关 / 路由身份 / 审批界）
      */
-    static int runServe(Scope root, int port, String compositionDump, AppBoot.BootOptions serverBoot,
-                        PrintStream out, PrintStream err) throws Exception {
-        RpcHttpServer server = new RpcHttpServer(new WorkbenchRpc(
-            root.require(SessionPersistence.KEY), root.require(SessionTail.KEY), compositionDump,
-            yaml -> dryRunVerify(yaml, serverBoot)));
+    static int runServe(Scope root, ServeStartup startup, PrintStream out, PrintStream err)
+            throws Exception {
+        SessionPersistence persistence = root.require(SessionPersistence.KEY);
+        SessionTail tail = root.require(SessionTail.KEY);
+        WebApprovalHub hub = null;
+        WebChatControl chat = null;
+        if (startup.webWrite()) {
+            // 中继等待界单源 = --approval-timeout（缺省按非交互 300s）：浏览器面不继承
+            // 交互终端的「不设限」；注入 prompt 后组合行的 idleTimeoutSeconds 不再被读，
+            // 这里刻意取窄不取宽（T3 硬约束：中继只搬运、不放宽）。
+            hub = new WebApprovalHub(startup.approvalSeconds());
+            try {
+                chat = new WebChatControl(startup.boot(), startup.agentOptions(), hub, persistence);
+            } catch (IOException | RuntimeException e) {
+                hub.close();
+                throw e;
+            }
+        }
+        WorkbenchRpc rpc = startup.webWrite()
+            ? new WorkbenchRpc(persistence, tail, startup.compositionDump(),
+                yaml -> dryRunVerify(yaml, startup.boot()), chat)
+            : new WorkbenchRpc(persistence, tail, startup.compositionDump(),
+                yaml -> dryRunVerify(yaml, startup.boot()));
+        RpcHttpServer server = startup.webWrite()
+            ? new RpcHttpServer(rpc, new WebEventSource(tail, hub),
+                root.require(SessionCodecRegistry.KEY), true)
+            : new RpcHttpServer(rpc);
+        Runnable closeAll = serveClose(server, chat, hub);
         try {
-            server.start(port);
+            server.start(startup.port());
         } catch (IOException e) {
-            err.println("监听 127.0.0.1:" + port + " 失败（端口被占用）: " + e.getMessage()
+            closeAll.run();
+            err.println("监听 127.0.0.1:" + startup.port() + " 失败（端口被占用）: " + e.getMessage()
                 + "；换 --port=<N> 或结束占用进程后重试");
             return 3;
         }
-        ServeShutdown shutdown = new ServeShutdown(server::close,
+        ServeShutdown shutdown = new ServeShutdown(closeAll,
             code -> java.lang.Runtime.getRuntime().halt(code));
         Runnable restoreSigint = bindSigint(shutdown::onSignal);
         try {
             out.println("JSON-RPC server 127.0.0.1:" + server.address().getPort()
-                + "（只读工作台面；Ctrl-C 退出）");
+                + "（" + (startup.webWrite() ? "工作台面；写面已开（聊天/审批）" : "只读工作台面")
+                + "；Ctrl-C 退出）");
+            // R4 可断言面(notes 0012):banner 与 --verify 同源 webWriteText,措辞不漂移
+            out.println("web-write: " + webWriteText(startup.webWrite()));
             out.println("UI: http://127.0.0.1:" + server.address().getPort() + "/（浏览器打开）");
             shutdown.await();
             return 0;
         } finally {
             restoreSigint.run();
         }
+    }
+
+    /**
+     * serve 收口面：server → chat → hub 有序关闭；每个失败都记下但继续收下一层
+     * （断连接失败不得让租约与运行时泄漏），最后抛出首个失败。
+     */
+    private static Runnable serveClose(RpcHttpServer server, WebChatControl chat, WebApprovalHub hub) {
+        return () -> {
+            RuntimeException failure = null;
+            try {
+                server.close();
+            } catch (RuntimeException e) {
+                failure = e;
+            }
+            try {
+                if (chat != null) {
+                    chat.close();
+                }
+            } catch (RuntimeException e) {
+                if (failure == null) {
+                    failure = e;
+                } else {
+                    failure.addSuppressed(e);
+                }
+            }
+            try {
+                if (hub != null) {
+                    hub.close();
+                }
+            } catch (RuntimeException e) {
+                if (failure == null) {
+                    failure = e;
+                } else {
+                    failure.addSuppressed(e);
+                }
+            }
+            if (failure != null) {
+                throw failure;
+            }
+        };
     }
 
     /**

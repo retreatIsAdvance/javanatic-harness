@@ -1,0 +1,36 @@
+停 2 定向突变 — 只改生产代码、逐字节还原、红→绿、零残留（2026-11-23）
+MUTATION_SCOPE=examples/headless/src/main/java/.../WebChatControl.java 与 workbench/rpc 生产/资源（WorkbenchUi.java、ui.html）
+TEST_FILES_UNTOUCHED=本组突变未改任何测试文件；夹具/常量均未动
+COUNT_COLUMNS=tests failures errors skipped（surefire XML/日志尾行）
+
+M1 request-pre-step
+CHANGE=WebChatControl.bindLease 的订阅从 AgentEvents.REQUEST 换成 PRE_STEP（错误绑定变体）
+EVIDENCE=stop2-mut-request-pre-step-red.log
+RESULT=WebChatControlTest [12, 10, 0, 0]；失败均为 20s 等待未达（审批未进 feed / 轮未完成）
+WHY=证明路由依赖 REQUEST 的真实 signal identity，PRE_STEP 变体会让真实工具审批恒不达
+
+M2 retiring-reset
+CHANGE=retire() 的 finally 删除 st.retiring = false（退役标记不复位）
+EVIDENCE=stop2-mut-retiring-reset-red.log（日志内 WebChatControlTest [2, 1, 0, 0]）
+RESULT=sendAfterRetiredRoundColdBootsAgain 红（20s 等待未达）
+WHY=证明退役后同会话 send 的冷启动路径依赖 retiring 复位
+
+M3 write-sentinel
+CHANGE=WorkbenchUi 的 __JH_WEB_WRITE__ 哨兵恒替换为 "false"
+EVIDENCE=stop2-mut-write-sentinel-red.log
+RESULT=WorkbenchUiTest [10, 1, 0, 0]、RpcHttpServerSseTest [22, 1, 0, 0]；合计 [32, 2, 0, 0]
+WHY=证明页面写面开关与根页取值由构造器决定，哨兵缺失/写死会同时被 UI 与 SSE 根页用例抓住
+
+M4 ime-guard
+CHANGE=ui.html 删除输入框与 document 两处 IME 守卫（isComposing || keyCode === 229）
+EVIDENCE=stop2-mut-ime-guard-red.log
+RESULT=WorkbenchUiTest [10, 1, 0, 0]；uiHtmlGuardsImeCompositionBeforeEnterHandling 期望 3 段实得 1 段
+WHY=证明加强后的断言钉住两处 handler 的逐字守卫，不只匹配注释里的关键词
+
+RESTORE
+EVIDENCE=stop2-mut-restore-green.log
+RESULT=WorkbenchUiTest [10, 0, 0, 0] + RpcHttpServerSseTest [22, 0, 0, 0] = [32, 0, 0, 0]
+SOURCE_SHA256_AFTER_RESTORE
+8369f2461b20b854dbca812931e4005f690bee6839b57b99560f669af642005c  examples/headless/src/main/java/io/javanatic/harness/examples/headless/WebChatControl.java
+RESIDUAL_CHECK=grep 命中 AgentEvents.REQUEST（WebChatControl.java:347）、retiring = false（:524）、两处 IME 守卫（ui.html:736,743）、WEB_WRITE 哨兵（WorkbenchUi.java:27 / ui.html:210）；未见突变标记残留
+GIT_DIFF_CHECK=见终包审计；WebChatControl.java 为未跟踪新文件，零残留以还原后全绿 + 上述锚点与 SHA 记录为准

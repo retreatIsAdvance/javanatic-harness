@@ -1,4 +1,4 @@
-# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），停 1 已放行，转停 2 集成面；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
+# 迭代 38 — W5 交互工作台（状态：四确认已通过（2026-11-20），停 1 已提交 `27b2d88`，停 2 已放行并提交，转停 3 真机验收；预登记 2026-11-17；开工前置 it37 已关账——0.5.0 已发布）
 
 基线：it37 已关账（0.5.0 全链闭环：Central 71 坐标 + GitHub Release 8 归档 + tag；最终 head `b568ef8`），工作版本 `0.6.0-SNAPSHOT`。**版本号与顺序已裁（2026-11-17）：先 0.5.0 发布（it37），W5 = 0.6.0**——版本叙事对齐治理叙事：0.5.0 把「零写面只读工作台」作为完整自洽的能力相位发布收口；「零写面不变量的终结」是叙事反转，配 ADR 配新 minor 号，patch 号不承载这种重量；发布后 W5 在**已发布基线**上动写面，回退面干净。路线表新起行（0.6.0），不混入已关账的 0.5 行：W5 显式终结零写面不变量，属新能力相位。
 
@@ -21,7 +21,7 @@
 - **停 1 评审重点（预告）**：① seam 接口形状；② 审批中继一次性结算状态机 + 300s 真时钟集成（fail-closed 在中继下的语义，本站最重的一件）；③ B36 写面复验突变；④ SSE 围栏覆盖 + `Last-Event-ID=seq` 续传语义（seq = R1 信封序，回放安全的地基）。
 - **执行序**：开工首批 = ADR 0012 入 notes + TwoHostLostProbe 手术 + 停 1 seam 契约；push 两笔（`00768be` + `be8df00`）已授权并落地（远端 head `be8df00` 实核）。
 
-## 停 1 已放行，转停 2 集成面（2026-11-20）
+## 停 1 已放行并提交，转停 2 集成面（2026-11-20）
 
 用户已点名「通过放行——契约层全绿，进停 2（集成面）」并授权 commit 停 1 批，完整原文见[放行归档](evidence/iteration-38/stop1-acceptance.txt)。用户独立复跑 rpc 172 绿、validate EXIT=0；与代理聚焦15类的测量面分开记，不混加。[审查包](evidence/iteration-38/stop1-review-packet.md)及[设计稿](evidence/iteration-38/stop1-write-seam-design.md)保留送审时状态；[证据档](evidence/iteration-38/stop1-tdd-evidence.txt)冻结各轮红绿，不以新状态改写历史。
 
@@ -29,7 +29,33 @@
 
 停 2 范围由本轮评审明确：WebChatControl 与 Agent/AppBoot 生命周期桥、真实持久化 follower、`--web-write` CLI 互斥/exit2、verify/banner 的 off/on、SSE dispatch/围栏与既有五读方法一致性、ui.html 聊天与审批接管/IME/零 innerHTML。R4 采纳送审包 §5：`--verify --serve [--web-write]` 为 keyless 纯预检，零监听/轮/工具；无 serve 的 web-write 仍 exit2，port 只校验范围，其余互斥不放宽。此裁决归档时尚未改解析器或接宿主。
 
-停 1 批获准提交；本地开工两笔和本批均未获 push 授权。停 2 必须另出 packet，未放行不提交、不进停 3。停 3 为用户亲手真浏览器发消息、看流式、点审批的检视轮，代理验证不得冒充；本机契约测试不外推 CI、浏览器或生产 serve 验收。
+停 1 批已提交为 `27b2d88`；本地开工两笔和本批均未获 push 授权。停 2 必须另出 packet，未放行不提交、不进停 3。停 3 为用户亲手真浏览器发消息、看流式、点审批的检视轮，代理验证不得冒充；本机契约测试不外推 CI、浏览器或生产 serve 验收。
+
+## 停 2 提前裁决：宿主装配与会话树归属（2026-11-20，待裁）
+
+[提前裁决包](evidence/iteration-38/stop2-review-packet.md)已落盘：源码核对发现 ToolsPlugin / AgentLoopPlugin 在装载时捕获审批服务 / executor，agent scope 覆盖不会被消费；PRE_STEP 与工具收到不同的 signal 视图，只有 REQUEST 与工具共享当前实例；delegation 服务首绑单一父会话，子轮独立运行，父 whenIdle 不代表子轮已静止。
+
+因此在生产代码落地前升格两项：**H1 仅审批通道的 AppBoot typed 注入口**（不开放通用插件替换 / 任意回调）；**H2 每根会话树一个跨轮 Runtime + REQUEST 关联每个实际父/子轮租约**（不新增父取消级联）。成本、备选、验收矩阵见包；两项均为拟案，未获放行。R4 纯预检矩阵已批，不重开；完整停 2 五项评审和停 3 用户检视仍保留。
+
+当前只新增 CLI R4 目标测试和取证脚本，生产 / UI 均未改：首红同窗两类 `36/7/1/0`（28 passed、7 failures、1 error，Maven EXIT=1；[原始结果](evidence/iteration-38/stop2-cli-r4-red-result.txt)）。未复绿、未做停 2 突变或全量，不把静态 validate 或停 1 证据外推为集成通过。停 2 未 commit、未 push，停在 H1/H2 裁决位。
+
+## 停 2 双裁（2026-11-23）：H1 注入口 + H2 按轮挂载
+
+用户对 H1/H2 各附一条精度钉并批准，实现解冻。完整裁决文本已写入 [停 2 审查包 §2](evidence/iteration-38/stop2-review-packet.md)，此处记执行口径：
+
+- **H1 批准**：AppBoot 仅接受 `ApprovalPrompt` 的启动期重载；一个接口、两个实现（CLI 终端提示 / serve 中继），组合时选实现。**边界钉死**：适配器落 `examples/headless`，`workbench/rpc` **不得**新增 `interaction-approval` 的 requires 边（`harness-workbench-rpc` 是 0.5.0 已发布坐标，静默加边 = 下游兼容性变更，12 §7 应记；适配器在 headless 非稳定面规避）。若实现确需该边，回来重裁，不静默突破。
+- **H2 批准，回收政策取 (a) 按轮挂载**：每次 `session/start|send` 从持久化事实重组组合，轮毕即 close——「组合是数据」+ R1 的本来面目，R3 干净排水、零累积。**后台工作例外**：delegation 子代 / jobs 的 runtime 活到其后台工作终局；关闭条件 = 其工作终局 + 无后续轮，保留期同会话 send 复用。租约形状照拟（REQUEST 真实 signal identity 关联每轮租约、未知 signal fail-closed）；**无父取消级联**（取消是显式动作）；一 session 一所有者（写者锁既有语义）。
+- **执行序**：两裁落 packet → 实现解冻 → CLI 七红转绿 → 宿主 / banner / exit 2 / SSE / 聊天 UI 按停 2 清单收 → 出终包评审（重点不变：`--web-write` 互斥、`web-write: off/on` 的 R4 行、SSE 修约重钉、IME 守卫、ui.html 行数）。停 2 未 commit、未 push、未进停 3。
+
+## 停 2 放行（2026-11-23）：批准 commit，转停 3
+
+用户点名「通过放行——批准 commit，进停 3」，完整原文见[放行归档](evidence/iteration-38/stop2-acceptance.txt)。独立复跑 rpc 177 + headless 189 全绿、validate EXIT=0（与代理聚焦 120/0/0/1、全量 package 1665/0/0/25 的测量面分开记）。五重点实核：H1 边界零命中、IME 双守卫逐字、ui.html 762 行 / 零 innerHTML、CLI 七红 36/0/0/0、计数链 1665 = 1614 + 51。
+
+**§4 偏离裁决：方向批，静默须变响亮**。中继固定非交互 300s「取窄不放宽」方向正确；但组合行 `idleTimeoutSeconds` 被静默忽略违背 fail loud——**停 3 补一小件**：`--web-write` 启动 banner 在「配置值 ≠ 300s」时打一行显式提示（如 `approval timeout: 300s（组合行 idleTimeoutSeconds=N 被中继覆盖）`），配置被忽略必须在可观察面留痕。
+
+**预算预警**：ui.html 762/800，软预算余 38 行；停 3 若再给 UI 添东西，T4 重访条款大概率触发（超 800 = 重议形态的四确认议程），须先备「裁剪 vs 重新议」论证。本停 3 的 banner 补丁落 CLI stdout，不触 UI 行数。
+
+停 2 批随本提交入仓；停 3 = 真机验收（用户亲手：真 serve + 真浏览器发消息/流式/审批点选/exit-5 答复/SIGINT）+ banner 补丁 + 同步面 + 收口。未授权 push。
 
 ## 准入条件：B36 Host/Origin 信任围栏（预登记，写面开工前必须落地）
 
@@ -55,7 +81,7 @@
 ### 内容
 
 1. **写面方法组**（JSON-RPC，走既有 POST `/` 通道）：`session/start` / `session/send` / `session/cancel` / `approval/respond`。`session/start` 开新会话并跑首轮；`session/send` 对既有会话送下一轮 user message（`--resume` 等价，即 exit 5 等答复的答复通道）；`session/cancel` 复用 it18 协作取消（aborted 落账、exit 4 语义）；`approval/respond` 只处理审批中继决定。
-2. **执行归属**：`workbench/rpc` 增写面契约 seam（名称停 1 钉死），实现由 `examples/headless` 组合注入——与该模块现有 projection / tail 双 seam 同构；底层只用 `core/agent` 的 `Agent.start/followup/cancel` 与既有 AppBoot 组合，**R2 不开新通道**、不新增发布坐标、不改镜像模块数（69）。
+2. **执行归属**：`workbench/rpc` 增写面契约 seam（名称停 1 钉死），实现由 `examples/headless` 组合注入——与该模块现有 projection / tail 双 seam 同构；底层只用 `core/agent` 的 `AgentRegistry.create/resume`、`Agent.followup/cancel` 与 AppBoot 组合（注入缺口见停 2 提前裁决 H1），**R2 不开新通道**、不新增发布坐标、不改镜像模块数（69）。
 3. **审批中继**：注入 `ApprovalPrompt` 实现（`ApprovalAskPlugin(ApprovalPrompt)` 的显式注入口已是现成接缝）——server 每次请求发 UUID，下行推送「toolName + summary + 参数摘要」；`approval/respond` 按 UUID 一次性结算；**300s fail-closed 与 `--approval-timeout` 原口径不变**（非交互缺省仍是 `NON_INTERACTIVE_IDLE_TIMEOUT`，中继只搬运提示与决定）；超时/取消后迟到的「允许」必须丢弃，UI 给「已过期」明确态。
 4. **流式推送**：SSE（`GET /events`）——`Last-Event-ID` 直接映射 `LoggedEvent` 的 seq 游标，keep-alive 注释帧，浏览器 EventSource 原生长活重连；消费 `assistant/chunk` 等既有事件，**事件源与 R1 面不动**。若评审改裁轮询腿，则零路由修约、活跃会话短间隔 poll 既有 tail 方法。
 5. **轮生命周期 UI 状态机**：running / waiting-approval / **waiting-answer（exit 5）** / done；等答复态 = 浏览器内问题 + 答复框（`session/send` 即 resume）；**不引入问题超时**——JH exit 5 语义本就是无限等（与 dsh TimedQuestionWait 的差异登记在案，不随 dsh）。
@@ -83,7 +109,7 @@ steer / prompt queue（在途轮打断与排队——JH 无队列面，新语义
 
 | # | 待裁项 | 拟案 | 依据 |
 |---|---|---|---|
-| T1 | **写面代码归属与 seam 形状** | **批（workbench/rpc 内契约 + headless 注入实现）**：增写面 seam 接口（`session/start`、`send`、`cancel`、`approval/respond` 四动作），实现类放 `examples/headless`（唯一 AppBoot 组合点，与 projection/tail 注入同构）；零新发布坐标、零新模块、镜像 69 不动。备选（若停 1 评审认定 seam 过大）：独立 `workbench/chat` 模块（+1 发布坐标，须重议 0.6.0 发布面） | 预登记锚 1「全部复用既有执行面」；`WorkbenchRpc` 现有双 seam 构造注入先例；`core/agent` 公开 `start/followup/cancel` |
+| T1 | **写面代码归属与 seam 形状** | **批（workbench/rpc 内契约 + headless 注入实现）**：增写面 seam 接口（`session/start`、`send`、`cancel`、`approval/respond` 四动作），实现类放 `examples/headless`（唯一 AppBoot 组合点，与 projection/tail 注入同构）；零新发布坐标、零新模块、镜像 69 不动。备选（若停 1 评审认定 seam 过大）：独立 `workbench/chat` 模块（+1 发布坐标，须重议 0.6.0 发布面） | 预登记锚 1「全部复用既有执行面」；`WorkbenchRpc` 现有双 seam 构造注入先例；`core/agent` 公开 `AgentRegistry.create/resume` 与 `Agent.followup/cancel` |
 | T2 | **在途轮的 `session/send` 处置** | **批拒绝**：running 轮的重复 send 返回 JSON-RPC 业务错误（「turn in flight」，code 停 1 钉死），不排队、不打断。重访条件 = 用户点名后台排队或 steer。**注记（2026-11-20 评审）：inbox `NEXT_TURN`/`NEXT_STEP` 是现存 steer 通道——拒绝是自觉选择，不是无知；steer 支持挂账为升级路径** | dsh `prompt` 有 queue/steer 双模，JH 无队列面；首版最小语义，避免隐式并发 |
 | T3 | **审批中继令牌与结算形状** | **批（server 发号 + 一次性结算）**：server 每次审批发 UUID；下行事件携带 requestId + toolName + summary；`approval/respond` 必带 requestId，首答结算、迟到/重复回业务错误并在 UI 显「已过期/已结算」；300s 与 `--approval-timeout` 不动；UI 词表只暴露「允许 / 拒绝」（cancelled/unavailable 归 host） | dsh `ApprovalRequestId` + 一次性 retire 先例；JH `ApprovalService.ApprovalRequest` 目前无 ID（需中继层发号）；it22 等待界契约 |
 | T4 | **流式推送实现腿** | **批 SSE**：`GET /events` 显式修约 W4 T1（仅精确 `/` GET/HEAD），`Last-Event-ID` = seq、keep-alive、慢消费者有界队列满即断开由 EventSource 重连续传；停 1 重钉 dispatch 测试。**`/events` 必须无条件过 B36/B37 围栏（GET 同在 dispatch 面，2026-11-20 评审增补）**。备选轮询腿（零修约）保留为评审可翻 | recon-streaming T 项三行成本/收益；SSE 零新依赖；W4 T1 用户原话「别静默破契」 |
@@ -151,7 +177,7 @@ dsh 三张清单落 `evidence/iteration-38/`（原 `evidence/iteration-37/`，�
 - [x] 开工批：TwoHostLostProbe 手术（条件等待 + fsync 证据）完成——聚焦 1/0/0/0 + CPU 饱和 5/5 绿 + 突变 M1 必红复绿（[证据](evidence/iteration-38/startup-batch-flake-surgery.txt)）
 - [x] ADR 0012 入 notes 并互链（[0012-zero-write-surface-end.md](../../.agents/notes/0012-zero-write-surface-end.md)，2026-11-20）
 - [x] 停 1 评审放行（2026-11-20：契约及实现前移范围通过，R4 拟案采纳，[用户原文](evidence/iteration-38/stop1-acceptance.txt)）
-- [ ] 停 2 评审放行（中继实现 + SSE + 状态机 + UI）
+- [x] 停 2 评审放行（2026-11-23：中继实现 + SSE + 状态机 + UI 通过，[用户原文](evidence/iteration-38/stop2-acceptance.txt)；§4 偏离裁决转停 3 banner 补丁）
 - [ ] 停 3 真机验收：jlink `--serve --web-write` → 浏览器跑通开轮/流式/审批/答复/取消 + 用户检视实录
 - [ ] B29/B36 复验（监听地址实录 + 跨站 Host/Origin 拒绝 + 突变必红）
 - [ ] 门禁：validate EXIT=0 + 全量 package EXIT=0 + 计数（surefire XML mtime 窗口）+ keyless `--verify`

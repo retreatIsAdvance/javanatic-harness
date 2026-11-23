@@ -1,0 +1,21 @@
+cwd=/Users/abel_yang/study/deepseek/javanatic-harness
+JAVA_HOME=$(/usr/libexec/java_home -v 25)
+COMMAND=/Users/abel_yang/Documents/apache-maven-3.10.0/bin/mvn -B -q -pl examples/headless -am -Dtest=WebChatControlTest,WebApprovalHubTest,WebEventSourceTest,RelayApprovalPromptTest,WebApprovalRelayContractTest,WebSseCodecContractTest,WebReplayTest,HeadlessWebWriteOptionsTest,HeadlessOptionsTest,RpcHttpServerSseTest,WorkbenchUiTest -Dsurefire.failIfNoSpecifiedTests=false test
+START=2026-11-23T11:11:39.335120
+END=2026-11-23T11:12:33.004182
+EXIT=0
+XML_COLUMNS=tests failures errors skipped
+WebChatControlTest [15, 0, 0, 0] mtime=2026-11-23T11:12:31.555104
+WebApprovalHubTest [10, 0, 0, 0] mtime=2026-11-23T11:12:19.713192
+WebEventSourceTest [7, 0, 0, 0] mtime=2026-11-23T11:12:20.105163
+RelayApprovalPromptTest [16, 0, 0, 0] mtime=2026-11-23T11:12:19.480602
+WebApprovalRelayContractTest [2, 0, 0, 1] mtime=2026-11-23T11:12:32.583089
+WebSseCodecContractTest [1, 0, 0, 0] mtime=2026-11-23T11:12:32.643980
+WebReplayTest [1, 0, 0, 0] mtime=2026-11-23T11:12:32.623708
+HeadlessWebWriteOptionsTest [7, 0, 0, 0] mtime=2026-11-23T11:12:19.612620
+HeadlessOptionsTest [29, 0, 0, 0] mtime=2026-11-23T11:12:18.768462
+RpcHttpServerSseTest [22, 0, 0, 0] mtime=2026-11-23T11:12:17.728504
+WorkbenchUiTest [10, 0, 0, 0] mtime=2026-11-23T11:11:47.363983
+FRESH_TOTAL=[120, 0, 0, 1]
+MISSING=[]
+LOG_SHA256=a9e56faa11cf2fb051f932c85c504a61aefd1327ca2cfff3b768affd78292726

@@ -10,6 +10,7 @@
 - surefire 下 `System.in` 不是 EOF 而是挂起流:stdin 相关测试必须 `System.setIn(空流)` 注入,否则测试类永久挂死。
 - ECJ/JDT 对「导出 API 引用他模块类型」报 *missing requires transitive*（IDE 告警 8390067）——非 transitive 政策（02 §748）的预期代价，不要用 `requires transitive` 消音；IDE 侧经 `java.settings.url` 忽略 APILeak。
 - javac 25：泛型推断下零参隐式 lambda 对 varargs 抽象方法编译失败（`() -> null` ✗）；用单参 lambda（`overrideArgs -> null` ✓，[Next 的 Javadoc](../kernel/core/src/main/java/io/javanatic/harness/kernel/events/Next.java)）。
+- 跨模块接线不能从 Scope 的“每次解析”推出消费者不缓存：核对 provide → 构造捕获 → 实际调用全链；事件载荷语义相同也不保证对象 identity 相同（it38 停 2：ToolsPlugin / AgentLoopPlugin 捕获审批 / executor，AbortController 每次 signal() 新建视图，PRE_STEP 与工具不是同一实例而 REQUEST 与工具才是）。搜索摘要须由关键源码确认；新增注入口 / 资源归属契约在落生产前升格停点（[裁决包](../docs/plan/evidence/iteration-38/stop2-review-packet.md)）。
 - 内核绑定两纪律（it24 两轮 CI 实撞）：① FFM `MethodHandle.invokeExact` **不做隐式加宽**——实参静态类型须与句柄类型逐位一致：`int` fd 喂全 `long` 描述符的 downcall 在 FFM 层即抛 `WrongMethodTypeException`（**调用根本到不了内核**，异常却形似系统调用失败；首跑 → exit 13，见修正表），`invokeWithArguments`/JNA 之类的隐式转换封装只会把这类缺陷藏得更深，不用。② errno 断言要按**查序**分档，不能只写「看似合理」的那个码：landlock 的 `restrict_self` 先查 no_new_privs/CAP_SYS_ADMIN（普通 JVM 两者皆无 → EPERM）之后才校验 fd，而 `add_rule` 先校验 fd（EBADF）——只断言 EBADF 的用例在没有 landlock 的机器上假绿（ENOSYS）、在真有 landlock 的 runner 上红（EPERM），二跑实撞。纪律：**每条内核绑定至少一条真跑用例**（编译通过、平台无关单测都不算数），承载安全不变量的 syscall 蹦床尤需（`Landlock.java` 的 `SYSCALL` 声明上方有同义注释）；写断言前先读内核源码的检查顺序。
 - 事件订阅表遍历用 `CopyOnWriteArrayList`；waterfall 的 next 守卫包在 rest 上（invokeOnce），不在最外层。
 - checkstyle 不解析 `module-info.java`（已排除在门禁外）；首次使用 `import module`（JEP 511）前先升级 checkstyle 依赖，否则解析报错。

@@ -1,0 +1,23 @@
+SCOPE=停2 新增两处实现修复 + feed 有界化的突变检查（生产代码单点改坏 → 必红 → 逐字节还原 → 复绿）
+M5=WebChatControl.bootFresh: shutdown = closing → shutdown = false
+M5_RED=WebChatControlTest.closedHostRefusesLateBootAndReleasesWriterLock FAILED (close 之后不得再落位 runtime)
+M6=WebChatControl.cancelDelegation: return service.cancel(snap.id()) → return false
+M6_RED=WebChatControlTest.cancelChildSessionAloneStopsOnlyChildTurn FAILED (20s await: 子代审批未撤)
+M7=WebApprovalHub.snapshot: feeds.get(owner) → feeds.computeIfAbsent(...)
+M7_RED=WebApprovalHubTest.snapshotForUnboundOwnerDoesNotCreateFeed FAILED (查询建 feed)
+RESTORE_GREEN=WebChatControlTest+WebApprovalHubTest EXIT=0
+RESTORE_SHA256_WebChatControl(round1)=8ab9fa792409e391a28d5ad34dc4149e25d93f76138be59ecab8e47e4d3d85cd
+RESTORE_SHA256_WebChatControl(final)=74c81c3141782d165d94bdac7b27caf541b759290c2b47155d9b37a8bdf4219d
+RESTORE_SHA256_WebApprovalHub=3482399592481625d45874e00f5f9b130c5d3013cdb59ec37a8d39de3e6da2e4
+M8=WebChatControl.finishRound: 两处代守卫去掉 st.gen != gen（旧清理不校验代，先关共用 st.signal）
+M8_RED=WebChatControlTest [15, 1, 0, 0]；staleGenerationCleanupDoesNotRevokeNewRoundLease:540「新代仍在途」失败
+M8_EVIDENCE=stop2-mut3-gen-guard-red.log
+M8_RESTORE=stop2-mut3-restore-green.log（WebChatControlTest [15, 0, 0, 0]）
+M8_NOTE=首次还原用 shutil.copy2 保留了备份的旧 mtime，Maven 增量编译跳过导致跑的是突变字节码（假红）；touch 源文件后重跑复绿，旧日志不入档；修正后绿日志为 -q 成功态，只含 4 条 spotless Unsafe 警告，故与本轮其它 quiet 绿日志同 SHA（内容相同，非复制）
+M8_RED_LOG_SHA256=149ad0bf794f096b96bf728ea368b3d19894c1add86d8384886eb48c12feeed9
+M8_GREEN_LOG_SHA256=c6fffa17b41dd82982f95cf3d9ed30a00bc062453365e53ef5db2b6683ac6c17
+RESIDUAL=none (files restored byte-identical; no test constants touched)
+M5_shutdown_guard_LOG=stop2-mut2-shutdown-guard-red.log SHA256=1cecf751c2bb9fb3d7a8e47a68a15e6b50c5dcdaa76897150a967bdd3e9132a3
+M6_child_cancel_LOG=stop2-mut2-child-cancel-red.log SHA256=210b537b097953ea99b41718ec34f71b4f0abad26de4156f2498ab30a224b6f7
+M7_feed_growth_LOG=stop2-mut2-feed-growth-red.log SHA256=42c6883ab011991b6512107fd6fdeb44727c7159ff058d542e81cebe623f7b29
+RESTORE_GREEN_LOG=stop2-mut2-restore-green.log SHA256=c6fffa17b41dd82982f95cf3d9ed30a00bc062453365e53ef5db2b6683ac6c17

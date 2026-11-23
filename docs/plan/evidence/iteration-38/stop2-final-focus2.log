@@ -1,0 +1,58 @@
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+11月 23, 2026 11:11:47 上午 io.javanatic.harness.workbench.rpc.SseConnection read
+严重: SSE source/codec failed after 200
+java.lang.IllegalStateException: missing SSE codec: test/chunk
+	at io.javanatic.harness.workbench.rpc.SseEncoder.lambda$encode$0(SseEncoder.java:30)
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403)
+	at io.javanatic.harness.workbench.rpc.SseEncoder.encode(SseEncoder.java:29)
+	at io.javanatic.harness.workbench.rpc.SseConnection.read(SseConnection.java:101)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+11月 23, 2026 11:11:47 上午 io.javanatic.harness.workbench.rpc.RpcHttpServer serveEvents
+严重: SSE open failed before 200
+java.lang.NullPointerException: SSE source returned null
+	at java.base/java.util.Objects.requireNonNull(Objects.java:246)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServer.serveEvents(RpcHttpServer.java:191)
+	at io.javanatic.harness.workbench.rpc.RpcHttpServer.dispatch(RpcHttpServer.java:143)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:76)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:101)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:924)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:900)
+	at java.base/java.util.concurrent.ThreadPerTaskExecutor$TaskRunner.run(ThreadPerTaskExecutor.java:291)
+	at java.base/java.lang.VirtualThread.run(VirtualThread.java:460)
+
+11月 23, 2026 11:12:18 上午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但审批为 AUTO（换 approval-ask / approval-deny）
+11月 23, 2026 11:12:18 上午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)
+11月 23, 2026 11:12:18 上午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+Profile: headless   policy: STANDARD
+  composition: 34 rows, 41 discovered, 0 unreferenced
+  approval: AUTO (approval-auto; exempt=ask_user)
+  mcp: mcp-registry + mcp-stdio + mcp-http + mcp-tool; tools=0
+  web: web-fetch-http + web-tool; tools=web_fetch (approval-required)
+  web-write: off（缺省）
+  lsp: lsp-tool; tools=0
+  jobs: jobs-local + jobs-tool; tools=job_cancel,job_read,job_start,job_status (approval-required)
+  delegation: delegation-local + delegation-tool; tools=delegate,delegate_answer,delegate_interrupt,delegate_list (approval-required)
+  audit: jsonl /var/folders/0f/_6y0jc6j0vd0zhdjzwmbcm780000gn/T/junit6688667926219786619 (durable)
+  stop: max-turns=50 max-steps=40 budget=unlimited
+11月 23, 2026 11:12:18 上午 io.javanatic.harness.examples.headless.HeadlessMain run
+严重: API key 未提供（--api-key=… 或环境变量 JH_DEFINITELY_UNSET_VAR；--verify 可无 key 运行）
+11月 23, 2026 11:12:19 上午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+11月 23, 2026 11:12:19 上午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但审批为 AUTO（换 approval-ask / approval-deny）
+11月 23, 2026 11:12:19 上午 io.javanatic.harness.examples.headless.HeadlessMain lambda$run$0
+严重: 违规: policy=PRODUCTION 但 token budget 为零(config loop-guard.maxBudgetTokens)
+11月 23, 2026 11:12:19 上午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+11月 23, 2026 11:12:19 上午 io.javanatic.harness.boot.AppBoot lambda$emitSandboxObservations$1
+信息: sandbox: confining policy "workspace-write" is enforced by backend "seatbelt" (enforcement FULL)
+RELAY_REAL_CLOCK configuredSeconds=1 elapsed=PT1.019248958S toolExecutions=0 lateAllow=-32009

@@ -1,0 +1,24 @@
+停 2 终包审计 — 2026-11-23T11:19:58+0800
+SCOPE=只读：源码锚点 / H1 否定断言 / 包内链接 / 证据存在性 / 源 SHA / 冻结规则
+BASE=27b2d88  PORCELAIN=68  UI=762/441
+PASS A1 基线 HEAD — HEAD=27b2d88
+PASS A2 工作树非空（停 2 未提交面存在） — 68 条变更
+PASS B1 租约挂 REQUEST — :428
+PASS B2 finishRound 代守卫先于关信号 — guard 出现 2 次，关信号在 guard 之后
+PASS B3 退役标记复位 — :617
+PASS B4 注入调用点唯一 — :373
+PASS B5 形状漂移 fail-closed 留痕
+PASS B6 feed 仅为真实租约建 — feedCount:164
+PASS B7 AppBoot 重载与注入前置 — 重载:204 定义:272
+PASS B8 UI 写面哨兵 — :210
+PASS B9 IME 双守卫逐字 — 行 [736, 743]
+PASS B10 UI 零 innerHTML
+PASS B11 UI 行数 — 工作树 762 / HEAD 441（无尾换行）
+PASS C1 rpc module-info 无 interaction.approval
+PASS C2 rpc pom 无 interaction-approval
+PASS D WebChatControl.java SHA — 74c81c314178…
+PASS D WebApprovalHub.java SHA — 348239959248…
+PASS E1 包内链接可解析 — 48 条链接
+PASS F1 关键证据非空 — 10 份
+PASS G1 冻结规则覆盖证据 — 40 份 log/result 匹配规则
+RESULT=PASS

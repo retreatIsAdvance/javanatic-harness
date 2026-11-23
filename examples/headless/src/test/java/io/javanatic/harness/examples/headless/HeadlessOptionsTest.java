@@ -330,9 +330,8 @@ class HeadlessOptionsTest {
         assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--resume=s1"}))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("--resume");
-        assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--verify"}))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("--verify");
+        // R4：--verify --serve 是纯预检；不再属于互斥矩阵。
+        assertThat(HeadlessMain.parse(new String[] {"--serve", "--verify"}).verify()).isTrue();
         assertThatThrownBy(() -> HeadlessMain.parse(new String[] {"--serve", "--sessions"}))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("--sessions");

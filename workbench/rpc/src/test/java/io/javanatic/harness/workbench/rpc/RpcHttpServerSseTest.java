@@ -463,8 +463,24 @@ class RpcHttpServerSseTest {
         }
     }
 
+    @Test
+    void rootPageCarriesWriteModeFlagFromConstructor() throws Exception {
+        try (var server = server(new Fixture(false), true); var client = HttpClient.newHttpClient()) {
+            var page = get(client, server, "/");
+            assertThat(page.statusCode()).isEqualTo(200);
+            assertThat(page.body()).contains("const WEB_WRITE = true;");
+        }
+        try (var server = server(new Fixture(false), false); var client = HttpClient.newHttpClient()) {
+            assertThat(get(client, server, "/").body()).contains("const WEB_WRITE = false;");
+        }
+    }
+
     private static RpcHttpServer server(SseEventSource source) throws IOException {
-        var server = new RpcHttpServer((method, params) -> null, source, SseEncoderTest.codecs());
+        return server(source, false);
+    }
+
+    private static RpcHttpServer server(SseEventSource source, boolean webWrite) throws IOException {
+        var server = new RpcHttpServer((method, params) -> null, source, SseEncoderTest.codecs(), webWrite);
         server.start(0);
         return server;
     }

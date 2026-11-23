@@ -3,6 +3,7 @@ package io.javanatic.harness.workbench.rpc;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -86,5 +87,62 @@ class WorkbenchUiTest {
         assertThat(html).contains("Blob").contains("download");
         // 安全面:零 innerHTML(动态内容一律 textContent/createElement)
         assertThat(html).doesNotContain("innerHTML");
+    }
+
+    // ────────── it38 停 2 写面资源形状(服务期哨兵替换,单文件双模式) ──────────
+
+    @Test
+    void writeModeSentinelIsSubstitutedAndNeverLeaks() {
+        String readOnly = new String(new WorkbenchUi().html(), StandardCharsets.UTF_8);
+        String webWrite = new String(new WorkbenchUi(true).html(), StandardCharsets.UTF_8);
+
+        assertThat(readOnly).contains("const WEB_WRITE = false;").doesNotContain("__JH_WEB_WRITE__");
+        assertThat(webWrite).contains("const WEB_WRITE = true;").doesNotContain("__JH_WEB_WRITE__");
+    }
+
+    @Test
+    void uiHtmlWiresChatWriteSurfaceAndSse() {
+        String html = new String(new WorkbenchUi(true).html(), StandardCharsets.UTF_8);
+
+        assertThat(html)
+            .contains("session/start").contains("session/send").contains("session/cancel")
+            .contains("approval/respond")
+            .contains("/events?session=")
+            .contains("new EventSource")
+            .contains("id=\"tab-chat\"")
+            .contains("id=\"pane-chat\"")
+            .contains("id=\"chat-log\"")
+            .contains("id=\"chat-input\"")
+            .contains("id=\"chat-send\"")
+            .contains("id=\"chat-cancel\"")
+            .contains("id=\"chat-state\"")
+            .contains("id=\"approval-overlay\"")
+            .contains("id=\"approval-list\"")
+            .contains("concludesTurn");
+    }
+
+    @Test
+    void uiHtmlGuardsImeCompositionBeforeEnterHandling() {
+        String html = new String(new WorkbenchUi(true).html(), StandardCharsets.UTF_8);
+
+        // IME 组词中按 Enter 不得触发发送/审批：输入框与文档两处 keydown 恒同款守卫
+        String guard = "if (event.isComposing || event.keyCode === 229) { return; }";
+        assertThat(html.split(Pattern.quote(guard), -1)).hasSize(3);
+        assertThat(html).contains("input.addEventListener(\"keydown\"")
+            .contains("document.addEventListener(\"keydown\"");
+    }
+
+    @Test
+    void readOnlyPageHidesWriteSurfacesByCssAndNeverInitsChat() {
+        String html = new String(new WorkbenchUi().html(), StandardCharsets.UTF_8);
+
+        // 缺省 body 无 web-write 类 → 聊天页签/面板/审批条 display:none;
+        // 写面初始化只在 WEB_WRITE 为真时执行(只读面零交互写控件、零 SSE 连接)。
+        assertThat(html)
+            .contains("body:not(.web-write) #tab-chat")
+            .contains("body:not(.web-write) #pane-chat")
+            .contains("body:not(.web-write) #approval-overlay")
+            .contains("if (WEB_WRITE) {")
+            .contains("initChat();");
     }
 }

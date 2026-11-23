@@ -1,0 +1,11 @@
+COMMAND=wc -l < workbench/rpc/src/main/resources/io/javanatic/harness/workbench/rpc/ui.html
+WORKTREE_LINES=762 (no trailing newline; last line = 763)
+COMMAND=git show HEAD:workbench/rpc/src/main/resources/io/javanatic/harness/workbench/rpc/ui.html | wc -l
+HEAD_LINES=441 (no trailing newline; last line = 442)
+DELTA=+321 (git diff --stat: 328 insertions, 7 deletions)
+COMMAND=grep -c innerHTML ui.html
+INNERHTML=0
+IME_GUARD_LINES=736,743
+IME_TEXT=if (event.isComposing || event.keyCode === 229) { return; }
+SENTINEL_LINE=210 (const WEB_WRITE = __JH_WEB_WRITE__;)
+VERDICT=no innerHTML; IME double-guard verified verbatim by sed at both send and approval keys.

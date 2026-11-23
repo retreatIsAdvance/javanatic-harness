@@ -28,6 +28,12 @@ module io.javanatic.harness.examples.headless {
     requires io.javanatic.harness.interaction.approval;
     requires io.javanatic.harness.interaction.commands;
     requires io.javanatic.harness.bundle.base;
+    // it38 H2:宿主按轮重组后判定后台例外(delegation 子代 / jobs 非终态)——只读 list()
+    requires io.javanatic.harness.delegation;
+    // it38 H2:首次 followup 前同步 bindSession（首绑即父），不依赖 CREATED 异步通知
+    requires io.javanatic.harness.delegation.local;
+    requires io.javanatic.harness.jobs;
+    requires io.javanatic.harness.jobs.local;
     // 测试：LspReplayTest 的 fake LSP service 实现 LspService（Definition 契约）
     requires io.javanatic.harness.lsp;
     // 测试：WebReplayTest 的 fake 抓取 provider 实现 WebFetchService（Definition 契约）

@@ -1,0 +1,152 @@
+COMMAND=python3 docs/plan/evidence/iteration-38/stop2-host-audit.py
+TIME=2026-11-23T08:44:30.266212
+HEAD=27b2d8843d896d0c3fa9b27f968c131b19b0f1d7
+PACKET_SHA256=29fb1121ae8035ca4e16b871228cfeab0dbe4f12dc551cec8ba096cfb96437f6
+ANCHORS_VERIFIED=16/16
+ANCHOR ok F1 core/tools/src/main/java/io/javanatic/harness/tools/ToolsPlugin.java:26
+ANCHOR ok F1 core/tools/src/main/java/io/javanatic/harness/tools/ToolExecutorImpl.java:36
+ANCHOR ok F1 core/tools/src/main/java/io/javanatic/harness/tools/ToolExecutorImpl.java:150
+ANCHOR ok F1 core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopPlugin.java:93
+ANCHOR ok F1 interaction/approval/src/main/java/io/javanatic/harness/interaction/approval/ApprovalAskPlugin.java:30
+ANCHOR ok F1 bundle/base/src/main/java/io/javanatic/harness/boot/AppBoot.java:183
+ANCHOR ok F1 bundle/base/src/main/java/io/javanatic/harness/boot/AppBoot.java:197
+ANCHOR ok F2 core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AbortController.java:30
+ANCHOR ok F2 core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java:287
+ANCHOR ok F2 core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java:396
+ANCHOR ok F2 core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java:411
+ANCHOR ok F2 core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java:466
+ANCHOR ok F3 delegation/local/src/main/java/io/javanatic/harness/delegation/local/LocalDelegationService.java:75
+ANCHOR ok F3 delegation/local/src/main/java/io/javanatic/harness/delegation/local/LocalDelegationService.java:200
+ANCHOR ok F3 delegation/local/src/main/java/io/javanatic/harness/delegation/local/DelegationChildSetup.java:16
+ANCHOR ok F3 delegation/local/src/main/java/io/javanatic/harness/delegation/local/LocalDelegationPlugin.java:47
+ABSENT ok H1 bundle/base/src/main/java/io/javanatic/harness/boot/AppBoot.java !ApprovalPrompt
+ABSENT ok F1 core/tools/src/main/java/io/javanatic/harness/tools/ToolExecutorImpl.java !ApprovalService.KEY
+CLI_RED EXIT=1 FRESH_TOTAL=[36, 7, 1, 0] MISSING=[] LOG_SHA256_MATCH=yes
+VALIDATE EXIT=0 LOG_SHA256_MATCH=yes SCOPE=spotless:check + checkstyle:check（全 reactor，不编译、不跑测试；不能替代红测复绿）
+LOCAL_LINKS=108
+LINK self docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-host-audit-result.txt
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-cli-r4-red-result.txt
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-cli-r4-red.log
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop1-acceptance.txt
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../iteration-38.md
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../core/tools/src/main/java/io/javanatic/harness/tools/ToolsPlugin.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../core/tools/src/main/java/io/javanatic/harness/tools/ToolExecutorImpl.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopPlugin.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../interaction/approval/src/main/java/io/javanatic/harness/interaction/approval/ApprovalAskPlugin.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../bundle/base/src/main/java/io/javanatic/harness/boot/AppBoot.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AbortController.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../core/agent-loop/src/main/java/io/javanatic/harness/agentloop/AgentLoopImpl.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../delegation/local/src/main/java/io/javanatic/harness/delegation/local/LocalDelegationService.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../delegation/local/src/main/java/io/javanatic/harness/delegation/local/DelegationChildSetup.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../delegation/local/src/main/java/io/javanatic/harness/delegation/local/LocalDelegationPlugin.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessWebWriteOptionsTest.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> ../../../../examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessOptionsTest.java
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-cli-r4-red-result.txt
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-check.py
+LINK self docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-host-audit-result.txt
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-host-audit.py
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-host-validate-result.txt
+LINK ok docs/plan/evidence/iteration-38/stop2-review-packet.md -> stop2-host-validate.log
+LINK ok docs/plan/iteration-38.md -> README.md
+LINK ok docs/plan/iteration-38.md -> boundary-register.md
+LINK ok docs/plan/iteration-38.md -> iteration-37.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/stop1-acceptance.txt
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/stop1-review-packet.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/stop1-write-seam-design.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/stop1-tdd-evidence.txt
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/stop2-review-packet.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/stop2-cli-r4-red-result.txt
+LINK ok docs/plan/iteration-38.md -> ../release-notes-0.5.0.md
+LINK ok docs/plan/iteration-38.md -> ../design/README.md
+LINK ok docs/plan/iteration-38.md -> ../release-notes-0.5.0.md
+LINK ok docs/plan/iteration-38.md -> iteration-35.md
+LINK ok docs/plan/iteration-38.md -> iteration-36.md
+LINK ok docs/plan/iteration-38.md -> ../design/12-api-stability.md
+LINK ok docs/plan/iteration-38.md -> ../../.agents/notes/0012-zero-write-surface-end.md
+LINK ok docs/plan/iteration-38.md -> ../dsh-reference.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/recon-chat.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/recon-approval.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/recon-streaming.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/startup-batch-flake-surgery.txt
+LINK ok docs/plan/iteration-38.md -> ../../.agents/notes/0012-zero-write-surface-end.md
+LINK ok docs/plan/iteration-38.md -> evidence/iteration-38/stop1-acceptance.txt
+LINK ok docs/plan/current-state.md -> ../design/README.md
+LINK ok docs/plan/current-state.md -> README.md
+LINK ok docs/plan/current-state.md -> boundary-register.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop3-acceptance.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop1-full-01/11-package.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.4.0/audit-stability-surface.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.4.0/rc1-rehearsal.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.4.0/deploy-0.4.0.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.4.0/publish-0.4.0.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-33/stop1-review-packet.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-33/stop2-review-packet.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-33/stop2-evidence.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-33/stop2-review-verdict.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-34/stop2-review-verdict.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-34/stop3-review-verdict.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-34/stop3-closeout.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-35/stop1-review-packet.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-35/stop1-verdict.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-35/stop1-tdd-evidence.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-35/stop2-review-packet.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-35/stop2-review-verdict.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-35/stop3-evidence.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-36/stop3-user-round.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-36/stop3-evidence.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-36/stop4-push-ci.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-37/stop1-tdd-evidence.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-37/stop1-review-packet.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-37/stop1-fence-design.md
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/flip-evidence.txt
+LINK ok docs/plan/current-state.md -> ../release-notes-0.5.0.md
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/rc1-rehearsal.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/push-landing.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/deploy-prep.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/portal-checklist.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/deploy-0.5.0.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/publish-0.5.0.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/audit-stability-surface.txt
+LINK ok docs/plan/current-state.md -> iteration-37.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-38/stop1-review-packet.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-38/stop1-acceptance.txt
+LINK ok docs/plan/current-state.md -> iteration-38.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-28/stop3-closeout-review.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop0-acceptance.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop1-acceptance.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop1-review-packet.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop1-verification-summary.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop2-acceptance.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop3-acceptance.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop3-replay.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop3-jlink.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop3-real-three-capabilities.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/stop3-model-in-loop.txt
+LINK ok docs/plan/current-state.md -> ../../integration/verify-stop.sh
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/verify-stop-review-packet.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-29/verify-stop-acceptance.txt
+LINK ok docs/plan/current-state.md -> iteration-29.md#verification-prerequisite
+LINK ok docs/plan/current-state.md -> ../../.agents/pits.md
+LINK ok docs/plan/current-state.md -> evidence/iteration-26/roadmap-diff-proposal.md#b4-capability-graph-机械化建议挂账
+LINK ok docs/plan/current-state.md -> evidence/iteration-36/stop3-evidence.md
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/push-landing.txt
+LINK ok docs/plan/current-state.md -> evidence/release-0.5.0/rc1-rehearsal.txt
+LINK ok docs/plan/current-state.md -> evidence/iteration-38/startup-batch-flake-surgery.txt
+WORKTREE  M .agents/pits.md
+WORKTREE  M .gitattributes
+WORKTREE  M docs/plan/current-state.md
+WORKTREE  M docs/plan/iteration-38.md
+WORKTREE  M examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessOptionsTest.java
+WORKTREE ?? docs/plan/evidence/iteration-38/stop2-check.py
+WORKTREE ?? docs/plan/evidence/iteration-38/stop2-cli-r4-red-result.txt
+WORKTREE ?? docs/plan/evidence/iteration-38/stop2-cli-r4-red.log
+WORKTREE ?? docs/plan/evidence/iteration-38/stop2-host-audit.py
+WORKTREE ?? docs/plan/evidence/iteration-38/stop2-host-validate-result.txt
+WORKTREE ?? docs/plan/evidence/iteration-38/stop2-host-validate.log
+WORKTREE ?? docs/plan/evidence/iteration-38/stop2-review-packet.md
+WORKTREE ?? examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessWebWriteOptionsTest.java
+GITATTR ok docs/plan/evidence/iteration-38/stop2-*.log -text !eol whitespace=-trailing-space,-blank-at-eof
+GITATTR ok docs/plan/evidence/iteration-38/stop2-*-result.txt -text !eol whitespace=-trailing-space,-blank-at-eof
+GIT_DIFF_CHECK_EXIT=0
+FAILURES=[]
+EXIT=0

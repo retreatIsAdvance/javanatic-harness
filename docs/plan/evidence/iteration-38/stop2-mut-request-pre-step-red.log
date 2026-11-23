@@ -1,0 +1,2002 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Javanatic Harness                                                  [pom]
+[INFO] harness-kernel-aggregator                                          [pom]
+[INFO] harness-kernel-brand                                               [jar]
+[INFO] harness-kernel-core                                                [jar]
+[INFO] harness-kernel-config                                              [jar]
+[INFO] harness-core-aggregator                                            [pom]
+[INFO] harness-core-session                                               [jar]
+[INFO] harness-core-system-prompt                                         [jar]
+[INFO] harness-llm-aggregator                                             [pom]
+[INFO] harness-llm-llm                                                    [jar]
+[INFO] harness-core-tools                                                 [jar]
+[INFO] harness-session-aggregator                                         [pom]
+[INFO] harness-session-persistence                                        [jar]
+[INFO] harness-session-persistence-jsonl                                  [jar]
+[INFO] harness-core-todo                                                  [jar]
+[INFO] harness-core-agent                                                 [jar]
+[INFO] harness-llm-replay                                                 [jar]
+[INFO] harness-core-agent-loop                                            [jar]
+[INFO] harness-core-plan                                                  [jar]
+[INFO] harness-fs-aggregator                                              [pom]
+[INFO] harness-fs-fs                                                      [jar]
+[INFO] harness-fs-local                                                   [jar]
+[INFO] harness-sandbox-aggregator                                         [pom]
+[INFO] harness-sandbox-sandbox                                            [jar]
+[INFO] harness-shell-aggregator                                           [pom]
+[INFO] harness-shell-shell                                                [jar]
+[INFO] harness-shell-local                                                [jar]
+[INFO] harness-sandbox-local                                              [jar]
+[INFO] harness-sandbox-policy                                             [jar]
+[INFO] harness-fs-tool                                                    [jar]
+[INFO] harness-core-preset                                                [jar]
+[INFO] harness-llm-openai-compat                                          [jar]
+[INFO] harness-skill-aggregator                                           [pom]
+[INFO] harness-skill-skill                                                [jar]
+[INFO] harness-skill-tool                                                 [jar]
+[INFO] harness-skill-local                                                [jar]
+[INFO] harness-mcp-aggregator                                             [pom]
+[INFO] harness-mcp-mcp                                                    [jar]
+[INFO] harness-mcp-stdio                                                  [jar]
+[INFO] harness-mcp-http                                                   [jar]
+[INFO] harness-mcp-tool                                                   [jar]
+[INFO] harness-web-aggregator                                             [pom]
+[INFO] harness-web-web                                                    [jar]
+[INFO] harness-web-fetch-http                                             [jar]
+[INFO] harness-web-search-deepseek                                        [jar]
+[INFO] harness-web-tool                                                   [jar]
+[INFO] harness-lsp-aggregator                                             [pom]
+[INFO] harness-lsp-lsp                                                    [jar]
+[INFO] harness-lsp-jdtls                                                  [jar]
+[INFO] harness-lsp-tool                                                   [jar]
+[INFO] harness-shell-tool                                                 [jar]
+[INFO] harness-shell-docker                                               [jar]
+[INFO] harness-interaction-aggregator                                     [pom]
+[INFO] harness-interaction-approval                                       [jar]
+[INFO] harness-interaction-ask                                            [jar]
+[INFO] harness-interaction-commands                                       [jar]
+[INFO] harness-jobs-aggregator                                            [pom]
+[INFO] harness-jobs-jobs                                                  [jar]
+[INFO] harness-jobs-local                                                 [jar]
+[INFO] harness-jobs-tool                                                  [jar]
+[INFO] harness-delegation-aggregator                                      [pom]
+[INFO] harness-delegation-delegation                                      [jar]
+[INFO] harness-delegation-local                                           [jar]
+[INFO] harness-delegation-tool                                            [jar]
+[INFO] harness-workbench-aggregator                                       [pom]
+[INFO] harness-workbench-projection                                       [jar]
+[INFO] harness-workbench-tui                                              [jar]
+[INFO] harness-workbench-rpc                                              [jar]
+[INFO] harness-bundle-aggregator                                          [pom]
+[INFO] harness-bundle-base                                                [jar]
+[INFO] harness-examples-aggregator                                        [pom]
+[INFO] harness-examples-headless                                          [jar]
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-parent >--------------
+[INFO] Building Javanatic Harness 0.6.0-SNAPSHOT                         [1/72]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] Loaded 64 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-parent ---
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.diffplug.spotless.java.ModuleHelper (file:/Users/abel_yang/Documents/m2e/repository/com/diffplug/spotless/spotless-lib/2.45.0/spotless-lib-2.45.0.jar)
+WARNING: Please consider reporting this to the maintainers of class com.diffplug.spotless.java.ModuleHelper
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-parent ---
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to jvnet-nexus-releases (https://maven.java.net/content/repositories/releases/): (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --------< io.github.retreatisadvance:harness-kernel-aggregator >--------
+[INFO] Building harness-kernel-aggregator 0.6.0-SNAPSHOT                 [2/72]
+[INFO]   from kernel/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-kernel-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-kernel-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-kernel-brand >-----------
+[INFO] Building harness-kernel-brand 0.6.0-SNAPSHOT                      [3/72]
+[INFO]   from kernel/brand/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-kernel-brand ---
+[INFO] Spotless.Java is keeping 3 files clean - 0 needs changes to be clean, 0 were already clean, 3 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-kernel-brand ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-kernel-brand ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/brand/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-kernel-brand ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-kernel-brand ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/brand/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-kernel-brand ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-kernel-brand ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-kernel-core >-----------
+[INFO] Building harness-kernel-core 0.6.0-SNAPSHOT                       [4/72]
+[INFO]   from kernel/core/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-kernel-core ---
+[INFO] Spotless.Java is keeping 22 files clean - 0 needs changes to be clean, 0 were already clean, 22 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-kernel-core ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-kernel-core ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/core/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-kernel-core ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-kernel-core ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/core/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-kernel-core ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-kernel-core ---
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-kernel-config >----------
+[INFO] Building harness-kernel-config 0.6.0-SNAPSHOT                     [5/72]
+[INFO]   from kernel/config/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-kernel-config ---
+[INFO] Spotless.Java is keeping 9 files clean - 0 needs changes to be clean, 0 were already clean, 9 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-kernel-config ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-kernel-config ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/config/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-kernel-config ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-kernel-config ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/kernel/config/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-kernel-config ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-kernel-config ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-core-aggregator >---------
+[INFO] Building harness-core-aggregator 0.6.0-SNAPSHOT                   [6/72]
+[INFO]   from core/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-core-session >-----------
+[INFO] Building harness-core-session 0.6.0-SNAPSHOT                      [7/72]
+[INFO]   from core/session/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-session ---
+[INFO] Spotless.Java is keeping 51 files clean - 0 needs changes to be clean, 0 were already clean, 51 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-session ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-session ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-session ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-session ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/session/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-session ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-session ---
+[INFO] 
+[INFO] -------< io.github.retreatisadvance:harness-core-system-prompt >--------
+[INFO] Building harness-core-system-prompt 0.6.0-SNAPSHOT                [8/72]
+[INFO]   from core/system-prompt/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-system-prompt ---
+[INFO] Spotless.Java is keeping 6 files clean - 0 needs changes to be clean, 0 were already clean, 6 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-system-prompt ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-system-prompt ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-system-prompt ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-system-prompt ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/system-prompt/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-system-prompt ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-system-prompt ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-llm-aggregator >----------
+[INFO] Building harness-llm-aggregator 0.6.0-SNAPSHOT                    [9/72]
+[INFO]   from llm/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-llm-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-llm-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-llm-llm >-------------
+[INFO] Building harness-llm-llm 0.6.0-SNAPSHOT                          [10/72]
+[INFO]   from llm/llm/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-llm-llm ---
+[INFO] Spotless.Java is keeping 17 files clean - 0 needs changes to be clean, 0 were already clean, 17 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-llm-llm ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-llm-llm ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-llm-llm ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-llm-llm ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/llm/llm/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-llm-llm ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-llm-llm ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-core-tools >------------
+[INFO] Building harness-core-tools 0.6.0-SNAPSHOT                       [11/72]
+[INFO]   from core/tools/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-tools ---
+[INFO] Spotless.Java is keeping 22 files clean - 0 needs changes to be clean, 0 were already clean, 22 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-tools ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-tools ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-tools ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-tools ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/tools/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-tools ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-tools ---
+[INFO] 
+[INFO] -------< io.github.retreatisadvance:harness-session-aggregator >--------
+[INFO] Building harness-session-aggregator 0.6.0-SNAPSHOT               [12/72]
+[INFO]   from session/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-session-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-session-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -------< io.github.retreatisadvance:harness-session-persistence >-------
+[INFO] Building harness-session-persistence 0.6.0-SNAPSHOT              [13/72]
+[INFO]   from session/persistence/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-session-persistence ---
+[INFO] Spotless.Java is keeping 8 files clean - 0 needs changes to be clean, 0 were already clean, 8 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-session-persistence ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-session-persistence ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/session/persistence/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-session-persistence ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-session-persistence ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/session/persistence/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-session-persistence ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-session-persistence ---
+[INFO] 
+[INFO] ----< io.github.retreatisadvance:harness-session-persistence-jsonl >----
+[INFO] Building harness-session-persistence-jsonl 0.6.0-SNAPSHOT        [14/72]
+[INFO]   from session/persistence-jsonl/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-session-persistence-jsonl ---
+[INFO] Spotless.Java is keeping 9 files clean - 0 needs changes to be clean, 0 were already clean, 9 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-session-persistence-jsonl ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-session-persistence-jsonl ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-session-persistence-jsonl ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-session-persistence-jsonl ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/session/persistence-jsonl/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-session-persistence-jsonl ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-session-persistence-jsonl ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-core-todo >------------
+[INFO] Building harness-core-todo 0.6.0-SNAPSHOT                        [15/72]
+[INFO]   from core/todo/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-todo ---
+[INFO] Spotless.Java is keeping 7 files clean - 0 needs changes to be clean, 0 were already clean, 7 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-todo ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-todo ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-todo ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-todo ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/todo/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-todo ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-todo ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-core-agent >------------
+[INFO] Building harness-core-agent 0.6.0-SNAPSHOT                       [16/72]
+[INFO]   from core/agent/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-agent ---
+[INFO] Spotless.Java is keeping 16 files clean - 0 needs changes to be clean, 0 were already clean, 16 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-agent ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-agent ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-agent ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-agent ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/agent/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-agent ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-agent ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-llm-replay >------------
+[INFO] Building harness-llm-replay 0.6.0-SNAPSHOT                       [17/72]
+[INFO]   from llm/replay/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-llm-replay ---
+[INFO] Spotless.Java is keeping 4 files clean - 0 needs changes to be clean, 0 were already clean, 4 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-llm-replay ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-llm-replay ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/llm/replay/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-llm-replay ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-llm-replay ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/llm/replay/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-llm-replay ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-llm-replay ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-core-agent-loop >---------
+[INFO] Building harness-core-agent-loop 0.6.0-SNAPSHOT                  [18/72]
+[INFO]   from core/agent-loop/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-agent-loop ---
+[INFO] Spotless.Java is keeping 23 files clean - 0 needs changes to be clean, 0 were already clean, 23 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-agent-loop ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-agent-loop ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-agent-loop ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-agent-loop ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/agent-loop/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-agent-loop ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-agent-loop ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-core-plan >------------
+[INFO] Building harness-core-plan 0.6.0-SNAPSHOT                        [19/72]
+[INFO]   from core/plan/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-plan ---
+[INFO] Spotless.Java is keeping 6 files clean - 0 needs changes to be clean, 0 were already clean, 6 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-plan ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-plan ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-plan ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-plan ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/plan/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-plan ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-plan ---
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-fs-aggregator >----------
+[INFO] Building harness-fs-aggregator 0.6.0-SNAPSHOT                    [20/72]
+[INFO]   from fs/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-fs-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-fs-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --------------< io.github.retreatisadvance:harness-fs-fs >--------------
+[INFO] Building harness-fs-fs 0.6.0-SNAPSHOT                            [21/72]
+[INFO]   from fs/fs/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-fs-fs ---
+[INFO] Spotless.Java is keeping 2 files clean - 0 needs changes to be clean, 0 were already clean, 2 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-fs-fs ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-fs-fs ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/fs/fs/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-fs-fs ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-fs-fs ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/fs/fs/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-fs-fs ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-fs-fs ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-fs-local >-------------
+[INFO] Building harness-fs-local 0.6.0-SNAPSHOT                         [22/72]
+[INFO]   from fs/local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-fs-local ---
+[INFO] Spotless.Java is keeping 5 files clean - 0 needs changes to be clean, 0 were already clean, 5 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-fs-local ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-fs-local ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-fs-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-fs-local ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/fs/local/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-fs-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-fs-local ---
+[INFO] 
+[INFO] -------< io.github.retreatisadvance:harness-sandbox-aggregator >--------
+[INFO] Building harness-sandbox-aggregator 0.6.0-SNAPSHOT               [23/72]
+[INFO]   from sandbox/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-sandbox-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-sandbox-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-sandbox-sandbox >---------
+[INFO] Building harness-sandbox-sandbox 0.6.0-SNAPSHOT                  [24/72]
+[INFO]   from sandbox/sandbox/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-sandbox-sandbox ---
+[INFO] Spotless.Java is keeping 11 files clean - 0 needs changes to be clean, 0 were already clean, 11 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-sandbox-sandbox ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-sandbox-sandbox ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/sandbox/sandbox/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-sandbox-sandbox ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-sandbox-sandbox ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/sandbox/sandbox/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-sandbox-sandbox ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-sandbox-sandbox ---
+[INFO] 
+[INFO] --------< io.github.retreatisadvance:harness-shell-aggregator >---------
+[INFO] Building harness-shell-aggregator 0.6.0-SNAPSHOT                 [25/72]
+[INFO]   from shell/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-shell-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-shell-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-shell-shell >-----------
+[INFO] Building harness-shell-shell 0.6.0-SNAPSHOT                      [26/72]
+[INFO]   from shell/shell/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-shell-shell ---
+[INFO] Spotless.Java is keeping 5 files clean - 0 needs changes to be clean, 0 were already clean, 5 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-shell-shell ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-shell-shell ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/shell/shell/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-shell-shell ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-shell-shell ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/shell/shell/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-shell-shell ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-shell-shell ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-shell-local >-----------
+[INFO] Building harness-shell-local 0.6.0-SNAPSHOT                      [27/72]
+[INFO]   from shell/local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-shell-local ---
+[INFO] Spotless.Java is keeping 9 files clean - 0 needs changes to be clean, 0 were already clean, 9 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-shell-local ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-shell-local ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-shell-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-shell-local ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/shell/local/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-shell-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-shell-local ---
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-sandbox-local >----------
+[INFO] Building harness-sandbox-local 0.6.0-SNAPSHOT                    [28/72]
+[INFO]   from sandbox/local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-sandbox-local ---
+[INFO] Spotless.Java is keeping 11 files clean - 0 needs changes to be clean, 0 were already clean, 11 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-sandbox-local ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-sandbox-local ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-sandbox-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-sandbox-local ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/sandbox/local/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-sandbox-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-sandbox-local ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-sandbox-policy >----------
+[INFO] Building harness-sandbox-policy 0.6.0-SNAPSHOT                   [29/72]
+[INFO]   from sandbox/policy/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-sandbox-policy ---
+[INFO] Spotless.Java is keeping 3 files clean - 0 needs changes to be clean, 0 were already clean, 3 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-sandbox-policy ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-sandbox-policy ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-sandbox-policy ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-sandbox-policy ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/sandbox/policy/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-sandbox-policy ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-sandbox-policy ---
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-fs-tool >-------------
+[INFO] Building harness-fs-tool 0.6.0-SNAPSHOT                          [30/72]
+[INFO]   from fs/tool/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-fs-tool ---
+[INFO] Spotless.Java is keeping 5 files clean - 0 needs changes to be clean, 0 were already clean, 5 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-fs-tool ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-fs-tool ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-fs-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-fs-tool ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/fs/tool/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-fs-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-fs-tool ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-core-preset >-----------
+[INFO] Building harness-core-preset 0.6.0-SNAPSHOT                      [31/72]
+[INFO]   from core/preset/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-core-preset ---
+[INFO] Spotless.Java is keeping 6 files clean - 0 needs changes to be clean, 0 were already clean, 6 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-core-preset ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-core-preset ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-core-preset ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-core-preset ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/core/preset/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-core-preset ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-core-preset ---
+[INFO] 
+[INFO] --------< io.github.retreatisadvance:harness-llm-openai-compat >--------
+[INFO] Building harness-llm-openai-compat 0.6.0-SNAPSHOT                [32/72]
+[INFO]   from llm/openai-compat/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-llm-openai-compat ---
+[INFO] Spotless.Java is keeping 9 files clean - 0 needs changes to be clean, 0 were already clean, 9 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-llm-openai-compat ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-llm-openai-compat ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-llm-openai-compat ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-llm-openai-compat ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/llm/openai-compat/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-llm-openai-compat ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-llm-openai-compat ---
+[INFO] 
+[INFO] --------< io.github.retreatisadvance:harness-skill-aggregator >---------
+[INFO] Building harness-skill-aggregator 0.6.0-SNAPSHOT                 [33/72]
+[INFO]   from skill/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-skill-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-skill-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-skill-skill >-----------
+[INFO] Building harness-skill-skill 0.6.0-SNAPSHOT                      [34/72]
+[INFO]   from skill/skill/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-skill-skill ---
+[INFO] Spotless.Java is keeping 11 files clean - 0 needs changes to be clean, 0 were already clean, 11 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-skill-skill ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-skill-skill ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-skill-skill ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-skill-skill ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/skill/skill/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-skill-skill ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-skill-skill ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-skill-tool >------------
+[INFO] Building harness-skill-tool 0.6.0-SNAPSHOT                       [35/72]
+[INFO]   from skill/tool/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-skill-tool ---
+[INFO] Spotless.Java is keeping 6 files clean - 0 needs changes to be clean, 0 were already clean, 6 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-skill-tool ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-skill-tool ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-skill-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-skill-tool ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/skill/tool/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-skill-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-skill-tool ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-skill-local >-----------
+[INFO] Building harness-skill-local 0.6.0-SNAPSHOT                      [36/72]
+[INFO]   from skill/local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-skill-local ---
+[INFO] Spotless.Java is keeping 5 files clean - 0 needs changes to be clean, 0 were already clean, 5 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-skill-local ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-skill-local ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-skill-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-skill-local ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/skill/local/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-skill-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-skill-local ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-mcp-aggregator >----------
+[INFO] Building harness-mcp-aggregator 0.6.0-SNAPSHOT                   [37/72]
+[INFO]   from mcp/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-mcp-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-mcp-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-mcp-mcp >-------------
+[INFO] Building harness-mcp-mcp 0.6.0-SNAPSHOT                          [38/72]
+[INFO]   from mcp/mcp/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-mcp-mcp ---
+[INFO] Spotless.Java is keeping 13 files clean - 0 needs changes to be clean, 0 were already clean, 13 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-mcp-mcp ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-mcp-mcp ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-mcp-mcp ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-mcp-mcp ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/mcp/mcp/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-mcp-mcp ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-mcp-mcp ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-mcp-stdio >------------
+[INFO] Building harness-mcp-stdio 0.6.0-SNAPSHOT                        [39/72]
+[INFO]   from mcp/stdio/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-mcp-stdio ---
+[INFO] Spotless.Java is keeping 11 files clean - 0 needs changes to be clean, 0 were already clean, 11 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-mcp-stdio ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-mcp-stdio ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-mcp-stdio ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-mcp-stdio ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-mcp-stdio ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-mcp-stdio ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-mcp-http >-------------
+[INFO] Building harness-mcp-http 0.6.0-SNAPSHOT                         [40/72]
+[INFO]   from mcp/http/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-mcp-http ---
+[INFO] Spotless.Java is keeping 10 files clean - 0 needs changes to be clean, 0 were already clean, 10 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-mcp-http ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-mcp-http ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-mcp-http ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-mcp-http ---
+[INFO] Copying 2 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-mcp-http ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-mcp-http ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-mcp-tool >-------------
+[INFO] Building harness-mcp-tool 0.6.0-SNAPSHOT                         [41/72]
+[INFO]   from mcp/tool/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-mcp-tool ---
+[INFO] Spotless.Java is keeping 9 files clean - 0 needs changes to be clean, 0 were already clean, 9 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-mcp-tool ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-mcp-tool ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-mcp-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-mcp-tool ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/mcp/tool/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-mcp-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-mcp-tool ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-web-aggregator >----------
+[INFO] Building harness-web-aggregator 0.6.0-SNAPSHOT                   [42/72]
+[INFO]   from web/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-web-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-web-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-web-web >-------------
+[INFO] Building harness-web-web 0.6.0-SNAPSHOT                          [43/72]
+[INFO]   from web/web/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-web-web ---
+[INFO] Spotless.Java is keeping 12 files clean - 0 needs changes to be clean, 0 were already clean, 12 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-web-web ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-web-web ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/web/web/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-web-web ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-web-web ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/web/web/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-web-web ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-web-web ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-web-fetch-http >----------
+[INFO] Building harness-web-fetch-http 0.6.0-SNAPSHOT                   [44/72]
+[INFO]   from web/fetch-http/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-web-fetch-http ---
+[INFO] Spotless.Java is keeping 19 files clean - 0 needs changes to be clean, 0 were already clean, 19 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-web-fetch-http ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-web-fetch-http ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-web-fetch-http ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-web-fetch-http ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/web/fetch-http/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-web-fetch-http ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-web-fetch-http ---
+[INFO] 
+[INFO] -------< io.github.retreatisadvance:harness-web-search-deepseek >-------
+[INFO] Building harness-web-search-deepseek 0.6.0-SNAPSHOT              [45/72]
+[INFO]   from web/search-deepseek/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-web-search-deepseek ---
+[INFO] Spotless.Java is keeping 12 files clean - 0 needs changes to be clean, 0 were already clean, 12 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-web-search-deepseek ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-web-search-deepseek ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-web-search-deepseek ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-web-search-deepseek ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/web/search-deepseek/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-web-search-deepseek ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-web-search-deepseek ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-web-tool >-------------
+[INFO] Building harness-web-tool 0.6.0-SNAPSHOT                         [46/72]
+[INFO]   from web/tool/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-web-tool ---
+[INFO] Spotless.Java is keeping 11 files clean - 0 needs changes to be clean, 0 were already clean, 11 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-web-tool ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-web-tool ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-web-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-web-tool ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/web/tool/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-web-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-web-tool ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-lsp-aggregator >----------
+[INFO] Building harness-lsp-aggregator 0.6.0-SNAPSHOT                   [47/72]
+[INFO]   from lsp/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-lsp-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-lsp-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -------------< io.github.retreatisadvance:harness-lsp-lsp >-------------
+[INFO] Building harness-lsp-lsp 0.6.0-SNAPSHOT                          [48/72]
+[INFO]   from lsp/lsp/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-lsp-lsp ---
+[INFO] Spotless.Java is keeping 18 files clean - 0 needs changes to be clean, 0 were already clean, 18 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-lsp-lsp ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-lsp-lsp ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/lsp/lsp/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-lsp-lsp ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-lsp-lsp ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/lsp/lsp/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-lsp-lsp ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-lsp-lsp ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-lsp-jdtls >------------
+[INFO] Building harness-lsp-jdtls 0.6.0-SNAPSHOT                        [49/72]
+[INFO]   from lsp/jdtls/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-lsp-jdtls ---
+[INFO] Spotless.Java is keeping 33 files clean - 0 needs changes to be clean, 0 were already clean, 33 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-lsp-jdtls ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-lsp-jdtls ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-lsp-jdtls ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-lsp-jdtls ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-lsp-jdtls ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-lsp-jdtls ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-lsp-tool >-------------
+[INFO] Building harness-lsp-tool 0.6.0-SNAPSHOT                         [50/72]
+[INFO]   from lsp/tool/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-lsp-tool ---
+[INFO] Spotless.Java is keeping 8 files clean - 0 needs changes to be clean, 0 were already clean, 8 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-lsp-tool ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-lsp-tool ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-lsp-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-lsp-tool ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/lsp/tool/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-lsp-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-lsp-tool ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-shell-tool >------------
+[INFO] Building harness-shell-tool 0.6.0-SNAPSHOT                       [51/72]
+[INFO]   from shell/tool/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-shell-tool ---
+[INFO] Spotless.Java is keeping 3 files clean - 0 needs changes to be clean, 0 were already clean, 3 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-shell-tool ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-shell-tool ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-shell-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-shell-tool ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/shell/tool/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-shell-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-shell-tool ---
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-shell-docker >-----------
+[INFO] Building harness-shell-docker 0.6.0-SNAPSHOT                     [52/72]
+[INFO]   from shell/docker/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-shell-docker ---
+[INFO] Spotless.Java is keeping 4 files clean - 0 needs changes to be clean, 0 were already clean, 4 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-shell-docker ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-shell-docker ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-shell-docker ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-shell-docker ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/shell/docker/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-shell-docker ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-shell-docker ---
+[INFO] 
+[INFO] -----< io.github.retreatisadvance:harness-interaction-aggregator >------
+[INFO] Building harness-interaction-aggregator 0.6.0-SNAPSHOT           [53/72]
+[INFO]   from interaction/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-interaction-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-interaction-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ------< io.github.retreatisadvance:harness-interaction-approval >-------
+[INFO] Building harness-interaction-approval 0.6.0-SNAPSHOT             [54/72]
+[INFO]   from interaction/approval/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-interaction-approval ---
+[INFO] Spotless.Java is keeping 6 files clean - 0 needs changes to be clean, 0 were already clean, 6 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-interaction-approval ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-interaction-approval ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-interaction-approval ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-interaction-approval ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/interaction/approval/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-interaction-approval ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-interaction-approval ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-interaction-ask >---------
+[INFO] Building harness-interaction-ask 0.6.0-SNAPSHOT                  [55/72]
+[INFO]   from interaction/ask/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-interaction-ask ---
+[INFO] Spotless.Java is keeping 3 files clean - 0 needs changes to be clean, 0 were already clean, 3 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-interaction-ask ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-interaction-ask ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-interaction-ask ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-interaction-ask ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/interaction/ask/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-interaction-ask ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-interaction-ask ---
+[INFO] 
+[INFO] ------< io.github.retreatisadvance:harness-interaction-commands >-------
+[INFO] Building harness-interaction-commands 0.6.0-SNAPSHOT             [56/72]
+[INFO]   from interaction/commands/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-interaction-commands ---
+[INFO] Spotless.Java is keeping 12 files clean - 0 needs changes to be clean, 0 were already clean, 12 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-interaction-commands ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-interaction-commands ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-interaction-commands ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-interaction-commands ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/interaction/commands/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-interaction-commands ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-interaction-commands ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-jobs-aggregator >---------
+[INFO] Building harness-jobs-aggregator 0.6.0-SNAPSHOT                  [57/72]
+[INFO]   from jobs/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-jobs-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-jobs-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-jobs-jobs >------------
+[INFO] Building harness-jobs-jobs 0.6.0-SNAPSHOT                        [58/72]
+[INFO]   from jobs/jobs/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-jobs-jobs ---
+[INFO] Spotless.Java is keeping 14 files clean - 0 needs changes to be clean, 0 were already clean, 14 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-jobs-jobs ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-jobs-jobs ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/jobs/jobs/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-jobs-jobs ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-jobs-jobs ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/jobs/jobs/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-jobs-jobs ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-jobs-jobs ---
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-jobs-local >------------
+[INFO] Building harness-jobs-local 0.6.0-SNAPSHOT                       [59/72]
+[INFO]   from jobs/local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-jobs-local ---
+[INFO] Spotless.Java is keeping 7 files clean - 0 needs changes to be clean, 0 were already clean, 7 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-jobs-local ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-jobs-local ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-jobs-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-jobs-local ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/jobs/local/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-jobs-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-jobs-local ---
+[INFO] 
+[INFO] ------------< io.github.retreatisadvance:harness-jobs-tool >------------
+[INFO] Building harness-jobs-tool 0.6.0-SNAPSHOT                        [60/72]
+[INFO]   from jobs/tool/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-jobs-tool ---
+[INFO] Spotless.Java is keeping 6 files clean - 0 needs changes to be clean, 0 were already clean, 6 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-jobs-tool ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-jobs-tool ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-jobs-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-jobs-tool ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/jobs/tool/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-jobs-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-jobs-tool ---
+[INFO] 
+[INFO] ------< io.github.retreatisadvance:harness-delegation-aggregator >------
+[INFO] Building harness-delegation-aggregator 0.6.0-SNAPSHOT            [61/72]
+[INFO]   from delegation/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-delegation-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-delegation-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ------< io.github.retreatisadvance:harness-delegation-delegation >------
+[INFO] Building harness-delegation-delegation 0.6.0-SNAPSHOT            [62/72]
+[INFO]   from delegation/delegation/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-delegation-delegation ---
+[INFO] Spotless.Java is keeping 12 files clean - 0 needs changes to be clean, 0 were already clean, 12 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-delegation-delegation ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-delegation-delegation ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/delegation/delegation/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-delegation-delegation ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-delegation-delegation ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/delegation/delegation/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-delegation-delegation ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-delegation-delegation ---
+[INFO] 
+[INFO] --------< io.github.retreatisadvance:harness-delegation-local >---------
+[INFO] Building harness-delegation-local 0.6.0-SNAPSHOT                 [63/72]
+[INFO]   from delegation/local/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-delegation-local ---
+[INFO] Spotless.Java is keeping 12 files clean - 0 needs changes to be clean, 0 were already clean, 12 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-delegation-local ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-delegation-local ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-delegation-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-delegation-local ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/delegation/local/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-delegation-local ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-delegation-local ---
+[INFO] 
+[INFO] ---------< io.github.retreatisadvance:harness-delegation-tool >---------
+[INFO] Building harness-delegation-tool 0.6.0-SNAPSHOT                  [64/72]
+[INFO]   from delegation/tool/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-delegation-tool ---
+[INFO] Spotless.Java is keeping 4 files clean - 0 needs changes to be clean, 0 were already clean, 4 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-delegation-tool ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-delegation-tool ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-delegation-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-delegation-tool ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/delegation/tool/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-delegation-tool ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-delegation-tool ---
+[INFO] 
+[INFO] ------< io.github.retreatisadvance:harness-workbench-aggregator >-------
+[INFO] Building harness-workbench-aggregator 0.6.0-SNAPSHOT             [65/72]
+[INFO]   from workbench/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-workbench-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-workbench-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] ------< io.github.retreatisadvance:harness-workbench-projection >-------
+[INFO] Building harness-workbench-projection 0.6.0-SNAPSHOT             [66/72]
+[INFO]   from workbench/projection/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-workbench-projection ---
+[INFO] Spotless.Java is keeping 14 files clean - 0 needs changes to be clean, 0 were already clean, 14 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-workbench-projection ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-workbench-projection ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/workbench/projection/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-workbench-projection ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-workbench-projection ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/workbench/projection/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-workbench-projection ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-workbench-projection ---
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-workbench-tui >----------
+[INFO] Building harness-workbench-tui 0.6.0-SNAPSHOT                    [67/72]
+[INFO]   from workbench/tui/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Loaded 64 auto-discovered prefixes for remote repository apache-snapshots (prefixes-apache-snapshots.txt)
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-workbench-tui ---
+[INFO] Spotless.Java is keeping 20 files clean - 0 needs changes to be clean, 0 were already clean, 20 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-workbench-tui ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-workbench-tui ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/workbench/tui/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-workbench-tui ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-workbench-tui ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/workbench/tui/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-workbench-tui ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-workbench-tui ---
+[INFO] 
+[INFO] ----------< io.github.retreatisadvance:harness-workbench-rpc >----------
+[INFO] Building harness-workbench-rpc 0.6.0-SNAPSHOT                    [68/72]
+[INFO]   from workbench/rpc/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-workbench-rpc ---
+[INFO] Spotless.Java is keeping 32 files clean - 0 needs changes to be clean, 0 were already clean, 32 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-workbench-rpc ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-workbench-rpc ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-workbench-rpc ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-workbench-rpc ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/workbench/rpc/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-workbench-rpc ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-workbench-rpc ---
+[INFO] 
+[INFO] --------< io.github.retreatisadvance:harness-bundle-aggregator >--------
+[INFO] Building harness-bundle-aggregator 0.6.0-SNAPSHOT                [69/72]
+[INFO]   from bundle/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-bundle-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-bundle-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] -----------< io.github.retreatisadvance:harness-bundle-base >-----------
+[INFO] Building harness-bundle-base 0.6.0-SNAPSHOT                      [70/72]
+[INFO]   from bundle/base/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-bundle-base ---
+[INFO] Spotless.Java is keeping 9 files clean - 0 needs changes to be clean, 0 were already clean, 9 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-bundle-base ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-bundle-base ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-bundle-base ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-bundle-base ---
+[INFO] skip non existing resourceDirectory /Users/abel_yang/study/deepseek/javanatic-harness/bundle/base/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-bundle-base ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-bundle-base ---
+[INFO] 
+[INFO] -------< io.github.retreatisadvance:harness-examples-aggregator >-------
+[INFO] Building harness-examples-aggregator 0.6.0-SNAPSHOT              [71/72]
+[INFO]   from examples/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-examples-aggregator ---
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-examples-aggregator ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --------< io.github.retreatisadvance:harness-examples-headless >--------
+[INFO] Building harness-examples-headless 0.6.0-SNAPSHOT                [72/72]
+[INFO]   from examples/headless/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- spotless:2.43.0:check (spotless-check) @ harness-examples-headless ---
+[INFO] Spotless.Java is keeping 46 files clean - 0 needs changes to be clean, 1 were already clean, 45 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle-check) @ harness-examples-headless ---
+[INFO] 开始检查……
+检查完成。
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ harness-examples-headless ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] The encoding used to copy filtered properties files has not been set. This means that the same encoding will be used to copy filtered properties files as when copying other filtered resources. This might not be what you want! Run your build with --debug to see which files might be affected. Read more at https://maven.apache.org/plugins/maven-resources-plugin/examples/filtering-properties-files.html
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ harness-examples-headless ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 10 source files with javac [debug release 25 module-path] to target/classes
+[INFO] JDK-8318913 workaround: patched module-info.class requires version from [25] to [25] on 3 JDK modules [java.base, jdk.unsupported, jdk.httpserver]
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[93,16] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[94,16] sun.misc.SignalHandler是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[1611,13] sun.misc.SignalHandler是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[1611,56] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[1611,38] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[1611,71] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[1612,44] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[1612,26] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/main/java/io/javanatic/harness/examples/headless/HeadlessMain.java:[1439,26] 不能在相应的 try 语句的正文中引用可自动结束的资源dryRuntime
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ harness-examples-headless ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ harness-examples-headless ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 36 source files with javac [debug release 25 module-path] to target/test-classes
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[36,16] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[37,16] sun.misc.SignalHandler是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[33,16] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[34,16] sun.misc.SignalHandler是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[127,30] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[127,13] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[175,13] sun.misc.SignalHandler是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[175,56] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[175,38] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[175,71] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[176,31] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessServeTest.java:[176,13] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[144,26] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[144,9] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[160,26] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[160,9] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[184,26] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[184,9] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[222,26] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[222,9] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[273,13] sun.misc.SignalHandler是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[273,56] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[273,38] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[273,71] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[274,31] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessSigintTest.java:[274,13] sun.misc.Signal是内部专用 API, 可能会在未来发行版中删除
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/HeadlessVerifyTest.java:[126,13] org.assertj.core.api.AbstractThrowableAssert中的getRootCause()已过时
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/RelayApprovalPromptTest.java:[154,18] 在可自动结束的资源上显式调用 close()
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/RelayApprovalPromptTest.java:[188,19] 在可自动结束的资源上显式调用 close()
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/RelayApprovalPromptTest.java:[189,19] 在可自动结束的资源上显式调用 close()
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/RelayApprovalPromptTest.java:[268,25] 在可自动结束的资源上显式调用 close()
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/RelayApprovalPromptTest.java:[286,19] 在可自动结束的资源上显式调用 close()
+[WARNING] /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/src/test/java/io/javanatic/harness/examples/headless/RelayApprovalPromptTest.java:[334,31] 在可自动结束的资源上显式调用 close()
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ harness-examples-headless ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running io.javanatic.harness.examples.headless.WebChatControlTest
+[ERROR] Tests run: 12, Failures: 10, Errors: 0, Skipped: 0, Time elapsed: 200.9 s <<< FAILURE! -- in io.javanatic.harness.examples.headless.WebChatControlTest
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.concurrentRootSessionsKeepFeedsAndAuditSeparate -- Time elapsed: 20.36 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.concurrentRootSessionsKeepFeedsAndAuditSeparate(WebChatControlTest.java:228)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.sendWhileTurnInFlightIsRejected -- Time elapsed: 20.05 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.sendWhileTurnInFlightIsRejected(WebChatControlTest.java:268)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.deniedApprovalSurfacesHumanGateDenialToTheModel -- Time elapsed: 20.03 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.deniedApprovalSurfacesHumanGateDenialToTheModel(WebChatControlTest.java:172)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.cancelRevokesOnlyThatSessionLeaseAndRetiresRuntime -- Time elapsed: 20.04 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.cancelRevokesOnlyThatSessionLeaseAndRetiresRuntime(WebChatControlTest.java:290)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.retainedRoundReusesRuntimeForNextSendThenRetiresAtJobTerminal -- Time elapsed: 20.04 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.retainedRoundReusesRuntimeForNextSendThenRetiresAtJobTerminal(WebChatControlTest.java:338)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.cancelParentDoesNotRevokeChildLease -- Time elapsed: 20.04 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.cancelParentDoesNotRevokeChildLease(WebChatControlTest.java:413)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.multiStepSameTurnKeepsSingleLease -- Time elapsed: 20.04 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.multiStepSameTurnKeepsSingleLease(WebChatControlTest.java:197)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.approvalAllowCompletesRoundAndRetiresRuntime -- Time elapsed: 20.02 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.approvalAllowCompletesRoundAndRetiresRuntime(WebChatControlTest.java:108)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.delegationChildApprovalStaysInParentFeedAndTreeRetiresAtTerminal -- Time elapsed: 20.03 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.delegationChildApprovalStaysInParentFeedAndTreeRetiresAtTerminal(WebChatControlTest.java:373)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[ERROR] io.javanatic.harness.examples.headless.WebChatControlTest.closeRevokesAllLeasesAndRetiresEveryRuntime -- Time elapsed: 20.04 s <<< FAILURE!
+java.lang.AssertionError: condition not met within 20s
+	at io.javanatic.harness.examples.headless.WebChatControlTest.await(WebChatControlTest.java:498)
+	at io.javanatic.harness.examples.headless.WebChatControlTest.closeRevokesAllLeasesAndRetiresEveryRuntime(WebChatControlTest.java:312)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   WebChatControlTest.approvalAllowCompletesRoundAndRetiresRuntime:108->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.cancelParentDoesNotRevokeChildLease:413->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.cancelRevokesOnlyThatSessionLeaseAndRetiresRuntime:290->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.closeRevokesAllLeasesAndRetiresEveryRuntime:312->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.concurrentRootSessionsKeepFeedsAndAuditSeparate:228->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.delegationChildApprovalStaysInParentFeedAndTreeRetiresAtTerminal:373->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.deniedApprovalSurfacesHumanGateDenialToTheModel:172->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.multiStepSameTurnKeepsSingleLease:197->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.retainedRoundReusesRuntimeForNextSendThenRetiresAtJobTerminal:338->await:498 condition not met within 20s
+[ERROR]   WebChatControlTest.sendWhileTurnInFlightIsRejected:268->await:498 condition not met within 20s
+[INFO] 
+[ERROR] Tests run: 12, Failures: 10, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Javanatic Harness 0.6.0-SNAPSHOT:
+[INFO] 
+[INFO] Javanatic Harness .................................. SUCCESS [  2.545 s]
+[INFO] harness-kernel-aggregator .......................... SUCCESS [  0.019 s]
+[INFO] harness-kernel-brand ............................... SUCCESS [  0.249 s]
+[INFO] harness-kernel-core ................................ SUCCESS [  0.051 s]
+[INFO] harness-kernel-config .............................. SUCCESS [  0.045 s]
+[INFO] harness-core-aggregator ............................ SUCCESS [  0.014 s]
+[INFO] harness-core-session ............................... SUCCESS [  0.061 s]
+[INFO] harness-core-system-prompt ......................... SUCCESS [  0.041 s]
+[INFO] harness-llm-aggregator ............................. SUCCESS [  0.013 s]
+[INFO] harness-llm-llm .................................... SUCCESS [  0.042 s]
+[INFO] harness-core-tools ................................. SUCCESS [  0.051 s]
+[INFO] harness-session-aggregator ......................... SUCCESS [  0.014 s]
+[INFO] harness-session-persistence ........................ SUCCESS [  0.034 s]
+[INFO] harness-session-persistence-jsonl .................. SUCCESS [  0.047 s]
+[INFO] harness-core-todo .................................. SUCCESS [  0.047 s]
+[INFO] harness-core-agent ................................. SUCCESS [  0.037 s]
+[INFO] harness-llm-replay ................................. SUCCESS [  0.032 s]
+[INFO] harness-core-agent-loop ............................ SUCCESS [  0.068 s]
+[INFO] harness-core-plan .................................. SUCCESS [  0.044 s]
+[INFO] harness-fs-aggregator .............................. SUCCESS [  0.009 s]
+[INFO] harness-fs-fs ...................................... SUCCESS [  0.023 s]
+[INFO] harness-fs-local ................................... SUCCESS [  0.030 s]
+[INFO] harness-sandbox-aggregator ......................... SUCCESS [  0.009 s]
+[INFO] harness-sandbox-sandbox ............................ SUCCESS [  0.031 s]
+[INFO] harness-shell-aggregator ........................... SUCCESS [  0.009 s]
+[INFO] harness-shell-shell ................................ SUCCESS [  0.020 s]
+[INFO] harness-shell-local ................................ SUCCESS [  0.034 s]
+[INFO] harness-sandbox-local .............................. SUCCESS [  0.036 s]
+[INFO] harness-sandbox-policy ............................. SUCCESS [  0.040 s]
+[INFO] harness-fs-tool .................................... SUCCESS [  0.039 s]
+[INFO] harness-core-preset ................................ SUCCESS [  0.035 s]
+[INFO] harness-llm-openai-compat .......................... SUCCESS [  0.035 s]
+[INFO] harness-skill-aggregator ........................... SUCCESS [  0.008 s]
+[INFO] harness-skill-skill ................................ SUCCESS [  0.026 s]
+[INFO] harness-skill-tool ................................. SUCCESS [  0.042 s]
+[INFO] harness-skill-local ................................ SUCCESS [  0.024 s]
+[INFO] harness-mcp-aggregator ............................. SUCCESS [  0.008 s]
+[INFO] harness-mcp-mcp .................................... SUCCESS [  0.027 s]
+[INFO] harness-mcp-stdio .................................. SUCCESS [  0.034 s]
+[INFO] harness-mcp-http ................................... SUCCESS [  0.032 s]
+[INFO] harness-mcp-tool ................................... SUCCESS [  0.042 s]
+[INFO] harness-web-aggregator ............................. SUCCESS [  0.008 s]
+[INFO] harness-web-web .................................... SUCCESS [  0.024 s]
+[INFO] harness-web-fetch-http ............................. SUCCESS [  0.028 s]
+[INFO] harness-web-search-deepseek ........................ SUCCESS [  0.029 s]
+[INFO] harness-web-tool ................................... SUCCESS [  0.031 s]
+[INFO] harness-lsp-aggregator ............................. SUCCESS [  0.008 s]
+[INFO] harness-lsp-lsp .................................... SUCCESS [  0.028 s]
+[INFO] harness-lsp-jdtls .................................. SUCCESS [  0.034 s]
+[INFO] harness-lsp-tool ................................... SUCCESS [  0.031 s]
+[INFO] harness-shell-tool ................................. SUCCESS [  0.032 s]
+[INFO] harness-shell-docker ............................... SUCCESS [  0.026 s]
+[INFO] harness-interaction-aggregator ..................... SUCCESS [  0.007 s]
+[INFO] harness-interaction-approval ....................... SUCCESS [  0.031 s]
+[INFO] harness-interaction-ask ............................ SUCCESS [  0.027 s]
+[INFO] harness-interaction-commands ....................... SUCCESS [  0.029 s]
+[INFO] harness-jobs-aggregator ............................ SUCCESS [  0.007 s]
+[INFO] harness-jobs-jobs .................................. SUCCESS [  0.022 s]
+[INFO] harness-jobs-local ................................. SUCCESS [  0.036 s]
+[INFO] harness-jobs-tool .................................. SUCCESS [  0.032 s]
+[INFO] harness-delegation-aggregator ...................... SUCCESS [  0.007 s]
+[INFO] harness-delegation-delegation ...................... SUCCESS [  0.022 s]
+[INFO] harness-delegation-local ........................... SUCCESS [  0.044 s]
+[INFO] harness-delegation-tool ............................ SUCCESS [  0.030 s]
+[INFO] harness-workbench-aggregator ....................... SUCCESS [  0.007 s]
+[INFO] harness-workbench-projection ....................... SUCCESS [  0.022 s]
+[INFO] harness-workbench-tui .............................. SUCCESS [  0.352 s]
+[INFO] harness-workbench-rpc .............................. SUCCESS [  0.037 s]
+[INFO] harness-bundle-aggregator .......................... SUCCESS [  0.008 s]
+[INFO] harness-bundle-base ................................ SUCCESS [  0.059 s]
+[INFO] harness-examples-aggregator ........................ SUCCESS [  0.008 s]
+[ERROR] harness-examples-headless .......................... FAILURE [03:23 min]
+[INFO] ------------------------------------------------------------------------
+[ERROR] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  03:28 min
+[INFO] Finished at: 2026-11-23T10:43:01+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project harness-examples-headless: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/abel_yang/study/deepseek/javanatic-harness/examples/headless/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :harness-examples-headless

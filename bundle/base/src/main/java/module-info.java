@@ -11,6 +11,8 @@ module io.javanatic.harness.bundle.base {
     requires io.javanatic.harness.sandbox.sandbox;
     requires io.javanatic.harness.core.agent.loop;
     requires io.javanatic.harness.session.persistence;
+    // it38 H1：bootReported(options, ApprovalPrompt) 只注入接口并替换 ask 插件实例
+    requires io.javanatic.harness.interaction.approval;
     requires org.yaml.snakeyaml;
     // snakeyaml 对 java.desktop 仅 requires static;默认 Yaml 构造走 java.beans 内省,
     // 运行时须在场——由本模块(snakeyaml 唯一边界)显式承担,jlink 镜像否则 ClassNotFound

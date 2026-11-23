@@ -94,7 +94,8 @@ class HeadlessServeTest {
                 true, Policy.STANDARD);
             Thread serving = Thread.ofVirtual().start(() -> {
                 try {
-                    exit.set(HeadlessMain.runServe(rt.root(), 0, "dump-snapshot-line", serverBoot, out, err));
+                    exit.set(HeadlessMain.runServe(rt.root(), new HeadlessMain.ServeStartup(
+                        0, "dump-snapshot-line", serverBoot, false), out, err));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
