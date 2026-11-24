@@ -27,7 +27,7 @@ gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>   # 公钥上传（Cen
 
 1. <https://central.sonatype.com> → Sign in with GitHub
 2. Namespaces：系统按 GitHub 用户名自动创建 `io.github.retreatisadvance` 并验证（无需临时仓）
-3. 若 Portal 回显拼写不同（如全小写）：全仓 77 个 POM（reactor 76 + 非 reactor 示例 1）同步校正一次即可（发布前零成本）
+3. 若 Portal 回显拼写不同（如全小写）：全仓 78 个 POM（reactor 76 + 非 reactor 2：`integration/consumer-sample` 示例 1 + 其 `negatives/no-version` 夹具 1，后者无版本串、不入翻转）同步校正一次即可（发布前零成本）
 4. Account → Generate User Token：得到 token 用户名/密码对
 
 ### 1.3 `~/.m2/settings.xml`
@@ -65,7 +65,7 @@ mvn -B -P release -Dgpg.skip=true package      # release 剖面干跑：sources/
 # 3.1 版本翻转 0.5.0-SNAPSHOT → 0.5.0（每个 POM 各一处）
 mvn versions:set -DnewVersion=0.5.0 -DgenerateBackupPoms=false   # 首次运行会拉取 versions-maven-plugin
 rm -rf dist/jh/target                                            # 旧版本 jar 残留 → jlink「Two versions of module」（注2）
-grep -rl "0.5.0-SNAPSHOT" --include=pom.xml . | wc -l            # 翻转后应为 0；翻转前全仓 77 = reactor 76 + 非 reactor 示例 1（示例不入 versions:set，须手动同步 pom + README）。0.5.0 坐标 71（0.4.0 的 67 + workbench 4，it33–it36）——机械计数定案，Portal 前对账
+grep -rl "0.5.0-SNAPSHOT" --include=pom.xml . | wc -l            # 翻转后应为 0；翻转前含版本串 77 = reactor 76 + 非 reactor 示例 1（示例不入 versions:set，须手动同步 pom + README；全仓 POM 总数 78，含 negatives/no-version 无版本串夹具）。0.5.0 坐标 71（0.4.0 的 67 + workbench 4，it33–it36）——机械计数定案，Portal 前对账
 
 # 3.1b 版本串同步面（硬编码标识符 versions:set 抓不到——必须显式 grep；0.4.0/0.5.0
 #      同族两次滞后，0.6.0 起翻转时机械命中，不再依赖收尾批「机械枚举」后知后觉）

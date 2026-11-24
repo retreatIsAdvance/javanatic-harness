@@ -1,4 +1,4 @@
-# 迭代 39 — 0.6.0 发布工程（状态：进行中（2026-11-24）；四确认评审通过，停 1 待放行）
+# 迭代 39 — 0.6.0 发布工程（状态：进行中（2026-11-24）；停 1 评审有条件通过，审计方向倒置已订正，停 1 批待推送，待放行进停 2）
 
 **裁决记录（2026-11-24，方向裁定）**：**it39 = 0.6.0 发布工程，单站发布，挂账全不动**。W5 自身已是完整能力相位（零写面不变量终结 + 写面显式 opt-in + 审批中继治理），发布站混功能改动会脏回退面；jobs 视图、T2 steer 升级、dump 键序 LinkedHashMap 化留 0.7 周期，按发布后的真实使用体感定优先级。流程复用 [release.md](../release.md) 与 it37（0.5.0）完整先例——零新发明。
 
@@ -53,7 +53,7 @@ grep -rnE --include='*.java' 'clientInfo\.put\("version", "[0-9]' .  # 1 处，�
 
 **稳定面增量预告**（v0.5.0→0.6.0，执行期核对三法坐实）：
 
-- **零新模块 / 零新导出包 / 零新发布坐标**（55 代码模块 / 59 包不变）；
+- **零新模块 / 零新导出包 / 零新发布坐标**（实测 v0.5.0 与 0.6.0 树均为 **56 代码模块 / 60 包**，逐字相同；草案写的 55/59 是 [12 §2](../design/12-api-stability.md) 的既有记数滞后——it35 `workbench/rpc` 入表未抬，非 0.6.0 增量，停 1 已按四测更正）；
 - `workbench.rpc` 导出包内纯增量：写面 seam `ChatControl` / `ApprovalRelay` + SSE 实现类型；`WorkbenchRpc` / `RpcHttpServer` 增构造重载（既有签名保留）；
 - `boot.AppBoot` 增 `bootReported(BootOptions, ApprovalPrompt)` 重载；`ApprovalPrompt` 获得「启动期可替换实现」语义（H1，签名不变）；
 - CLI flag **+1**：`--web-write`（缺省关；无 `--serve` exit 2；`--verify --serve --web-write` 为 keyless 纯预检）；
@@ -62,28 +62,49 @@ grep -rnE --include='*.java' 'clientInfo\.put\("version", "[0-9]' .  # 1 处，�
 - keyless `--verify` **34/41/0 不变**（摘要 `composition: 34 rows, 41 discovered, 0 unreferenced`），新增 `web-write: off（缺省）` / `on（--web-write）` 行；
 - 非稳定面：审批中继与宿主桥实现落 `examples/headless`；`ui.html` 重设计（830 行）。
 
+## 停 1 出包（2026-11-24，待放行）
+
+翻转批 + notes 定稿 + 审计三法已执行，[packet](evidence/release-0.6.0/stop1-review-packet.md) /
+[翻转证据](evidence/release-0.6.0/flip-evidence.txt) /
+[稳定面审计](evidence/release-0.6.0/audit-stability-surface.txt) 落盘；**未 commit、未 push、未进 rc**。
+
+- 版本树：含版本串 77→0 残留；全仓 POM 78 / reactor 76 / 坐标 71 / 闭包 34 / 镜像 69 全不变；
+  5 处硬编码版本串改齐（UA ×4 = 0.6、JDT = 0.6.0）；`docs/design/02` 6 处 POM 片段翻转；
+- 门禁：validate EXIT=0；全量 package EXIT=0（fresh 202 XML = 1670/0/0/25）；keyless
+  `--verify` 34/41/0 + `web-write: off`，`--verify --serve --web-write` 同计数 +
+  `web-write: on` + 零监听；`jh --version` = 0.6.0；
+- 审计：零新模块 / 导出包（60→60 逐字同）/ **零删除签名**（2 处 public 成员**新增**
+  `synchronized`，v0.5.0 = 0 → 0.6.0 = 4；方向订正与锁面原因见审计 §二/§九）/ 事件 /
+  配置键 / bundle 行（41→41）/ 第三方依赖（24→24）；CLI 唯一 +`--web-write`；
+- notes [0.6.0 定稿](../release-notes-0.6.0.md)：升级承诺 → 写面 opt-in → 围栏先行半页因果，
+  W5 四能力面 + 已知边界；
+- 文档副产物：[12 §2](../design/12-api-stability.md) 导出面计数 55/59 → 56/60（it35 rpc
+  入表未抬的既有滞后，四测修正注）；release.md 78/77 POM 计数两处校正（其余 0.6.0 化留收尾）。
+
 ## 锚点（开工前填写：本次将改动的既有代码位置）
 
 | 锚点 | 预期改动 | 完成 |
 |---|---|---|
-| 77 个含版本串 POM | `0.6.0-SNAPSHOT → 0.6.0` | [ ] |
-| `web/fetch-http` `PinnedHttpClient.USER_AGENT` + 同名测试；`web/search-deepseek` `DeepSeekWire.USER_AGENT` + 同名测试 | `javanatic-harness/0.5 → /0.6` | [ ] |
-| `lsp/jdtls` `JdtlsProvider` clientInfo | `0.5.0 → 0.6.0` | [ ] |
-| `integration/consumer-sample` pom + README | 候选缺省 `0.6.0-SNAPSHOT`、发布件注释 `0.6.0` | [ ] |
-| `integration/verify-consumer.sh` | 发布腿 `0.5.0 → 0.6.0` | [ ] |
-| `docs/release.md` | 标题 / §0 发布面 / §3 序列 / §4 校验点 / §5 收尾清单 0.6.0 化；校正 78/77 POM 口径 | [ ] |
-| `README.md`、`docs/design/README.md`、`docs/plan/current-state.md` | 0.6 系列 ✅ / 0.7 当前行；状态基准收口 | [ ] |
-| `docs/embedding.md` | 版本示例与「0.5.0 → 0.6.0 升级面」指针 | [ ] |
-| `docs/release-notes-0.6.0.md` | 新建并定稿 | [ ] |
+| 77 个含版本串 POM | `0.6.0-SNAPSHOT → 0.6.0` | [x] 停 1（SNAPSHOT 残留 0） |
+| `web/fetch-http` `PinnedHttpClient.USER_AGENT` + 同名测试；`web/search-deepseek` `DeepSeekWire.USER_AGENT` + 同名测试 | `javanatic-harness/0.5 → /0.6` | [x] 停 1（4 处齐） |
+| `lsp/jdtls` `JdtlsProvider` clientInfo | `0.5.0 → 0.6.0` | [x] 停 1 |
+| `integration/consumer-sample` pom + README | 候选缺省 `0.6.0-SNAPSHOT`、发布件注释 `0.6.0` | [x] 停 1 |
+| `integration/verify-consumer.sh` | 发布腿 `0.5.0 → 0.6.0` | [ ] 收尾批 |
+| `docs/release.md` | 标题 / §0 发布面 / §3 序列 / §4 校验点 / §5 收尾清单 0.6.0 化；校正 78/77 POM 口径 | [ ] 本批仅 78/77 口径两处；0.6.0 化留收尾 |
+| `docs/design/02-module-layout.md` | 6 处 POM 片段 `0.6.0-SNAPSHOT → 0.6.0`（非 POM 文件，翻转批易漏） | [x] 停 1 |
+| `docs/design/12-api-stability.md` §2 | 导出面计数 55/59 → 56/60 + 四测修正注（既有滞后，非本版增量） | [x] 停 1 |
+| `README.md`、`docs/design/README.md`、`docs/plan/current-state.md` | 0.6 系列 ✅ / 0.7 当前行；状态基准收口 | [ ] 收尾批 |
+| `docs/embedding.md` | 版本示例与「0.5.0 → 0.6.0 升级面」指针 | [ ] 收尾批 |
+| `docs/release-notes-0.6.0.md` | 新建并定稿 | [x] 停 1 |
 
 ## 审查停点（发布工程无产品代码停点；节点门 = 不可逆动作前的评审门）
 
 | 停点 | 覆盖 | 状态 |
 |---|---|---|
-| 停 1 = 翻转批 + notes 定稿 + 稳定面审计 | 版本树 / notes / 审计三法 / 坐标复测 / 版本串 5 处；出 packet 等放行后才能进 rc | 未开工 |
+| 停 1 = 翻转批 + notes 定稿 + 稳定面审计 | 版本树 / notes / 审计三法 / 坐标复测 / 版本串 5 处；出 packet 等放行后才能进 rc | **评审有条件通过；方向订正已落，本批已提交**（2026-11-24；未 push） |
 | 停 2 = rc 排练全链 | tag `v0.6.0-rc1` → 五腿绿 + master 复跑 + draft 8 归档 + rc 清理实核；出 packet 等放行后才能进 deploy | 未开工 |
 | 停 3 = deploy 前对账门 | release 剖面干跑 + bundle 硬门槛预检 + Portal 71 坐标核对单；**真签名上传前须用户点名放行**（Portal Publish 与 GitHub Release Publish 恒用户侧） | 未开工 |
-| 草案评审 | 本文件 | 待评审（2026-11-24） |
+| 草案评审 | 本文件 | **已通过**（2026-11-24，四确认全批） |
 
 **升级路径**：若稳定面审计发现非预期签名变化 / 新事件 / 新配置键 / 坐标漂移，停 1 升级为代码停点并报告，不在发布站顺手修。
 
@@ -91,6 +112,7 @@ grep -rnE --include='*.java' 'clientInfo\.put\("version", "[0-9]' .  # 1 处，�
 
 | 文件（预期） | 覆盖 |
 |---|---|
+| stop1-review-packet.md | 停 1 评审包：五条 TL;DR / 翻转批 / notes 三层叙事 / 审计三法 / 偏离观察表 / 停点边界 |
 | flip-evidence.txt | 翻转批：POM 77→0、总数 78 口径、坐标 71、版本串 5 处、validate / package / `--verify` 复核 |
 | audit-stability-surface.txt | 导出面 diff、`jh --help`、`--verify` 计数、permits / 配置键 / bundle 行 / 依赖面 |
 | rc1-rehearsal.txt | rc 排练全链（tag run 五绿 + master 复跑 + draft 8 归档 + rc 清理 API 404 实核） |
@@ -102,10 +124,10 @@ grep -rnE --include='*.java' 'clientInfo\.put\("version", "[0-9]' .  # 1 处，�
 
 ## 验收（草案，执行期逐项勾选）
 
-- [ ] 四确认评审通过（本草案，2026-11-24）
-- [ ] 版本翻转 + 坐标机械复测定案（71 不变；POM 版本串 77→0、总数 78 口径；5 处硬编码版本串改齐；全量 package EXIT=0；`--verify` 34/41/0）
-- [ ] release-notes-0.6.0.md 定稿（ADR 0012 叙事 + 围栏先行因果 + 升级必读「行为不变、写面 opt-in」+ 零破坏性变更 + 已知边界）
-- [ ] 稳定面差异审计入档（三法重跑：导出面 diff / `jh --help` / `--verify`；零新事件 / 配置键 / bundle 行 / 第三方依赖）
+- [x] 四确认评审通过（本草案，2026-11-24）
+- [x] 版本翻转 + 坐标机械复测定案（71 不变；POM 版本串 77→0、总数 78 口径；5 处硬编码版本串改齐；全量 package EXIT=0；`--verify` 34/41/0）——**停 1 本批，待放行**
+- [x] release-notes-0.6.0.md 定稿（ADR 0012 叙事 + 围栏先行因果 + 升级必读「行为不变、写面 opt-in」+ 零破坏性变更 + 已知边界）
+- [x] 稳定面差异审计入档（三法重跑：导出面 diff / `jh --help` / `--verify`；零新事件 / 配置键 / bundle 行 / 第三方依赖）
 - [ ] rc 排练全链绿（`v0.6.0-rc1`：五腿 + draft 8 归档 + rc 清理无残留）
 - [ ] deploy 预检干跑绿（`-P release -Dgpg.skip=true package` EXIT=0；坐标 71 / name 71/71；Portal 核对单落盘）
 - [ ] deploy 成功 + bundle 硬门槛（真签名；每主件 `.asc` 齐；deploymentId + Central 校验通过）——**Publish 仍待用户侧**
@@ -119,7 +141,9 @@ grep -rnE --include='*.java' 'clientInfo\.put\("version", "[0-9]' .  # 1 处，�
 
 | 提交 | 缺陷 | 修正 |
 |---|---|---|
-| — | — | — |
+| 停 1 批 | 审计方向倒置：`RpcHttpServer` 的 `synchronized` 被写成「删除」，实为 it38 `27b2d88` **新增**（v0.5.0 = 0 → 0.6.0 = 4）；根源 = 只抽 diff 删除侧 + 人工把 `+` 侧修饰符转写到 `-` 侧 | 审计 §二 改方向并补锁面原因（迟到 open vs close / 锁外回调 / start check-then-act，各配钉死测试）；§九 用双向集合差重跑 exports / 依赖 / bundle / SessionEvent（两侧差 0）；packet 同步订正 |
+| 停 1 批 | [12 §2](../design/12-api-stability.md) 导出面计数 55 模块 / 59 包，实核 v0.5.0 与 0.6.0 树均为 56 / 60——it35 `workbench/rpc` 入表时未抬计数的既有滞后，非 0.6.0 增量 | 改 56 / 60 并落 2026-11-24 四测修正注；不升级代码停点（无事件 / 配置 / 坐标变化） |
+| 停 1 批 | release.md 旧记「77 POM」与全仓实核 78 不符（漏 `negatives/no-version` 无版本串夹具） | 两处校正为 78 全仓 / 77 含版本串口径，含推导式 |
 
 ## 设计偏离（如有）
 

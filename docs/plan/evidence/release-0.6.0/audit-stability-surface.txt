@@ -1,0 +1,148 @@
+# 0.6.0 发布验收 · 稳定面差异审计（v0.5.0 → 0.6.0 树）
+
+核对基准 = [12-api-stability.md](../../design/12-api-stability.md) 三法：导出面 =
+module-info.java 扫描；CLI = `jh --help` / `--verify`；配置/事件/依赖 = 主源与资源 diff。
+比对基准 = tag `v0.5.0`（f7aed38）→ 工作树 HEAD（595002e + 翻转批未提交改动）；
+执行 2026-11-24。翻转批只改版本串与文档，不改主源语义，故比对不受未提交翻转影响。
+发布执行属用户侧；本档承载验收证据。
+
+## 一、导出面（module-info.java 扫描）
+
+`git diff v0.5.0..HEAD --stat -- '*/src/main/java/module-info.java'`：
+2 文件 8+/0−，**零导出包增删**：
+
+- `bundle/base`（+2）：`requires io.javanatic.harness.interaction.approval;`（it38 H1
+  `bootReported(options, ApprovalPrompt)`）；无 exports 行变化。
+- `examples/headless`（+6）：`requires delegation / delegation.local / jobs / jobs.local`
+  （it38 H2 后台例外判定与首轮 bindSession）；无 exports 行变化。
+- exports 集合：v0.5.0 与 HEAD 均 **56 个 module-info / 60 个唯一导出包**，`diff`
+  逐字相同（`EXPORTS_IDENTICAL`）。**无新模块**（module-info 文件数 56 → 56）。
+- 与 [12] 旧记「55/59」差 1 = it35 W3 `workbench/rpc` 入表后计数未抬（既有文档滞后，
+  非 0.6.0 增量）；本次已在 12 §2 加四测修正注（56/60，两版本树相同）。
+
+## 二、导出类型签名（破坏性变更扫描，2026-11-24 方向订正）
+
+**先给方向（旧稿写反，已订正）**：`RpcHttpServer.java` 的 `synchronized` 在 v0.5.0 = **0**、
+0.6.0 树 = **4**（`:98 start` / `:111 address` 两个方法修饰符 + `:219` / `:253` 两个内部
+同步块）——it38 `27b2d88` **新增**的并发加固，**零删除**。模块面同向：`workbench/rpc`
+主源 0 → 19（ApprovalRelay 8 / RpcHttpServer 4 / SseBuffer 4 / SseConnection 3），
+测试 0 → 6。
+
+公开/保护签名面：`git diff -U1 v0.5.0..HEAD -- .../RpcHttpServer.java` 的两组变化均为
+`- public void start(int)` → `+ public synchronized void start(int)`、
+`- public InetSocketAddress address()` → `+ public synchronized InetSocketAddress address()`：
+**成员保留、参数不变、仅新增修饰符**；无 public/protected 成员删除。旧稿把 `+` 侧的
+`synchronized` 写到了删除侧（`-` 行是旧签名，不带修饰符），方向倒置，见 §九。
+
+**为什么该同步是对的（delta 说明，不只记 delta）**：it38 SSE 写面引入三类并发竞态，
+锁面就是它们的治理边界：
+
+1. `serveEvents` 迟到 open vs `close()`：外部 `source.open` 不可中断，返回时 server 可能
+   已关；`synchronized (this)` 内做 `accepted = !closed` 的登记/拒绝判定，锁外撤销连接，
+   **绝不发出 SSE 200**。钉死测试 `openReturningAfterServerCloseCannotLeakRegistration`。
+2. `close()` 幂等快照 vs 外部回调：锁内取 `connections/server/executor` 快照并置 `closed`，
+   锁外 `stop` / 逐连接 `close` / `shutdownNow`——回调里再调 `address()` 不会自锁。
+   钉死测试 `closeCallbacksRunOutsideGlobalLockAndOneFailureCannotLeakOtherConnections`
+   （回调内用另一虚拟线程探测 `address()`，持锁即超时失败）。
+3. `start()` 的 check-then-act（`closed || server != null` → 建 server / executor / start）
+   与 `close()` 同锁，避免「关后启动」与双重启动泄漏已绑定 socket；`address()` 同锁保证
+   server 引用的发布与读取原子。内部块 `:219` / `:253` 位于 private 方法体，**不在导出面**，
+   此处仅作原因登记。
+
+**旧稿倒置的根源（工具 / 转写）**：diff 本身方向正确（`-` 旧、`+` 新）；审计命令只抽了
+`git diff | grep '^-'` 的删除侧，随后 packet §三 把 `+` 侧的 `synchronized` 转写到了删除
+侧——**单方向抽取 + 人工转写**，不是 diff 箭头错。其余「相同」结论已按双向断言重做（§九）。
+
+无参数列表变更（`WorkbenchRpc` / `RpcHttpServer` 新增构造重载，既有构造逐字保留；
+`boot.AppBoot` 新增 `bootReported(BootOptions, ApprovalPrompt)` 重载）。`BootOptions`
+无 diff。sealed permits：`SessionEvent` 文件 v0.5.0→HEAD **零改动**。record 组件：既有
+record 零改动；新增 record 均在新增类内（`ApprovalRelay.Pending` / `SseFrame` /
+`SseRequest` / headless 内 `ServeStartup` 等），属 0.6 新面纯增量。
+
+## 三、事件 schema
+
+`git diff v0.5.0..HEAD -- core/session/src/main/java/io/javanatic/harness/session/event/SessionEvent.java`
+为空：sealed permits 零变化，零新事件（`chat.questionPending` 是 ui.html 事实位，不入
+日志）。与 notes「零新会话事件」一致。
+
+## 四、配置键 / bundle 行
+
+- `git diff --name-only v0.5.0..HEAD -- 'kernel/config/**' '**/resources/**/*.yml' '**/resources/**/*.yaml'`
+  → 仅 `kernel/config/pom.xml`（版本行）；**零配置资源改动、零新配置键**。
+- `bundle/base` 行数：`grep -cE '^\s*-\s' bundle.yml` = **41 → 41**（不变）。
+- `bundle.yml` / profile yml 全 diff 为空；零新 bundle 行。
+
+## 五、第三方依赖
+
+`<artifactId>` 集合（剔除 `harness-*` 与 `consumer-sample`）v0.5.0 vs HEAD：
+**24 → 24 逐字相同**（`NON_HARNESS_DEPS_IDENTICAL`）——零新第三方依赖；JLine 仍
+4.6.0 三坐标（terminal / terminal-ffm / native）。
+
+## 六、CLI（jlink 镜像实测）
+
+- 主源 flag 字面量集合（`examples/headless/src/main/**`）：9 → 10，**唯一新增
+  `--web-write`**；既有 flag 零删除。
+- `jh --help` **EXIT=0**：用法行 `jh --serve [--port=<N>] [--web-write]` + flag 说明
+  「缺省关：只读 UI；开：聊天/审批/答复控件；需与 --serve 同用；`--verify --serve
+  --web-write` 下只做预检」逐字在案。
+- `jh --verify` **EXIT=0**：`composition: 34 rows, 41 discovered, 0 unreferenced`
+  （不变）+ `web-write: off（缺省）`（R4 新行）。
+- `jh --verify --serve --web-write` **EXIT=0**：`web-write: on（--web-write）`；
+  `lsof :8787` 前/后 0 监听（纯预检零监听）。
+- `jh --version` = `0.6.0`，EXIT=0。
+- 镜像模块面：`jlink-image/bin/java --list-modules | wc -l` = **69**（不变）。
+
+## 七、版本面与文档修复（本批副产物）
+
+- POM：含版本串 77→0 残留；全仓 78 / reactor 76 / 坐标 71 不变（详见 flip-evidence）。
+- `docs/design/02-module-layout.md`：6 处 `<version>` 片段 0.6.0-SNAPSHOT → 0.6.0（翻转面）。
+- `docs/release.md`：78/77 POM 计数口径两处校正（Portal 命名校正面 + §3.1 翻转 grep 注）；
+  其余 0.5.0 化留收尾批（it37 先例）。
+- `docs/design/12-api-stability.md`：导出面计数 55/59 → 56/60 + 四测修正注（见一）。
+
+## 八、结论
+
+v0.5.0→0.6.0 **零破坏性稳定面变化**：零新模块 / 零新导出包 / 零删除签名（唯一签名面变化 =
+`RpcHttpServer.start/address` 两个 public 成员**新增** `synchronized`，成员与参数不变）/
+零新事件 / 零新配置键 / 零新 bundle 行 / 零新第三方依赖；CLI +1 flag、RPC +4 方法 + SSE、
+导出包内纯增量 seam 与构造重载，全部在预登记增量内。无触发「非预期变化 → 代码停点」条款。
+
+## 九、方向显式复核（2026-11-24，订正后重跑）
+
+对旧稿的「逐字相同」结论做**双向集合差**（`comm -23` = 仅 v0.5.0 有；`comm -13` = 仅
+HEAD 有），两侧同时为零才算相同：
+
+| 面 | v0.5.0 | HEAD | 仅 v0.5.0 | 仅 HEAD |
+|---|---|---|---|---|
+| exports 唯一包 | 60 | 60 | **0** | **0** |
+| 非 harness `<artifactId>` | 24 | 24 | **0** | **0** |
+| base bundle 行 | 41 | 41 | **0** | **0** |
+| `SessionEvent.java` | — | — | 逐字节相同（`diff -q` 空） | 同左 |
+| `synchronized`（RpcHttpServer.java） | 0 | 4 | **0（零删除）** | **4（新增）** |
+
+复跑命令（仓根）：
+
+```sh
+# exports 双向差
+git grep -h -E '^[[:space:]]*exports[[:space:]]+[a-zA-Z0-9_.]+' v0.5.0 -- '*module-info.java' \
+  | sed -E 's/^[[:space:]]*exports[[:space:]]+//; s/[;[:space:]].*$//' | sort -u > /tmp/e050
+git grep -h -E '^[[:space:]]*exports[[:space:]]+[a-zA-Z0-9_.]+' HEAD -- '*module-info.java' \
+  | sed -E 's/^[[:space:]]*exports[[:space:]]+//; s/[;[:space:]].*$//' | sort -u > /tmp/e060
+comm -23 /tmp/e050 /tmp/e060 | wc -l; comm -13 /tmp/e050 /tmp/e060 | wc -l   # 0 / 0
+# 非 harness 依赖双向差（每次换 ref 重跑，过滤 harness-* 与 consumer-sample）
+git grep -h -E '<artifactId>[^<]+</artifactId>' v0.5.0 -- '*pom.xml' \
+  | sed -E 's/.*<artifactId>([^<]+)<\/artifactId>.*/\1/' \
+  | grep -vE '^harness-' | grep -vx 'consumer-sample' | sort -u > /tmp/d050
+# ...同法生成 /tmp/dHEAD 后：comm -23 → 0，comm -13 → 0
+# bundle 行双向差
+git show v0.5.0:bundle/base/src/main/resources/META-INF/harness/bundle.yml \
+  | grep -E '^[[:space:]]*-[[:space:]]' | sed -E 's/^[[:space:]]+//' | sort > /tmp/b050
+# ...HEAD 同法生成 /tmp/bHEAD 后：各 41 行，comm 两侧均 0
+# synchronized 方向
+git grep -o synchronized v0.5.0 -- 'workbench/rpc/src/main/java/**/RpcHttpServer.java' | wc -l  # 0
+git grep -o synchronized HEAD -- 'workbench/rpc/src/main/java/**/RpcHttpServer.java' | wc -l    # 4
+```
+
+结论：其余「相同」结论在双向口径下成立；唯一例外 = `synchronized` **新增**，方向已在 §二
+订正。pits 候选：发布审计的 delta 方向要机器判定 + 双向断言（「A 有 B 无」与「B 有 A 无」
+分开报），人工转写方向是最容易静默翻车的一格。

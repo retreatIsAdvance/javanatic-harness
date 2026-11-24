@@ -1,0 +1,65 @@
+it39 翻转批取证：0.6.0-SNAPSHOT → 0.6.0（2026-11-24）
+
+一、版本翻转（versions:set + 手动同步）
+reactor 76 POM 经 `mvn versions:set -DnewVersion=0.6.0 -DgenerateBackupPoms=false`
+（执行时 BUILD SUCCESS；结果态由 二 的 D/A 复核）；`rm -rf dist/jh/target` 清旧版残留。
+非 reactor 面手动同步：
+  - integration/consumer-sample/pom.xml：<harness.version>0.6.0-SNAPSHOT → 0.6.0
+    （发布腿注释仍 0.5.0，重指属收尾批）；
+  - integration/consumer-sample/README.md：缺省版本串 0.6.0；
+  - docs/design/02-module-layout.md：6 处 <version> POM 片段 0.6.0-SNAPSHOT → 0.6.0
+    （perl -pi，it37 先例同法；`grep -c '<version>0.6.0</version>'` = 6）；
+  - negatives/no-version 夹具 POM 故意无版本——不翻转不动（第 78 个 POM）。
+
+二、版本树机械复测（命令 + 结果，2026-11-24）
+A `grep -rl '<version>0.6.0</version>' --include=pom.xml . | wc -l` = 76（reactor 全量）
+B `grep -rl '<harness.version>0.6.0</harness.version>' --include=pom.xml . | wc -l` = 1
+  （consumer-sample 属性单点；合计含版本串 77 = reactor 76 + 非 reactor 1）
+C `find . -name pom.xml -not -path '*/target/*' | wc -l` = 78
+  = reactor 76 + consumer-sample 1 + negatives/no-version 1（无版本串）
+D `grep -rl '0.6.0-SNAPSHOT' --include=pom.xml . | wc -l` = 0
+E `grep -rl '0.5.0-SNAPSHOT' --include=pom.xml . | wc -l` = 0
+
+三、硬编码版本串（§3.1b 硬前置，全部随翻转改齐）
+`grep -rnE --include='*.java' 'javanatic-harness/[0-9]+\.[0-9]+' .` → 4 处，全部 = 0.6：
+  web/fetch-http PinnedHttpClient.java + PinnedHttpClientTest.java
+  web/search-deepseek DeepSeekWire.java + DeepSeekSearchProviderTest.java
+`grep -rnE --include='*.java' 'clientInfo\.put\("version", "[0-9]' .` → 1 处 = 0.6.0：
+  lsp/jdtls JdtlsProvider.java
+（0.4.0/0.5.0 两次同为收尾后知后觉；本次翻转前改齐，grep 不符即停。）
+
+四、坐标机械复测（与 0.5.0 全同）
+全仓 POM 78（= 上 C）；reactor 76；excludeArtifacts 5（root pom release profile 逐字核）：
+  harness-examples-aggregator / harness-examples-agent-spine / harness-examples-headless /
+  harness-dist-aggregator / harness-dist-jh
+发布坐标 = 76 − 5 = 71（不变）。构成：pom-only 17（根 1 + 聚合 16）+ jar 叶 54。
+POM 文件集合 `git ls-tree v0.5.0` vs HEAD：78 → 78 逐字相同（零新增/删除 POM）。
+module `<modules>` 清单：111 行 → 111 行逐字相同（含 dist/jh jlink 的 <modules> 配置面）。
+bundle 预期 1398 项不变（233 主件 + 233 .asc + 932 校验和；以真 deploy 日志定案）。
+
+五、门禁（翻转树）
+`mvn -B -q validate` → VALIDATE_EXIT=0（2026-11-24 09:36 前）。
+`mvn -B package`（JAVA_HOME=JDK25，~/Documents/apache-maven-3.10.0/bin/mvn）
+  日志 /private/tmp/it39-flip-package.log；PACKAGE_EXIT=0；BUILD SUCCESS；
+  Total time 04:45 min，Finished 09:36:03。
+surefire XML 求和（窗口 = 日志 birth 09:31:18 起，避孤儿 XML）：
+  测量面 = **/target/surefire-reports/TEST-*.xml，窗口内 202 XML；
+  tests=1670 failures=0 errors=0 skipped=25 —— 与 it38 关账终态一致（翻转不改测试数；
+  300s 真钟哨兵不重复跑）。
+
+六、keyless verify / help / 版本面（fresh jlink 镜像，09:36 产出）
+`jh --verify` → VERIFY_EXIT=0；`composition: 34 rows, 41 discovered, 0 unreferenced`；
+  `web-write: off（缺省）`（R4 行逐字）。
+`jh --verify --serve --web-write` → VERIFY_ON_EXIT=0；`web-write: on（--web-write）`；
+  端口 8787 前/后 LISTEN 行数均 0（零监听）。
+`jh --help` → HELP_EXIT=0；含 `--web-write`（用法行 + flag 说明，缺省关 / 需与 --serve 同用）。
+`jh --version` → `0.6.0`，EXIT=0。
+镜像模块面：`jlink-image/bin/java --list-modules | wc -l` = 69（不变）；其中 io.javanatic 53。
+UI 面（未改动复核）：ui.html 830 行；sha256 = ee07712c5b392614570b2bd48841f3dbfb742ae172c3efe0dd6a35a98d719890
+  （与 it38 停 3 终态逐字相同）。
+
+七、结论
+翻转批版本树完成：含版本串 77→0 残留、POM 78/坐标 71 不变、5 处硬编码串改齐、
+全量 package EXIT=0（1670/0/0/25 不变）、validate EXIT=0、keyless verify 34/41/0 不变、
+`--version` 0.6.0。release-notes-0.6.0.md 已定稿（三层叙事）。下一步：出停 1 packet
+等放行 → 提交翻转批 → rc 排练（停 2）。

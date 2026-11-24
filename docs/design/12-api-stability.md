@@ -14,7 +14,7 @@
 
 ## 2. 包级 API（JPMS 导出面）
 
-`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（**55 个 reactor 代码模块 / 59 个包**；前缀 `io.javanatic.harness.` 省略）。2026-10-29 用 Python `xml.etree.ElementTree` 递归根 POM `<modules>`，再读取各模块 `src/main/java/module-info.java` 的 `exports` 实测，排除 `target`，2026-11-02 同法复测、2026-11-12 三测（55/59；moditect 插件 `<modules>` 里的 JPMS 名不是目录、不按子模块递归，否则 `dist/jh` 被误判为聚合；根 reactor 75 个项目 = 19 聚合 + 56 叶子，唯一非代码叶子为 `dist/jh`，另 55 代码模块）。计数含 it29 的 `lsp/*` 与 it33/it34 W2 的 `workbench/*`；jobs/delegation 六模块的表行与计数差额属 it30–32 登记挂账（导出面已含在 55/59 内）。列出导出面不代表已通过产品验收。
+`exports` 是唯一编译期可见面：实现类不导出（导出包内的 public 实现类亦属内部，除非本文点名）。全部导出包如下（**56 个 reactor 代码模块 / 60 个包**；前缀 `io.javanatic.harness.` 省略）。2026-10-29 用 Python `xml.etree.ElementTree` 递归根 POM `<modules>`，再读取各模块 `src/main/java/module-info.java` 的 `exports` 实测，排除 `target`，2026-11-02 同法复测、2026-11-12 三测（55/59；moditect 插件 `<modules>` 里的 JPMS 名不是目录、不按子模块递归，否则 `dist/jh` 被误判为聚合；根 reactor 75 个项目 = 19 聚合 + 56 叶子，唯一非代码叶子为 `dist/jh`，另 55 代码模块）。计数含 it29 的 `lsp/*` 与 it33/it34 W2 的 `workbench/*`；jobs/delegation 六模块的表行与计数差额属 it30–32 登记挂账（导出面已含在 55/59 内）。**2026-11-24 四测修正：it35 W3 的 `workbench/rpc` 入表后计数未随抬，实核为 56 模块 / 60 包（v0.5.0 与 0.6.0 树逐字相同；差 1 即该模块，非 0.6.0 增量）**。列出导出面不代表已通过产品验收。
 
 | 模块 | 导出包 |
 |---|---|
